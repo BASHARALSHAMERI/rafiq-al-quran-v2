@@ -21,6 +21,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npx prisma validate --schema=prisma/schema.prisma
+      - run: npx prisma generate --schema=prisma/schema.prisma
       - run: npm run build
 
   frontend:
