@@ -1,0 +1,3501 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                       Int                       @id @default(autoincrement())
+  name                     String                    @db.VarChar(120)
+  code                     String                    @unique @db.VarChar(60)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  logoUrl                  String?                   @map("logo_url") @db.VarChar(500)
+  activityLogs             ActivityLog[]
+  accountingAccounts       AccountingAccount[]
+  journalEntries           JournalEntry[]
+  journalEntryLines        JournalEntryLine[]
+  attendancePolicy         AttendancePolicy?
+  auditLogs                AuditLog[]
+  centers                  Center[]
+  correctionRequests       CorrectionRequest[]
+  donations                Donation[]
+  donors                   Donor[]
+  ExamGradeScale           ExamGradeScale[]
+  examNominationRequests   ExamNominationRequest[]
+  examQuestionBankItems    ExamQuestionBankItem[]
+  exams                    Exam[]
+  financeMovements         FinanceAccountMovement[]
+  financeAccounts          FinanceAccount[]
+  financeDeductionEvents   FinanceDeductionEvent[]
+  financeDeductionRules    FinanceDeductionRule[]
+  financeTransfers         FinanceFundTransfer[]
+  financePolicies          FinancePolicyProfile[]
+  financeSettings          FinanceSettings?
+  fiscalYears              FiscalYear[]
+  fiscalPeriods            FiscalPeriod[]
+  financeVouchers          FinanceVoucher[]
+  goldenRecords            GoldenRecord[]
+  graduationCandidates     GraduationCandidate[]
+  groupActivities          GroupActivity[]
+  libraryCategories        LibraryCategory[]
+  libraryItems             LibraryItem[]
+  matnCatalogs             MatnCatalog[]
+  monthlyPlans             MonthlyPlan[]
+  notifications            Notification[]
+  payrollBatches           PayrollBatch[]
+  payrollProfiles          PayrollProfile[]
+  reportFiles              ReportFile[]
+  reportRuns               ReportRun[]
+  reviewPlanSettings       ReviewPlanSettings[]
+  rewardBatches            RewardBatch[]
+  rewardProfiles           RewardProfile[]
+  staffAttendances         StaffAttendanceRecord[]
+  staffExcuses             StaffExcuseRequest[]
+  staffLeaveRequests       StaffLeaveRequest[]
+  staffSchedules           StaffScheduleAssignment[]
+  studentFeeProfiles       StudentFeeProfile[]
+  currencies               Currency[]
+  exchangeRates            ExchangeRate[]
+  documentSequences        DocumentSequence[]
+  salaryGrades             SalaryGrade[]
+  suppliers                Supplier[]
+  expenseCategories        ExpenseCategory[]
+  expenseInvoices          ExpenseInvoice[]
+  expensePayments          ExpensePayment[]
+  assetCategories          AssetCategory[]
+  fixedAssets              FixedAsset[]
+  assetCustodyLogs         AssetCustodyLog[]
+  assetDepreciationEntries AssetDepreciationEntry[]
+  staffAssignments         StaffAssignment[]
+
+  studentYearlyAchievementSnapshots StudentYearlyAchievementSnapshot[]
+  supervisorNotes                   SupervisorNote[]
+  supervisorVisitLogs               SupervisorVisitLog[]
+  supervisorVisitPlans              SupervisorVisitPlan[]
+  tuitionPlans                      TuitionPlan[]
+  users                             User[]
+
+  @@map("organizations")
+}
+
+model Center {
+  id                       Int                       @id @default(autoincrement())
+  organizationId           Int
+  name                     String                    @map("name_ar") @db.VarChar(120)
+  code                     String                    @db.VarChar(60)
+  isActive                 Boolean                   @default(true)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  gender                   Gender                    @default(MALE)
+  centerAdminUserId        Int                       @map("center_admin_user_id")
+  logoUrl                  String?                   @map("logo_url") @db.VarChar(500)
+  timezone                 String                    @default("Asia/Riyadh") @db.VarChar(64)
+  mosqueName               String?                   @map("mosque_name") @db.VarChar(255)
+  allowedRadiusMeters      Int?                      @default(500) @map("allowed_radius_meters")
+  latitude                 Decimal?                  @db.Decimal(10, 7)
+  longitude                Decimal?                  @db.Decimal(10, 7)
+  locationText             String?                   @map("location_text") @db.VarChar(255)
+  activityLogs             ActivityLog[]
+  accountingAccounts       AccountingAccount[]
+  journalEntries           JournalEntry[]
+  journalEntryLines        JournalEntryLine[]
+  auditLogs                AuditLog[]
+  centerSupervisors        CenterSupervisor[]
+  centerAdmin              User                      @relation("ManagedCenters", fields: [centerAdminUserId], references: [id])
+  organization             Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  circles                  Circle[]
+  correctionRequests       CorrectionRequest[]
+  donations                Donation[]
+  donors                   Donor[]
+  examNominationRequests   ExamNominationRequest[]
+  exams                    Exam[]
+  financeAccounts          FinanceAccount[]
+  financeDeductionEvents   FinanceDeductionEvent[]
+  financeTransfersFrom     FinanceFundTransfer[]     @relation("FundTransferFromCenter")
+  financeTransfersTo       FinanceFundTransfer[]     @relation("FundTransferToCenter")
+  financePolicies          FinancePolicyProfile[]
+  financeVouchers          FinanceVoucher[]
+  goldenRecords            GoldenRecord[]
+  graduationCandidates     GraduationCandidate[]
+  groupActivities          GroupActivity[]
+  invoices                 Invoice[]
+  libraryCategories        LibraryCategory[]
+  libraryItems             LibraryItem[]
+  monthlyPlans             MonthlyPlan[]
+  notifications            Notification[]
+  payrollBatches           PayrollBatch[]
+  payrollProfiles          PayrollProfile[]
+  prayerTimeCache          PrayerTimeCache[]
+  remoteRecitationBookings RemoteRecitationBooking[]
+  remoteRecitationSettings RemoteRecitationSetting[]
+  remoteRecitationSlots    RemoteRecitationSlot[]
+  reportFiles              ReportFile[]
+  reportRuns               ReportRun[]
+  rewardBatches            RewardBatch[]
+  rewardItems              RewardItem[]
+  rewardProfiles           RewardProfile[]
+  staffAttendances         StaffAttendanceRecord[]
+  staffExcuses             StaffExcuseRequest[]
+  staffLeaveRequests       StaffLeaveRequest[]
+  staffSchedules           StaffScheduleAssignment[]
+  studentFeeProfiles       StudentFeeProfile[]
+  salaryGrades             SalaryGrade[]
+  expenseInvoices          ExpenseInvoice[]
+  fixedAssets              FixedAsset[]
+  assetCustodyLogs         AssetCustodyLog[]
+  staffAssignments         StaffAssignment[]
+
+  studentYearlyAchievementSnapshots StudentYearlyAchievementSnapshot[]
+  supervisorNotes                   SupervisorNote[]
+  supervisorVisitLogs               SupervisorVisitLog[]
+  supervisorVisitPlanItems          SupervisorVisitPlanItem[]
+  supervisorVisitPlans              SupervisorVisitPlan[]
+  tuitionPlans                      TuitionPlan[]
+  userCenterAccesses                UserCenterAccess[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([organizationId, timezone])
+  @@index([centerAdminUserId])
+  @@map("centers")
+}
+
+model Circle {
+  id                       Int                       @id @default(autoincrement())
+  centerId                 Int
+  name                     String                    @map("name_ar") @db.VarChar(120)
+  teacherId                Int                       @map("primary_teacher_user_id")
+  isActive                 Boolean                   @default(true)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  gender                   Gender                    @default(MALE)
+  circleType               CircleType                @default(HIFZ) @map("circle_type")
+  mosqueName               String?                   @map("mosque_name") @db.VarChar(255)
+  locationText             String?                   @map("location_text") @db.VarChar(255)
+  latitude                 Decimal?                  @db.Decimal(10, 7)
+  longitude                Decimal?                  @db.Decimal(10, 7)
+  allowedRadiusMeters      Int?                      @map("allowed_radius_meters")
+  activityLogs             ActivityLog[]
+  attendanceRecords        AttendanceRecord[]
+  auditLogs                AuditLog[]
+  weeklyScheduleSlots      CircleScheduleSlot[]
+  center                   Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  teacher                  User                      @relation("TeacherCircles", fields: [teacherId], references: [id])
+  correctionRequests       CorrectionRequest[]
+  examAttempts             ExamAttempt[]             @relation("ExamAttemptCircle")
+  examNominationRequests   ExamNominationRequest[]
+  exams                    Exam[]
+  followUpRecords          FollowUpRecord[]
+  goldenRecords            GoldenRecord[]
+  graduationCandidates     GraduationCandidate[]
+  groupActivities          GroupActivity[]
+  libraryItems             LibraryItem[]
+  monthlyPlans             MonthlyPlan[]
+  notifications            Notification[]
+  remoteRecitationBookings RemoteRecitationBooking[]
+  remoteRecitationSetting  RemoteRecitationSetting?
+  remoteRecitationSlots    RemoteRecitationSlot[]
+  reportFiles              ReportFile[]
+  reportRuns               ReportRun[]
+  reviewPlanSettings       ReviewPlanSettings[]      @relation("ReviewPlanSettingsCircle")
+  rewardItems              RewardItem[]
+  staffSchedules           StaffScheduleAssignment[]
+  staffAssignments         StaffAssignment[]
+  enrollments              StudentCircleEnrollment[]
+
+  studentYearlyAchievementSnapshots StudentYearlyAchievementSnapshot[]
+  supervisorNotes                   SupervisorNote[]
+  supervisorVisitLogs               SupervisorVisitLog[]
+  supervisorVisitPlanItems          SupervisorVisitPlanItem[]
+  userCircleAccesses                UserCircleAccess[]
+
+  @@unique([centerId, name])
+  @@index([centerId])
+  @@index([teacherId])
+  @@index([gender])
+  @@index([circleType])
+  @@map("circles")
+}
+
+model CircleScheduleSlot {
+  id         Int                @id @default(autoincrement())
+  circleId   Int                @map("circle_id")
+  dayOfWeek  Weekday            @map("day_of_week")
+  mode       CircleScheduleMode @map("mode")
+  fromTime   String?            @map("from_time") @db.VarChar(5)
+  toTime     String?            @map("to_time") @db.VarChar(5)
+  fromPrayer PrayerName?        @map("from_prayer")
+  toPrayer   PrayerName?        @map("to_prayer")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+  circle     Circle             @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@unique([circleId, dayOfWeek])
+  @@index([circleId])
+  @@map("circle_schedule_slots")
+}
+
+model RemoteRecitationSetting {
+  id                      Int      @id @default(autoincrement())
+  centerId                Int      @map("center_id")
+  circleId                Int      @unique @map("circle_id")
+  isEnabled               Boolean  @default(false) @map("is_enabled")
+  slotDurationMinutes     Int      @default(30) @map("slot_duration_minutes")
+  bookingLeadHours        Int      @default(2) @map("booking_lead_hours")
+  cancellationWindowHours Int      @default(2) @map("cancellation_window_hours")
+  maxAdvanceDays          Int      @default(21) @map("max_advance_days")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  center                  Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle                  Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@index([centerId])
+  @@map("remote_recitation_settings")
+}
+
+model RemoteRecitationSlot {
+  id           Int                       @id @default(autoincrement())
+  centerId     Int                       @map("center_id")
+  circleId     Int                       @map("circle_id")
+  teacherId    Int                       @map("teacher_id")
+  startsAt     DateTime                  @map("starts_at")
+  endsAt       DateTime                  @map("ends_at")
+  joinUrl      String                    @map("join_url") @db.VarChar(500)
+  providerHost String?                   @map("provider_host") @db.VarChar(120)
+  note         String?                   @db.VarChar(500)
+  isActive     Boolean                   @default(true) @map("is_active")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+  lockVersion  Int                       @default(0) @map("lock_version")
+  bookings     RemoteRecitationBooking[]
+  center       Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle       Circle                    @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  teacher      User                      @relation("RemoteRecitationSlotTeacher", fields: [teacherId], references: [id])
+
+  @@index([centerId, startsAt])
+  @@index([circleId, startsAt])
+  @@index([teacherId, startsAt])
+  @@index([isActive, startsAt])
+  @@map("remote_recitation_slots")
+}
+
+model RemoteRecitationBooking {
+  id                 Int                           @id @default(autoincrement())
+  centerId           Int                           @map("center_id")
+  circleId           Int                           @map("circle_id")
+  slotId             Int                           @map("slot_id")
+  studentId          Int                           @map("student_id")
+  teacherId          Int                           @map("teacher_id")
+  status             RemoteRecitationBookingStatus @default(REQUESTED)
+  requestedAt        DateTime                      @default(now()) @map("requested_at")
+  reviewedAt         DateTime?                     @map("reviewed_at")
+  reviewNote         String?                       @map("review_note") @db.VarChar(500)
+  cancelledAt        DateTime?                     @map("cancelled_at")
+  cancellationReason String?                       @map("cancellation_reason") @db.VarChar(500)
+  completedAt        DateTime?                     @map("completed_at")
+  followUpRecordId   Int?                          @unique @map("follow_up_record_id")
+  createdAt          DateTime                      @default(now()) @map("created_at")
+  updatedAt          DateTime                      @updatedAt @map("updated_at")
+  lockVersion        Int                           @default(0) @map("lock_version")
+  center             Center                        @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle             Circle                        @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  followUpRecord     FollowUpRecord?               @relation("RemoteRecitationBookingFollowUp", fields: [followUpRecordId], references: [id])
+  slot               RemoteRecitationSlot          @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  student            User                          @relation("RemoteRecitationBookingStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher            User                          @relation("RemoteRecitationBookingTeacher", fields: [teacherId], references: [id])
+
+  @@index([centerId, status, requestedAt])
+  @@index([circleId, status, requestedAt])
+  @@index([slotId])
+  @@index([studentId, status, requestedAt])
+  @@index([teacherId, status, requestedAt])
+  @@map("remote_recitation_bookings")
+}
+
+model User {
+  id                                       Int                          @id @default(autoincrement())
+  organizationId                           Int
+  email                                    String                       @unique @db.VarChar(191)
+  fullName                                 String                       @db.VarChar(120)
+  role                                     Role
+  passwordHash                             String?                      @db.VarChar(255)
+  isActive                                 Boolean                      @default(true)
+  createdAt                                DateTime                     @default(now())
+  updatedAt                                DateTime                     @updatedAt
+  createdByUserId                          Int?
+  lastLoginAt                              DateTime?
+  username                                 String?                      @unique @db.VarChar(80)
+  accountStatus                            AccountStatus                @default(ACTIVE) @map("account_status")
+  activatedAt                              DateTime?                    @map("activated_at")
+  activationSentAt                         DateTime?                    @map("activation_sent_at")
+  activationTokenExpiresAt                 DateTime?                    @map("activation_token_expires_at")
+  activationTokenHash                      String?                      @map("activation_token_hash") @db.VarChar(255)
+  activityLogs                             ActivityLog[]
+  postedJournalEntries                     JournalEntry[]               @relation("JournalEntryPostedBy")
+  closedFiscalYears                        FiscalYear[]                 @relation("FiscalYearClosedBy")
+  closedFiscalPeriods                      FiscalPeriod[]               @relation("FiscalPeriodClosedBy")
+  attendanceMarked                         AttendanceRecord[]           @relation("MarkedByUser")
+  attendanceAsStudent                      AttendanceRecord[]           @relation("AttendanceStudent")
+  auditLogsAsActor                         AuditLog[]                   @relation("AuditActor")
+  createdCenterAdminProfiles               CenterAdminProfile[]         @relation("CenterAdminProfileCreatedBy")
+  centerAdminProfile                       CenterAdminProfile?
+  centerSupervisorLinks                    CenterSupervisor[]           @relation("CenterSupervisorUser")
+  managedCenters                           Center[]                     @relation("ManagedCenters")
+  taughtCircles                            Circle[]                     @relation("TeacherCircles")
+  correctionRequestsApplied                CorrectionRequest[]          @relation("CorrectionRequestAppliedBy")
+  correctionRequestsCreated                CorrectionRequest[]          @relation("CorrectionRequestRequestedBy")
+  correctionRequestsReviewed               CorrectionRequest[]          @relation("CorrectionRequestReviewedBy")
+  examAttemptCommitteeAssignments          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeAssignedBy")
+  examAttemptCommitteeMemberships          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeUser")
+  examAttemptsApproved                     ExamAttempt[]                @relation("ExamAttemptApprovedBy")
+  examAttemptsEvaluated                    ExamAttempt[]                @relation("ExamAttemptEvaluatedBy")
+  examAttemptsEvaluationClosed             ExamAttempt[]                @relation("ExamAttemptEvaluationClosedBy")
+  examAttemptsPublished                    ExamAttempt[]                @relation("ExamAttemptPublishedBy")
+  examAttemptsAsStudent                    ExamAttempt[]                @relation("ExamAttemptStudent")
+  centerApprovedExamNominationRequests     ExamNominationRequest[]      @relation("ExamNominationCenterApprovedBy")
+  createdExamNominationRequests            ExamNominationRequest[]      @relation("ExamNominationCreatedBy")
+  examNominationRequestsAsStudent          ExamNominationRequest[]      @relation("ExamNominationStudent")
+  supervisorReviewedExamNominationRequests ExamNominationRequest[]      @relation("ExamNominationSupervisorReviewedBy")
+  createdExamQuestionBankItems             ExamQuestionBankItem[]
+  createdExams                             Exam[]                       @relation("ExamCreatedBy")
+  financeDeductionsReviewed                FinanceDeductionEvent[]      @relation("DeductionsReviewed")
+  financeDeductions                        FinanceDeductionEvent[]      @relation("UserDeductions")
+  approvedFundTransfers                    FinanceFundTransfer[]        @relation("FundTransferApprovedBy")
+  requestedFundTransfers                   FinanceFundTransfer[]        @relation("FundTransferRequestedBy")
+  approvedFinanceVouchers                  FinanceVoucher[]             @relation("FinanceVoucherApprovedBy")
+  approvedExpenseInvoices                  ExpenseInvoice[]             @relation("ExpenseInvoiceApprovedBy")
+  assetCustodiesCreated                    AssetCustodyLog[]            @relation("AssetCustodyCreatedBy")
+  assetCustodiesFrom                       AssetCustodyLog[]            @relation("AssetCustodyFromUser")
+  assetCustodiesTo                         AssetCustodyLog[]            @relation("AssetCustodyToUser")
+  fixedAssetsInCustody                     FixedAsset[]                 @relation("FixedAssetCustodian")
+  createdFinanceVouchers                   FinanceVoucher[]             @relation("FinanceVoucherCreatedBy")
+  postedFinanceVouchers                    FinanceVoucher[]             @relation("FinanceVoucherPostedBy")
+  followUpsAsStudent                       FollowUpRecord[]             @relation("FollowUpStudent")
+  followUpsAsTeacher                       FollowUpRecord[]             @relation("FollowUpTeacher")
+  approvedGoldenRecords                    GoldenRecord[]               @relation("GoldenRecordApprovedBy")
+  createdGoldenRecords                     GoldenRecord[]               @relation("GoldenRecordCreatedBy")
+  rejectedGoldenRecords                    GoldenRecord[]               @relation("GoldenRecordRejectedBy")
+  goldenRecordsAsStudent                   GoldenRecord[]               @relation("GoldenRecordStudent")
+  submittedGoldenRecords                   GoldenRecord[]               @relation("GoldenRecordSubmittedBy")
+  updatedGoldenRecords                     GoldenRecord[]               @relation("GoldenRecordUpdatedBy")
+  approvedGraduationCandidates             GraduationCandidate[]        @relation("GraduationCandidateApprovedBy")
+  createdGraduationCandidates              GraduationCandidate[]        @relation("GraduationCandidateCreatedBy")
+  deferredGraduationCandidates             GraduationCandidate[]        @relation("GraduationCandidateDeferredBy")
+  rejectedGraduationCandidates             GraduationCandidate[]        @relation("GraduationCandidateRejectedBy")
+  graduationCandidatesAsStudent            GraduationCandidate[]        @relation("GraduationCandidateStudent")
+  updatedGraduationCandidates              GraduationCandidate[]        @relation("GraduationCandidateUpdatedBy")
+  groupActivitiesAsTeacher                 GroupActivity[]              @relation("GroupActivityTeacher")
+  groupActivityParticipations              GroupActivityParticipant[]   @relation("GroupActivityStudent")
+  invoicesCancelled                        Invoice[]                    @relation("InvoiceCancelledBy")
+  invoicesAsStudent                        Invoice[]                    @relation("InvoiceStudent")
+  createdLibraryItems                      LibraryItem[]                @relation("LibraryItemCreatedBy")
+  monthlyPlansAsStudent                    MonthlyPlan[]                @relation("MonthlyPlanStudent")
+  monthlyPlansAsTeacher                    MonthlyPlan[]                @relation("MonthlyPlanTeacher")
+  notificationsCreated                     Notification[]               @relation("NotificationCreatedBy")
+  notificationsReceived                    Notification[]               @relation("NotificationRecipient")
+  createdParentProfiles                    ParentProfile[]              @relation("ParentProfileCreatedBy")
+  parentProfile                            ParentProfile?
+  createdParentStudentLinks                ParentStudentLink[]          @relation("ParentStudentLinkCreatedBy")
+  parentLinks                              ParentStudentLink[]          @relation("ParentLinks")
+  childLinks                               ParentStudentLink[]          @relation("ChildLinks")
+  passwordResetTokens                      PasswordResetToken[]
+  receivedPayments                         Payment[]                    @relation("PaymentReceivedBy")
+  approvedPayrollBatches                   PayrollBatch[]               @relation("PayrollBatchApprovedBy")
+  payrollItems                             PayrollItem[]                @relation("PayrollItemBeneficiary")
+  payrollProfiles                          PayrollProfile[]             @relation("PayrollProfileUser")
+  approvedPayrollProfiles                  PayrollProfile[]             @relation("PayrollProfileApprovedBy")
+  staffAssignments                         StaffAssignment[]            @relation("StaffAssignmentUser")
+  staffAssignmentsCreated                  StaffAssignment[]            @relation("StaffAssignmentCreatedBy")
+  staffAssignmentsEnded                    StaffAssignment[]            @relation("StaffAssignmentEndedBy")
+  refreshTokens                            RefreshToken[]
+  remoteRecitationBookingsAsStudent        RemoteRecitationBooking[]    @relation("RemoteRecitationBookingStudent")
+  remoteRecitationBookingsAsTeacher        RemoteRecitationBooking[]    @relation("RemoteRecitationBookingTeacher")
+  remoteRecitationSlotsAsTeacher           RemoteRecitationSlot[]       @relation("RemoteRecitationSlotTeacher")
+  createdReportFiles                       ReportFile[]                 @relation("ReportFileCreatedBy")
+  requestedReportRuns                      ReportRun[]                  @relation("ReportRequestedBy")
+  reviewPlanSettings                       ReviewPlanSettings[]         @relation("ReviewPlanSettingsTeacher")
+  approvedRewardBatches                    RewardBatch[]                @relation("RewardBatchApprovedBy")
+  rewardItems                              RewardItem[]                 @relation("RewardItemBeneficiary")
+  rewardProfiles                           RewardProfile[]              @relation("RewardProfileBeneficiary")
+  staffAttendancesMarked                   StaffAttendanceRecord[]      @relation("StaffAttendanceMarkedBy")
+  staffAttendances                         StaffAttendanceRecord[]      @relation("StaffAttendanceUser")
+  staffExcusesHandled                      StaffExcuseRequest[]         @relation("StaffExcuseHandledBy")
+  staffExcuses                             StaffExcuseRequest[]         @relation("StaffExcuseUser")
+  staffLeavesHandled                       StaffLeaveRequest[]          @relation("StaffLeavesHandled")
+  staffLeaveRequests                       StaffLeaveRequest[]          @relation("StaffLeaves")
+  staffSchedules                           StaffScheduleAssignment[]    @relation("StaffSchedules")
+  studentEnrollments                       StudentCircleEnrollment[]    @relation("StudentEnrollments")
+  studentFeeProfiles                       StudentFeeProfile[]          @relation("StudentFeeProfileStudent")
+
+  createdStudentProfiles       StudentProfile[]                   @relation("StudentProfileCreatedBy")
+  studentProfile               StudentProfile?
+  tuitionAssignments           StudentTuitionAssignment[]         @relation("StudentTuitionAssignments")
+  capturedAchievementSnapshots StudentYearlyAchievementSnapshot[] @relation("AchievementSnapshotCapturedBy")
+  studentAchievementSnapshots  StudentYearlyAchievementSnapshot[] @relation("AchievementSnapshotStudent")
+  supervisorNotes              SupervisorNote[]                   @relation("SupervisorNotes")
+  createdSupervisorProfiles    SupervisorProfile[]                @relation("SupervisorProfileCreatedBy")
+  supervisorProfile            SupervisorProfile?
+  supervisorVisitLogs          SupervisorVisitLog[]               @relation("SupervisorVisitLogs")
+  supervisorVisitPlansCreated  SupervisorVisitPlan[]              @relation("PlansCreated")
+  supervisorVisitPlans         SupervisorVisitPlan[]              @relation("SupervisorPlans")
+  createdTeacherProfiles       TeacherProfile[]                   @relation("TeacherProfileCreatedBy")
+  teacherProfile               TeacherProfile?
+  centerAccesses               UserCenterAccess[]
+  circleAccesses               UserCircleAccess[]
+  createdUserProfiles          UserProfile[]                      @relation("UserProfileCreatedBy")
+  profile                      UserProfile?
+  createdByUser                User?                              @relation("UserCreatedBy", fields: [createdByUserId], references: [id])
+  createdUsers                 User[]                             @relation("UserCreatedBy")
+  organization                 Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([role])
+  @@index([isActive])
+  @@index([createdByUserId])
+  @@index([lastLoginAt])
+  @@map("users")
+}
+
+model UserProfile {
+  userId          Int       @id
+  fullName        String    @db.VarChar(160)
+  gender          Gender
+  birthDate       DateTime? @db.Date
+  phone           String?   @unique @db.VarChar(32)
+  address         String?   @db.VarChar(255)
+  avatarUrl       String?   @db.VarChar(500)
+  createdByUserId Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  phoneNormalized String?   @unique @map("phone_normalized") @db.VarChar(32)
+  createdByUser   User?     @relation("UserProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fullName])
+  @@index([createdByUserId])
+  @@map("user_profiles")
+}
+
+model TeacherProfile {
+  userId          Int         @id
+  hireDate        DateTime?   @db.Date
+  khatmType       KhatmType?
+  riwaya          RiwayaType?
+  educationLevel  String?     @db.VarChar(120)
+  yearsExperience Int?
+  createdByUserId Int?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdByUser   User?       @relation("TeacherProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUserId])
+  @@map("teacher_profiles")
+}
+
+model SupervisorProfile {
+  userId             Int                     @id
+  assignedAt         DateTime?               @db.Date
+  status             SupervisorProfileStatus @default(ACTIVE)
+  educationLevel     String?                 @db.VarChar(120)
+  yearsExperience    Int?
+  quranQualification KhatmType?
+  professionalNotes  String?                 @db.VarChar(500)
+  createdByUserId    Int?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  createdByUser      User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdByUserId])
+  @@map("supervisor_profiles")
+}
+
+model CenterAdminProfile {
+  userId                        Int              @id
+  assignedAt                    DateTime?        @db.Date
+  employmentStatus              EmploymentStatus @default(ACTIVE)
+  educationLevel                String?          @db.VarChar(120)
+  yearsExperience               Int?
+  administrativeExperienceYears Int?
+  professionalNotes             String?          @db.VarChar(500)
+  createdByUserId               Int?
+  createdAt                     DateTime         @default(now())
+  updatedAt                     DateTime         @updatedAt
+  createdByUser                 User?            @relation("CenterAdminProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user                          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([employmentStatus])
+  @@index([createdByUserId])
+  @@map("center_admin_profiles")
+}
+
+model StudentProfile {
+  userId          Int                  @id
+  nickname        String?              @db.VarChar(80)
+  level           StudentLevel         @default(BEGINNER)
+  studentStatus   StudentProfileStatus @default(REGULAR)
+  joinDate        DateTime?            @db.Date
+  createdByUserId Int?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  currentJuzz     Int                  @default(0) @map("current_juzz")
+  createdByUser   User?                @relation("StudentProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([level])
+  @@index([studentStatus])
+  @@index([createdByUserId])
+  @@map("student_profiles")
+}
+
+model ParentProfile {
+  userId          Int                        @id
+  relationType    ParentProfileRelationType?
+  createdByUserId Int?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  createdByUser   User?                      @relation("ParentProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([relationType])
+  @@index([createdByUserId])
+  @@map("parent_profiles")
+}
+
+model CenterSupervisor {
+  id               Int      @id @default(autoincrement())
+  centerId         Int
+  supervisorUserId Int      @map("supervisor_user_id")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  center           Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  supervisor       User     @relation("CenterSupervisorUser", fields: [supervisorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([centerId, supervisorUserId])
+  @@index([centerId])
+  @@index([supervisorUserId])
+  @@index([isActive])
+  @@map("center_supervisors")
+}
+
+model UserCenterAccess {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  centerId  Int
+  createdAt DateTime @default(now())
+  center    Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, centerId])
+  @@index([centerId])
+  @@map("user_center_accesses")
+}
+
+model UserCircleAccess {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  circleId  Int
+  createdAt DateTime @default(now())
+  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, circleId])
+  @@index([circleId])
+  @@map("user_circle_accesses")
+}
+
+model StudentCircleEnrollment {
+  id        Int              @id @default(autoincrement())
+  studentId Int
+  circleId  Int
+  status    EnrollmentStatus @default(ACTIVE)
+  startDate DateTime         @default(now())
+  endDate   DateTime?
+  circle    Circle           @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  student   User             @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, circleId])
+  @@index([circleId])
+  @@index([status])
+  @@index([studentId, status])
+  @@map("student_circle_enrollments")
+}
+
+model ParentStudentLink {
+  id              Int                @id @default(autoincrement())
+  parentId        Int
+  studentId       Int
+  relationType    ParentRelationType @default(GUARDIAN)
+  createdAt       DateTime           @default(now())
+  createdByUserId Int?
+  createdByUser   User?              @relation("ParentStudentLinkCreatedBy", fields: [createdByUserId], references: [id])
+  parent          User               @relation("ParentLinks", fields: [parentId], references: [id], onDelete: Cascade)
+  student         User               @relation("ChildLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+  @@index([studentId])
+  @@index([createdByUserId])
+  @@map("parent_student_links")
+}
+
+model AttendanceRecord {
+  id             Int              @id @default(autoincrement())
+  studentId      Int
+  circleId       Int
+  attendanceDate DateTime         @db.Date
+  status         AttendanceStatus
+  markedById     Int
+  note           String?          @db.VarChar(500)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  lockVersion    Int              @default(0) @map("lock_version")
+  circle         Circle           @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  markedBy       User             @relation("MarkedByUser", fields: [markedById], references: [id])
+  student        User             @relation("AttendanceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, circleId, attendanceDate])
+  @@index([circleId, attendanceDate])
+  @@index([circleId, attendanceDate, lockVersion])
+  @@index([studentId, attendanceDate])
+  @@map("attendance_records")
+}
+
+model StaffAttendanceRecord {
+  id                    Int              @id @default(autoincrement())
+  organizationId        Int              @map("organization_id")
+  centerId              Int              @map("center_id")
+  userId                Int              @map("user_id")
+  attendanceDate        DateTime         @map("attendance_date") @db.Date
+  status                AttendanceStatus
+  checkInTime           DateTime?        @map("check_in_time")
+  checkOutTime          DateTime?        @map("check_out_time")
+  markedById            Int?             @map("marked_by_id")
+  note                  String?          @db.VarChar(500)
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  earlyDepartureMinutes Int?             @map("early_departure_minutes")
+  lateMinutes           Int?             @map("late_minutes")
+  source                AttendanceSource @default(MANUAL)
+  staffRole             StaffRoleType    @default(TEACHER) @map("staff_role")
+  center                Center           @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  markedBy              User?            @relation("StaffAttendanceMarkedBy", fields: [markedById], references: [id])
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                  User             @relation("StaffAttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, attendanceDate])
+  @@index([centerId, attendanceDate])
+  @@index([organizationId, attendanceDate])
+  @@map("staff_attendance_records")
+}
+
+model StaffExcuseRequest {
+  id             Int                 @id @default(autoincrement())
+  organizationId Int                 @map("organization_id")
+  centerId       Int                 @map("center_id")
+  userId         Int                 @map("user_id")
+  absenceDate    DateTime            @map("absence_date") @db.Date
+  reason         String              @db.VarChar(1000)
+  status         ExcuseRequestStatus @default(PENDING)
+  handledById    Int?                @map("handled_by_id")
+  handledAt      DateTime?           @map("handled_at")
+  responseNote   String?             @map("response_note") @db.VarChar(500)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  center         Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  handledBy      User?               @relation("StaffExcuseHandledBy", fields: [handledById], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                @relation("StaffExcuseUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([centerId, status])
+  @@index([userId, absenceDate])
+  @@map("staff_excuse_requests")
+}
+
+model AttendancePolicy {
+  id                             Int            @id @default(autoincrement())
+  organizationId                 Int            @unique @map("organization_id")
+  gracePeriodMinutes             Int            @default(15) @map("grace_period_minutes")
+  autoAbsenceDelayMinutes        Int            @default(60) @map("auto_absence_delay_minutes")
+  weekendDays                    Json           @default("[\"FRIDAY\", \"SATURDAY\"]") @map("weekend_days")
+  holidays                       Json           @default("[]") @map("holidays")
+  geoEnforcement                 GeoEnforcement @default(WARN_ONLY) @map("geo_enforcement")
+  defaultShiftDurationMinutes    Int            @default(480) @map("default_shift_duration_minutes")
+  earlyDepartureThresholdMinutes Int            @default(15) @map("early_departure_threshold_minutes")
+  prayerApiSource                String         @default("ALADHAN") @map("prayer_api_source") @db.VarChar(120)
+  timezone                       String         @default("Asia/Riyadh") @db.VarChar(64)
+  createdAt                      DateTime       @default(now()) @map("created_at")
+  updatedAt                      DateTime       @updatedAt @map("updated_at")
+  organization                   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_policies")
+}
+
+model StaffScheduleAssignment {
+  id             Int                 @id @default(autoincrement())
+  organizationId Int                 @map("organization_id")
+  userId         Int                 @map("user_id")
+  staffRole      StaffRoleType       @map("staff_role")
+  centerId       Int                 @map("center_id")
+  circleId       Int?                @map("circle_id")
+  sourceType     ScheduleSourceType  @default(MANUAL) @map("source_type")
+  isActive       Boolean             @default(true) @map("is_active")
+  effectiveFrom  DateTime            @default(now()) @map("effective_from") @db.Date
+  effectiveTo    DateTime?           @map("effective_to") @db.Date
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  center         Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle         Circle?             @relation(fields: [circleId], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                @relation("StaffSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  slots          StaffScheduleSlot[]
+
+  @@index([organizationId])
+  @@index([userId, isActive])
+  @@index([centerId])
+  @@map("staff_schedule_assignments")
+}
+
+model StaffScheduleSlot {
+  id                      Int                     @id @default(autoincrement())
+  assignmentId            Int                     @map("assignment_id")
+  dayOfWeek               Weekday                 @map("day_of_week")
+  mode                    CircleScheduleMode      @map("mode")
+  fromTime                String?                 @map("from_time") @db.VarChar(5)
+  toTime                  String?                 @map("to_time") @db.VarChar(5)
+  fromPrayer              PrayerName?             @map("from_prayer")
+  toPrayer                PrayerName?             @map("to_prayer")
+  fromPrayerOffsetMinutes Int                     @default(0) @map("from_prayer_offset_minutes")
+  toPrayerOffsetMinutes   Int                     @default(0) @map("to_prayer_offset_minutes")
+  defaultDurationMinutes  Int?                    @map("default_duration_minutes")
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @updatedAt @map("updated_at")
+  assignment              StaffScheduleAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
+  @@map("staff_schedule_slots")
+}
+
+model StaffLeaveRequest {
+  id             Int                @id @default(autoincrement())
+  organizationId Int                @map("organization_id")
+  userId         Int                @map("user_id")
+  centerId       Int                @map("center_id")
+  leaveType      LeaveType          @map("leave_type")
+  startDate      DateTime           @map("start_date") @db.Date
+  endDate        DateTime           @map("end_date") @db.Date
+  totalDays      Int                @map("total_days")
+  reason         String             @db.VarChar(1000)
+  attachmentUrl  String?            @map("attachment_url") @db.VarChar(500)
+  status         LeaveRequestStatus @default(LEAVE_PENDING)
+  handledById    Int?               @map("handled_by_id")
+  handledAt      DateTime?          @map("handled_at")
+  responseNote   String?            @map("response_note") @db.VarChar(500)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  center         Center             @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  handledBy      User?              @relation("StaffLeavesHandled", fields: [handledById], references: [id])
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User               @relation("StaffLeaves", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([userId, startDate])
+  @@index([centerId])
+  @@map("staff_leave_requests")
+}
+
+model SupervisorVisitPlan {
+  id             Int                       @id @default(autoincrement())
+  organizationId Int                       @map("organization_id")
+  supervisorId   Int                       @map("supervisor_id")
+  centerId       Int                       @map("center_id")
+  month          Int
+  year           Int
+  status         VisitPlanStatus           @default(VISIT_PLAN_DRAFT)
+  createdById    Int                       @map("created_by_id")
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+  items          SupervisorVisitPlanItem[]
+  center         Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  createdBy      User                      @relation("PlansCreated", fields: [createdById], references: [id])
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supervisor     User                      @relation("SupervisorPlans", fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@unique([supervisorId, centerId, month, year])
+  @@index([organizationId])
+  @@map("supervisor_visit_plans")
+}
+
+model SupervisorVisitPlanItem {
+  id                Int                  @id @default(autoincrement())
+  planId            Int                  @map("plan_id")
+  centerId          Int                  @map("center_id")
+  circleId          Int?                 @map("circle_id")
+  plannedDate       DateTime             @map("planned_date") @db.Date
+  plannedTimeWindow String?              @map("planned_time_window") @db.VarChar(100)
+  priority          VisitPriority        @default(NORMAL)
+  notes             String?              @db.VarChar(500)
+  status            VisitPlanItemStatus  @default(VISIT_ITEM_PENDING)
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  logs              SupervisorVisitLog[]
+  center            Center               @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle            Circle?              @relation(fields: [circleId], references: [id])
+  plan              SupervisorVisitPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+  @@index([plannedDate])
+  @@map("supervisor_visit_plan_items")
+}
+
+model SupervisorVisitLog {
+  id                  Int                      @id @default(autoincrement())
+  organizationId      Int                      @map("organization_id")
+  planItemId          Int?                     @map("plan_item_id")
+  supervisorId        Int                      @map("supervisor_id")
+  centerId            Int                      @map("center_id")
+  circleId            Int?                     @map("circle_id")
+  startedAt           DateTime                 @map("started_at")
+  endedAt             DateTime?                @map("ended_at")
+  durationMinutes     Int?                     @map("duration_minutes")
+  startLatitude       Decimal?                 @map("start_latitude") @db.Decimal(10, 7)
+  startLongitude      Decimal?                 @map("start_longitude") @db.Decimal(10, 7)
+  startGeoState       GeoState                 @default(NOT_SENT) @map("start_geo_state")
+  startDistanceMeters Int?                     @map("start_distance_meters")
+  endLatitude         Decimal?                 @map("end_latitude") @db.Decimal(10, 7)
+  endLongitude        Decimal?                 @map("end_longitude") @db.Decimal(10, 7)
+  endGeoState         GeoState                 @default(NOT_SENT) @map("end_geo_state")
+  endDistanceMeters   Int?                     @map("end_distance_meters")
+  checklist           Json?
+  rating              Int?
+  observations        String?                  @db.VarChar(1000)
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+  center              Center                   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle              Circle?                  @relation(fields: [circleId], references: [id])
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planItem            SupervisorVisitPlanItem? @relation(fields: [planItemId], references: [id])
+  supervisor          User                     @relation("SupervisorVisitLogs", fields: [supervisorId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([supervisorId, startedAt])
+  @@map("supervisor_visit_logs")
+}
+
+model FinanceDeductionRule {
+  id                 Int                     @id @default(autoincrement())
+  organizationId     Int                     @map("organization_id")
+  triggerType        DeductionTriggerType    @map("trigger_type")
+  thresholdCount     Int?                    @map("threshold_count")
+  deductionAmountSAR Decimal                 @map("deduction_amount_sar") @db.Decimal(10, 2)
+  deductionType      DeductionCalcType       @default(FIXED) @map("deduction_type")
+  isActive           Boolean                 @default(true) @map("is_active")
+  description        String?                 @db.VarChar(500)
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  events             FinanceDeductionEvent[]
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, triggerType])
+  @@map("finance_deduction_rules")
+}
+
+model FinanceDeductionEvent {
+  id                  Int                  @id @default(autoincrement())
+  organizationId      Int                  @map("organization_id")
+  userId              Int                  @map("user_id")
+  centerId            Int                  @map("center_id")
+  ruleId              Int                  @map("rule_id")
+  month               Int
+  year                Int
+  triggerType         DeductionTriggerType @map("trigger_type")
+  occurrenceCount     Int                  @default(1) @map("occurrence_count")
+  calculatedAmountSAR Decimal              @map("calculated_amount_sar") @db.Decimal(10, 2)
+  status              DeductionEventStatus @default(DEDUCTION_PENDING)
+  payrollBatchId      Int?                 @map("payroll_batch_id")
+  reviewedById        Int?                 @map("reviewed_by_id")
+  reviewedAt          DateTime?            @map("reviewed_at")
+  reviewNote          String?              @map("review_note") @db.VarChar(500)
+  details             Json?
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  center              Center               @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy          User?                @relation("DeductionsReviewed", fields: [reviewedById], references: [id])
+  rule                FinanceDeductionRule @relation(fields: [ruleId], references: [id])
+  user                User                 @relation("UserDeductions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, month, year, triggerType], name: "deduction_event_no_duplicate")
+  @@index([organizationId, month, year])
+  @@index([userId])
+  @@index([payrollBatchId])
+  @@map("finance_deduction_events")
+}
+
+model PrayerTimeCache {
+  centerId  Int      @map("center_id")
+  date      DateTime @db.Date
+  fajr      String   @db.VarChar(5)
+  dhuhr     String   @db.VarChar(5)
+  asr       String   @db.VarChar(5)
+  maghrib   String   @db.VarChar(5)
+  isha      String   @db.VarChar(5)
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+  center    Center   @relation(fields: [centerId], references: [id], onDelete: Cascade)
+
+  @@id([centerId, date])
+  @@map("prayer_time_cache")
+}
+
+model FollowUpRecord {
+  id                      Int                      @id @default(autoincrement())
+  studentId               Int                      @map("student_id")
+  circleId                Int                      @map("circle_id")
+  teacherId               Int                      @map("teacher_id")
+  recordDate              DateTime                 @map("record_date") @db.Date
+  type                    FollowUpType
+  surah                   String?                  @db.VarChar(120)
+  fromAyah                Int?                     @map("from_ayah")
+  toAyah                  Int?                     @map("to_ayah")
+  pagesCount              Decimal?                 @map("pages_count") @db.Decimal(5, 1)
+  rating                  Int?
+  matnName                String?                  @map("matn_name") @db.VarChar(120)
+  matnStatus              String?                  @map("matn_status") @db.VarChar(50)
+  notes                   String?                  @db.VarChar(500)
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  status                  FollowUpRecordStatus     @default(FINAL)
+  finalizedAt             DateTime?                @map("finalized_at")
+  fromSurah               Int?                     @map("from_surah")
+  toSurah                 Int?                     @map("to_surah")
+  ayahCount               Int?                     @map("ayah_count")
+  fromPage                Int?                     @map("from_page")
+  toPage                  Int?                     @map("to_page")
+  matnId                  Int?                     @map("matn_id")
+  matnFromRef             String?                  @map("matn_from_ref") @db.VarChar(80)
+  matnToRef               String?                  @map("matn_to_ref") @db.VarChar(80)
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  lockVersion             Int                      @default(0) @map("lock_version")
+  circle                  Circle                   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  matn                    MatnCatalog?             @relation(fields: [matnId], references: [id])
+  student                 User                     @relation("FollowUpStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher                 User                     @relation("FollowUpTeacher", fields: [teacherId], references: [id])
+  remoteRecitationBooking RemoteRecitationBooking? @relation("RemoteRecitationBookingFollowUp")
+
+  @@index([studentId, recordDate])
+  @@index([circleId, recordDate])
+  @@index([status, recordDate])
+  @@index([matnId])
+  @@map("follow_up_records")
+}
+
+model MatnCatalog {
+  id              Int              @id @default(autoincrement())
+  organizationId  Int?             @map("organization_id")
+  code            String           @db.VarChar(80)
+  titleAr         String           @map("title_ar") @db.VarChar(160)
+  titleEn         String?          @map("title_en") @db.VarChar(160)
+  category        String           @db.VarChar(80)
+  isActive        Boolean          @default(true) @map("is_active")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  followUpRecords FollowUpRecord[]
+  organization    Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("matn_catalogs")
+}
+
+model SupervisorNote {
+  id             Int                    @id @default(autoincrement())
+  organizationId Int                    @map("organization_id")
+  centerId       Int                    @map("center_id")
+  circleId       Int?                   @map("circle_id")
+  supervisorId   Int                    @map("supervisor_id")
+  category       SupervisorNoteCategory @default(GENERAL)
+  status         SupervisorNoteStatus   @default(PENDING)
+  targetLabel    String?                @map("target_label") @db.VarChar(255)
+  content        String
+  scores         Json?
+  visitChecklist Json?                  @map("visit_checklist")
+  rating         Int?
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+  center         Center                 @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle         Circle?                @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supervisor     User                   @relation("SupervisorNotes", fields: [supervisorId], references: [id])
+
+  @@index([organizationId, centerId])
+  @@index([circleId])
+  @@index([supervisorId])
+  @@index([category])
+  @@index([status])
+  @@map("supervisor_notes")
+}
+
+model CorrectionRequest {
+  id              Int                     @id @default(autoincrement())
+  organizationId  Int                     @map("organization_id")
+  centerId        Int                     @map("center_id")
+  circleId        Int                     @map("circle_id")
+  targetType      CorrectionTargetType    @map("target_type")
+  targetId        Int                     @map("target_id")
+  requestedById   Int                     @map("requested_by_id")
+  requestedByRole Role                    @map("requested_by_role")
+  reason          String
+  proposedChanges Json                    @map("proposed_changes")
+  currentSnapshot Json                    @map("current_snapshot")
+  status          CorrectionRequestStatus @default(PENDING)
+  reviewedById    Int?                    @map("reviewed_by_id")
+  reviewNote      String?                 @map("review_note") @db.VarChar(500)
+  reviewedAt      DateTime?               @map("reviewed_at")
+  appliedById     Int?                    @map("applied_by_id")
+  appliedAt       DateTime?               @map("applied_at")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  appliedBy       User?                   @relation("CorrectionRequestAppliedBy", fields: [appliedById], references: [id])
+  center          Center                  @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle          Circle                  @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy     User                    @relation("CorrectionRequestRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy      User?                   @relation("CorrectionRequestReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([organizationId, status, createdAt])
+  @@index([targetType, targetId])
+  @@index([requestedById, createdAt])
+  @@map("correction_requests")
+}
+
+model QuranAyahIndex {
+  id              Int      @id @default(autoincrement())
+  surahNumber     Int      @map("surah_number")
+  ayahNumber      Int      @map("ayah_number")
+  pageNumber      Int      @map("page_number")
+  juzNumber       Int      @map("juz_number")
+  hizbQuarter     Int?     @map("hizb_quarter")
+  provider        String   @db.VarChar(120)
+  providerVersion String?  @map("provider_version") @db.VarChar(120)
+  fetchedAt       DateTime @map("fetched_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([surahNumber, ayahNumber])
+  @@index([pageNumber])
+  @@index([fetchedAt])
+  @@map("quran_ayah_index")
+}
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  tokenHash  String    @unique @db.VarChar(128)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  userAgent  String?   @db.VarChar(255)
+  ipAddress  String?   @db.VarChar(64)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@index([expiresAt, revokedAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  userAgent String?   @map("user_agent") @db.VarChar(255)
+  ipAddress String?   @map("ip_address") @db.VarChar(64)
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, usedAt])
+  @@index([expiresAt, usedAt])
+  @@map("password_reset_tokens")
+}
+
+model ActivityLog {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  userId         Int?
+  centerId       Int?
+  circleId       Int?
+  activityType   ActivityType
+  entityType     String       @db.VarChar(100)
+  entityId       Int?
+  message        String       @db.VarChar(255)
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  center         Center?      @relation(fields: [centerId], references: [id])
+  circle         Circle?      @relation(fields: [circleId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([centerId, createdAt])
+  @@index([circleId, createdAt])
+  @@index([userId, createdAt])
+  @@map("activity_logs")
+}
+
+model Exam {
+  id                   Int                     @id @default(autoincrement())
+  organizationId       Int                     @map("organization_id")
+  centerId             Int?                    @map("center_id")
+  circleId             Int?                    @map("circle_id")
+  title                String                  @db.VarChar(160)
+  type                 ExamType
+  examBranch           String?                 @map("exam_branch") @db.VarChar(120)
+  purpose              ExamPurpose             @default(NORMAL)
+  maxScore             Float                   @default(100) @map("max_score")
+  passScore            Float                   @map("pass_score")
+  status               ExamStatus              @default(DRAFT)
+  scheduledAt          DateTime?               @map("scheduled_at")
+  createdById          Int                     @map("created_by_id")
+  createdAt            DateTime                @default(now()) @map("created_at")
+  updatedAt            DateTime                @updatedAt @map("updated_at")
+  attempts             ExamAttempt[]
+  criteria             ExamCriteria?
+  nominationRequests   ExamNominationRequest[]
+  center               Center?                 @relation(fields: [centerId], references: [id])
+  circle               Circle?                 @relation(fields: [circleId], references: [id])
+  createdBy            User                    @relation("ExamCreatedBy", fields: [createdById], references: [id])
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  goldenRecords        GoldenRecord[]
+  graduationCandidates GraduationCandidate[]
+
+  @@index([organizationId, centerId, status])
+  @@index([organizationId, centerId, purpose, status])
+  @@index([circleId])
+  @@index([purpose, scheduledAt])
+  @@index([scheduledAt])
+  @@map("exams")
+}
+
+model ExamCriteria {
+  id                      Int   @id @default(autoincrement())
+  examId                  Int   @unique @map("exam_id")
+  memorizationScore       Float @default(0) @map("memorization_score")
+  tajweedScore            Float @default(0) @map("tajweed_score")
+  performanceScore        Float @default(0) @map("performance_score")
+  promptingPenalty        Float @default(0) @map("prompting_penalty")
+  remindingPenalty        Float @default(0) @map("reminding_penalty")
+  tajweedPenalty          Float @default(0) @map("tajweed_penalty")
+  theoreticalTajweedScore Float @default(0) @map("theoretical_tajweed_score")
+  minQuestionCount        Int   @default(1) @map("min_question_count")
+  defaultQuestionCount    Int   @default(5) @map("default_question_count")
+  maxQuestionCount        Int   @default(10) @map("max_question_count")
+  exam                    Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@map("exam_criteria")
+}
+
+model ExamNominationRequest {
+  id                     Int                     @id @default(autoincrement())
+  organizationId         Int                     @map("organization_id")
+  centerId               Int                     @map("center_id")
+  examId                 Int                     @map("exam_id")
+  studentId              Int                     @map("student_id")
+  circleId               Int                     @map("circle_id")
+  proposedExamDate       DateTime?               @map("proposed_exam_date") @db.Date
+  teacherNotes           String?                 @map("teacher_notes") @db.VarChar(2000)
+  readinessScore         Int?                    @map("readiness_score")
+  status                 NominationRequestStatus @default(SUBMITTED)
+  supervisorReviewNotes  String?                 @map("supervisor_review_notes") @db.VarChar(2000)
+  supervisorReviewedById Int?                    @map("supervisor_reviewed_by_id")
+  supervisorReviewedAt   DateTime?               @map("supervisor_reviewed_at")
+  centerApprovalNotes    String?                 @map("center_approval_notes") @db.VarChar(2000)
+  centerApprovedById     Int?                    @map("center_approved_by_id")
+  centerApprovedAt       DateTime?               @map("center_approved_at")
+  createdById            Int                     @map("created_by_id")
+  createdAt              DateTime                @default(now()) @map("created_at")
+  updatedAt              DateTime                @updatedAt @map("updated_at")
+  attempt                ExamAttempt?
+  centerApprovedBy       User?                   @relation("ExamNominationCenterApprovedBy", fields: [centerApprovedById], references: [id])
+  center                 Center                  @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle                 Circle                  @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  createdBy              User                    @relation("ExamNominationCreatedBy", fields: [createdById], references: [id])
+  exam                   Exam                    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student                User                    @relation("ExamNominationStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  supervisorReviewedBy   User?                   @relation("ExamNominationSupervisorReviewedBy", fields: [supervisorReviewedById], references: [id])
+
+  @@index([organizationId, status, createdAt])
+  @@index([centerId, status, createdAt])
+  @@index([circleId, status, createdAt])
+  @@index([studentId, status, createdAt])
+  @@index([examId, status, createdAt])
+  @@map("exam_nomination_requests")
+}
+
+model ExamAttempt {
+  id                   Int                          @id @default(autoincrement())
+  examId               Int                          @map("exam_id")
+  studentId            Int                          @map("student_id")
+  circleId             Int                          @map("circle_id")
+  nominationRequestId  Int?                         @unique @map("nomination_request_id")
+  examDate             DateTime                     @map("exam_date") @db.Date
+  fullQuranCompletedAt DateTime?                    @map("full_quran_completed_at") @db.Date
+  committeeNotes       String?                      @map("committee_notes")
+  totalScore           Float?                       @map("total_score")
+  gradeLabel           String?                      @map("grade_label") @db.VarChar(40)
+  status               AttemptStatus                @default(SCHEDULED)
+  startedAt            DateTime?                    @map("started_at")
+  submittedAt          DateTime?                    @map("submitted_at")
+  reviewedAt           DateTime?                    @map("reviewed_at")
+  evaluatedById        Int?                         @map("evaluated_by_id")
+  evaluationClosedById Int?                         @map("evaluation_closed_by_id")
+  evaluationClosedAt   DateTime?                    @map("evaluation_closed_at")
+  approvedById         Int?                         @map("approved_by_id")
+  approvedAt           DateTime?                    @map("approved_at")
+  publishedById        Int?                         @map("published_by_id")
+  publishedAt          DateTime?                    @map("published_at")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  lockVersion          Int                          @default(0) @map("lock_version")
+  breakdown            ExamAttemptBreakdown?
+  committeeMembers     ExamAttemptCommitteeMember[]
+  questions            ExamAttemptQuestion[]
+  approvedBy           User?                        @relation("ExamAttemptApprovedBy", fields: [approvedById], references: [id])
+  circle               Circle                       @relation("ExamAttemptCircle", fields: [circleId], references: [id])
+  evaluatedBy          User?                        @relation("ExamAttemptEvaluatedBy", fields: [evaluatedById], references: [id])
+  evaluationClosedBy   User?                        @relation("ExamAttemptEvaluationClosedBy", fields: [evaluationClosedById], references: [id])
+  exam                 Exam                         @relation(fields: [examId], references: [id], onDelete: Cascade)
+  nominationRequest    ExamNominationRequest?       @relation(fields: [nominationRequestId], references: [id])
+  publishedBy          User?                        @relation("ExamAttemptPublishedBy", fields: [publishedById], references: [id])
+  student              User                         @relation("ExamAttemptStudent", fields: [studentId], references: [id])
+  goldenRecord         GoldenRecord?
+  graduationCandidate  GraduationCandidate?
+
+  @@unique([examId, studentId, examDate])
+  @@index([examId, status])
+  @@index([circleId])
+  @@index([examDate])
+  @@index([studentId, status])
+  @@index([status, approvedAt])
+  @@index([status, publishedAt])
+  @@map("exam_attempts")
+}
+
+model ExamAttemptCommitteeMember {
+  id               Int           @id @default(autoincrement())
+  attemptId        Int           @map("attempt_id")
+  userId           Int           @map("user_id")
+  assignedById     Int?          @map("assigned_by_id")
+  roleAtAssignment Role          @map("role_at_assignment")
+  committeeRole    CommitteeRole @default(MEMBER) @map("committee_role")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  assignedBy       User?         @relation("ExamAttemptCommitteeAssignedBy", fields: [assignedById], references: [id])
+  attempt          ExamAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  user             User          @relation("ExamAttemptCommitteeUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, userId])
+  @@index([userId])
+  @@map("exam_attempt_committee_members")
+}
+
+model ExamAttemptQuestion {
+  id                  Int                @id @default(autoincrement())
+  attemptId           Int                @map("attempt_id")
+  orderIndex          Int                @map("order_index")
+  source              ExamQuestionSource @default(AUTO)
+  fromSurah           Int                @map("from_surah")
+  fromAyah            Int                @map("from_ayah")
+  toSurah             Int                @map("to_surah")
+  toAyah              Int                @map("to_ayah")
+  promptingDeductions Float              @default(0) @map("prompting_deductions")
+  remindingDeductions Float              @default(0) @map("reminding_deductions")
+  tajweedDeductions   Float              @default(0) @map("tajweed_deductions")
+  isEvaluated         Boolean            @default(false) @map("is_evaluated")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  attempt             ExamAttempt        @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, orderIndex])
+  @@index([attemptId, source])
+  @@map("exam_attempt_questions")
+}
+
+model ExamAttemptBreakdown {
+  id                      Int         @id @default(autoincrement())
+  attemptId               Int         @unique @map("attempt_id")
+  memorizationScore       Float?      @map("memorization_score")
+  tajweedScore            Float?      @map("tajweed_score")
+  performanceScore        Float?      @map("performance_score")
+  promptingDeductions     Float?      @map("prompting_deductions")
+  remindingDeductions     Float?      @map("reminding_deductions")
+  tajweedDeductions       Float?      @map("tajweed_deductions")
+  theoreticalTajweedScore Float?      @map("theoretical_tajweed_score")
+  strengthNotes           String?     @map("strength_notes")
+  weaknessNotes           String?     @map("weakness_notes")
+  attempt                 ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@map("exam_attempt_breakdown")
+}
+
+model GraduationCandidate {
+  id                         Int                       @id @default(autoincrement())
+  organizationId             Int                       @map("organization_id")
+  year                       Int                       @db.SmallInt
+  studentId                  Int                       @map("student_id")
+  centerId                   Int                       @map("center_id")
+  circleId                   Int                       @map("circle_id")
+  examId                     Int?                      @map("exam_id")
+  examAttemptId              Int?                      @unique @map("exam_attempt_id")
+  studentNameSnapshot        String                    @map("student_name_snapshot") @db.VarChar(120)
+  centerNameSnapshot         String                    @map("center_name_snapshot") @db.VarChar(120)
+  circleNameSnapshot         String                    @map("circle_name_snapshot") @db.VarChar(120)
+  memorizationCompletionDate DateTime?                 @map("memorization_completion_date") @db.Date
+  khatmaTestDate             DateTime?                 @map("khatma_test_date") @db.Date
+  memorizationStartDate      DateTime?                 @map("memorization_start_date") @db.Date
+  memorizationDurationMonths Int?                      @map("memorization_duration_months") @db.SmallInt
+  gradeSnapshot              String?                   @map("grade_snapshot") @db.VarChar(40)
+  averageSnapshot            Decimal?                  @map("average_snapshot") @db.Decimal(5, 2)
+  notes                      String?                   @db.VarChar(1000)
+  status                     GraduationCandidateStatus @default(NOMINATED)
+  statusNote                 String?                   @map("status_note") @db.VarChar(1000)
+  approvedById               Int?                      @map("approved_by_id")
+  approvedAt                 DateTime?                 @map("approved_at")
+  rejectedById               Int?                      @map("rejected_by_id")
+  rejectedAt                 DateTime?                 @map("rejected_at")
+  deferredById               Int?                      @map("deferred_by_id")
+  deferredAt                 DateTime?                 @map("deferred_at")
+  createdById                Int                       @map("created_by_id")
+  updatedById                Int?                      @map("updated_by_id")
+  createdAt                  DateTime                  @default(now()) @map("created_at")
+  updatedAt                  DateTime                  @updatedAt @map("updated_at")
+  lockVersion                Int                       @default(0) @map("lock_version")
+  goldenRecord               GoldenRecord?             @relation("GoldenRecordCandidate")
+  approvedBy                 User?                     @relation("GraduationCandidateApprovedBy", fields: [approvedById], references: [id])
+  center                     Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle                     Circle                    @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  createdBy                  User                      @relation("GraduationCandidateCreatedBy", fields: [createdById], references: [id])
+  deferredBy                 User?                     @relation("GraduationCandidateDeferredBy", fields: [deferredById], references: [id])
+  examAttempt                ExamAttempt?              @relation(fields: [examAttemptId], references: [id])
+  exam                       Exam?                     @relation(fields: [examId], references: [id])
+  organization               Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rejectedBy                 User?                     @relation("GraduationCandidateRejectedBy", fields: [rejectedById], references: [id])
+  student                    User                      @relation("GraduationCandidateStudent", fields: [studentId], references: [id])
+  updatedBy                  User?                     @relation("GraduationCandidateUpdatedBy", fields: [updatedById], references: [id])
+
+  @@unique([organizationId, studentId, year])
+  @@index([organizationId, year, centerId, status])
+  @@index([studentId, year])
+  @@index([centerId, year])
+  @@index([circleId, year])
+  @@index([status, year])
+  @@index([examId])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([approvedById])
+  @@index([rejectedById])
+  @@index([deferredById])
+  @@map("graduation_candidates")
+}
+
+model GoldenRecord {
+  id                  Int                               @id @default(autoincrement())
+  organizationId      Int                               @map("organization_id")
+  year                Int                               @db.SmallInt
+  source              GoldenRecordSource
+  candidateId         Int?                              @unique @map("candidate_id")
+  examId              Int?                              @map("exam_id")
+  examAttemptId       Int?                              @unique @map("exam_attempt_id")
+  studentId           Int                               @map("student_id")
+  centerId            Int                               @map("center_id")
+  circleId            Int?                              @map("circle_id")
+  studentNameSnapshot String                            @map("student_name_snapshot") @db.VarChar(120)
+  centerNameSnapshot  String                            @map("center_name_snapshot") @db.VarChar(120)
+  circleNameSnapshot  String?                           @map("circle_name_snapshot") @db.VarChar(120)
+  registrySerial      String?                           @unique @map("registry_serial") @db.VarChar(40)
+  grade               String                            @db.VarChar(40)
+  average             Decimal                           @db.Decimal(5, 2)
+  appreciation        String                            @db.VarChar(60)
+  examDate            DateTime                          @map("exam_date") @db.Date
+  type                GoldenRecordType
+  riwaya              RiwayaType?
+  notes               String?                           @db.VarChar(1000)
+  status              GoldenRecordStatus                @default(DRAFT)
+  statusNote          String?                           @map("status_note") @db.VarChar(1000)
+  submittedById       Int?                              @map("submitted_by_id")
+  submittedAt         DateTime?                         @map("submitted_at")
+  approvedById        Int?                              @map("approved_by_id")
+  approvedAt          DateTime?                         @map("approved_at")
+  rejectedById        Int?                              @map("rejected_by_id")
+  rejectedAt          DateTime?                         @map("rejected_at")
+  createdById         Int                               @map("created_by_id")
+  updatedById         Int?                              @map("updated_by_id")
+  createdAt           DateTime                          @default(now()) @map("created_at")
+  updatedAt           DateTime                          @updatedAt @map("updated_at")
+  lockVersion         Int                               @default(0) @map("lock_version")
+  approvedBy          User?                             @relation("GoldenRecordApprovedBy", fields: [approvedById], references: [id])
+  candidate           GraduationCandidate?              @relation("GoldenRecordCandidate", fields: [candidateId], references: [id])
+  center              Center                            @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle              Circle?                           @relation(fields: [circleId], references: [id])
+  createdBy           User                              @relation("GoldenRecordCreatedBy", fields: [createdById], references: [id])
+  examAttempt         ExamAttempt?                      @relation(fields: [examAttemptId], references: [id])
+  exam                Exam?                             @relation(fields: [examId], references: [id])
+  organization        Organization                      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rejectedBy          User?                             @relation("GoldenRecordRejectedBy", fields: [rejectedById], references: [id])
+  student             User                              @relation("GoldenRecordStudent", fields: [studentId], references: [id])
+  submittedBy         User?                             @relation("GoldenRecordSubmittedBy", fields: [submittedById], references: [id])
+  updatedBy           User?                             @relation("GoldenRecordUpdatedBy", fields: [updatedById], references: [id])
+  achievementSnapshot StudentYearlyAchievementSnapshot?
+
+  @@unique([organizationId, studentId, year, type])
+  @@index([organizationId, year, centerId, status])
+  @@index([organizationId, year, type])
+  @@index([organizationId, year, riwaya])
+  @@index([studentId, year])
+  @@index([examId])
+  @@index([circleId])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([submittedById])
+  @@index([approvedById])
+  @@index([rejectedById])
+  @@index([approvedAt])
+  @@map("golden_records")
+}
+
+model StudentYearlyAchievementSnapshot {
+  id                  Int                 @id @default(autoincrement())
+  organizationId      Int                 @map("organization_id")
+  year                Int                 @db.SmallInt
+  studentId           Int                 @map("student_id")
+  centerId            Int                 @map("center_id")
+  circleId            Int?                @map("circle_id")
+  achievementCategory AchievementCategory @map("achievement_category")
+  juzCount            Int                 @map("juz_count") @db.SmallInt
+  goldenRecordId      Int?                @unique @map("golden_record_id")
+  snapshotSource      String              @map("snapshot_source") @db.VarChar(30)
+  capturedById        Int?                @map("captured_by_id")
+  capturedAt          DateTime            @default(now()) @map("captured_at")
+  notes               String?             @db.VarChar(500)
+  capturedBy          User?               @relation("AchievementSnapshotCapturedBy", fields: [capturedById], references: [id])
+  center              Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle              Circle?             @relation(fields: [circleId], references: [id])
+  goldenRecord        GoldenRecord?       @relation(fields: [goldenRecordId], references: [id])
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student             User                @relation("AchievementSnapshotStudent", fields: [studentId], references: [id])
+
+  @@unique([organizationId, studentId, year])
+  @@index([organizationId, year, centerId, achievementCategory])
+  @@index([organizationId, year, achievementCategory])
+  @@index([studentId, year])
+  @@index([centerId, year])
+  @@index([circleId, year])
+  @@index([capturedById])
+  @@map("student_yearly_achievement_snapshots")
+}
+
+model ExamGradeScale {
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @map("organization_id")
+  label          String       @db.VarChar(60)
+  minPercentage  Decimal      @map("min_percentage") @db.Decimal(5, 2)
+  maxPercentage  Decimal      @map("max_percentage") @db.Decimal(5, 2)
+  color          String?      @db.VarChar(20)
+  sortOrder      Int          @default(0) @map("sort_order")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@map("exam_grade_scales")
+}
+
+model ExamQuestionBankItem {
+  id              Int                @id @default(autoincrement())
+  organizationId  Int                @map("organization_id")
+  fromSurah       Int                @map("from_surah")
+  fromAyah        Int                @map("from_ayah")
+  toSurah         Int                @map("to_surah")
+  toAyah          Int                @map("to_ayah")
+  suggestedText   String?            @map("suggested_text")
+  source          ExamQuestionSource @default(MANUAL)
+  createdById     Int                @map("created_by_id")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  pageNumber      Int                @default(1) @map("page_number")
+  lineCount       Int                @default(1) @map("line_count")
+  difficultyLevel Int                @default(3) @map("difficulty_level")
+  createdBy       User               @relation(fields: [createdById], references: [id])
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([fromSurah, toSurah])
+  @@map("exam_question_bank_items")
+}
+
+model TuitionPlan {
+  id                 Int                        @id @default(autoincrement())
+  organizationId     Int
+  centerId           Int
+  name               String                     @db.VarChar(120)
+  monthlyAmount      Decimal                    @db.Decimal(10, 2)
+  isActive           Boolean                    @default(true)
+  createdAt          DateTime                   @default(now())
+  archivedAt         DateTime?                  @map("archived_at")
+  planKind           TuitionPlanKind            @default(MONTHLY)
+  studentFeeProfiles StudentFeeProfile[]
+  studentAssignments StudentTuitionAssignment[]
+  center             Center                     @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([centerId, name])
+  @@index([organizationId])
+  @@index([planKind, isActive])
+  @@map("tuition_plans")
+}
+
+model StudentTuitionAssignment {
+  id            Int                     @id @default(autoincrement())
+  studentId     Int
+  tuitionPlanId Int
+  startDate     DateTime                @db.Date
+  endDate       DateTime?               @db.Date
+  status        TuitionAssignmentStatus @default(ACTIVE)
+  student       User                    @relation("StudentTuitionAssignments", fields: [studentId], references: [id], onDelete: Cascade)
+  tuitionPlan   TuitionPlan             @relation(fields: [tuitionPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, tuitionPlanId])
+  @@index([tuitionPlanId])
+  @@index([status])
+  @@map("student_tuition_assignments")
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  studentId     Int
+  centerId      Int
+  month         Int
+  year          Int
+  amount        Decimal       @db.Decimal(10, 2)
+  status        InvoiceStatus @default(PENDING)
+  issuedAt      DateTime      @db.Date
+  createdAt     DateTime      @default(now())
+  cancelReason  String?       @map("cancel_reason") @db.VarChar(500)
+  cancelledAt   DateTime?     @map("cancelled_at")
+  cancelledById Int?          @map("cancelled_by_id")
+  dueDate       DateTime?     @db.Date
+  invoiceType   InvoiceType   @default(TUITION_MONTHLY)
+  lockVersion   Int           @default(0) @map("lock_version")
+  notes         String?       @db.VarChar(500)
+  cancelledBy   User?         @relation("InvoiceCancelledBy", fields: [cancelledById], references: [id])
+  center        Center        @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+
+  @@unique([studentId, month, year])
+  @@index([centerId, year, month])
+  @@index([studentId])
+  @@index([status, dueDate])
+  @@index([cancelledAt])
+  @@map("invoices")
+}
+
+model Payment {
+  id                   Int             @id @default(autoincrement())
+  invoiceId            Int
+  amount               Decimal         @db.Decimal(10, 2)
+  method               PaymentMethod   @default(CASH)
+  receivedById         Int
+  receivedAt           DateTime        @default(now())
+  createdAt            DateTime        @default(now())
+  attachmentStorageKey String?         @map("attachment_storage_key") @db.VarChar(255)
+  centerId             Int?
+  externalTransferRef  String?         @map("external_transfer_ref") @db.VarChar(120)
+  idempotencyKey       String?         @db.VarChar(128)
+  organizationId       Int?
+  voucherId            Int?            @unique
+  invoice              Invoice         @relation(fields: [invoiceId], references: [id])
+  receivedBy           User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+  voucher              FinanceVoucher? @relation(fields: [voucherId], references: [id])
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([invoiceId, receivedAt])
+  @@index([receivedById])
+  @@index([organizationId, centerId, createdAt])
+  @@index([method, createdAt])
+  @@map("payments")
+}
+
+model FinancePolicyProfile {
+  id                          Int          @id @default(autoincrement())
+  organizationId              Int
+  centerId                    Int?
+  requireTransferAttachment   Boolean      @default(true)
+  requireApprovalDisbursement Boolean      @default(true)
+  requireApprovalReceipt      Boolean      @default(false)
+  allowFreeStudents           Boolean      @default(true)
+  allowSymbolicOneTimeFee     Boolean      @default(true)
+  allowOverdraft              Boolean      @default(false)
+  createdAt                   DateTime     @default(now())
+  updatedAt                   DateTime     @updatedAt
+  center                      Center?      @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization                Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, centerId])
+  @@index([organizationId, centerId])
+  @@map("finance_policy_profiles")
+}
+
+model FinanceAccount {
+  id                  Int                      @id @default(autoincrement())
+  organizationId      Int
+  centerId            Int?
+  accountingAccountId Int?                     @map("accounting_account_id")
+  accountType         FinanceAccountType
+  openingBalance      Decimal                  @db.Decimal(12, 2)
+  currentBalance      Decimal                  @db.Decimal(12, 2)
+  currencyCode        String                   @default("YER") @db.VarChar(8)
+  isActive            Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  movements           FinanceAccountMovement[]
+  accountingAccount   AccountingAccount?       @relation(fields: [accountingAccountId], references: [id])
+  center              Center?                  @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transfersFrom       FinanceFundTransfer[]    @relation("FundTransferFromAccount")
+  transfersTo         FinanceFundTransfer[]    @relation("FundTransferToAccount")
+  vouchers            FinanceVoucher[]
+  expensePayments     ExpensePayment[]
+
+  @@unique([organizationId, accountType, centerId])
+  @@index([accountingAccountId])
+  @@index([organizationId, centerId, isActive])
+  @@map("finance_accounts")
+}
+
+model FinanceVoucher {
+  id                   Int                        @id @default(autoincrement())
+  organizationId       Int
+  centerId             Int?
+  accountId            Int
+  voucherType          VoucherType
+  voucherNo            String                     @db.VarChar(80)
+  sourceType           VoucherSourceType
+  sourceId             Int?
+  paymentMethod        PaymentMethod?
+  amount               Decimal                    @db.Decimal(12, 2)
+  // FA-UX-4: Currency fields (nullable for backward compatibility)
+  originalAmount       Decimal?                   @db.Decimal(12, 2)
+  originalCurrencyCode String?                    @db.VarChar(3)
+  exchangeRateToBase   Decimal?                   @db.Decimal(18, 6)
+  status               VoucherStatus              @default(DRAFT)
+  accountingCategory   VoucherAccountingCategory? // FA-3.2.1: nullable — existing/payment-generated vouchers excluded from accounting posting
+  attachmentStorageKey String?                    @db.VarChar(255)
+  externalTransferRef  String?                    @db.VarChar(120)
+  manualReferenceNo    String?                    @db.VarChar(120)
+  notes                String?                    @db.VarChar(500)
+  createdById          Int
+  approvedById         Int?
+  postedById           Int?
+  submittedAt          DateTime?
+  approvedAt           DateTime?
+  rejectedAt           DateTime?
+  rejectionReason      String?                    @db.VarChar(500)
+  postedAt             DateTime?
+  voidRequestedAt      DateTime?
+  voidedAt             DateTime?
+  voucherDate          DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  movement             FinanceAccountMovement?
+  expensePayments      ExpensePayment[]
+  fundTransferIn       FinanceFundTransfer?       @relation("FundTransferVoucherIn")
+  fundTransferOut      FinanceFundTransfer?       @relation("FundTransferVoucherOut")
+  account              FinanceAccount             @relation(fields: [accountId], references: [id])
+  approvedBy           User?                      @relation("FinanceVoucherApprovedBy", fields: [approvedById], references: [id])
+  center               Center?                    @relation(fields: [centerId], references: [id])
+  createdBy            User                       @relation("FinanceVoucherCreatedBy", fields: [createdById], references: [id])
+  donation             Donation?
+  organization         Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  postedBy             User?                      @relation("FinanceVoucherPostedBy", fields: [postedById], references: [id])
+  payment              Payment?
+  payrollItem          PayrollItem?
+  rewardItem           RewardItem?
+
+  @@unique([organizationId, voucherNo])
+  @@index([organizationId, centerId, status, createdAt])
+  @@index([sourceType, sourceId])
+  @@index([accountId, postedAt])
+  @@map("finance_vouchers")
+}
+
+model DocumentSequence {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  documentType   String   @db.VarChar(40)
+  year           Int      @db.SmallInt
+  lastSequence   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, documentType, year])
+  @@map("document_sequences")
+}
+
+model Donor {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  centerId       Int?
+  name           String       @db.VarChar(180)
+  donorType      DonorType
+  phone          String?      @db.VarChar(40)
+  email          String?      @db.VarChar(180)
+  address        String?      @db.VarChar(255)
+  contactPerson  String?      @db.VarChar(180)
+  notes          String?      @db.VarChar(500)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  center         Center?      @relation(fields: [centerId], references: [id])
+  donations      Donation[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, centerId, isActive])
+  @@index([organizationId, donorType])
+  @@map("donors")
+}
+
+model Donation {
+  id                   Int             @id @default(autoincrement())
+  organizationId       Int
+  centerId             Int?
+  donorId              Int
+  amount               Decimal         @db.Decimal(12, 2)
+  // FA-UX-4: Currency fields (nullable for backward compatibility)
+  originalAmount       Decimal?        @db.Decimal(12, 2)
+  originalCurrencyCode String?         @db.VarChar(3)
+  exchangeRateToBase   Decimal?        @db.Decimal(18, 6)
+  donationDate         DateTime        @db.Date
+  paymentMethod        PaymentMethod
+  purpose              String?         @db.VarChar(255)
+  status               DonationStatus  @default(PLEDGED)
+  isPledge             Boolean         @default(true)
+  pledgeDueDate        DateTime?       @db.Date
+  receivedDate         DateTime?       @db.Date
+  voucherId            Int?            @unique
+  notes                String?         @db.VarChar(500)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  center               Center?         @relation(fields: [centerId], references: [id])
+  donor                Donor           @relation(fields: [donorId], references: [id])
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  voucher              FinanceVoucher? @relation(fields: [voucherId], references: [id])
+
+  @@index([organizationId, centerId, status, donationDate])
+  @@index([donorId, status])
+  @@map("donations")
+}
+
+// FA-UX-4: Currency and Exchange Rate models
+model Currency {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  code           String   @db.VarChar(3)
+  nameAr         String   @db.VarChar(60)
+  nameEn         String   @db.VarChar(60)
+  symbol         String   @db.VarChar(10)
+  decimalPlaces  Int      @default(2)
+  isBase         Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  exchangeRates ExchangeRate[]
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@index([organizationId, isBase])
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  currencyCode   String   @db.VarChar(3)
+  rateToBase     Decimal  @db.Decimal(18, 6)
+  effectiveDate  DateTime @db.Date
+  source         String?  @db.VarChar(60)
+  notes          String?  @db.VarChar(255)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  currency     Currency     @relation(fields: [organizationId, currencyCode], references: [organizationId, code])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, currencyCode, effectiveDate])
+  @@index([organizationId, currencyCode, createdAt])
+  @@map("exchange_rates")
+}
+
+model FinanceAccountMovement {
+  id                   Int                      @id @default(autoincrement())
+  organizationId       Int
+  accountId            Int
+  voucherId            Int                      @unique
+  movementType         FinanceMovementType
+  direction            FinanceMovementDirection
+  amount               Decimal                  @db.Decimal(12, 2)
+  balanceBefore        Decimal                  @db.Decimal(12, 2)
+  balanceAfter         Decimal                  @db.Decimal(12, 2)
+  postedAt             DateTime
+  reversalOfMovementId Int?
+  createdAt            DateTime                 @default(now())
+  account              FinanceAccount           @relation(fields: [accountId], references: [id])
+  organization         Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reversalOfMovement   FinanceAccountMovement?  @relation("MovementReversal", fields: [reversalOfMovementId], references: [id])
+  reversedByMovements  FinanceAccountMovement[] @relation("MovementReversal")
+  voucher              FinanceVoucher           @relation(fields: [voucherId], references: [id])
+
+  @@index([accountId, postedAt, id])
+  @@index([organizationId, movementType, postedAt])
+  @@index([reversalOfMovementId])
+  @@map("finance_account_movements")
+}
+
+model FinanceFundTransfer {
+  id              Int                @id @default(autoincrement())
+  organizationId  Int
+  fromAccountId   Int
+  toAccountId     Int
+  fromCenterId    Int?
+  toCenterId      Int?
+  amount          Decimal            @db.Decimal(12, 2)
+  status          FundTransferStatus @default(DRAFT)
+  requestedById   Int
+  approvedById    Int?
+  voucherOutId    Int?               @unique
+  voucherInId     Int?               @unique
+  notes           String?            @db.VarChar(500)
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?            @db.VarChar(500)
+  postedAt        DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  approvedBy      User?              @relation("FundTransferApprovedBy", fields: [approvedById], references: [id])
+  fromAccount     FinanceAccount     @relation("FundTransferFromAccount", fields: [fromAccountId], references: [id])
+  fromCenter      Center?            @relation("FundTransferFromCenter", fields: [fromCenterId], references: [id])
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy     User               @relation("FundTransferRequestedBy", fields: [requestedById], references: [id])
+  toAccount       FinanceAccount     @relation("FundTransferToAccount", fields: [toAccountId], references: [id])
+  toCenter        Center?            @relation("FundTransferToCenter", fields: [toCenterId], references: [id])
+  voucherIn       FinanceVoucher?    @relation("FundTransferVoucherIn", fields: [voucherInId], references: [id])
+  voucherOut      FinanceVoucher?    @relation("FundTransferVoucherOut", fields: [voucherOutId], references: [id])
+
+  @@index([organizationId, status, createdAt])
+  @@index([fromAccountId, toAccountId, status])
+  @@map("finance_fund_transfers")
+}
+
+model AccountingAccount {
+  id                                           Int                     @id @default(autoincrement())
+  organizationId                               Int
+  centerId                                     Int?
+  code                                         String                  @db.VarChar(32)
+  name                                         String                  @db.VarChar(180)
+  type                                         AccountingAccountType
+  normalBalance                                AccountingNormalBalance
+  parentId                                     Int?
+  isActive                                     Boolean                 @default(true)
+  systemKey                                    String?                 @db.VarChar(80)
+  createdAt                                    DateTime                @default(now())
+  updatedAt                                    DateTime                @updatedAt
+  center                                       Center?                 @relation(fields: [centerId], references: [id])
+  children                                     AccountingAccount[]     @relation("AccountingAccountTree")
+  financeAccounts                              FinanceAccount[]
+  journalLines                                 JournalEntryLine[]
+  expenseCategories                            ExpenseCategory[]
+  assetCategoryAssetAccounts                   AssetCategory[]         @relation("AssetCategoryAssetAccount")
+  assetCategoryDepreciationExpenseAccounts     AssetCategory[]         @relation("AssetCategoryDepreciationExpenseAccount")
+  assetCategoryAccumulatedDepreciationAccounts AssetCategory[]         @relation("AssetCategoryAccumulatedDepreciationAccount")
+  organization                                 Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id])
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, systemKey])
+  @@index([organizationId, type, isActive])
+  @@index([organizationId, centerId])
+  @@index([parentId])
+  @@map("accounting_accounts")
+}
+
+model JournalEntry {
+  id                     Int                     @id @default(autoincrement())
+  organizationId         Int
+  centerId               Int?
+  entryNo                String                  @db.VarChar(80)
+  entryDate              DateTime                @db.Date
+  sourceType             JournalSourceType
+  sourceId               Int?
+  status                 JournalEntryStatus      @default(DRAFT)
+  description            String?                 @db.VarChar(500)
+  postedById             Int?
+  postedAt               DateTime?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  center                 Center?                 @relation(fields: [centerId], references: [id])
+  lines                  JournalEntryLine[]
+  expensePayments        ExpensePayment[]
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  postedBy               User?                   @relation("JournalEntryPostedBy", fields: [postedById], references: [id])
+  assetAcquisition       FixedAsset?             @relation("AssetAcquisitionEntry")
+  assetDepreciationEntry AssetDepreciationEntry? @relation("AssetDepreciationEntry")
+
+  @@unique([organizationId, entryNo])
+  @@unique([organizationId, sourceType, sourceId])
+  @@index([organizationId, entryDate])
+  @@index([organizationId, status, entryDate])
+  @@index([centerId, entryDate])
+  @@index([postedById])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             Int                @id @default(autoincrement())
+  journalEntryId Int
+  accountId      Int
+  centerId       Int?
+  debit          Decimal            @default(0) @db.Decimal(12, 2)
+  credit         Decimal            @default(0) @db.Decimal(12, 2)
+  memo           String?            @db.VarChar(500)
+  sourceLineType JournalSourceType?
+  sourceLineId   Int?
+  account        AccountingAccount  @relation(fields: [accountId], references: [id])
+  center         Center?            @relation(fields: [centerId], references: [id])
+  journalEntry   JournalEntry       @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId Int
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@index([centerId])
+  @@index([organizationId, accountId])
+  @@map("journal_entry_lines")
+}
+
+model StudentFeeProfile {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  centerId       Int
+  studentId      Int
+  feeMode        FeeMode
+  tuitionPlanId  Int?
+  symbolicAmount Decimal?     @db.Decimal(12, 2)
+  isActive       Boolean      @default(true)
+  startDate      DateTime     @db.Date
+  endDate        DateTime?    @db.Date
+  notes          String?      @db.VarChar(500)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  center         Center       @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student        User         @relation("StudentFeeProfileStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  tuitionPlan    TuitionPlan? @relation(fields: [tuitionPlanId], references: [id])
+
+  @@index([centerId, studentId, isActive])
+  @@index([organizationId, feeMode, isActive])
+  @@map("student_fee_profiles")
+}
+
+model PayrollProfile {
+  id                   Int           @id @default(autoincrement())
+  organizationId       Int
+  centerId             Int?
+  userId               Int
+  monthlyBaseAmount    Decimal       @db.Decimal(12, 2)
+  paymentMethodDefault PaymentMethod @default(CASH)
+  effectiveFrom        DateTime      @db.Date
+  effectiveTo          DateTime?     @db.Date
+  isActive             Boolean       @default(true)
+  notes                String?       @db.VarChar(500)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  salaryCurrencyCode   String        @default("YER") @db.VarChar(8)
+  bankAccountNumber    String?       @db.VarChar(80)
+  bankName             String?       @db.VarChar(120)
+  iban                 String?       @db.VarChar(34)
+  salaryGradeId        Int?
+  salarySource         SalarySource  @default(GRADE)
+  overrideReason       String?       @db.VarChar(500)
+  approvedById         Int?
+  approvedAt           DateTime?
+  salaryGrade          SalaryGrade?  @relation(fields: [salaryGradeId], references: [id])
+  approvedBy           User?         @relation("PayrollProfileApprovedBy", fields: [approvedById], references: [id])
+  center               Center?       @relation(fields: [centerId], references: [id])
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                 User          @relation("PayrollProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([centerId, userId, isActive])
+  @@index([organizationId, isActive])
+  @@map("payroll_profiles")
+}
+
+model SalaryGrade {
+  id             Int      @id @default(autoincrement())
+  organizationId Int
+  centerId       Int?
+  jobTitle       String   @db.VarChar(120)
+  gradeLevel     String   @db.VarChar(60)
+  baseSalary     Decimal  @db.Decimal(12, 2)
+  currencyCode   String   @default("YER") @db.VarChar(8)
+  isActive       Boolean  @default(true)
+  notes          String?  @db.VarChar(500)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  center          Center?          @relation(fields: [centerId], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payrollProfiles PayrollProfile[]
+
+  @@unique([organizationId, centerId, jobTitle, gradeLevel])
+  @@index([organizationId, isActive])
+  @@index([centerId, isActive])
+  @@map("salary_grades")
+}
+
+model StaffAssignment {
+  id             Int                 @id @default(autoincrement())
+  organizationId Int
+  userId         Int
+  assignmentType StaffAssignmentType
+  centerId       Int?
+  circleId       Int?
+  effectiveFrom  DateTime            @db.Date
+  effectiveTo    DateTime?           @db.Date
+  isActive       Boolean             @default(true)
+  endReason      String?             @db.VarChar(500)
+  notes          String?             @db.VarChar(500)
+  createdById    Int?
+  endedById      Int?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("StaffAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  center       Center?      @relation(fields: [centerId], references: [id])
+  circle       Circle?      @relation(fields: [circleId], references: [id])
+  createdBy    User?        @relation("StaffAssignmentCreatedBy", fields: [createdById], references: [id])
+  endedBy      User?        @relation("StaffAssignmentEndedBy", fields: [endedById], references: [id])
+
+  @@index([organizationId, userId, isActive])
+  @@index([centerId, assignmentType, isActive])
+  @@index([circleId, assignmentType, isActive])
+  @@index([userId, assignmentType, isActive])
+  @@map("staff_assignments")
+}
+
+model PayrollBatch {
+  id              Int                @id @default(autoincrement())
+  organizationId  Int
+  centerId        Int?
+  periodYear      Int
+  periodMonth     Int
+  status          PayrollBatchStatus @default(DRAFT)
+  totalItems      Int                @default(0)
+  totalNetAmount  Decimal            @default(0) @db.Decimal(12, 2)
+  approvedById    Int?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?            @db.VarChar(500)
+  closedAt        DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  approvedBy      User?              @relation("PayrollBatchApprovedBy", fields: [approvedById], references: [id])
+  center          Center?            @relation(fields: [centerId], references: [id])
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items           PayrollItem[]
+
+  @@index([organizationId, centerId, status])
+  @@map("payroll_batches")
+}
+
+model PayrollItem {
+  id                   Int               @id @default(autoincrement())
+  batchId              Int
+  beneficiaryUserId    Int
+  centerId             Int?              @map("center_id")
+  baseAmount           Decimal           @db.Decimal(12, 2)
+  originalAmount       Decimal?          @db.Decimal(12, 2)
+  originalCurrencyCode String?           @db.VarChar(3)
+  exchangeRateToBase   Decimal?          @db.Decimal(18, 6)
+  bonusAmount          Decimal           @default(0) @db.Decimal(12, 2)
+  deductionAmount      Decimal           @default(0) @db.Decimal(12, 2)
+  deductionEventIds    Json?
+  netAmount            Decimal           @db.Decimal(12, 2)
+  status               PayrollItemStatus @default(PENDING)
+  paymentMethod        PaymentMethod?
+  paymentReference     String?           @db.VarChar(120)
+  failureReason        String?           @db.VarChar(500)
+  voucherId            Int?              @unique
+  notes                String?           @db.VarChar(500)
+  paidAt               DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  batch                PayrollBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  beneficiary          User              @relation("PayrollItemBeneficiary", fields: [beneficiaryUserId], references: [id])
+  voucher              FinanceVoucher?   @relation(fields: [voucherId], references: [id])
+
+  @@index([batchId, status])
+  @@index([beneficiaryUserId, status])
+  @@index([centerId])
+  @@map("payroll_items")
+}
+
+model RewardProfile {
+  id                Int                   @id @default(autoincrement())
+  organizationId    Int
+  centerId          Int?
+  beneficiaryUserId Int
+  beneficiaryRole   RewardBeneficiaryRole
+  cycle             RewardCycle
+  rewardType        RewardType?
+  defaultAmount     Decimal               @db.Decimal(12, 2)
+  effectiveFrom     DateTime              @db.Date
+  effectiveTo       DateTime?             @db.Date
+  isActive          Boolean               @default(true)
+  notes             String?               @db.VarChar(500)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  beneficiary       User                  @relation("RewardProfileBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Cascade)
+  center            Center?               @relation(fields: [centerId], references: [id])
+  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, beneficiaryUserId, isActive])
+  @@index([centerId, cycle, isActive])
+  @@map("reward_profiles")
+}
+
+model RewardBatch {
+  id              Int               @id @default(autoincrement())
+  organizationId  Int
+  centerId        Int?
+  cycle           RewardCycle
+  rewardType      RewardType?
+  periodYear      Int
+  periodMonth     Int?
+  periodQuarter   Int?
+  status          RewardBatchStatus @default(DRAFT)
+  totalAmount     Decimal           @default(0) @db.Decimal(12, 2)
+  totalItems      Int               @default(0)
+  approvedById    Int?
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?           @db.VarChar(500)
+  closedAt        DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  approvedBy      User?             @relation("RewardBatchApprovedBy", fields: [approvedById], references: [id])
+  center          Center?           @relation(fields: [centerId], references: [id])
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items           RewardItem[]
+
+  @@index([organizationId, cycle, periodYear, status])
+  @@index([centerId, status])
+  @@map("reward_batches")
+}
+
+model RewardItem {
+  id                Int                   @id @default(autoincrement())
+  batchId           Int
+  beneficiaryUserId Int
+  beneficiaryRole   RewardBeneficiaryRole
+  centerId          Int
+  circleId          Int?
+  amount            Decimal               @db.Decimal(12, 2)
+  rankInCircle      Int?
+  rewardType        RewardType?
+  status            RewardItemStatus      @default(PENDING)
+  paymentMethod     PaymentMethod?
+  paymentReference  String?               @db.VarChar(120)
+  failureReason     String?               @db.VarChar(500)
+  voucherId         Int?                  @unique
+  notes             String?               @db.VarChar(500)
+  paidAt            DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  batch             RewardBatch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  beneficiary       User                  @relation("RewardItemBeneficiary", fields: [beneficiaryUserId], references: [id])
+  center            Center                @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle            Circle?               @relation(fields: [circleId], references: [id])
+  voucher           FinanceVoucher?       @relation(fields: [voucherId], references: [id])
+
+  @@index([batchId, status])
+  @@index([beneficiaryUserId, status])
+  @@map("reward_items")
+}
+
+model ReportFile {
+  id             Int            @id @default(autoincrement())
+  organizationId Int
+  centerId       Int?
+  circleId       Int?
+  name           String         @db.VarChar(180)
+  mimeType       String         @db.VarChar(120)
+  sizeBytes      Int
+  storageKey     String         @db.VarChar(255)
+  kind           ReportFileKind
+  createdById    Int
+  expiresAt      DateTime?
+  createdAt      DateTime       @default(now())
+  center         Center?        @relation(fields: [centerId], references: [id])
+  circle         Circle?        @relation(fields: [circleId], references: [id])
+  createdBy      User           @relation("ReportFileCreatedBy", fields: [createdById], references: [id])
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reportRuns     ReportRun[]
+
+  @@index([organizationId, createdAt])
+  @@index([createdById, createdAt])
+  @@index([expiresAt])
+  @@map("report_files")
+}
+
+model ReportRun {
+  id             Int             @id @default(autoincrement())
+  organizationId Int
+  centerId       Int?
+  circleId       Int?
+  reportType     ReportType
+  status         ReportRunStatus @default(PENDING)
+  requestedById  Int
+  requestedAt    DateTime        @default(now())
+  completedAt    DateTime?
+  filters        Json
+  summary        Json?
+  errorMessage   String?         @db.VarChar(500)
+  outputFileId   Int?
+  center         Center?         @relation(fields: [centerId], references: [id])
+  circle         Circle?         @relation(fields: [circleId], references: [id])
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outputFile     ReportFile?     @relation(fields: [outputFileId], references: [id])
+  requestedBy    User            @relation("ReportRequestedBy", fields: [requestedById], references: [id])
+
+  @@index([organizationId, requestedAt])
+  @@index([requestedById, requestedAt])
+  @@index([reportType, requestedAt])
+  @@index([status, requestedAt])
+  @@map("report_runs")
+}
+
+model Notification {
+  id              Int              @id @default(autoincrement())
+  organizationId  Int
+  centerId        Int?
+  circleId        Int?
+  type            NotificationType
+  title           String           @db.VarChar(200)
+  body            String           @db.VarChar(500)
+  payload         Json
+  recipientUserId Int
+  isRead          Boolean          @default(false)
+  createdById     Int?
+  createdAt       DateTime         @default(now())
+  readAt          DateTime?
+  center          Center?          @relation(fields: [centerId], references: [id])
+  circle          Circle?          @relation(fields: [circleId], references: [id])
+  createdBy       User?            @relation("NotificationCreatedBy", fields: [createdById], references: [id])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipient       User             @relation("NotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, isRead, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id             Int             @id @default(autoincrement())
+  organizationId Int
+  centerId       Int?
+  circleId       Int?
+  actorUserId    Int?
+  actorRole      String          @db.VarChar(40)
+  action         AuditAction
+  entityType     AuditEntityType
+  entityId       Int
+  summary        String          @db.VarChar(255)
+  metadata       Json
+  ip             String?         @db.VarChar(64)
+  userAgent      String?         @db.VarChar(255)
+  createdAt      DateTime        @default(now())
+  actor          User?           @relation("AuditActor", fields: [actorUserId], references: [id])
+  center         Center?         @relation(fields: [centerId], references: [id])
+  circle         Circle?         @relation(fields: [circleId], references: [id])
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([centerId, createdAt])
+  @@index([circleId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model LibraryCategory {
+  id             Int           @id @default(autoincrement())
+  organizationId Int           @map("organization_id")
+  centerId       Int?          @map("center_id")
+  name           String        @db.VarChar(120)
+  code           String        @db.VarChar(80)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  center         Center?       @relation(fields: [centerId], references: [id])
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items          LibraryItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([centerId])
+  @@map("library_categories")
+}
+
+model LibraryItem {
+  id              Int               @id @default(autoincrement())
+  organizationId  Int               @map("organization_id")
+  centerId        Int?              @map("center_id")
+  circleId        Int?              @map("circle_id")
+  categoryId      Int?              @map("category_id")
+  bookCategory    BookCategory?
+  title           String            @db.VarChar(200)
+  description     String?
+  fileName        String            @map("file_name") @db.VarChar(255)
+  mimeType        String            @map("mime_type") @db.VarChar(120)
+  fileSize        Int               @map("file_size")
+  storageKey      String            @map("storage_key") @db.VarChar(255)
+  coverStorageKey String?           @map("cover_storage_key") @db.VarChar(255)
+  visibility      LibraryVisibility
+  status          LibraryItemStatus @default(ACTIVE)
+  createdById     Int               @map("created_by_id")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  type            LibraryItemType   @default(DOCUMENT)
+  category        LibraryCategory?  @relation(fields: [categoryId], references: [id])
+  center          Center?           @relation(fields: [centerId], references: [id])
+  circle          Circle?           @relation(fields: [circleId], references: [id])
+  createdBy       User              @relation("LibraryItemCreatedBy", fields: [createdById], references: [id])
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([centerId])
+  @@index([circleId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([visibility])
+  @@map("library_items")
+}
+
+model MonthlyPlan {
+  id                Int               @id @default(autoincrement())
+  organizationId    Int               @map("organization_id")
+  centerId          Int               @map("center_id")
+  circleId          Int               @map("circle_id")
+  studentId         Int               @map("student_id")
+  teacherId         Int               @map("teacher_id")
+  month             Int               @db.SmallInt
+  year              Int               @db.SmallInt
+  hifzFromSurah     Int?              @map("hifz_from_surah")
+  hifzFromAyah      Int?              @map("hifz_from_ayah")
+  hifzToSurah       Int?              @map("hifz_to_surah")
+  hifzToAyah        Int?              @map("hifz_to_ayah")
+  hifzTargetPages   Decimal?          @map("hifz_target_pages") @db.Decimal(5, 1)
+  hifzDailyRate     Decimal?          @map("hifz_daily_rate") @db.Decimal(5, 2)
+  reviewFromSurah   Int?              @map("review_from_surah")
+  reviewFromAyah    Int?              @map("review_from_ayah")
+  reviewToSurah     Int?              @map("review_to_surah")
+  reviewToAyah      Int?              @map("review_to_ayah")
+  reviewTargetPages Decimal?          @map("review_target_pages") @db.Decimal(5, 1)
+  reviewDailyRate   Decimal?          @map("review_daily_rate") @db.Decimal(5, 2)
+  status            MonthlyPlanStatus @default(PENDING)
+  approvedAt        DateTime?         @map("approved_at")
+  notes             String?           @db.VarChar(500)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  center            Center            @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle            Circle            @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  student           User              @relation("MonthlyPlanStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher           User              @relation("MonthlyPlanTeacher", fields: [teacherId], references: [id])
+
+  @@unique([studentId, circleId, month, year])
+  @@index([circleId, month, year])
+  @@index([organizationId, centerId, month, year])
+  @@index([teacherId])
+  @@map("monthly_plans")
+}
+
+model GroupActivity {
+  id             Int                        @id @default(autoincrement())
+  organizationId Int                        @map("organization_id")
+  centerId       Int                        @map("center_id")
+  circleId       Int                        @map("circle_id")
+  teacherId      Int                        @map("teacher_id")
+  activityDate   DateTime                   @map("activity_date") @db.Date
+  activityType   GroupActivityType
+  title          String                     @db.VarChar(255)
+  description    String?                    @db.VarChar(1000)
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  center         Center                     @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle         Circle                     @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teacher        User                       @relation("GroupActivityTeacher", fields: [teacherId], references: [id])
+  participants   GroupActivityParticipant[]
+
+  @@index([circleId, activityDate])
+  @@index([organizationId, centerId, activityDate])
+  @@index([teacherId])
+  @@map("group_activities")
+}
+
+model GroupActivityParticipant {
+  id         Int           @id @default(autoincrement())
+  activityId Int           @map("activity_id")
+  studentId  Int           @map("student_id")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  activity   GroupActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  student    User          @relation("GroupActivityStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, studentId])
+  @@index([studentId])
+  @@map("group_activity_participants")
+}
+
+model ReviewPlanSettings {
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @map("organization_id")
+  circleId       Int?         @map("circle_id")
+  teacherId      Int          @map("teacher_id")
+  juzThreshold5  Decimal      @default(10) @map("juz_threshold_5") @db.Decimal(5, 1)
+  juzThreshold10 Decimal      @default(15) @map("juz_threshold_10") @db.Decimal(5, 1)
+  juzThreshold20 Decimal      @default(20) @map("juz_threshold_20") @db.Decimal(5, 1)
+  juzThreshold30 Decimal      @default(30) @map("juz_threshold_30") @db.Decimal(5, 1)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  circle         Circle?      @relation("ReviewPlanSettingsCircle", fields: [circleId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  teacher        User         @relation("ReviewPlanSettingsTeacher", fields: [teacherId], references: [id])
+
+  @@unique([organizationId, teacherId, circleId])
+  @@index([teacherId])
+  @@map("review_plan_settings")
+}
+
+enum AccountStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
+enum BookCategory {
+  TAFSIR
+  FIQH
+  HADITH
+  MATN
+  SIRA
+  GENERAL
+}
+
+enum Role {
+  SUPER_ADMIN
+  CENTER_ADMIN
+  SUPERVISOR
+  TEACHER
+  PARENT
+  STUDENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+  ON_LEAVE
+}
+
+enum AttendanceSource {
+  MANUAL
+  SELF_CHECK_IN
+  SYSTEM
+  IMPORT
+}
+
+enum StaffRoleType {
+  TEACHER
+  CENTER_ADMIN
+  SUPERVISOR
+  OTHER
+}
+
+enum LeaveType {
+  MEDICAL
+  OFFICIAL
+  PERSONAL
+  UNPAID
+}
+
+enum LeaveRequestStatus {
+  LEAVE_PENDING
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+}
+
+enum ScheduleSourceType {
+  CIRCLE_SYNC
+  MANUAL
+}
+
+enum VisitPlanStatus {
+  VISIT_PLAN_DRAFT
+  VISIT_PLAN_ACTIVE
+  VISIT_PLAN_COMPLETED
+}
+
+enum VisitPlanItemStatus {
+  VISIT_ITEM_PENDING
+  VISIT_ITEM_COMPLETED
+  VISIT_ITEM_MISSED
+}
+
+enum VisitPriority {
+  NORMAL
+  HIGH
+  URGENT
+  LOW
+}
+
+enum DeductionTriggerType {
+  UNEXCUSED_ABSENCE
+  LATE_THRESHOLD
+  EARLY_DEPARTURE
+  UNPAID_LEAVE
+  MISSED_VISIT
+}
+
+enum DeductionCalcType {
+  FIXED
+  PER_DAY
+  PER_OCCURRENCE
+}
+
+enum DeductionEventStatus {
+  DEDUCTION_PENDING
+  DEDUCTION_APPROVED
+  DEDUCTION_REJECTED
+  DEDUCTION_WAIVED
+  DEDUCTION_INCLUDED_IN_PAYROLL
+}
+
+enum GeoState {
+  INSIDE
+  OUTSIDE
+  NOT_SENT
+}
+
+enum GeoEnforcement {
+  DISABLED
+  WARN_ONLY
+  STRICT
+}
+
+enum ParentRelationType {
+  FATHER
+  MOTHER
+  GUARDIAN
+}
+
+enum ParentProfileRelationType {
+  FATHER
+  MOTHER
+  GUARDIAN
+  OTHER
+}
+
+enum KhatmType {
+  HAFIZ
+  KHATEM
+  IJAZAH
+  QIRAAT
+}
+
+enum RiwayaType {
+  HAFS
+  WARSH
+}
+
+enum GraduationCandidateStatus {
+  NOMINATED
+  SCHEDULED
+  TESTED
+  APPROVED
+  REJECTED
+  DEFERRED
+}
+
+enum GoldenRecordStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum GoldenRecordType {
+  KHATEM
+  IJAZAH
+}
+
+enum GoldenRecordSource {
+  CANDIDATE
+  MANUAL
+  EXAM_BASED
+}
+
+enum AchievementCategory {
+  LESS_THAN_10_JUZ
+  JUZ_10
+  JUZ_20
+  JUZ_30
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  SUSPENDED
+  TRANSFERRED
+}
+
+enum SupervisorProfileStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SalarySource {
+  GRADE
+  OVERRIDE
+}
+
+enum StaffAssignmentType {
+  CENTER_ADMIN
+  CENTER_SUPERVISOR
+  CIRCLE_TEACHER
+  CIRCLE_SUPERVISOR
+  ACCOUNTANT
+}
+
+enum StudentLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum StudentProfileStatus {
+  REGULAR
+  DROPPED
+  GRADUATED
+}
+
+enum ActivityType {
+  LOGIN
+  REFRESH_TOKEN
+  LOGOUT
+  ATTENDANCE_MARKED
+  ATTENDANCE_UPDATED
+  STUDENT_ENROLLED
+  USER_CREATED
+  GENERIC
+  FOLLOW_UP_RECORDED
+}
+
+enum FollowUpType {
+  NEW_MEMORIZATION
+  REVIEW
+  MATN
+}
+
+enum FollowUpRecordStatus {
+  DRAFT
+  FINAL
+}
+
+enum MatnProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+}
+
+enum CorrectionTargetType {
+  ATTENDANCE
+  FOLLOW_UP
+  EXAM_ATTEMPT
+}
+
+enum CorrectionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  APPLIED
+  CANCELLED
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+}
+
+enum ExamType {
+  JUZ
+  FULL_QURAN
+  SURAH_RANGE
+  OTHER
+}
+
+enum ExamPurpose {
+  NORMAL
+  MONTHLY
+  LEVEL
+  GOLDEN_RECORD_MUSHAF
+}
+
+enum ExamQuestionSource {
+  MANUAL
+  AUTO
+}
+
+enum NominationRequestStatus {
+  SUBMITTED
+  RETURNED
+  REJECTED
+  DEFERRED
+  SUPERVISOR_APPROVED
+  CENTER_APPROVED
+}
+
+enum CommitteeRole {
+  CHAIR
+  MEMBER
+}
+
+enum AttemptStatus {
+  SCHEDULED
+  IN_PROGRESS
+  EVALUATED
+  APPROVED
+  PUBLISHED
+  CANCELLED
+}
+
+enum LibraryVisibility {
+  ORG
+  CENTER
+  CIRCLE
+}
+
+enum LibraryItemStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum LibraryItemType {
+  DOCUMENT
+  AUDIO
+  VIDEO
+}
+
+enum TuitionAssignmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
+enum DonorType {
+  CHARITY_FOUNDATION
+  CHARITY_ASSOCIATION
+  INDIVIDUAL_DONOR
+  MERCHANT
+  PARENT_DONOR
+  GOVERNMENT_ENTITY
+  CORPORATE_SPONSOR
+}
+
+enum DonationStatus {
+  PLEDGED
+  RECEIVED
+  CANCELLED
+}
+
+enum FinanceAccountType {
+  ORG_FUND
+  CENTER_FUND
+  ORG_BANK
+  CENTER_BANK
+}
+
+enum VoucherType {
+  RECEIPT
+  DISBURSEMENT
+}
+
+enum VoucherSourceType {
+  PAYMENT
+  PAYROLL_ITEM
+  REWARD_ITEM
+  FUND_TRANSFER
+  MANUAL
+  EXPENSE
+}
+
+enum VoucherStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  POSTED
+  VOID_REQUESTED
+  VOIDED
+  CANCELLED
+}
+
+enum VoucherAccountingCategory {
+  // RECEIPT voucher categories
+  DONATION
+  STUDENT_CONTRIBUTION
+  OTHER_INCOME
+  // DISBURSEMENT voucher categories
+  OPERATING_EXPENSE
+  EDUCATIONAL_EXPENSE
+  CENTER_EXPENSE
+  REWARD
+  PAYROLL
+}
+
+enum FinanceMovementType {
+  PAYMENT_COLLECTION
+  VOUCHER_DISBURSEMENT
+  FUND_TRANSFER_OUT
+  FUND_TRANSFER_IN
+  PAYROLL_PAYOUT
+  REWARD_PAYOUT
+  VOID_REVERSAL
+  LEGACY_BACKFILL
+}
+
+enum FinanceMovementDirection {
+  IN
+  OUT
+}
+
+enum AccountingAccountType {
+  ASSET
+  LIABILITY
+  NET_ASSET
+  REVENUE
+  EXPENSE
+}
+
+enum AccountingNormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+enum JournalSourceType {
+  INVOICE
+  PAYMENT
+  VOUCHER
+  FUND_TRANSFER
+  MANUAL
+  PAYROLL
+  REWARD
+  DEDUCTION
+  EXPENSE_INVOICE
+  EXPENSE_PAYMENT
+  ASSET_ACQUISITION
+  ASSET_DEPRECIATION
+}
+
+enum FundTransferStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  POSTED
+  CANCELLED
+}
+
+enum FeeMode {
+  FREE
+  SYMBOLIC_ONE_TIME
+  PLAN_MONTHLY
+}
+
+enum InvoiceType {
+  TUITION_MONTHLY
+  REGISTRATION_ONE_TIME
+  OTHER
+}
+
+enum TuitionPlanKind {
+  MONTHLY
+  ONE_TIME_REGISTRATION
+}
+
+enum PayrollBatchStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  PARTIALLY_PAID
+  PAID
+  CLOSED
+  CANCELLED
+}
+
+enum PayrollItemStatus {
+  PENDING
+  PAID
+  FAILED
+  VOIDED
+}
+
+enum RewardCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum RewardType {
+  GENERAL
+  PERFORMANCE
+  ATTENDANCE
+  COMPETITION
+  OTHER
+}
+
+enum RewardBatchStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  PARTIALLY_PAID
+  PAID
+  CLOSED
+  CANCELLED
+}
+
+enum RewardItemStatus {
+  PENDING
+  PAID
+  FAILED
+  VOIDED
+}
+
+enum RewardBeneficiaryRole {
+  TEACHER
+  STUDENT
+}
+
+enum ReportType {
+  ATTENDANCE
+  FOLLOW_UP
+  EXAMS
+  FINANCE
+}
+
+enum ReportRunStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ReportFileKind {
+  PDF
+  XLSX
+}
+
+enum NotificationType {
+  EXAM_PUBLISHED
+  EXAM_ATTEMPT_SCHEDULED
+  GOLDEN_RECORD_NOMINATION_APPROVED
+  REMOTE_RECITATION_REQUESTED
+  REMOTE_RECITATION_APPROVED
+  REMOTE_RECITATION_REJECTED
+  REMOTE_RECITATION_CANCELLED
+  REMOTE_RECITATION_COMPLETED
+  LIBRARY_UPLOADED
+  INVOICE_ISSUED
+  PAYMENT_RECORDED
+  REPORT_EXPORTED
+  EXAM_SCORED
+  EXAM_RESULT_SHARED
+  VOUCHER_SUBMITTED
+  VOUCHER_APPROVED
+  PAYROLL_APPROVED
+  REWARD_APPROVED
+  TRANSFER_APPROVED
+  SUPERVISOR_VISIT_ASSIGNED
+  STAFF_SHIFT_REMINDER
+  STAFF_LATE_ALERT
+}
+
+enum AuditEntityType {
+  USER
+  CENTER
+  CIRCLE
+  REMOTE_RECITATION_SLOT
+  REMOTE_RECITATION_BOOKING
+  EXAM
+  EXAM_ATTEMPT
+  LIBRARY_ITEM
+  INVOICE
+  PAYMENT
+  REPORT_EXPORT
+  SETTINGS
+  VOUCHER
+  FINANCE_ACCOUNT
+  FUND_TRANSFER
+  PAYROLL_BATCH
+  PAYROLL_ITEM
+  REWARD_BATCH
+  REWARD_ITEM
+  // Finance module – added in AUDIT-TRAIL-FINANCE-1
+  EXPENSE_INVOICE
+  FIXED_ASSET
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  ARCHIVE
+  DOWNLOAD
+  EXPORT
+  SCORE
+  LOGIN
+  LOGOUT
+}
+
+enum RemoteRecitationBookingStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum SupervisorNoteCategory {
+  GENERAL
+  PRAISE
+  WARNING
+  VISIT
+  EVALUATION
+}
+
+enum SupervisorNoteStatus {
+  PENDING
+  RESOLVED
+}
+
+enum CircleType {
+  HIFZ
+  REVIEW
+  HIFZ_REVIEW
+}
+
+enum Weekday {
+  FRIDAY
+  SATURDAY
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+}
+
+enum CircleScheduleMode {
+  CLOCK
+  PRAYER
+}
+
+enum PrayerName {
+  FAJR
+  DHUHR
+  ASR
+  MAGHRIB
+  ISHA
+}
+
+enum ExcuseRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MonthlyPlanStatus {
+  PENDING
+  APPROVED
+  MODIFIED
+}
+
+enum GroupActivityType {
+  LECTURE
+  TAFSEER
+  SEERAH
+  FIQH
+  TAJWEED
+  HADITH
+  EDUCATIONAL
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+model FinanceSettings {
+  id                               Int      @id @default(autoincrement())
+  organizationId                   Int      @unique
+  baseCurrencyCode                 String   @default("YER") @db.VarChar(8)
+  fiscalYearStartMonth             Int      @default(1) @db.SmallInt
+  roundingPolicy                   String?  @db.VarChar(40)
+  defaultCashAccountId             Int?
+  defaultBankAccountId             Int?
+  defaultStudentRevenueAccountId   Int?
+  defaultDonationRevenueAccountId  Int?
+  defaultPayrollExpenseAccountId   Int?
+  defaultOperatingExpenseAccountId Int?
+  createdAt                        DateTime @default(now())
+  updatedAt                        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("finance_settings")
+}
+
+model FiscalYear {
+  id             Int                @id @default(autoincrement())
+  organizationId Int
+  year           Int
+  startDate      DateTime           @db.Date
+  endDate        DateTime           @db.Date
+  status         FiscalPeriodStatus @default(OPEN)
+  closedAt       DateTime?
+  closedById     Int?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  periods      FiscalPeriod[]
+  closedBy     User?          @relation("FiscalYearClosedBy", fields: [closedById], references: [id])
+
+  @@unique([organizationId, year])
+  @@index([organizationId, status])
+  @@map("fiscal_years")
+}
+
+model FiscalPeriod {
+  id             Int                @id @default(autoincrement())
+  organizationId Int
+  fiscalYearId   Int
+  periodNumber   Int                @db.SmallInt
+  periodName     String             @db.VarChar(60)
+  startDate      DateTime           @db.Date
+  endDate        DateTime           @db.Date
+  status         FiscalPeriodStatus @default(OPEN)
+  closedAt       DateTime?
+  closedById     Int?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  closedBy     User?        @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+
+  @@unique([fiscalYearId, periodNumber])
+  @@index([organizationId, startDate, endDate])
+  @@index([organizationId, status])
+  @@map("fiscal_periods")
+}
+
+enum ExpenseInvoiceStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PARTIALLY_PAID
+  PAID
+  VOIDED
+}
+
+enum FixedAssetStatus {
+  ACTIVE
+  UNDER_MAINTENANCE
+  DISPOSED
+  LOST
+  INACTIVE
+}
+
+model Supplier {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  name           String   @db.VarChar(120)
+  phone          String?  @db.VarChar(32)
+  address        String?  @db.VarChar(255)
+  notes          String?  @db.VarChar(500)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     ExpenseInvoice[]
+  fixedAssets  FixedAsset[]
+
+  @@index([organizationId])
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+model ExpenseCategory {
+  id                  Int      @id @default(autoincrement())
+  organizationId      Int      @map("organization_id")
+  name                String   @db.VarChar(120)
+  type                String?  @db.VarChar(60)
+  accountingAccountId Int?     @map("accounting_account_id")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accountingAccount AccountingAccount? @relation(fields: [accountingAccountId], references: [id])
+  invoices          ExpenseInvoice[]
+
+  @@index([organizationId])
+  @@map("expense_categories")
+}
+
+model ExpenseInvoice {
+  id             Int                  @id @default(autoincrement())
+  organizationId Int                  @map("organization_id")
+  centerId       Int?                 @map("center_id")
+  supplierId     Int?                 @map("supplier_id")
+  categoryId     Int                  @map("category_id")
+  invoiceNo      String?              @map("invoice_no") @db.VarChar(80)
+  invoiceDate    DateTime             @map("invoice_date") @db.Date
+  dueDate        DateTime?            @map("due_date") @db.Date
+  description    String               @db.VarChar(500)
+  amount         Decimal              @db.Decimal(10, 2)
+  status         ExpenseInvoiceStatus @default(DRAFT)
+  approvedById   Int?                 @map("approved_by_id")
+  approvedAt     DateTime?            @map("approved_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  center       Center?          @relation(fields: [centerId], references: [id])
+  supplier     Supplier?        @relation(fields: [supplierId], references: [id])
+  category     ExpenseCategory  @relation(fields: [categoryId], references: [id])
+  approvedBy   User?            @relation("ExpenseInvoiceApprovedBy", fields: [approvedById], references: [id])
+  payments     ExpensePayment[]
+  fixedAssets  FixedAsset[]
+
+  @@index([organizationId])
+  @@index([centerId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("expense_invoices")
+}
+
+model ExpensePayment {
+  id               Int      @id @default(autoincrement())
+  organizationId   Int      @map("organization_id")
+  invoiceId        Int      @map("invoice_id")
+  amount           Decimal  @db.Decimal(10, 2)
+  paidAt           DateTime @map("paid_at")
+  financeAccountId Int?     @map("finance_account_id")
+  voucherId        Int?     @map("voucher_id")
+  journalEntryId   Int?     @map("journal_entry_id")
+  notes            String?  @db.VarChar(500)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice        ExpenseInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  financeAccount FinanceAccount? @relation(fields: [financeAccountId], references: [id])
+  voucher        FinanceVoucher? @relation(fields: [voucherId], references: [id])
+  journalEntry   JournalEntry?   @relation(fields: [journalEntryId], references: [id])
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@map("expense_payments")
+}
+
+model AssetCategory {
+  id                               Int      @id @default(autoincrement())
+  organizationId                   Int      @map("organization_id")
+  name                             String   @db.VarChar(120)
+  assetAccountId                   Int?     @map("asset_account_id")
+  depreciationExpenseAccountId     Int?     @map("depreciation_expense_account_id")
+  accumulatedDepreciationAccountId Int?     @map("accumulated_depreciation_account_id")
+  usefulLifeMonths                 Int?     @map("useful_life_months")
+  isActive                         Boolean  @default(true) @map("is_active")
+  createdAt                        DateTime @default(now()) @map("created_at")
+  updatedAt                        DateTime @updatedAt @map("updated_at")
+
+  organization                   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assetAccount                   AccountingAccount? @relation("AssetCategoryAssetAccount", fields: [assetAccountId], references: [id])
+  depreciationExpenseAccount     AccountingAccount? @relation("AssetCategoryDepreciationExpenseAccount", fields: [depreciationExpenseAccountId], references: [id])
+  accumulatedDepreciationAccount AccountingAccount? @relation("AssetCategoryAccumulatedDepreciationAccount", fields: [accumulatedDepreciationAccountId], references: [id])
+  fixedAssets                    FixedAsset[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@index([assetAccountId])
+  @@index([depreciationExpenseAccountId])
+  @@index([accumulatedDepreciationAccountId])
+  @@map("asset_categories")
+}
+
+model FixedAsset {
+  id                        Int              @id @default(autoincrement())
+  organizationId            Int              @map("organization_id")
+  centerId                  Int?             @map("center_id")
+  categoryId                Int              @map("category_id")
+  assetCode                 String           @map("asset_code") @db.VarChar(80)
+  name                      String           @db.VarChar(160)
+  description               String?          @db.VarChar(500)
+  purchaseDate              DateTime         @map("purchase_date") @db.Date
+  purchaseCost              Decimal          @map("purchase_cost") @db.Decimal(12, 2)
+  currentValue              Decimal?         @map("current_value") @db.Decimal(12, 2)
+  usefulLifeMonths          Int?             @map("useful_life_months")
+  status                    FixedAssetStatus @default(ACTIVE)
+  location                  String?          @db.VarChar(255)
+  custodianUserId           Int?             @map("custodian_user_id")
+  supplierId                Int?             @map("supplier_id")
+  expenseInvoiceId          Int?             @map("expense_invoice_id")
+  acquisitionJournalEntryId Int?             @unique @map("acquisition_journal_entry_id")
+  notes                     String?          @db.VarChar(500)
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
+
+  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  center                  Center?                  @relation(fields: [centerId], references: [id])
+  category                AssetCategory            @relation(fields: [categoryId], references: [id])
+  custodian               User?                    @relation("FixedAssetCustodian", fields: [custodianUserId], references: [id])
+  supplier                Supplier?                @relation(fields: [supplierId], references: [id])
+  expenseInvoice          ExpenseInvoice?          @relation(fields: [expenseInvoiceId], references: [id])
+  acquisitionJournalEntry JournalEntry?            @relation("AssetAcquisitionEntry", fields: [acquisitionJournalEntryId], references: [id])
+  custodyLogs             AssetCustodyLog[]
+  depreciationEntries     AssetDepreciationEntry[]
+
+  @@unique([organizationId, assetCode])
+  @@index([organizationId, status])
+  @@index([centerId])
+  @@index([categoryId])
+  @@index([custodianUserId])
+  @@index([supplierId])
+  @@index([expenseInvoiceId])
+  @@map("fixed_assets")
+}
+
+model AssetCustodyLog {
+  id             Int       @id @default(autoincrement())
+  organizationId Int       @map("organization_id")
+  assetId        Int       @map("asset_id")
+  fromUserId     Int?      @map("from_user_id")
+  toUserId       Int?      @map("to_user_id")
+  centerId       Int?      @map("center_id")
+  assignedAt     DateTime  @map("assigned_at")
+  returnedAt     DateTime? @map("returned_at")
+  notes          String?   @db.VarChar(500)
+  createdById    Int?      @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  asset        FixedAsset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromUser     User?        @relation("AssetCustodyFromUser", fields: [fromUserId], references: [id])
+  toUser       User?        @relation("AssetCustodyToUser", fields: [toUserId], references: [id])
+  center       Center?      @relation(fields: [centerId], references: [id])
+  createdBy    User?        @relation("AssetCustodyCreatedBy", fields: [createdById], references: [id])
+
+  @@index([organizationId, assignedAt])
+  @@index([assetId, assignedAt])
+  @@index([toUserId])
+  @@index([centerId])
+  @@map("asset_custody_logs")
+}
+
+model AssetDepreciationEntry {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  assetId        Int      @map("asset_id")
+  periodYear     Int      @map("period_year") @db.SmallInt
+  periodMonth    Int      @map("period_month") @db.SmallInt
+  amount         Decimal  @db.Decimal(12, 2)
+  journalEntryId Int?     @unique @map("journal_entry_id")
+  notes          String?  @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  asset        FixedAsset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  journalEntry JournalEntry? @relation("AssetDepreciationEntry", fields: [journalEntryId], references: [id])
+
+  @@unique([assetId, periodYear, periodMonth])
+  @@index([organizationId])
+  @@index([assetId])
+  @@map("asset_depreciation_entries")
+}

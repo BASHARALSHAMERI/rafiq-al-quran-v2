@@ -1,0 +1,1 @@
+ALTER TYPE "VoucherAccountingCategory" ADD VALUE IF NOT EXISTS 'PAYROLL';

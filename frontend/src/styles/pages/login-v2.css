@@ -1,0 +1,397 @@
+/* =========================================
+   Aurora V6 (The Sanctuary - المحراب) 
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --auth-emerald: #064e3b;
+  --auth-gold: #c5a059;
+  --auth-ivory: #fdfbf7;
+  --auth-text: #1e293b;
+  --auth-muted: #64748b;
+  --auth-border: #e2e8f0;
+}
+
+/* --- Page Foundation --- */
+.auth-prime {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  font-family: 'Outfit', 'Tajawal', system-ui, sans-serif;
+  background-color: #f1f5f9;
+  color: var(--auth-text);
+  position: relative;
+  overflow: hidden;
+}
+
+[dir="rtl"] .auth-prime {
+  flex-direction: row-reverse;
+}
+
+/* --- The Sanctuary Side (Art) --- */
+.auth-prime__art {
+  flex: 1.1;
+  background-color: var(--auth-emerald);
+  background-image: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative Islamic Pattern Overlay */
+.auth-prime__art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0l10 10-10 10-10-10zM0 40l10 10-10 10-10-10zM80 40l10 10-10 10-10-10zM40 80l10 10-10 10-10-10z' fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* --- The Mihrab (Islamic Arch) --- */
+.auth-mihrab {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  border-radius: 200px 200px 40px 40px; /* Base Arch Shape */
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+  animation: mihrab-float 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The Pointed Top of the Arch (Pseudo-element) */
+.auth-mihrab::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  background: var(--auth-emerald);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  border-bottom: none;
+  transform: translateX(-50%) rotate(45deg);
+  border-radius: 4px 0 0 0;
+  z-index: -1;
+}
+
+@keyframes mihrab-float {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-mihrab-logo {
+  width: 180px; /* Significantly enlarged for clarity and prestige */
+  height: 180px;
+  margin-bottom: 2rem;
+  filter: drop-shadow(0 15px 30px rgba(0,0,0,0.4));
+  object-fit: contain;
+}
+
+.auth-mihrab-title {
+  color: #ffffff;
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  letter-spacing: 0.02em;
+}
+
+.auth-mihrab-divider {
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--auth-gold), transparent);
+  margin-bottom: 2.5rem;
+  opacity: 0.8;
+}
+
+.auth-mihrab-quote {
+  color: var(--auth-gold);
+  font-family: 'Amiri', serif;
+  font-size: 2rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.auth-mihrab-footer {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 1rem;
+  width: 100%;
+}
+
+/* --- Action Side (Form) --- */
+.auth-prime__form-side {
+  flex: 1.2;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 20;
+  box-shadow: -20px 0 50px rgba(0,0,0,0.05);
+}
+
+.auth-prime__top-actions {
+  padding: 2.5rem 4rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auth-prime__lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  background: #f8fafc;
+  border: 1px solid var(--auth-border);
+  border-radius: 12px;
+  color: var(--auth-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-prime__lang:hover {
+  border-color: var(--auth-gold);
+  color: var(--auth-emerald);
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.auth-prime__container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 6rem 4rem;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.auth-prime__header {
+  margin-bottom: 3.5rem;
+}
+
+.auth-prime__header h2 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--auth-emerald);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+}
+
+.auth-prime__header p {
+  color: var(--auth-muted);
+  font-size: 1.15rem;
+  line-height: 1.5;
+}
+
+/* --- Artistic Form Fields --- */
+.auth-prime__field {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.auth-prime__field span {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--auth-emerald);
+  margin-bottom: 0.8rem;
+  transition: color 0.3s;
+}
+
+.auth-prime__input {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 2px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 0 1.5rem;
+  height: 4.25rem;
+  gap: 1.25rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-prime__input:focus-within {
+  border-color: var(--auth-gold);
+  background: #fff;
+  transform: scale(1.01);
+  box-shadow: 0 10px 25px -5px rgba(197, 160, 89, 0.15);
+}
+
+.auth-prime__input svg {
+  color: #94a3b8;
+  width: 1.5rem;
+  transition: color 0.3s;
+}
+
+.auth-prime__input:focus-within svg {
+  color: var(--auth-gold);
+}
+
+.auth-prime__input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--auth-text);
+  background: transparent;
+}
+
+.auth-prime__password-toggle {
+  color: #94a3b8;
+  transition: color 0.2s;
+  padding: 0.5rem;
+}
+
+.auth-prime__password-toggle:hover {
+  color: var(--auth-gold);
+}
+
+/* --- Remember Me & Forgot Password Alignment --- */
+.auth-prime__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
+}
+
+.auth-prime__remember {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-prime__remember input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--auth-emerald);
+  cursor: pointer;
+}
+
+.auth-prime__remember span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--auth-muted);
+  transition: color 0.2s;
+}
+
+.auth-prime__remember:hover span {
+  color: var(--auth-emerald);
+}
+
+.auth-prime__forgot {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--auth-gold);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.auth-prime__forgot:hover {
+  color: var(--auth-emerald);
+  text-decoration: underline;
+}
+
+.auth-prime__submit-btn {
+  width: 100%;
+  height: 4.5rem;
+  background: linear-gradient(135deg, var(--auth-emerald) 0%, #022c22 100%);
+  color: #fff;
+  border-radius: 18px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  box-shadow: 0 15px 30px -10px rgba(6, 78, 59, 0.4);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  cursor: pointer;
+}
+
+.auth-prime__submit-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -10px rgba(6, 78, 59, 0.5);
+  filter: brightness(1.1);
+}
+
+.auth-prime__submit-btn:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Success Card */
+.auth-success-card {
+  text-align: center;
+}
+
+.auth-success-card__icon {
+  width: 5.5rem;
+  height: 5.5rem;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 2rem; /* Soft Square */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  transform: rotate(45deg);
+}
+
+.auth-success-card__icon > svg {
+  transform: rotate(-45deg);
+}
+
+.auth-success-card h3 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--auth-emerald);
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .auth-prime {
+    flex-direction: column !important;
+  }
+  .auth-prime__art {
+    flex: none;
+    height: 40vh;
+    padding: 2rem;
+  }
+  .auth-mihrab {
+    padding: 2rem 1rem;
+    max-width: 320px;
+    border-radius: 150px 150px 20px 20px;
+  }
+  .auth-mihrab-logo { width: 70px; height: 70px; }
+  .auth-mihrab-title { font-size: 1.5rem; margin-bottom: 1rem; }
+  .auth-mihrab-divider, .auth-mihrab-quote, .auth-mihrab-footer { display: none; }
+  
+  .auth-prime__form-side {
+    margin-top: -3rem;
+    border-radius: 3rem 3rem 0 0;
+  }
+}

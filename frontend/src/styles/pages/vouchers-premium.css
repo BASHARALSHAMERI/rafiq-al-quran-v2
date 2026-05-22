@@ -1,0 +1,222 @@
+/**
+ * ═════════════════════════════════════════════════════════════════
+ * VOUCHERS PREMIUM — ARTISTIC MODIFIER STYLES
+ * ═════════════════════════════════════════════════════════════════
+ */
+
+/* ─── Page & Layout ─── */
+.fin-premium-container {
+  padding: 0 !important; /* Managed by FinancePageShell gap/padding */
+}
+
+/* ─── Premium Modal Redesign (Neutral Like Centers) ─── */
+.fin-premium-modal .modal-content {
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15) !important;
+  background: var(--bg-card) !important;
+}
+
+.fin-premium-modal__header {
+  padding: 1.5rem 2rem !important;
+  border-bottom: 1px solid var(--border-light, #f1f5f9) !important;
+  color: var(--text-main) !important;
+  background: var(--bg-card) !important;
+  position: relative;
+}
+
+/* Remove colored gradients as per user request for neutral "Centers" look */
+.fin-premium-modal__header--receipt,
+.fin-premium-modal__header--disbursement {
+  background: var(--bg-card) !important;
+  color: var(--text-main) !important;
+}
+
+.fin-premium-modal__body {
+  padding: 2rem !important;
+  background: var(--bg-card) !important;
+}
+
+.fin-premium-form-section {
+  background: var(--bg-subtle, #f8fafc) !important;
+  border: 1px solid var(--border-subtle, #eef2f6) !important;
+  border-radius: 18px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* ─── Status Badge Refinement ─── */
+.fin-status-pill {
+  padding: 6px 14px !important;
+  border-radius: 50px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+}
+
+/* ─── Table Floating Artistic Row Design ─── */
+.fin-premium-panel {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin-top: 1rem;
+  height: auto !important;
+  min-height: auto !important;
+}
+
+.fin-premium-panel__content {
+  background: transparent !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.fin-premium-table {
+  width: 100%;
+  border-spacing: 0 10px !important;
+  border-collapse: separate !important;
+  margin-bottom: 0 !important; /* Remove bottom gap */
+}
+
+.fin-premium-table thead th {
+  background: rgba(var(--primary-rgb), 0.05) !important;
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border-bottom: none !important;
+  color: var(--primary-700);
+  padding: 1rem 1.5rem !important;
+}
+
+.fin-floating-row {
+  background: var(--bg-card, #fff) !important;
+  border: 1px solid var(--border-light, #eef2f6) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.fin-floating-row td {
+  border-bottom: none !important;
+  padding: 1.15rem 1.5rem !important;
+}
+
+.fin-floating-row td:first-child {
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-inline-start: 6px solid transparent;
+}
+
+.fin-floating-row td:last-child {
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.fin-floating-row.receipt td:first-child {
+  border-inline-start-color: #10b981;
+}
+
+.fin-floating-row.disbursement td:first-child {
+  border-inline-start-color: #f43f5e;
+}
+
+.fin-floating-row:hover {
+  transform: translateY(-4px) scale(1.002);
+  box-shadow: 0 12px 30px rgba(var(--primary-rgb), 0.08) !important;
+  border-color: var(--primary-200) !important;
+  background: #fff !important;
+  z-index: 10;
+}
+
+[data-theme="dark"] .fin-floating-row {
+  background: #1a1a1a !important;
+  border-color: #2a2a2a !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .fin-floating-row:hover {
+  background: #222 !important;
+  border-color: var(--primary-800) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ─── Premium Input Modernization ─── */
+.fin-premium-input {
+  height: 48px !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--border-light, #e2e8f0) !important;
+  background: var(--bg-card, #fff) !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 16px !important;
+}
+
+.fin-premium-input:focus {
+  border-color: var(--primary-500) !important;
+  box-shadow: 0 0 0 4px rgba(36, 125, 126, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+/* ─── Modern KPIs Stripe ─── */
+/* KPI styles removed to allow global centers-modern.css to take precedence */
+
+/* Header styles removed to allow finance-premium.css to take precedence */
+
+/* ─── Action Buttons Polish ─── */
+.fin-action-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  background: var(--bg-body, #f8fafc);
+  color: var(--text-secondary);
+}
+
+.fin-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.fin-action-btn.view:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #dbeafe;
+}
+
+.fin-action-btn.approve:hover {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #dcfce7;
+}
+
+.fin-action-btn.warn:hover {
+  background: #fffbeb;
+  color: #d97706;
+  border-color: #fef3c7;
+}
+
+/* ─── Form Select Polish ─── */
+select.fin-premium-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 1.25rem;
+  padding-inline: 1rem 3rem !important;
+}
+
+[dir="rtl"] select.fin-premium-input {
+  background-position: right 1rem center;
+  padding-inline: 3rem 1rem !important;
+}
+
+[data-theme="dark"] select.fin-premium-input {
+  background-color: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #eee;
+}

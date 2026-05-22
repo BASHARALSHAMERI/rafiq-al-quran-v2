@@ -1,0 +1,491 @@
+﻿/* ==========================================================================
+   Exam Setup Wizard — Premium Multi-step Modal
+   ========================================================================== */
+
+.wizard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.wizard-intro {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  background: var(--bg-body);
+}
+
+.wizard-intro__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, hsla(210, 80%, 56%, 0.12), hsla(210, 80%, 56%, 0.05));
+  color: var(--color-primary-600);
+  flex-shrink: 0;
+}
+
+.wizard-intro h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.wizard-intro p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* —— OVERLAY & MODAL SHELL —— */
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: hsla(220, 40%, 12%, 0.6);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: wizard-fade-in 0.3s ease both;
+}
+
+@keyframes wizard-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.wizard-modal {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-radius: 24px;
+  border: 1px solid var(--border-light);
+  box-shadow:
+    0 32px 80px hsla(220, 50%, 10%, 0.25),
+    0 8px 24px hsla(220, 50%, 10%, 0.15),
+    0 0 0 1px hsla(0, 0%, 100%, 0.1) inset;
+  overflow: hidden;
+  animation: wizard-slide-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wizard-slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+[data-theme="dark"] .wizard-modal {
+  background: var(--bg-surface);
+  border-color: var(--border-divider);
+  box-shadow:
+    0 32px 80px hsla(0, 0%, 0%, 0.5),
+    0 8px 24px hsla(0, 0%, 0%, 0.3),
+    0 0 0 1px hsla(0, 0%, 100%, 0.05) inset;
+}
+
+/* —— HEADER —— */
+.wizard-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.wizard-header__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.wizard-header__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, hsla(210, 80%, 56%, 0.12), hsla(210, 80%, 56%, 0.04));
+  color: var(--color-primary-600);
+}
+
+.wizard-header__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.wizard-header__sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.wizard-close-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wizard-close-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+/* —— STEPPER NAV —— */
+.wizard-stepper {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-5) var(--space-8);
+  background: var(--bg-body);
+  border-bottom: 1px solid var(--border-light);
+  position: relative;
+}
+
+.wizard-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  z-index: 2;
+}
+
+.wizard-step__circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-divider);
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.wizard-step__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+/* Line connector */
+.wizard-stepper::before {
+  content: '';
+  position: absolute;
+  top: 38px; /* half of padding + half of circle */
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--border-divider);
+  z-index: 1;
+}
+
+/* States */
+.wizard-step--active .wizard-step__circle {
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+  box-shadow: 0 0 0 4px hsla(210, 80%, 56%, 0.1);
+}
+
+.wizard-step--active .wizard-step__label {
+  color: var(--color-primary-700);
+}
+
+.wizard-step--done .wizard-step__circle {
+  border-color: var(--color-success-500);
+  background: var(--color-success-500);
+  color: #fff;
+}
+
+.wizard-step--done .wizard-step__label {
+  color: var(--text-primary);
+}
+
+/* —— BODY (Scrollable) —— */
+.wizard-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-body::-webkit-scrollbar { width: 5px; }
+.wizard-body::-webkit-scrollbar-thumb {
+  background: var(--border-divider);
+  border-radius: 99px;
+}
+
+/* Animated wrapper for smooth transitions between steps */
+.wizard-step-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: step-fade-in 0.3s ease both;
+}
+
+@keyframes step-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-step-header {
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.wizard-step-header h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.wizard-step-header p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* —— FORM ELEMENTS —— */
+.wizard-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.wizard-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wizard-field--full {
+  grid-column: 1 / -1;
+}
+
+.wizard-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.wizard-input,
+.wizard-select {
+  height: 48px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-body);
+  padding: 0 var(--space-4);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.wizard-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left var(--space-4) center; /* RTL support */
+  padding-left: var(--space-8);
+}
+
+.wizard-input:focus,
+.wizard-select:focus {
+  border-color: var(--color-primary-400);
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 3px hsla(210, 80%, 56%, 0.1);
+}
+
+/* —— SPECIFIC CARDS —— */
+.wizard-card {
+  background: var(--bg-body);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+}
+
+.wizard-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-divider);
+}
+
+.wizard-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.wizard-matrix-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wizard-matrix-item label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.wizard-matrix-item input {
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-light);
+  background: var(--bg-surface);
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+}
+
+/* Color Coding for Matrix */
+.matrix-green input { color: var(--color-success-600); border-color: hsla(160, 60%, 46%, 0.3); }
+.matrix-red input { color: var(--color-error-600); border-color: hsla(0, 60%, 55%, 0.3); }
+.matrix-blue input { color: var(--color-primary-600); border-color: hsla(210, 80%, 56%, 0.3); }
+
+/* Review Summary */
+.wizard-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wizard-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.wizard-summary-row dt { color: var(--text-secondary); }
+.wizard-summary-row dd { color: var(--text-primary); font-weight: 600; }
+
+/* —— ERROR ALERT —— */
+.wizard-error {
+  background: hsla(0, 70%, 55%, 0.08);
+  border: 1px solid hsla(0, 70%, 55%, 0.2);
+  color: var(--color-error-700);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wizard-body-inline {
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-footer-inline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.wizard-footer-inline__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* —— FOOTER —— */
+.wizard-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light);
+}
+
+.wizard-btn-next {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-6);
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-600);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px hsla(210, 80%, 56%, 0.2);
+}
+
+.wizard-btn-next:hover {
+  background: var(--color-primary-700);
+  box-shadow: 0 6px 16px hsla(210, 80%, 56%, 0.3);
+  transform: translateY(-1px);
+}
+
+.wizard-btn-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* specific style for submit button on last step */
+.wizard-btn-submit {
+  background: linear-gradient(135deg, hsl(160, 60%, 42%), hsl(160, 60%, 34%));
+  box-shadow: 0 4px 12px hsla(160, 60%, 40%, 0.25);
+}
+
+.wizard-btn-submit:hover {
+  background: linear-gradient(135deg, hsl(160, 60%, 38%), hsl(160, 60%, 30%));
+  box-shadow: 0 6px 16px hsla(160, 60%, 40%, 0.35);
+}

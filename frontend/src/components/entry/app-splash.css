@@ -1,0 +1,106 @@
+/* =========================================
+   Aurora V3 Splash Screen
+   ========================================= */
+
+   .app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #040d12;
+  overflow: hidden;
+  isolation: isolate;
+  font-family: 'Outfit', 'Tajawal', system-ui, sans-serif;
+}
+
+/* Beautiful Animated Ambient Aurora Background (Exactly matching auth-prime) */
+.app-splash::before,
+.app-splash::after {
+  content: "";
+  position: absolute;
+  inset: -20vmax;
+  z-index: -1;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+}
+
+.app-splash::before {
+  background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.25) 0%, transparent 40%),
+              radial-gradient(circle at 70% 70%, rgba(5, 150, 105, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(20, 184, 166, 0.1) 0%, transparent 40%);
+  filter: blur(80px);
+  animation: aurora-flow 25s ease-in-out infinite alternate;
+}
+
+.app-splash::after {
+  background: radial-gradient(circle at 40% 80%, rgba(4, 120, 87, 0.2) 0%, transparent 50%),
+              radial-gradient(circle at 10% 90%, rgba(20, 184, 166, 0.15) 0%, transparent 40%);
+  filter: blur(60px);
+  animation: aurora-flow-reverse 35s ease-in-out infinite alternate;
+}
+
+.app-splash__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.app-splash__logo-wrapper {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  background: rgba(15, 23, 31, 0.5);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.15);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.app-splash__logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(16, 185, 129, 0.2));
+}
+
+.app-splash__impact-text {
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.app-splash__loader-line {
+  width: 140px;
+  height: 2px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.app-splash__loader-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40px;
+  background-color: #10b981; 
+  border-radius: 2px;
+  animation: abstract-load 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+@keyframes abstract-load {
+  0% { transform: translateX(-40px); }
+  100% { transform: translateX(140px); }
+}

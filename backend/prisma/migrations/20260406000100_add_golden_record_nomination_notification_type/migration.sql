@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "public"."NotificationType"
+ADD VALUE IF NOT EXISTS 'GOLDEN_RECORD_NOMINATION_APPROVED';

@@ -1,0 +1,179 @@
+/**
+ * ═════════════════════════════════════════════════════════════════
+ * MODERN FORMS & MODAL LAYOUTS (Global)
+ * ═════════════════════════════════════════════════════════════════
+ */
+
+/* Form Grouping & Layout */
+.ctr-fg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 240px;
+  text-align: start;
+}
+
+.ctr-fg label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.ctr-fg-row {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Glass Input & Select Styles */
+.glass-input,
+.glass-select,
+.silk-input {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.3s ease;
+  border-radius: 10px !important;
+  height: 42px;
+  padding: 0 var(--space-3);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+[data-theme="dark"] .glass-input,
+[data-theme="dark"] .glass-select,
+[data-theme="dark"] .silk-input {
+  background: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.glass-input:focus,
+.glass-select:focus,
+.silk-input:focus {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  outline: none;
+}
+
+[data-theme="dark"] .glass-input:focus,
+[data-theme="dark"] .glass-select:focus,
+[data-theme="dark"] .silk-input:focus {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-color: rgba(52, 211, 153, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15), 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Form Sections */
+.glass-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl, 14px);
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .glass-form-section {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.ctr-form-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* Center Modal Modern Theme (Lib Style) */
+.ctr-center-modal-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-radius: 28px;
+  width: auto !important;
+  min-width: 400px;
+  max-width: 95vw;
+}
+
+[data-theme="dark"] .ctr-center-modal-panel {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.ctr-center-modal-panel.lib-style {
+  border-radius: 20px;
+}
+
+.ctr-center-modal-body {
+  padding: 1.5rem 1.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.25rem !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+
+.ctr-center-modal-footer {
+  padding: 1.25rem 1.75rem 1.75rem !important;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-canvas);
+  border-radius: 0 0 28px 28px;
+}
+
+.ctr-modal-head-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+[data-theme="dark"] .ctr-modal-head-icon {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+}
+
+.ctr-form-input {
+  height: 42px;
+  padding: 0 var(--space-3);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.ctr-center-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Error Box */
+.ue-error-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 12px;
+}

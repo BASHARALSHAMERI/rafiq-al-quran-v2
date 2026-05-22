@@ -1,0 +1,66 @@
+# dependencies
+**/node_modules/
+**/.pnp
+**/.pnp.js
+
+# build outputs
+**/dist/
+**/build/
+**/.vite/
+**/.turbo/
+**/.next/
+
+# env
+**/.env
+**/.env.*
+
+# logs
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# runtime
+**/.runtime-*
+**/lint-output.txt
+
+# legacy (deprecated)
+**/__legacy/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Runtime artifacts
+.runtime-*
+.latest-*.png
+*.log
+*.err
+*.out
+*.hprof
+build_output*.txt
+flutter_run_log.txt
+*_log.txt
+codex_*.png
+emulator_*.png
+playwright_*.png
+.playwright-*.png
+*_verify*.png
+*_screen*.png
+*_after*.png
+*_latest*.png
+window_dump.xml
+
+backend/scratch/
+
+# System & Temp dirs
+.agent/
+.codex-temp/
+.runtime/
+storage/
+uploads/
+
+# Excluded CSS
+frontend/src/styles/pages/reports-v6.css

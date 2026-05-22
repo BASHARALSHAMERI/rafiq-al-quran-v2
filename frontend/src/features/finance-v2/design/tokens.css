@@ -1,0 +1,345 @@
+/**
+ * FA-UX-5 — Finance Design Tokens
+ * CSS custom properties shared by all finance-design primitives.
+ *
+ * Note: Tokens are defined on :root so individual primitives work even
+ * outside FinancePageShell. The .finance-surface class redeclares them
+ * for scoping isolation when a full page shell is used.
+ */
+
+:root {
+  /* Spacing scale (4px base) */
+  --fin-space-1: 4px;
+  --fin-space-2: 8px;
+  --fin-space-3: 12px;
+  --fin-space-4: 16px;
+  --fin-space-5: 20px;
+  --fin-space-6: 24px;
+
+  /* Radius scale */
+  --fin-radius-sm: 6px;
+  --fin-radius-md: 10px;
+  --fin-radius-lg: 14px;
+
+  /* Elevation */
+  --fin-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --fin-shadow-popover: 0 8px 24px rgba(15, 23, 42, 0.12);
+
+  /* Row heights for density toggle */
+  --fin-row-h-dense: 36px;
+  --fin-row-h-comfortable: 48px;
+
+  /* Numeric font feature for tabular digits */
+  --fin-num-feat: "tnum" 1, "lnum" 1;
+
+  /* Color fallbacks (mirror the design system defaults) */
+  --fin-color-text-primary: #0f172a;
+  --fin-color-text-muted: #64748b;
+  --fin-color-bg-surface: #ffffff;
+  --fin-color-bg-muted: #f8fafc;
+  --fin-color-border-subtle: #e5e7eb;
+
+  /* Legacy mapping for backward compatibility */
+  --color-text-primary: var(--fin-color-text-primary);
+  --color-text-muted: var(--fin-color-text-muted);
+  --color-bg-surface: var(--fin-color-bg-surface);
+  --color-bg-muted: var(--fin-color-bg-muted);
+  --color-border-subtle: var(--fin-color-border-subtle);
+}
+
+/* Dark mode tokens */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fin-color-text-primary: #f8fafc;
+    --fin-color-text-muted: #94a3b8;
+    --fin-color-bg-surface: #0f172a;
+    --fin-color-bg-muted: #1e293b;
+    --fin-color-border-subtle: #334155;
+    --color-text-primary: var(--fin-color-text-primary);
+    --color-text-muted: var(--fin-color-text-muted);
+    --color-bg-surface: var(--fin-color-bg-surface);
+    --color-bg-muted: var(--fin-color-bg-muted);
+    --color-border-subtle: var(--fin-color-border-subtle);
+  }
+}
+
+/* Page shell scope (re-declares tokens for isolation when needed) */
+.finance-surface {
+  --fin-space-1: 4px;
+  --fin-space-2: 8px;
+  --fin-space-3: 12px;
+  --fin-space-4: 16px;
+  --fin-space-5: 20px;
+  --fin-space-6: 24px;
+  --fin-radius-sm: 6px;
+  --fin-radius-md: 10px;
+  --fin-radius-lg: 14px;
+  --fin-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
+  --fin-shadow-popover: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --fin-row-h-dense: 36px;
+  --fin-row-h-comfortable: 48px;
+  --fin-num-feat: "tnum" 1, "lnum" 1;
+}
+
+/* ─── Page Shell ─────────────────────────────────────────────── */
+.finance-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fin-space-4);
+  padding: var(--fin-space-3) var(--fin-space-4);
+}
+
+/* ─── Toolbar ───────────────────────────────────────────────── */
+.finance-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fin-space-3);
+  padding: var(--fin-space-3) var(--fin-space-4);
+  background: var(--color-bg-surface, #fff);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: var(--fin-radius-lg);
+  box-shadow: var(--fin-shadow-card);
+}
+
+.finance-toolbar__search {
+  flex: 1 1 260px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  padding: 6px var(--fin-space-3);
+  background: var(--color-bg-muted, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: var(--fin-radius-md);
+}
+
+.finance-toolbar__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 0.875rem;
+  color: inherit;
+}
+
+.finance-toolbar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--fin-space-2);
+  flex: 1 1 auto;
+}
+
+.finance-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--fin-space-2);
+  margin-inline-start: auto;
+}
+
+.finance-toolbar__density {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-bg-muted, #f8fafc);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: var(--fin-radius-md);
+}
+
+.finance-toolbar__density button {
+  border: 0;
+  background: transparent;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-muted, #64748b);
+}
+
+.finance-toolbar__density button[aria-pressed="true"] {
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-primary, #0f172a);
+  box-shadow: var(--fin-shadow-card);
+}
+
+/* ─── KPI Strip ─────────────────────────────────────────────── */
+.finance-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--fin-space-3);
+}
+
+.finance-kpi-card {
+  position: relative;
+  padding: var(--fin-space-4);
+  background: var(--color-bg-surface, #fff);
+  border: 1px solid var(--color-border-subtle, #e5e7eb);
+  border-radius: var(--fin-radius-lg);
+  box-shadow: var(--fin-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.finance-kpi-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+  letter-spacing: 0.01em;
+}
+
+.finance-kpi-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: var(--fin-num-feat);
+  line-height: 1.1;
+}
+
+.finance-kpi-card__sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.finance-kpi-card--success { border-inline-start: 3px solid #16a34a; }
+.finance-kpi-card--warning { border-inline-start: 3px solid #d97706; }
+.finance-kpi-card--danger { border-inline-start: 3px solid #dc2626; }
+.finance-kpi-card--info { border-inline-start: 3px solid #2563eb; }
+
+/* ─── Money ─────────────────────────────────────────────────── */
+.finance-money {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: var(--fin-num-feat);
+}
+
+.finance-money__primary {
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.finance-money__secondary {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-text-muted, #64748b);
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+/* ─── Status Badge ──────────────────────────────────────────── */
+.finance-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.finance-status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.finance-status-badge--neutral  { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+.finance-status-badge--info     { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.finance-status-badge--success  { background: #ecfdf5; color: #15803d; border-color: #bbf7d0; }
+.finance-status-badge--warning  { background: #fffbeb; color: #a16207; border-color: #fde68a; }
+.finance-status-badge--danger   { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.finance-status-badge--muted    { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* Dark mode minimal tuning */
+:where(.dark) .finance-status-badge--neutral  { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+:where(.dark) .finance-status-badge--info     { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border-color: rgba(59, 130, 246, 0.35); }
+:where(.dark) .finance-status-badge--success  { background: rgba(34, 197, 94, 0.12); color: #86efac; border-color: rgba(34, 197, 94, 0.35); }
+:where(.dark) .finance-status-badge--warning  { background: rgba(234, 179, 8, 0.12); color: #fcd34d; border-color: rgba(234, 179, 8, 0.35); }
+:where(.dark) .finance-status-badge--danger   { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
+:where(.dark) .finance-status-badge--muted    { background: #0f172a; color: #94a3b8; border-color: #1e293b; }
+
+/* ─── Form Modal helpers ────────────────────────────────────── */
+.finance-form-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fin-space-2);
+  padding-block-end: var(--fin-space-3);
+  margin-block-end: var(--fin-space-3);
+  border-bottom: 1px dashed var(--color-border-subtle, #e5e7eb);
+}
+
+.finance-form-modal__section:last-child {
+  border-bottom: 0;
+  padding-block-end: 0;
+  margin-block-end: 0;
+}
+
+.finance-form-modal__section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.finance-form-modal__error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--fin-radius-md);
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  margin-block-end: var(--fin-space-3);
+}
+
+:where(.dark) .finance-form-modal__error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* ─── Empty State variants ──────────────────────────────────── */
+.finance-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fin-space-3);
+  padding: var(--fin-space-6) var(--fin-space-4);
+  text-align: center;
+}
+
+.finance-empty-state__icon {
+  width: 40px;
+  height: 40px;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.finance-empty-state__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.finance-empty-state__description {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted, #64748b);
+  max-width: 40ch;
+}

@@ -1,0 +1,110 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding-inline: var(--space-xs);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-caption-size);
+  line-height: 1;
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.badge-sm {
+  min-height: 22px;
+  padding-inline: 6px;
+}
+
+.badge-md {
+  min-height: 24px;
+}
+
+.badge-lg {
+  min-height: 28px;
+  padding-inline: var(--space-sm);
+}
+
+.badge-default,
+.badge-secondary {
+  background: var(--bg-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.badge-primary,
+.badge-info {
+  background: var(--primary-50);
+  border-color: color-mix(in srgb, var(--primary-200) 78%, transparent);
+  color: var(--primary-700);
+}
+
+.badge-success {
+  background: var(--success-50);
+  border-color: color-mix(in srgb, var(--success-200) 78%, transparent);
+  color: var(--success-700);
+}
+
+.badge-warning {
+  background: var(--warning-50);
+  border-color: color-mix(in srgb, var(--warning-200) 78%, transparent);
+  color: var(--warning-700);
+}
+
+.badge-error {
+  background: var(--error-50);
+  border-color: color-mix(in srgb, var(--error-200) 78%, transparent);
+  color: var(--error-700);
+}
+
+.badge-neutral {
+  background: var(--bg-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.badge-brand {
+  background: var(--primary-50);
+  border-color: color-mix(in srgb, var(--primary-200) 78%, transparent);
+  color: var(--primary-700);
+}
+
+.badge-dot-indicator,
+.badge-dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.badge-pulse .badge-dot-indicator {
+  animation: badge-pulse 1.8s ease-in-out infinite;
+}
+
+.badge-count {
+  min-width: 18px;
+  min-height: 18px;
+  padding-inline: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-pill);
+  background: var(--bg-primary);
+  color: var(--text-inverse);
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}

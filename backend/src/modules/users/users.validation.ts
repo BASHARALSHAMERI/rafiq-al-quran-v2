@@ -1,0 +1,270 @@
+import {
+  EmploymentStatus,
+  Gender,
+  KhatmType,
+  ParentProfileRelationType,
+  ParentRelationType,
+  RiwayaType,
+  Role,
+  StudentLevel,
+  StudentProfileStatus,
+  SupervisorProfileStatus
+} from "@prisma/client";
+import { z } from "zod";
+
+export const usersQuerySchema = z
+  .object({
+    role: z.nativeEnum(Role).optional(),
+    centerId: z.coerce.number().int().positive().optional(),
+    circleId: z.coerce.number().int().positive().optional()
+  })
+  .strict();
+
+const positiveId = z.coerce.number().int().positive();
+const nonEmptyString = (max: number) => z.string().trim().min(1).max(max);
+const optionalTrimmedString = (max: number) => z.string().trim().max(max).optional().nullable();
+const optionalDate = z.coerce.date().optional().nullable();
+const khatmTypeInputSchema = z
+  .union([z.nativeEnum(KhatmType), z.enum(["KHATIM", "MUJAZ"])])
+  .transform((value): KhatmType => {
+    if (value === "KHATIM") {
+      return KhatmType.KHATEM;
+    }
+
+    if (value === "MUJAZ") {
+      return KhatmType.IJAZAH;
+    }
+
+    return value;
+  });
+
+const commonProfileCreateSchema = z
+  .object({
+    fullName: nonEmptyString(160).optional(),
+    gender: z.nativeEnum(Gender).optional().nullable(),
+    birthDate: optionalDate,
+    phone: optionalTrimmedString(32),
+    address: optionalTrimmedString(255),
+    avatarUrl: optionalTrimmedString(500)
+  })
+  .strict();
+
+const commonProfileUpdateSchema = commonProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one profile field is required" }
+);
+
+const teacherProfileCreateSchema = z
+  .object({
+    hireDate: optionalDate,
+    khatmType: khatmTypeInputSchema.optional().nullable(),
+    riwaya: z.nativeEnum(RiwayaType).optional().nullable(),
+    educationLevel: optionalTrimmedString(120),
+    yearsExperience: z.coerce.number().int().min(0).max(80).optional().nullable()
+  })
+  .strict();
+
+const teacherProfileUpdateSchema = teacherProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one teacher profile field is required" }
+);
+
+const supervisorProfileCreateSchema = z
+  .object({
+    assignedAt: optionalDate,
+    status: z.nativeEnum(SupervisorProfileStatus).optional(),
+    educationLevel: optionalTrimmedString(120),
+    yearsExperience: z.coerce.number().int().min(0).max(80).optional().nullable(),
+    quranQualification: khatmTypeInputSchema.optional().nullable(),
+    professionalNotes: optionalTrimmedString(500)
+  })
+  .strict();
+
+const supervisorProfileUpdateSchema = supervisorProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one supervisor profile field is required" }
+);
+
+const centerAdminProfileCreateSchema = z
+  .object({
+    assignedAt: optionalDate,
+    employmentStatus: z.nativeEnum(EmploymentStatus).optional(),
+    educationLevel: optionalTrimmedString(120),
+    yearsExperience: z.coerce.number().int().min(0).max(80).optional().nullable(),
+    administrativeExperienceYears: z.coerce.number().int().min(0).max(80).optional().nullable(),
+    professionalNotes: optionalTrimmedString(500)
+  })
+  .strict();
+
+const centerAdminProfileUpdateSchema = centerAdminProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one center admin profile field is required" }
+);
+
+const studentProfileCreateSchema = z
+  .object({
+    nickname: optionalTrimmedString(80),
+    level: z.nativeEnum(StudentLevel).optional(),
+    studentStatus: z.nativeEnum(StudentProfileStatus).optional(),
+    joinDate: optionalDate
+  })
+  .strict();
+
+const studentProfileUpdateSchema = studentProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one student profile field is required" }
+);
+
+const parentProfileCreateSchema = z
+  .object({
+    relationType: z.nativeEnum(ParentProfileRelationType).optional().nullable()
+  })
+  .strict();
+
+const parentProfileUpdateSchema = parentProfileCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one parent profile field is required" }
+);
+
+const userLinksCreateSchema = z
+  .object({
+    centerIds: z.array(positiveId).max(100).optional(),
+    circleIds: z.array(positiveId).max(200).optional(),
+    children: z
+      .array(
+        z
+          .object({
+            studentId: positiveId,
+            relationType: z.nativeEnum(ParentRelationType).optional()
+          })
+          .strict()
+      )
+      .max(200)
+      .optional(),
+    enrollments: z
+      .array(
+        z
+          .object({
+            circleId: positiveId,
+            startDate: z.coerce.date().optional()
+          })
+          .strict()
+      )
+      .max(200)
+      .optional()
+  })
+  .strict();
+
+const userLinksUpdateSchema = userLinksCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one links field is required" }
+);
+
+export const userIdParamSchema = z
+  .object({
+    id: positiveId
+  })
+  .strict();
+
+export const createUserBodySchema = z
+  .object({
+    fullName: nonEmptyString(120).optional(), // legacy compatibility
+    email: z.string().trim().email().max(191),
+    username: optionalTrimmedString(80),
+    role: z.nativeEnum(Role),
+    isActive: z.boolean().optional(),
+    profile: commonProfileCreateSchema.optional(),
+    teacherProfile: teacherProfileCreateSchema.optional(),
+    supervisorProfile: supervisorProfileCreateSchema.optional(),
+    centerAdminProfile: centerAdminProfileCreateSchema.optional(),
+    studentProfile: studentProfileCreateSchema.optional(),
+    parentProfile: parentProfileCreateSchema.optional(),
+    links: userLinksCreateSchema.optional()
+  })
+  .strict()
+  .refine((value) => Boolean(value.profile?.fullName || value.fullName), {
+    message: "fullName (or profile.fullName) is required"
+  });
+
+export const updateUserBodySchema = z
+  .object({
+    fullName: nonEmptyString(120).optional(), // legacy compatibility
+    email: z.string().trim().email().max(191).optional(),
+    username: optionalTrimmedString(80),
+    profile: commonProfileUpdateSchema.optional(),
+    teacherProfile: teacherProfileUpdateSchema.optional(),
+    supervisorProfile: supervisorProfileUpdateSchema.optional(),
+    centerAdminProfile: centerAdminProfileUpdateSchema.optional(),
+    studentProfile: studentProfileUpdateSchema.optional(),
+    parentProfile: parentProfileUpdateSchema.optional(),
+    links: userLinksUpdateSchema.optional()
+  })
+  .strict()
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: "At least one field is required"
+  });
+
+export const updateUserStatusBodySchema = z
+  .object({
+    isActive: z.boolean()
+  })
+  .strict();
+
+export const createUserCenterAccessBodySchema = z
+  .object({
+    centerId: positiveId
+  })
+  .strict();
+
+export const createUserCircleAccessBodySchema = z
+  .object({
+    circleId: positiveId
+  })
+  .strict();
+
+export const createParentStudentLinkBodySchema = z
+  .object({
+    studentId: positiveId,
+    relationType: z.nativeEnum(ParentRelationType).optional()
+  })
+  .strict();
+
+export const createStudentEnrollmentBodySchema = z
+  .object({
+    circleId: positiveId,
+    startDate: z.coerce.date().optional()
+  })
+  .strict();
+
+export const userCenterLinkParamsSchema = z
+  .object({
+    id: positiveId,
+    centerId: positiveId
+  })
+  .strict();
+
+export const userCircleLinkParamsSchema = z
+  .object({
+    id: positiveId,
+    circleId: positiveId
+  })
+  .strict();
+
+export const userStudentLinkParamsSchema = z
+  .object({
+    id: positiveId,
+    studentId: positiveId
+  })
+  .strict();
+
+// ==========================================
+// DTO Types inferred from Zod Schemas
+// ==========================================
+export type UsersQueryDto = z.infer<typeof usersQuerySchema>;
+export type CreateUserDto = z.infer<typeof createUserBodySchema>;
+export type UpdateUserDto = z.infer<typeof updateUserBodySchema>;
+export type UpdateUserStatusDto = z.infer<typeof updateUserStatusBodySchema>;
+export type CreateUserCenterAccessDto = z.infer<typeof createUserCenterAccessBodySchema>;
+export type CreateUserCircleAccessDto = z.infer<typeof createUserCircleAccessBodySchema>;
+export type CreateParentStudentLinkDto = z.infer<typeof createParentStudentLinkBodySchema>;
+export type CreateStudentEnrollmentDto = z.infer<typeof createStudentEnrollmentBodySchema>;

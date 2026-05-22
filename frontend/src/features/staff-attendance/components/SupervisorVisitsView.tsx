@@ -1,0 +1,400 @@
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  CalendarDays,
+  Calendar,
+  Star,
+  MapPin,
+  Users,
+  Search,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle,
+  FileText,
+} from "lucide-react";
+import { useI18n } from "../../../app/i18n";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { ErrorState } from "../../../components/ui/ErrorState";
+import { fadeUp } from "../../../shared/pageAnimations";
+import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
+import { entityFeedback, type LocalizedLabel } from "../../../shared/ui/feedback";
+
+import { useSupervisorVisitLogs } from "../staff-attendance.api";
+import {
+  useClientPagination
+} from "../../../shared/ui/useClientPagination";
+
+
+
+const SUPERVISOR_VISITS_ENTITY: LocalizedLabel = { ar: "الزيارات الإشرافية", en: "supervisor visits" };
+
+export const getVisitStatusBadge = (status: string, ar: boolean) => {
+  const normalized = status?.toUpperCase();
+  if (normalized === "COMPLETED" || normalized === "RESOLVED") {
+    return <Badge variant="success" size="sm">{ar ? "مكتملة" : "Completed"}</Badge>;
+  }
+  return <Badge variant="warning" size="sm">{ar ? "مفتوحة" : "Open"}</Badge>;
+};
+
+
+export function SupervisorVisitsView() {
+  const { language } = useI18n();
+  const ar = language === "ar";
+
+  const [search, setSearch] = useState("");
+  const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
+  const visitsQuery = useSupervisorVisitLogs();
+  const visits = visitsQuery.data ?? [];
+
+  const filteredVisits = useMemo(() => {
+    const normalized = search.trim().toLowerCase();
+
+    if (!normalized) {
+      return visits;
+    }
+
+    return visits.filter((visit) => {
+      const supervisor = visit.supervisor.fullName.toLowerCase();
+      const center = visit.center.name.toLowerCase();
+      const target = String(visit.circle?.name ?? visit.targetLabel ?? "").toLowerCase();
+      const category = String(visit.category ?? "").toLowerCase();
+
+      return (
+        supervisor.includes(normalized) ||
+        center.includes(normalized) ||
+        target.includes(normalized) ||
+        category.includes(normalized)
+      );
+    });
+  }, [search, visits]);
+
+  const pagination = useClientPagination(filteredVisits, { initialPageSize: 12 });
+
+  const selectedVisit = useMemo(
+    () => filteredVisits.find((visit) => visit.id === selectedVisitId) ?? null,
+    [filteredVisits, selectedVisitId]
+  );
+
+  useEffect(() => {
+    if (selectedVisitId && !selectedVisit) {
+      setSelectedVisitId(null);
+    }
+  }, [selectedVisit, selectedVisitId]);
+
+  const stats = useMemo(() => {
+    const totalVisits = filteredVisits.length;
+    const scheduledVisits = filteredVisits.filter(
+      (v) => v.status?.toUpperCase() !== "COMPLETED" && v.status?.toUpperCase() !== "RESOLVED"
+    ).length;
+    const averageRating =
+      totalVisits > 0
+        ? (
+            filteredVisits.reduce((sum, visit) => sum + (visit.rating ?? 0), 0) /
+            totalVisits
+          ).toFixed(1)
+        : "0.0";
+
+    return [
+      {
+        label: ar ? "إجمالي الزيارات" : "Total Visits",
+        value: totalVisits,
+        cls: "exams-kpi-card--total",
+        icon: MapPin
+      },
+      {
+        label: ar ? "قيد التنفيذ" : "Pending / Open",
+        value: scheduledVisits,
+        cls: "exams-kpi-card--published",
+        icon: CalendarDays
+      },
+      {
+        label: ar ? "متوسط التقييم" : "Average Rating",
+        value: averageRating,
+        cls: "exams-kpi-card--draft",
+        icon: Star
+      }
+    ];
+  }, [ar, filteredVisits]);
+
+  return (
+    <section className="staff-ops-view ctr-workspace">
+      <div 
+        className="ctr-kpis-modern mb-6"
+        style={{ 
+          gridTemplateColumns: `repeat(${stats.length}, 1fr)`,
+          width: '100%' 
+        }}
+      >
+        {stats.map((stat) => (
+          <div 
+            key={stat.label} 
+            className={`ctr-kpi-modern ${
+              stat.cls === "exams-kpi-card--completed" ? "emerald" :
+              stat.cls === "exams-kpi-card--draft" ? "amber" :
+              stat.cls === "exams-kpi-card--cancelled" ? "violet" :
+              stat.cls === "exams-kpi-card--published" ? "brand" :
+              "brand"
+            }`}
+          >
+            <div className="ctr-kpi-icon-wrap">
+              <stat.icon size={22} />
+            </div>
+            <div className="ctr-kpi-content">
+              <div className="ctr-kpi-val">{stat.value}</div>
+              <div className="ctr-kpi-label">{stat.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="ctr-controls mb-6">
+        <div className="ctr-search-wrap">
+          <Search className="ctr-search-icon" size={16} />
+          <input
+            type="text"
+            className="ctr-search-input"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              pagination.setCurrentPage(1);
+            }}
+            placeholder={ar ? "ابحث بالمشرف أو المركز أو التصنيف..." : "Search by supervisor, center, or category..."}
+          />
+        </div>
+        
+        <div className="ctr-filters-group">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearch("");
+              pagination.setCurrentPage(1);
+            }}
+            disabled={!search.trim()}
+          >
+            {ar ? "إعادة الضبط" : "Reset"}
+          </Button>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {visitsQuery.isError ? (
+          <ErrorState
+            title={ar ? "تعذر تحميل الزيارات الإشرافية" : "Unable to load supervisor visits"}
+            description={getLocalizedApiErrorMessage(visitsQuery.error, {
+              ar,
+              fallback: entityFeedback.error(ar, "load", SUPERVISOR_VISITS_ENTITY)
+            })}
+            onRetry={() => void visitsQuery.refetch()}
+            retryLabel={ar ? "إعادة المحاولة" : "Retry"}
+          />
+        ) : visitsQuery.isLoading ? (
+          <div className="ctr-grid-modern">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="ctr-card-modern animate-pulse" style={{ height: "200px", opacity: 0.5 }} />
+            ))}
+          </div>
+        ) : pagination.pagedRows.length === 0 ? (
+          <EmptyState
+            title={ar ? "لا توجد زيارات" : "No visits recorded"}
+            description={
+              ar
+                ? "لم يتم العثور على زيارات تطابق الفلاتر الحالية."
+                : "No visits match the current filters."
+            }
+          />
+        ) : (
+          <div className="ctr-grid-modern">
+            {pagination.pagedRows.map((visit) => {
+               const rating = Number(visit.rating || 0);
+               const scoreColor = rating >= 90 ? "text-emerald-600" : rating >= 70 ? "text-amber-600" : "text-red-600";
+               const title = visit.center?.name || (ar ? "مركز غير معروف" : "Unknown Center");
+               const subtitle = visit.supervisor?.fullName || (ar ? "مشرف" : "Supervisor");
+              
+              return (
+                <motion.div
+                  key={visit.id}
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                  className={`ctr-card-modern ${selectedVisitId === visit.id ? "border-brand ring-1 ring-brand/20 shadow-lg bg-brand/[0.01]" : "border-slate-50 shadow-sm"}`}
+                  onClick={() => setSelectedVisitId(visit.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="ctr-card-header">
+                    <div className={`ctr-card-icon-box ${selectedVisitId === visit.id ? "bg-brand text-white" : "bg-brand/5 text-brand"}`}>
+                      <MapPin size={24} />
+                    </div>
+                    <div className="ctr-card-title-wrap">
+                      <h3 className="ctr-card-title text-[15px] font-bold">{title}</h3>
+                      <div className="ctr-card-subtitle flex items-center gap-1.5">
+                        <Users size={12} className="text-slate-400" />
+                        <span className="text-slate-500 font-medium">{subtitle}</span>
+                      </div>
+                    </div>
+                    <div className="ctr-card-status-row">
+                       <Badge variant="secondary" size="sm" className="ctr-card-status bg-slate-100 text-slate-700">
+                         {visit.category || (ar ? "زيارة" : "Visit")}
+                       </Badge>
+                    </div>
+                  </div>
+
+                  <div className="ctr-card-details bg-slate-50/30 p-3 rounded-xl mt-3 space-y-2">
+                    <div className="ctr-card-detail-row">
+                      <span className="ctr-card-detail-label text-[11px]">{ar ? "تاريخ الزيارة" : "Visit Date"}</span>
+                       <span className="ctr-card-detail-val font-medium">
+                         <Calendar size={14} className="text-blue-500" />
+                         {new Date(visit.createdAt).toLocaleDateString(ar ? 'ar-SA-u-nu-latn' : 'en-US')}
+                       </span>
+                    </div>
+                     <div className="ctr-card-detail-row">
+                       <span className="ctr-card-detail-label text-[11px]">{ar ? "التقييم الإجمالي" : "Overall Score"}</span>
+                       <span className={`ctr-card-detail-val text-lg font-black ${scoreColor}`}>
+                         <Star size={16} className="fill-current" />
+                         {rating}%
+                       </span>
+                     </div>
+                  </div>
+
+                   <div className="ctr-card-actions mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                       <div>
+                         {getVisitStatusBadge(visit.status, ar)}
+                       </div>
+                     <Button
+                       variant="ghost"
+                       size="sm"
+                       className="h-8 text-[11px] text-brand font-bold hover:bg-brand/5"
+                       onClick={(e) => { e.stopPropagation(); setSelectedVisitId(visit.id); }}
+                      >
+                       {ar ? "عرض التقرير" : "View Report"}
+                     </Button>
+                   </div>
+                 </motion.div>
+               );
+            })}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {!visitsQuery.isLoading && !visitsQuery.isError && pagination.totalItems > 0 && (
+        <div className="ctr-footer">
+          <div className="ctr-page-size">
+            <span>{ar ? "الصفوف:" : "Rows:"}</span>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => {
+                pagination.setPageSize(Number(e.target.value));
+              }}
+            >
+              {[12, 24, 48].map((sz) => (
+                <option key={sz} value={sz}>{sz}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ctr-page-info">
+            {ar
+              ? `عرض ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} من ${pagination.totalItems}`
+              : `Showing ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} of ${pagination.totalItems}`
+            }
+          </div>
+
+          <div className="ctr-page-controls">
+            <button
+              className="ctr-page-btn"
+              disabled={pagination.currentPage === 1}
+              onClick={() => pagination.setCurrentPage(pagination.currentPage - 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
+            <button
+              className="ctr-page-btn active"
+            >
+              {pagination.currentPage}
+            </button>
+            <button
+              className="ctr-page-btn"
+              disabled={pagination.currentPage === pagination.totalPages}
+              onClick={() => pagination.setCurrentPage(pagination.currentPage + 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {selectedVisit && (
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="ctr-card-modern mt-8 border-brand/20 bg-brand/[0.02]" 
+            aria-label={ar ? "تفاصيل الزيارة" : "Visit details"}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-brand text-white rounded-lg shadow-brand/20 shadow-lg">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-800">{ar ? "تقرير الزيارة التفصيلي" : "Detailed Visit Report"}</h3>
+                    <p className="text-sm text-slate-500">{ar ? "ملاحظات المشرف وتقييم البنود" : "Supervisor observations and checklist"}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedVisitId(null)}
+                  className="text-slate-400 hover:text-red-500"
+                >
+                  {ar ? "إغلاق" : "Close"}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                    <Star size={16} className="text-amber-500" />
+                    {ar ? "الملاحظات العامة" : "General Observations"}
+                  </h4>
+                  <div className="p-4 bg-white border border-slate-100 rounded-xl text-slate-600 leading-relaxed shadow-sm italic">
+                    {selectedVisit.observations ||
+                      selectedVisit.content ||
+                      (ar
+                        ? "لا توجد ملاحظات مسجلة لهذه الزيارة حالياً."
+                        : "No observations recorded for this visit.")}
+                  </div>
+                </div>
+
+                {selectedVisit.checklist?.length ? (
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                      <CheckCircle size={16} className="text-emerald-500" />
+                      {ar ? "بنود التقييم" : "Evaluation Checklist"}
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {selectedVisit.checklist.map((item, index) => (
+                        <div key={`${selectedVisit.id}-${index}`} className="flex items-center justify-between p-3 bg-white border border-slate-50 rounded-lg shadow-sm">
+                          <span className="text-sm text-slate-600 font-medium">
+                            {String(item.label ?? item.key ?? `${ar ? "بند" : "Item"} ${index + 1}`)}
+                          </span>
+                          <Badge variant={item.checked === true ? "success" : "secondary"} size="sm" className="font-bold">
+                            {item.checked === true ? (ar ? "مكتمل" : "Done") : ar ? "مفتوح" : "Open"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}

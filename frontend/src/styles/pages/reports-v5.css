@@ -1,0 +1,232 @@
+/**
+ * ═════════════════════════════════════════════════════════════════
+ * REPORTS V5 — PREMIUM ENTERPRISE ANALYTICS
+ * صفحة التقارير والتحليلات — تصميم مؤسسي فاخر
+ * ═════════════════════════════════════════════════════════════════
+ */
+
+.rpt-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8, 2rem);
+  margin-top: var(--space-4, 1rem);
+}
+
+.rpt-group__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.rpt-group__icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.rpt-group__icon-wrap.rpt-grad--indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; }
+.rpt-group__icon-wrap.rpt-grad--violet { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; }
+.rpt-group__icon-wrap.rpt-grad--emerald { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+.rpt-group__icon-wrap.rpt-grad--amber { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+.rpt-group__icon-wrap.rpt-grad--rose { background: linear-gradient(135deg, #f43f5e, #e11d48); color: #fff; }
+
+.rpt-group__title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Premium Card ─── */
+.rpt-card-premium {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 20px;
+  text-align: start;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.rpt-card-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.rpt-card-premium:hover {
+  background: var(--bg-surface);
+  border-color: var(--brand-300);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.rpt-card-premium:hover::before {
+  opacity: 1;
+}
+
+.rpt-card-premium:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.rpt-card-premium__icon-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.rpt-card-premium__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.rpt-card-premium:hover .rpt-card-premium__icon {
+  transform: rotate(-8deg) scale(1.15);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.rpt-card-premium__icon.rpt-grad--indigo { background: rgba(99,102,241,0.08); color: #6366f1; }
+.rpt-card-premium__icon.rpt-grad--violet { background: rgba(124,58,237,0.08); color: #7c3aed; }
+.rpt-card-premium__icon.rpt-grad--emerald { background: rgba(5,150,105,0.08); color: #059669; }
+.rpt-card-premium__icon.rpt-grad--amber { background: rgba(217,119,6,0.08); color: #d97706; }
+.rpt-card-premium__icon.rpt-grad--rose { background: rgba(225,29,72,0.08); color: #e11d48; }
+
+.rpt-card-premium__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.rpt-card-premium__name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.rpt-card-premium__desc {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.rpt-card-premium__footer {
+  flex-shrink: 0;
+  margin-top: 4px;
+  opacity: 0.3;
+  transition: all 0.3s;
+  position: relative;
+  z-index: 1;
+}
+
+.rpt-card-premium:hover .rpt-card-premium__footer {
+  opacity: 1;
+  transform: translateX(-4px);
+}
+
+/* ─── Unified Workspace ─── */
+.rpt-workspace {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+}
+
+.rpt-th-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 1rem 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  transition: all 0.2s;
+}
+
+.rpt-th-btn:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+.rpt-th-btn--active { color: var(--brand-600); background: rgba(5,150,105,0.03); }
+
+/* ─── Dark Mode Overrides ─── */
+[data-theme="dark"] .rpt-card-premium {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(255,255,255,0.05);
+}
+
+[data-theme="dark"] .rpt-card-premium::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
+}
+
+[data-theme="dark"] .rpt-card-premium:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: var(--brand-500);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .rpt-card-premium__icon.rpt-grad--indigo { background: rgba(129,140,248,0.12); color: #818cf8; }
+[data-theme="dark"] .rpt-card-premium__icon.rpt-grad--violet { background: rgba(167,139,250,0.12); color: #a78bfa; }
+[data-theme="dark"] .rpt-card-premium__icon.rpt-grad--emerald { background: rgba(52,211,153,0.12); color: #34d399; }
+[data-theme="dark"] .rpt-card-premium__icon.rpt-grad--amber { background: rgba(251,191,36,0.12); color: #fbbf24; }
+[data-theme="dark"] .rpt-card-premium__icon.rpt-grad--rose { background: rgba(251,113,133,0.12); color: #fb7185; }
+
+[data-theme="dark"] .rpt-group__icon-wrap {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+[data-theme="dark"] .rpt-workspace {
+  background: var(--bg-surface);
+  border-color: rgba(255,255,255,0.05);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 1024px) {
+  .rpt-groups { gap: var(--space-6); }
+}
+
+@media (max-width: 640px) {
+  .rpt-card-premium { padding: 1.25rem; gap: 1rem; }
+  .rpt-card-premium__icon { width: 40px; height: 40px; border-radius: 12px; }
+  .rpt-card-premium__name { font-size: 0.95rem; }
+}

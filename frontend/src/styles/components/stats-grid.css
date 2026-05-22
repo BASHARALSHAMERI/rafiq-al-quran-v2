@@ -1,0 +1,46 @@
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(19, 98, 105, 0.04) 100%);
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover .stat-card-icon {
+  transform: scale(1.04);
+}
+
+.stat-card-icon {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.stat-card-primary {
+  border-color: color-mix(in srgb, var(--primary-200) 72%, transparent);
+}
+
+.stat-card-success {
+  border-color: color-mix(in srgb, var(--success-200) 72%, transparent);
+}
+
+.stat-card-warning {
+  border-color: color-mix(in srgb, var(--warning-200) 72%, transparent);
+}
+
+.stat-card-info {
+  border-color: color-mix(in srgb, var(--primary-200) 72%, transparent);
+}
+
+.stat-card-error {
+  border-color: color-mix(in srgb, var(--error-200) 72%, transparent);
+}

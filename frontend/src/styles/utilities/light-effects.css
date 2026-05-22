@@ -1,0 +1,288 @@
+/**
+ * ═══════════════════════════════════════════════════════════
+   LIGHT EFFECTS - Premium Ambient & Glow Effects
+   تأثيرات الضوء والإضاءة الفاخرة
+ * ═══════════════════════════════════════════════════════════
+ * Theme: Soft glows, ambient light, Islamic elegance
+ */
+
+/* ─────────────────────────────────────────────────────────
+   AMBIENT BACKGROUND GLOWS
+   ───────────────────────────────────────────────────────── */
+
+/* Main ambient glow - Soft olive gradient */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.ambient-glow::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -20%;
+  width: 80%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(50, 99, 73, 0.06) 0%,
+    transparent 70%
+  );
+  animation: ambient-drift 20s ease-in-out infinite alternate;
+}
+
+.ambient-glow::after {
+  content: "";
+  position: absolute;
+  bottom: -30%;
+  right: -10%;
+  width: 60%;
+  height: 80%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 150, 42, 0.04) 0%,
+    transparent 60%
+  );
+  animation: ambient-drift 25s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes ambient-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(5%, 3%) scale(1.1); }
+}
+
+[data-theme="dark"] .ambient-glow::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(50, 99, 73, 0.12) 0%,
+    transparent 70%
+  );
+}
+
+[data-theme="dark"] .ambient-glow::after {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 150, 42, 0.06) 0%,
+    transparent 60%
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   GLOW EFFECTS - For interactive elements
+   ───────────────────────────────────────────────────────── */
+
+/* Soft olive glow */
+.glow-olive {
+  box-shadow: 
+    0 0 20px rgba(50, 99, 73, 0.15),
+    0 0 40px rgba(50, 99, 73, 0.08);
+}
+
+.glow-olive-hover:hover {
+  box-shadow: 
+    0 0 30px rgba(50, 99, 73, 0.2),
+    0 0 60px rgba(50, 99, 73, 0.1);
+}
+
+/* Gold glow */
+.glow-gold {
+  box-shadow: 
+    0 0 20px rgba(212, 150, 42, 0.2),
+    0 0 40px rgba(212, 150, 42, 0.1);
+}
+
+.glow-gold-hover:hover {
+  box-shadow: 
+    0 0 30px rgba(212, 150, 42, 0.25),
+    0 0 60px rgba(212, 150, 42, 0.12);
+}
+
+/* Inner glow for cards */
+.inner-glow {
+  position: relative;
+}
+
+.inner-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   SHIMMER EFFECTS - Premium loading states
+   ───────────────────────────────────────────────────────── */
+
+.shimmer-gold {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-gold::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 150, 42, 0.1) 50%,
+    transparent 100%
+  );
+  animation: shimmer-sweep 3s ease-in-out infinite;
+}
+
+@keyframes shimmer-sweep {
+  0% { inset-inline-start: -100%; }
+  100% { inset-inline-start: 200%; }
+}
+
+/* ─────────────────────────────────────────────────────────
+   GRADIENT BORDERS - Premium outline effect
+   ───────────────────────────────────────────────────────── */
+
+.gradient-border {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, 
+    var(--brand-400) 0%, 
+    var(--accent-400) 50%,
+    var(--brand-400) 100%
+  );
+  z-index: -1;
+  opacity: 0.5;
+}
+
+.gradient-border:hover::before {
+  opacity: 0.8;
+}
+
+/* ─────────────────────────────────────────────────────────
+   LIGHT BEAM EFFECT - For special cards
+   ───────────────────────────────────────────────────────── */
+
+.light-beam {
+  position: relative;
+  overflow: hidden;
+}
+
+.light-beam::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  inset-inline-start: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 70%
+  );
+  animation: light-beam-sweep 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes light-beam-sweep {
+  0%, 100% { transform: translateX(-100%) rotate(45deg); }
+  50% { transform: translateX(100%) rotate(45deg); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   TEXT GRADIENTS - Premium typography
+   ───────────────────────────────────────────────────────── */
+
+.text-gradient-olive {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─────────────────────────────────────────────────────────
+   HOVER LIGHT EFFECT - Spotlight on hover
+   ───────────────────────────────────────────────────────── */
+
+.hover-light {
+  position: relative;
+  overflow: hidden;
+}
+
+.hover-light::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  pointer-events: none;
+}
+
+.hover-light:hover::before {
+  width: 300%;
+  height: 300%;
+}
+
+/* ─────────────────────────────────────────────────────────
+   PREMIUM CARD SHINE - Elegant reflection
+   ───────────────────────────────────────────────────────── */
+
+.card-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline-start: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: inset-inline-start 0.6s ease;
+  pointer-events: none;
+}
+
+.card-shine:hover::after {
+  inset-inline-start: 150%;
+}

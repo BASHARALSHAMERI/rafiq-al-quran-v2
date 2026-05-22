@@ -1,0 +1,68 @@
+.table-wrapper {
+  overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--gradient-surface);
+  box-shadow: var(--shadow-1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-sm) var(--space-md);
+  text-align: start;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-subtle) 84%, transparent);
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+tbody td {
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+  line-height: var(--type-body-line-height);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: var(--bg-surface-hover);
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}
+
+.table-action-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  color: var(--text-tertiary);
+  transition: var(--transition-colors), var(--transition-shadow), var(--transition-transform);
+}
+
+.table-action-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  transform: translateY(var(--state-hover-lift));
+}

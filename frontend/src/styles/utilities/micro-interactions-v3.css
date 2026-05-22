@@ -1,0 +1,374 @@
+/**
+ * ═══════════════════════════════════════════════════════════
+ * MICRO-INTERACTIONS V3 - Premium Motion System
+ * نظام الحركات والتفاعلات المصغرة الفاخر
+ * ═══════════════════════════════════════════════════════════
+ * Theme: Smooth, Elegant, Islamic-inspired
+ */
+
+/* ─────────────────────────────────────────────────────────
+   MOTION TIERS - 3 Levels
+   ───────────────────────────────────────────────────────── */
+
+/* Tier 1: Instant (0-100ms) — toggles, badge updates */
+.motion-instant {
+  transition: all 80ms ease;
+}
+
+/* Tier 2: Smooth (150-250ms) — most UI interactions */
+.motion-smooth {
+  transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Tier 3: Expressive (300-400ms) — modal entries */
+.motion-expressive {
+  transition: all 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─────────────────────────────────────────────────────────
+   BUTTON MICRO-INTERACTIONS
+   ───────────────────────────────────────────────────────── */
+
+.btn-press:active {
+  transform: scale(0.96);
+}
+
+.btn-lift:hover {
+  transform: translateY(-2px);
+}
+
+.btn-lift:active {
+  transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────────────────
+   CARD HOVER LIFT - Premium elevation
+   ───────────────────────────────────────────────────────── */
+
+.card-lift {
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.card-lift:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 12px 40px rgba(17, 34, 27, 0.12),
+    0 4px 12px rgba(17, 34, 27, 0.08);
+}
+
+/* ─────────────────────────────────────────────────────────
+   TABLE ROW HOVER - Olive tint
+   ───────────────────────────────────────────────────────── */
+
+.tr-hover {
+  transition: background-color 0.2s ease;
+}
+
+.tr-hover:hover {
+  background-color: rgba(50, 99, 73, 0.04) !important;
+}
+
+[data-theme="dark"] .tr-hover:hover {
+  background-color: rgba(80, 155, 115, 0.08) !important;
+}
+
+/* ─────────────────────────────────────────────────────────
+   ICON ANIMATIONS
+   ───────────────────────────────────────────────────────── */
+
+@keyframes icon-spin {
+  to { transform: rotate(360deg); }
+}
+
+.icon-spin {
+  animation: icon-spin 1s linear infinite;
+}
+
+/* Gentle pulse for notification icons */
+@keyframes icon-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.icon-pulse {
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+   FADE ANIMATIONS
+   ───────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fade-in { animation: fade-in 0.25s ease both; }
+.fade-in-up { animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fade-in-down { animation: fade-in-down 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.fade-in-scale { animation: fade-in-scale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Staggered children animations */
+.stagger > * {
+  opacity: 0;
+  animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ─────────────────────────────────────────────────────────
+   SLIDE ANIMATIONS
+   ───────────────────────────────────────────────────────── */
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in-right { animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.slide-in-left { animation: slide-in-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ─────────────────────────────────────────────────────────
+   SHIMMER / SKELETON LOADING
+   ───────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-line {
+  display: block;
+  background: linear-gradient(90deg,
+    var(--bg-surface-hover) 25%,
+    var(--border-default) 50%,
+    var(--bg-surface-hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+  border-radius: var(--radius-sm);
+}
+
+[data-theme="dark"] .skeleton-line {
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+}
+
+/* ─────────────────────────────────────────────────────────
+   INPUT FOCUS RING - Premium olive
+   ───────────────────────────────────────────────────────── */
+
+.input-focus-ring:focus {
+  outline: none;
+  border-color: var(--brand-400);
+  box-shadow: 0 0 0 3px rgba(50, 99, 73, 0.12);
+}
+
+.input-focus-ring-gold:focus {
+  outline: none;
+  border-color: var(--accent-400);
+  box-shadow: 0 0 0 3px rgba(212, 150, 42, 0.12);
+}
+
+/* ─────────────────────────────────────────────────────────
+   SELECTED ROW HIGHLIGHT
+   ───────────────────────────────────────────────────────── */
+
+tr.row-selected {
+  background-color: rgba(50, 99, 73, 0.06) !important;
+  box-shadow: inset 3px 0 0 var(--brand-600);
+}
+
+[data-theme="dark"] tr.row-selected {
+  background-color: rgba(80, 155, 115, 0.1) !important;
+  box-shadow: inset 3px 0 0 var(--brand-400);
+}
+
+/* ─────────────────────────────────────────────────────────
+   BADGE PULSE - Gold accent
+   ───────────────────────────────────────────────────────── */
+
+@keyframes badge-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(212, 150, 42, 0.4);
+  }
+  50% { 
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px rgba(212, 150, 42, 0);
+  }
+}
+
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+   FLOATING ANIMATION - For special elements
+   ───────────────────────────────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Gentle sway */
+@keyframes sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.animate-sway {
+  animation: sway 6s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+   PAGE TRANSITIONS
+   ───────────────────────────────────────────────────────── */
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-16px);
+  transition: all 0.3s ease;
+}
+
+/* ─────────────────────────────────────────────────────────
+   TOOLTIPS
+   ───────────────────────────────────────────────────────── */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 8px 14px;
+  background: rgba(28, 45, 38, 0.95);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 9999;
+  box-shadow: var(--shadow-3);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ─────────────────────────────────────────────────────────
+   REDUCED MOTION - Accessibility
+   ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-smooth,
+  .motion-expressive,
+  .motion-instant,
+  .card-lift,
+  .btn-lift,
+  .btn-press,
+  .fade-in-up,
+  .fade-in-scale,
+  .stagger > *,
+  .animate-float,
+  .animate-sway,
+  .badge-pulse,
+  .icon-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .card-lift:hover {
+    transform: none;
+  }
+}

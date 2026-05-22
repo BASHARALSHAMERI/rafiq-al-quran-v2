@@ -1,0 +1,103 @@
+import { CalendarDays, Filter, RefreshCcw } from "lucide-react";
+import type { Center } from "../../../org/types";
+import type { InvoiceStatusV2 } from "../../types";
+
+type Props = {
+  ar: boolean;
+  centers: Center[];
+  centerId: number | undefined;
+  month: number;
+  year: number;
+  status: InvoiceStatusV2 | "";
+  statusLabels: Record<InvoiceStatusV2, string>;
+  onCenterChange: (value: number | undefined) => void;
+  onMonthChange: (value: number) => void;
+  onYearChange: (value: number) => void;
+  onStatusChange: (value: InvoiceStatusV2 | "") => void;
+  onReset: () => void;
+  activeFiltersCount?: number;
+};
+
+export function FinancePageFilters({
+  ar,
+  centers,
+  centerId,
+  month,
+  year,
+  status,
+  statusLabels,
+  onCenterChange,
+  onMonthChange,
+  onYearChange,
+  onStatusChange,
+  onReset
+}: Props) {
+  return (
+    <div className="fin-filters-container" dir={ar ? "rtl" : "ltr"}>
+      <div className="fin-filters-scroll">
+        {/* Center Filter */}
+        <div className="fin-filter-item min-w-[180px]">
+          <Filter className="fin-filter-icon" />
+          <select
+            value={centerId ?? ""}
+            onChange={(event) => onCenterChange(event.target.value ? Number(event.target.value) : undefined)}
+          >
+            <option value="">{ar ? "كل المراكز" : "All Centers"}</option>
+            {centers.map((center) => (
+              <option key={center.id} value={center.id}>
+                {center.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Month Filter */}
+        <div className="fin-filter-item w-24">
+          <CalendarDays className="fin-filter-icon" />
+          <input
+            type="number"
+            min={1}
+            max={12}
+            value={month}
+            onChange={(event) => onMonthChange(Math.min(12, Math.max(1, Number(event.target.value))))}
+            placeholder={ar ? "الشهر" : "Month"}
+          />
+        </div>
+
+        {/* Year Filter */}
+        <div className="fin-filter-item w-28">
+          <CalendarDays className="fin-filter-icon" />
+          <input
+            type="number"
+            min={2000}
+            max={2100}
+            value={year}
+            onChange={(event) => onYearChange(Math.min(2100, Math.max(2000, Number(event.target.value))))}
+            placeholder={ar ? "السنة" : "Year"}
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div className="fin-filter-item min-w-[150px]">
+          <Filter className="fin-filter-icon" />
+          <select
+            value={status}
+            onChange={(event) => onStatusChange(event.target.value as InvoiceStatusV2 | "")}
+          >
+            <option value="">{ar ? "كل الحالات" : "All Statuses"}</option>
+            {(["PENDING", "PARTIAL", "PAID", "CANCELLED"] as const).map((state) => (
+              <option key={state} value={state}>
+                {statusLabels[state]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <button type="button" className="fin-filter-reset" onClick={onReset}>
+        <RefreshCcw className="w-4 h-4" />
+        <span>{ar ? "إعادة ضبط" : "Reset"}</span>
+      </button>
+    </div>
+  );
+}

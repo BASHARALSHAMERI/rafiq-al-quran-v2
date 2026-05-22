@@ -1,0 +1,741 @@
+.self-attendance {
+  width: min(1180px, 100%);
+  margin: 0 auto 32px;
+  display: grid;
+  gap: 16px;
+  color: #172033;
+}
+
+.self-attendance__header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.self-attendance__policy-tip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.self-attendance__policy-tip {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-canvas, #f8fafc);
+  color: var(--text-secondary, #475569);
+  cursor: help;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.self-attendance__policy-tip-bubble {
+  position: absolute;
+  top: calc(100% + 10px);
+  inset-inline-end: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(340px, 84vw);
+  padding: 10px 12px;
+  border: 1px solid var(--border-default, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #1e293b);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.14);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.7;
+  white-space: pre-line;
+  text-align: start;
+  pointer-events: none;
+}
+
+.self-attendance__policy-tip:hover {
+  border-color: var(--brand-500, #059669);
+  background: var(--bg-surface, #fff);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.08);
+}
+
+.self-attendance__hero {
+  min-height: 168px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(17, 24, 39, 0.08);
+}
+
+.self-attendance__hero--ready {
+  border-color: #b8e0d4;
+  background: #f7fbf9;
+}
+
+.self-attendance__hero--active,
+.self-attendance__hero--done {
+  border-color: #c7d7f2;
+  background: #f7f9fd;
+}
+
+.self-attendance__hero--waiting,
+.self-attendance__hero--warning {
+  border-color: #f1d49f;
+  background: #fffaf0;
+}
+
+.self-attendance__hero--locked {
+  border-color: #e5c2c2;
+  background: #fff8f8;
+}
+
+.self-attendance__hero-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.self-attendance__state-icon,
+.self-attendance__decision-badge,
+.self-attendance__panel-icon,
+.self-attendance__metrics span {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+}
+
+.self-attendance__state-icon svg,
+.self-attendance__decision-badge svg,
+.self-attendance__panel-icon svg,
+.self-attendance__metrics svg,
+.self-attendance__hero-meta svg,
+.self-attendance__alert svg {
+  width: 18px;
+  height: 18px;
+}
+
+.self-attendance__hero--ready .self-attendance__state-icon,
+.self-attendance__decision-badge.is-open {
+  color: #047857;
+  background: #dff7ec;
+}
+
+.self-attendance__hero--active .self-attendance__state-icon,
+.self-attendance__hero--done .self-attendance__state-icon {
+  color: #1d4ed8;
+  background: #e3ecff;
+}
+
+.self-attendance__hero--waiting .self-attendance__state-icon,
+.self-attendance__hero--warning .self-attendance__state-icon {
+  color: #9a5b00;
+  background: #fff0c7;
+}
+
+.self-attendance__hero--locked .self-attendance__state-icon,
+.self-attendance__decision-badge.is-locked {
+  color: #b42318;
+  background: #ffe4e2;
+}
+
+.self-attendance__eyebrow {
+  display: inline-flex;
+  width: max-content;
+  margin-bottom: 7px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #526071;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.self-attendance h2,
+.self-attendance h3,
+.self-attendance p {
+  margin: 0;
+}
+
+.self-attendance__hero h2 {
+  color: #0f172a;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.25;
+  font-weight: 950;
+}
+
+.self-attendance__hero p,
+.self-attendance__locked-action span,
+.self-attendance__panel span:not(.self-attendance__panel-icon) {
+  color: #5b6878;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.7;
+}
+
+.self-attendance__hero-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  min-width: 260px;
+}
+
+.self-attendance__hero-meta span {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fff;
+  color: #253247;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.self-attendance__hero-meta bdi {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+.self-attendance__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(310px, 0.84fr);
+  gap: 16px;
+}
+
+.self-attendance__decision,
+.self-attendance__panel,
+.self-attendance__operations article,
+.self-attendance__metrics article {
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 34px rgba(17, 24, 39, 0.06);
+}
+
+.self-attendance__decision {
+  min-height: 290px;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.self-attendance__decision-head,
+.self-attendance__locked-action,
+.self-attendance__panel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.self-attendance__decision-head {
+  justify-content: space-between;
+}
+
+.self-attendance__decision p,
+.self-attendance__panel p,
+.self-attendance__metrics p {
+  margin-bottom: 5px;
+  color: #687789;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.self-attendance__decision-date {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.self-attendance__decision strong,
+.self-attendance__panel strong,
+.self-attendance__metrics strong {
+  display: block;
+  color: #111827;
+  font-size: 1.02rem;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.self-attendance__primary-button {
+  min-height: 52px;
+  background: #176b5b !important;
+  color: #fff !important;
+  border-color: #176b5b !important;
+  box-shadow: 0 10px 24px rgba(23, 107, 91, 0.24);
+}
+
+.self-attendance__primary-button:hover:not(:disabled) {
+  background: #125647 !important;
+}
+
+.self-attendance__locked-action {
+  min-height: 78px;
+  padding: 14px 16px;
+  border: 1px solid #ecd2a8;
+  border-radius: 8px;
+  background: #fffbf3;
+}
+
+.self-attendance__locked-action svg {
+  width: 24px;
+  height: 24px;
+  color: #9a5b00;
+  flex: 0 0 auto;
+}
+
+.self-attendance__timeline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.self-attendance__timeline-item {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dde6ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.self-attendance__timeline-item > span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #b7c2d0;
+  box-shadow: 0 0 0 5px #e7edf4;
+  flex: 0 0 12px;
+}
+
+.self-attendance__timeline-item.is-done > span {
+  background: #168a5a;
+  box-shadow: 0 0 0 5px #dff7ec;
+}
+
+.self-attendance__timeline-item.is-ready > span {
+  background: #2563eb;
+  box-shadow: 0 0 0 5px #dbeafe;
+}
+
+.self-attendance__timeline-item p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.self-attendance__side {
+  display: grid;
+  gap: 14px;
+}
+
+.self-attendance__panel {
+  min-height: 138px;
+  padding: 18px;
+}
+
+.self-attendance__geo--success .self-attendance__panel-icon {
+  color: #047857;
+  background: #dff7ec;
+}
+
+.self-attendance__geo--warning .self-attendance__panel-icon {
+  color: #9a5b00;
+  background: #fff0c7;
+}
+
+.self-attendance__geo--danger .self-attendance__panel-icon {
+  color: #b42318;
+  background: #ffe4e2;
+}
+
+.self-attendance__geo--neutral .self-attendance__panel-icon,
+.self-attendance__panel-icon--center {
+  color: #24536b;
+  background: #e7f0f4;
+}
+
+.self-attendance__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.self-attendance__metrics article {
+  min-height: 116px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.self-attendance__metrics span {
+  color: #24536b;
+  background: #e7f0f4;
+}
+
+.self-attendance__operations {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.self-attendance__operations article {
+  padding: 18px;
+}
+
+.self-attendance__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.self-attendance__section-head h3 {
+  margin: 0 0 4px;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.self-attendance__section-head span {
+  color: #697789;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.self-attendance__section-head button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #24536b;
+  cursor: help;
+}
+
+.self-attendance__section-head button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.self-attendance__history-list,
+.self-attendance__excuses-mini,
+.self-attendance__excuse-form {
+  display: grid;
+  gap: 10px;
+}
+
+.self-attendance__history-row,
+.self-attendance__excuses-mini > div {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e1e9f2;
+  border-radius: 8px;
+  background: #f9fbfd;
+}
+
+.self-attendance__status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #94a3b8;
+  box-shadow: 0 0 0 5px #e2e8f0;
+}
+
+.self-attendance__status-dot--success {
+  background: #168a5a;
+  box-shadow: 0 0 0 5px #dff7ec;
+}
+
+.self-attendance__status-dot--warning {
+  background: #d97706;
+  box-shadow: 0 0 0 5px #fef0c7;
+}
+
+.self-attendance__status-dot--danger {
+  background: #dc2626;
+  box-shadow: 0 0 0 5px #fee2e2;
+}
+
+.self-attendance__status-dot--info {
+  background: #2563eb;
+  box-shadow: 0 0 0 5px #dbeafe;
+}
+
+.self-attendance__history-row strong,
+.self-attendance__excuses-mini strong {
+  display: block;
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.self-attendance__history-row p,
+.self-attendance__excuses-mini span {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.self-attendance__tag {
+  min-width: 70px;
+  display: inline-flex;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.self-attendance__tag--success {
+  color: #047857;
+  background: #dff7ec;
+}
+
+.self-attendance__tag--warning {
+  color: #9a5b00;
+  background: #fff0c7;
+}
+
+.self-attendance__tag--danger {
+  color: #b42318;
+  background: #ffe4e2;
+}
+
+.self-attendance__tag--info {
+  color: #1d4ed8;
+  background: #e3ecff;
+}
+
+.self-attendance__tag--muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.self-attendance__empty,
+.self-attendance__mini-empty {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed #cfd9e5;
+  border-radius: 8px;
+  color: #64748b;
+  background: #f8fafc;
+  font-weight: 850;
+}
+
+.self-attendance__empty svg {
+  width: 20px;
+  height: 20px;
+  color: #24536b;
+}
+
+.self-attendance__excuse-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.self-attendance__excuse-note,
+.self-attendance__secondary-button,
+.self-attendance__excuses-mini {
+  grid-column: 1 / -1;
+}
+
+.self-attendance__excuse-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.self-attendance__excuse-form label > span {
+  color: #526071;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.self-attendance__excuse-form input,
+.self-attendance__excuse-form select,
+.self-attendance__excuse-form textarea {
+  width: 100%;
+  border: 1px solid #cfd9e5;
+  border-radius: 8px;
+  background: #f9fbfd;
+  color: #111827;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.self-attendance__excuse-form input,
+.self-attendance__excuse-form select {
+  height: 42px;
+  padding: 0 11px;
+}
+
+.self-attendance__excuse-form textarea {
+  resize: vertical;
+  min-height: 82px;
+  padding: 10px 11px;
+}
+
+.self-attendance__excuse-form input:focus,
+.self-attendance__excuse-form select:focus,
+.self-attendance__excuse-form textarea:focus {
+  border-color: #176b5b;
+  box-shadow: 0 0 0 3px rgba(23, 107, 91, 0.12);
+}
+
+.self-attendance__secondary-button {
+  min-height: 46px;
+  background: #24536b !important;
+  color: #fff !important;
+  border-color: #24536b !important;
+}
+
+.self-attendance__alerts {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.self-attendance__alert {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.self-attendance__alert--warning {
+  color: #8a4b00;
+  background: #fff7e6;
+  border: 1px solid #f0d2a2;
+}
+
+.self-attendance__alert--danger {
+  color: #a61b1b;
+  background: #fff1f1;
+  border: 1px solid #f4c3c3;
+}
+
+[data-theme="dark"] .self-attendance {
+  color: #e5edf5;
+}
+
+[data-theme="dark"] .self-attendance__hero,
+[data-theme="dark"] .self-attendance__decision,
+[data-theme="dark"] .self-attendance__panel,
+[data-theme="dark"] .self-attendance__operations article,
+[data-theme="dark"] .self-attendance__metrics article {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+[data-theme="dark"] .self-attendance__hero h2,
+[data-theme="dark"] .self-attendance__decision strong,
+[data-theme="dark"] .self-attendance__panel strong,
+[data-theme="dark"] .self-attendance__metrics strong,
+[data-theme="dark"] .self-attendance__section-head h3,
+[data-theme="dark"] .self-attendance__timeline-item strong {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .self-attendance__hero-meta span,
+[data-theme="dark"] .self-attendance__timeline-item,
+[data-theme="dark"] .self-attendance__history-row,
+[data-theme="dark"] .self-attendance__excuses-mini > div,
+[data-theme="dark"] .self-attendance__excuse-form input,
+[data-theme="dark"] .self-attendance__excuse-form select,
+[data-theme="dark"] .self-attendance__excuse-form textarea {
+  background: rgba(30, 41, 59, 0.82);
+  border-color: rgba(148, 163, 184, 0.16);
+  color: #e5edf5;
+}
+
+@media (max-width: 1080px) {
+  .self-attendance__hero,
+  .self-attendance__grid,
+  .self-attendance__operations {
+    grid-template-columns: 1fr;
+  }
+
+  .self-attendance__hero {
+    display: grid;
+  }
+
+  .self-attendance__hero-meta {
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .self-attendance__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .self-attendance__header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .self-attendance__header-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .self-attendance__hero,
+  .self-attendance__decision,
+  .self-attendance__panel,
+  .self-attendance__operations article {
+    padding: 15px;
+  }
+
+  .self-attendance__hero-main,
+  .self-attendance__decision-head,
+  .self-attendance__locked-action,
+  .self-attendance__panel {
+    align-items: flex-start;
+  }
+
+  .self-attendance__timeline,
+  .self-attendance__metrics,
+  .self-attendance__excuse-form {
+    grid-template-columns: 1fr;
+  }
+}

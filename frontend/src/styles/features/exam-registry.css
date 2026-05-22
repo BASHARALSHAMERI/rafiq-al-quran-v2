@@ -1,0 +1,183 @@
+/* ══════════════════════════════════════════════════════════════
+   EXAM REGISTRY (سجل الاختبارات) — Visual Identity Refinement
+   Modern Card-based UI, Horizontal Rows, & Unified Controls
+   ══════════════════════════════════════════════════════════════ */
+
+.exams-registry-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-bottom: 3rem;
+}
+
+/* Row-based Cards */
+.exam-registry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exam-registry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #f1f5f9);
+  border-radius: 14px;
+  padding: 0.85rem 1.25rem;
+  transition: all 0.2s ease;
+  gap: 1.5rem;
+}
+
+.exam-registry-row:hover {
+  transform: translateX(-5px);
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.03));
+  background: var(--bg-hover, #fcfdfe);
+}
+
+.er-row-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1.5;
+}
+
+.er-student-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--primary-light, #e0f2f1);
+  color: var(--primary, #247d7e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.er-student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.er-student-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main, #1e293b);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.er-student-name:hover {
+  color: var(--primary);
+}
+
+.er-circle-name {
+  font-size: 0.72rem;
+  color: var(--text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.er-row-center {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1.2;
+}
+
+.er-exam-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-secondary, #334155);
+}
+
+.er-exam-type {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.er-row-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-shrink: 0;
+}
+
+.er-date-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+
+.er-date-box span {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.er-date-box strong {
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.er-result-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
+}
+
+.er-result-score {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.er-result-grade {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Filters & Controls */
+.er-filters-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.er-filter-select {
+  height: 34px;
+  padding: 0 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-light, #e2e8f0);
+  background: var(--bg-body, #f8fafc);
+  color: var(--text-secondary, #475569);
+  font-size: 0.75rem;
+  outline: none;
+  cursor: pointer;
+  max-width: 150px;
+}
+
+/* Pagination Style matches ExamBank */
+.er-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-card, #fff);
+  border-radius: 14px;
+  border: 1px solid var(--border-light, #eef2f6);
+  margin-top: 1rem;
+}
+
+/* Dark Mode */
+[data-theme='dark'] .exam-registry-row {
+  border-color: rgba(255, 255, 255, 0.05);
+}
