@@ -28,6 +28,8 @@ import {
   Users,
   Wallet2,
   Activity,
+  Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -42,9 +44,11 @@ import {
   useCirclesSummaryQuery,
   useStudentsSummaryQuery,
   useGoldenRecordsSummaryQuery,
+  useExportReportMutation,
 } from "../features/reports/reports.hooks";
+import { reportsApi } from "../features/reports/reports.api";
 import { ErrorState } from "../components/ui/ErrorState";
-import type { ReportsFilters, ReportType } from "../features/reports/types";
+import type { ReportFormat, ReportsFilters, ReportType } from "../features/reports/types";
 import { MonthlyStaffReportView } from "../features/staff-attendance/components/MonthlyStaffReportView";
 
 import "../styles/pages/reports-v5.css";
@@ -244,6 +248,9 @@ export default function ReportsPage() {
   const [secFilter, setSecFilter] = useState<SectionFilter>("all");
   const [statusFlt, setStatusFlt] = useState<StatusFilter>("all");
   const [outputFlt, setOutputFlt] = useState<OutputFilter>("all");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
 
@@ -256,6 +263,7 @@ export default function ReportsPage() {
     viewLevel === "UNIFIED" && activeSummary === "students"
   );
   const goldenSumQ = useGoldenRecordsSummaryQuery(filters.centerId, viewLevel === "UNIFIED" && activeSummary === "golden-records");
+  const exportMutation = useExportReportMutation();
 
   const activeQuery = activeSummary === "centers" ? centersSumQ
     : activeSummary === "circles" ? circlesSumQ
@@ -377,12 +385,43 @@ export default function ReportsPage() {
     setActiveTitle(ar ? card.nameAr : card.nameEn);
     if (card.summaryKey) { setActiveSummary(card.summaryKey); setActiveReportType("ATTENDANCE"); }
     else if (card.reportType) { setActiveSummary(null); setActiveReportType(card.reportType); }
+    setExportError(null);
+    setExportSuccess(null);
     setViewLevel("UNIFIED");
     setPage(1);
     setSortKey(null);
   };
 
   const refreshData = () => { void (activeQuery as any).refetch?.(); };
+
+  const handleExport = async (format: ReportFormat) => {
+    setExportError(null);
+    setExportSuccess(null);
+    setExportLoading(true);
+    try {
+      const result = await exportMutation.mutateAsync({
+        reportType: activeReportType,
+        format,
+        filters,
+      });
+      const blob = await reportsApi.downloadExport(result.fileId);
+      const ext = format === "PDF" ? "pdf" : "xlsx";
+      const fileName = `report-${activeReportType.toLowerCase()}-${filters.from}-${filters.to}.${ext}`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setExportSuccess(ar ? "تم التصدير. ملاحظة: سينتهي صلاحية الملف خلال 7 أيام." : "Export ready. Note: file expires in 7 days.");
+    } catch {
+      setExportError(ar ? "تعذر تصدير التقرير. يرجى المحاولة مجدداً." : "Export failed. Please try again.");
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   /* ─── Render helpers ─── */
   const renderBadges = (card: ReportCardDef) => (
@@ -583,6 +622,16 @@ export default function ReportsPage() {
               <Button variant="secondary" size="sm" leftIcon={<RefreshCw className={`w-4 h-4 ${(activeQuery as any).isFetching ? "animate-spin" : ""}`} />} onClick={refreshData}>
                 {ar ? "تحديث" : "Refresh"}
               </Button>
+              {!activeSummary && (
+                <>
+                  <Button variant="secondary" size="sm" leftIcon={<Download className="w-4 h-4" />} onClick={() => void handleExport("PDF")} disabled={exportLoading} isLoading={exportLoading}>
+                    {ar ? "PDF تصدير" : "Export PDF"}
+                  </Button>
+                  <Button variant="secondary" size="sm" leftIcon={<FileSpreadsheet className="w-4 h-4" />} onClick={() => void handleExport("XLSX")} disabled={exportLoading} isLoading={exportLoading}>
+                    {ar ? "Excel تصدير" : "Export Excel"}
+                  </Button>
+                </>
+              )}
             </div>
 
             <div className="rcc-fbar">
@@ -616,6 +665,17 @@ export default function ReportsPage() {
                 <RotateCcw size={14} />
               </button>
             </div>
+
+            {!activeSummary && exportError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                {exportError}
+              </p>
+            )}
+            {!activeSummary && exportSuccess && (
+              <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+                {exportSuccess}
+              </p>
+            )}
 
             {(activeQuery as any).isLoading ? (
               <div className="flex flex-col gap-3">{[1, 2, 3].map((i) => <div key={i} className="rcc-skel" />)}</div>
