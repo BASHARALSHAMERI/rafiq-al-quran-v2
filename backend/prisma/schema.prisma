@@ -46,6 +46,7 @@ model Organization {
   matnCatalogs             MatnCatalog[]
   monthlyPlans             MonthlyPlan[]
   notifications            Notification[]
+  payments                 Payment[]
   payrollBatches           PayrollBatch[]
   payrollProfiles          PayrollProfile[]
   reportFiles              ReportFile[]
@@ -127,7 +128,9 @@ model Center {
   libraryItems             LibraryItem[]
   monthlyPlans             MonthlyPlan[]
   notifications            Notification[]
+  payments                 Payment[]
   payrollBatches           PayrollBatch[]
+  payrollItems             PayrollItem[]
   payrollProfiles          PayrollProfile[]
   prayerTimeCache          PrayerTimeCache[]
   remoteRecitationBookings RemoteRecitationBooking[]
@@ -1622,7 +1625,9 @@ model Payment {
   idempotencyKey       String?         @db.VarChar(128)
   organizationId       Int?
   voucherId            Int?            @unique
+  center               Center?         @relation(fields: [centerId], references: [id], onDelete: Restrict)
   invoice              Invoice         @relation(fields: [invoiceId], references: [id])
+  organization         Organization?   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   receivedBy           User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   voucher              FinanceVoucher? @relation(fields: [voucherId], references: [id])
 
@@ -2158,6 +2163,7 @@ model PayrollItem {
   updatedAt            DateTime          @updatedAt
   batch                PayrollBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
   beneficiary          User              @relation("PayrollItemBeneficiary", fields: [beneficiaryUserId], references: [id])
+  center               Center?           @relation(fields: [centerId], references: [id], onDelete: Restrict)
   voucher              FinanceVoucher?   @relation(fields: [voucherId], references: [id])
 
   @@unique([batchId, beneficiaryUserId])
