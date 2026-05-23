@@ -14,7 +14,7 @@ import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { accountingService } from "../../accounting/accounting.service";
-import { postVoucherTx } from "../finance-v2.internal";
+import { nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
   return tx.accountingAccount.findFirst({
@@ -322,7 +322,7 @@ export const expensesService = {
       }
 
       // Create Finance Voucher (Disbursement)
-      const voucherNo = `DISB-${Date.now()}`;
+      const voucherNo = await nextVoucherNoTx(tx, "DV", scope.organizationId);
       const voucher = await tx.financeVoucher.create({
         data: {
           organizationId: scope.organizationId,
