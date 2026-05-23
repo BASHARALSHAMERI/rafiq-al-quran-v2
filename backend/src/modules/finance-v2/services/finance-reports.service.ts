@@ -691,15 +691,8 @@ export const financeReportsService = {
         netAssets.totalUnrestricted += balance;
         netAssets.totalNetAssets += balance;
       } else if (account.type === AccountingAccountType.EXPENSE) {
-        // Expense decreases surplus (Note: expenses normally have debit balance which is positive in TB, 
-        // so we need to subtract it, or wait, if balance is net credit? 
-        // Trial balance returns normal balance? Let's check how revenue and expense are signed.
-        // Actually, if TB returns normal balance, revenue is credit (positive), expense is debit (positive).
-        // Let's look at the TB calculation. If debit is positive, credit is positive?
-        // Wait, TB usually returns debit/credit columns or a single net balance.
-        // Let me check how `reportStatementOfActivities` uses them:
-        // `revenue.totalRevenue += balance; expenses.totalExpenses += balance; surplus = revenue - expenses;`
-        // So balance is positive for both. Therefore, we should ADD revenue and SUBTRACT expense from Net Assets.
+        // EXPENSE accounts have DEBIT normal balance, so getTrialBalance returns a positive balance.
+        // Expenses reduce net assets.
         netAssets.totalUnrestricted -= balance;
         netAssets.totalNetAssets -= balance;
       }
@@ -707,11 +700,11 @@ export const financeReportsService = {
 
     // Add a synthetic line for current year surplus if it's non-zero
     const currentSurplus = netAssets.totalUnrestricted - netAssets.unrestricted.reduce((sum: number, item: any) => sum + item.balance, 0);
-    if (currentSurplus !== 0) {
+    if (Math.abs(currentSurplus) >= 0.005) {
       netAssets.unrestricted.push({
         accountId: 0,
         code: '3200-YTD',
-        name: 'فائض/عجز الفترة الحالية',
+        name: 'الفائض/العجز المتراكم',
         balance: currentSurplus
       });
     }
