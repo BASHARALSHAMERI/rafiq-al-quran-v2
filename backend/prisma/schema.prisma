@@ -1844,6 +1844,7 @@ model ExchangeRate {
   currency     Currency     @relation(fields: [organizationId, currencyCode], references: [organizationId, code])
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, currencyCode, effectiveDate])
   @@index([organizationId, currencyCode, effectiveDate])
   @@index([organizationId, currencyCode, createdAt])
   @@map("exchange_rates")
@@ -1932,7 +1933,7 @@ model AccountingAccount {
   assetCategoryDepreciationExpenseAccounts     AssetCategory[]         @relation("AssetCategoryDepreciationExpenseAccount")
   assetCategoryAccumulatedDepreciationAccounts AssetCategory[]         @relation("AssetCategoryAccumulatedDepreciationAccount")
   organization                                 Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id])
+  parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
   @@unique([organizationId, systemKey])
@@ -2159,6 +2160,7 @@ model PayrollItem {
   beneficiary          User              @relation("PayrollItemBeneficiary", fields: [beneficiaryUserId], references: [id])
   voucher              FinanceVoucher?   @relation(fields: [voucherId], references: [id])
 
+  @@unique([batchId, beneficiaryUserId])
   @@index([batchId, status])
   @@index([beneficiaryUserId, status])
   @@index([centerId])
@@ -2244,6 +2246,7 @@ model RewardItem {
   circle            Circle?               @relation(fields: [circleId], references: [id])
   voucher           FinanceVoucher?       @relation(fields: [voucherId], references: [id])
 
+  @@unique([batchId, beneficiaryUserId])
   @@index([batchId, status])
   @@index([beneficiaryUserId, status])
   @@map("reward_items")
