@@ -686,7 +686,27 @@ export const financeReportsService = {
           netAssets.totalUnrestricted += balance;
         }
         netAssets.totalNetAssets += balance;
+      } else if (account.type === AccountingAccountType.REVENUE) {
+        // Revenue increases surplus
+        netAssets.totalUnrestricted += balance;
+        netAssets.totalNetAssets += balance;
+      } else if (account.type === AccountingAccountType.EXPENSE) {
+        // EXPENSE accounts have DEBIT normal balance, so getTrialBalance returns a positive balance.
+        // Expenses reduce net assets.
+        netAssets.totalUnrestricted -= balance;
+        netAssets.totalNetAssets -= balance;
       }
+    }
+
+    // Add a synthetic line for current year surplus if it's non-zero
+    const currentSurplus = netAssets.totalUnrestricted - netAssets.unrestricted.reduce((sum: number, item: any) => sum + item.balance, 0);
+    if (Math.abs(currentSurplus) >= 0.005) {
+      netAssets.unrestricted.push({
+        accountId: 0,
+        code: '3200-YTD',
+        name: 'الفائض/العجز المتراكم',
+        balance: currentSurplus
+      });
     }
 
     return normalize({
