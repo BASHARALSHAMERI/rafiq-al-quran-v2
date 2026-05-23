@@ -119,7 +119,11 @@ export const roleLabel = (role: Role, ar: boolean) => {
     SUPERVISOR: "مشرف",
     TEACHER: "معلم",
     PARENT: "ولي أمر",
-    STUDENT: "طالب"
+    STUDENT: "طالب",
+    ACCOUNTANT: "محاسب",
+    FINANCE_MANAGER: "مدير المالية",
+    TREASURER: "أمين الصندوق",
+    AUDITOR: "مدقق"
   };
   return map[role];
 };

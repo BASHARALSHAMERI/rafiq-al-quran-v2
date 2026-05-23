@@ -383,7 +383,11 @@ const roleLabelsByLanguage: Record<AppLanguage, Record<Role, string>> = {
     SUPERVISOR: "مشرف",
     TEACHER: "معلم",
     PARENT: "ولي أمر",
-    STUDENT: "طالب"
+    STUDENT: "طالب",
+    ACCOUNTANT: "محاسب",
+    FINANCE_MANAGER: "مدير المالية",
+    TREASURER: "أمين الصندوق",
+    AUDITOR: "مدقق"
   },
   en: {
     SUPER_ADMIN: "General Manager",
@@ -391,7 +395,11 @@ const roleLabelsByLanguage: Record<AppLanguage, Record<Role, string>> = {
     SUPERVISOR: "Supervisor",
     TEACHER: "Teacher",
     PARENT: "Parent",
-    STUDENT: "Student"
+    STUDENT: "Student",
+    ACCOUNTANT: "Accountant",
+    FINANCE_MANAGER: "Finance Manager",
+    TREASURER: "Treasurer",
+    AUDITOR: "Auditor"
   }
 };
 

@@ -4,7 +4,11 @@ export type Role =
   | "SUPERVISOR"
   | "TEACHER"
   | "PARENT"
-  | "STUDENT";
+  | "STUDENT"
+  | "ACCOUNTANT"
+  | "FINANCE_MANAGER"
+  | "TREASURER"
+  | "AUDITOR";
 
 export type AuthUser = {
   id: number;
