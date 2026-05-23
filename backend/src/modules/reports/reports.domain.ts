@@ -37,7 +37,8 @@ const FULL_REPORT_ROLES: Role[] = [
   Role.CENTER_ADMIN,
   Role.SUPERVISOR,
   Role.TEACHER,
-  Role.PARENT
+  Role.PARENT,
+  Role.ACCOUNTANT
 ];
 
 export const reportsDomain = {
@@ -52,6 +53,10 @@ export const reportsDomain = {
 
     if (scope.role === Role.TEACHER && reportType === ReportType.FINANCE) {
       throw new AppError("Finance report is restricted for teachers", 403);
+    }
+
+    if (scope.role === Role.ACCOUNTANT && reportType !== ReportType.FINANCE) {
+      throw new AppError("Only finance reports are available for accountants", 403);
     }
   },
 

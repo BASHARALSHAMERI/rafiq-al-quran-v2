@@ -66,6 +66,17 @@ import {
 } from "./finance-v2.validation";
 
 const financeV2Router = Router();
+const financeReadRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.ACCOUNTANT];
+const financeBillingReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.ACCOUNTANT,
+  Role.PARENT,
+  Role.STUDENT
+];
+const financeAdminReadRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
+const financeDraftWriteRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
 
 financeV2Router.use(authGuard, attachScope);
 
@@ -93,7 +104,7 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/v2/student-fee-profiles",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listStudentFeeProfilesQuerySchema),
   financeV2Controller.listStudentFeeProfiles
 );
@@ -115,20 +126,14 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/v2/invoices",
-  requireRoles([
-    Role.SUPER_ADMIN,
-    Role.CENTER_ADMIN,
-    Role.SUPERVISOR,
-    Role.PARENT,
-    Role.STUDENT
-  ]),
+  requireRoles(financeBillingReadRoles),
   validateQuery(listInvoicesV2QuerySchema),
   financeV2Controller.listInvoices
 );
 
 financeV2Router.post(
   "/finance/v2/invoices",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeDraftWriteRoles),
   validateBody(createInvoiceV2BodySchema),
   financeV2Controller.createInvoice
 );
@@ -143,13 +148,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/invoices/:id/payments",
-  requireRoles([
-    Role.SUPER_ADMIN,
-    Role.CENTER_ADMIN,
-    Role.SUPERVISOR,
-    Role.PARENT,
-    Role.STUDENT
-  ]),
+  requireRoles(financeBillingReadRoles),
   validateParams(financeV2EntityIdParamSchema),
   financeV2Controller.listInvoicePayments
 );
@@ -163,14 +162,14 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/vouchers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listVouchersQuerySchema),
   financeV2Controller.listVouchers
 );
 
 financeV2Router.post(
   "/finance/v2/vouchers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeDraftWriteRoles),
   validateBody(createVoucherBodySchema),
   financeV2Controller.createVoucher
 );
@@ -225,7 +224,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/donors",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   validateQuery(listDonorsQuerySchema),
   financeV2Controller.listDonors
 );
@@ -239,7 +238,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/donors/:id",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   validateParams(financeV2EntityIdParamSchema),
   financeV2Controller.getDonor
 );
@@ -254,7 +253,7 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/donations",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   validateQuery(listDonationsQuerySchema),
   financeV2Controller.listDonations
 );
@@ -276,14 +275,14 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/accounts",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listAccountsQuerySchema),
   financeV2Controller.listAccounts
 );
 
 financeV2Router.get(
   "/finance/v2/accounts/:id/movements",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateQuery(listAccountMovementsQuerySchema),
   financeV2Controller.listAccountMovements
@@ -299,14 +298,14 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/v2/fund-transfers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listFundTransfersQuerySchema),
   financeV2Controller.listFundTransfers
 );
 
 financeV2Router.post(
   "/finance/v2/fund-transfers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeDraftWriteRoles),
   validateBody(createFundTransferBodySchema),
   financeV2Controller.createFundTransfer
 );
@@ -337,7 +336,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/payroll/profiles",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listPayrollProfilesQuerySchema),
   financeV2Controller.listPayrollProfiles
 );
@@ -359,14 +358,14 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/v2/payroll/batches",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listPayrollBatchesQuerySchema),
   financeV2Controller.listPayrollBatches
 );
 
 financeV2Router.post(
   "/finance/v2/payroll/batches",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeDraftWriteRoles),
   validateBody(createPayrollBatchBodySchema),
   financeV2Controller.createPayrollBatch
 );
@@ -413,7 +412,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/reward/profiles",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listRewardProfilesQuerySchema),
   financeV2Controller.listRewardProfiles
 );
@@ -427,7 +426,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/reward/batches",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listRewardBatchesQuerySchema),
   financeV2Controller.listRewardBatches
 );
@@ -487,56 +486,56 @@ financeV2Router.get(
 
 financeV2Router.get(
   "/finance/v2/reports/dashboard",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(reportsDashboardQuerySchema),
   financeV2Controller.reportDashboard
 );
 
 financeV2Router.get(
   "/finance/v2/reports/cashflow",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(cashflowReportQuerySchema),
   financeV2Controller.reportCashflow
 );
 
 financeV2Router.get(
   "/finance/v2/reports/payroll",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(payrollReportQuerySchema),
   financeV2Controller.reportPayroll
 );
 
 financeV2Router.get(
   "/finance/v2/reports/rewards",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(rewardsReportQuerySchema),
   financeV2Controller.reportRewards
 );
 
 financeV2Router.get(
   "/finance/v2/reports/vouchers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(vouchersReportQuerySchema),
   financeV2Controller.reportVouchers
 );
 
 financeV2Router.get(
   "/finance/v2/reports/invoice-aging",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(invoiceAgingReportQuerySchema),
   financeV2Controller.reportInvoiceAging
 );
 
 financeV2Router.get(
   "/finance/v2/reports/financial-position",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(invoiceAgingReportQuerySchema),
   financeV2Controller.reportFinancialPosition
 );
 
 financeV2Router.get(
   "/finance/v2/reports/statement-of-activities",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(reportsDashboardQuerySchema),
   financeV2Controller.reportStatementOfActivities
 );
@@ -544,7 +543,7 @@ financeV2Router.get(
 // FA-CENTER-FINANCIAL-TRACKING-1: ملخص تمويل وتكلفة المراكز
 financeV2Router.get(
   "/finance/v2/reports/center-funding",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(reportsDashboardQuerySchema),
   financeV2Controller.reportCenterFundingSummary
 );
@@ -552,13 +551,13 @@ financeV2Router.get(
 // FA-UX-4: Currencies
 financeV2Router.get(
   "/finance/v2/currencies",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   financeV2Controller.listCurrencies
 );
 
 financeV2Router.get(
   "/finance/v2/currencies/predefined",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   financeV2Controller.getAvailablePredefinedCurrencies
 );
 
@@ -579,21 +578,21 @@ financeV2Router.patch(
 
 financeV2Router.get(
   "/finance/v2/currencies/base",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   financeV2Controller.getBaseCurrency
 );
 
 // FA-UX-4: Exchange Rates
 financeV2Router.get(
   "/finance/v2/exchange-rates",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   validateQuery(listExchangeRatesQuerySchema),
   financeV2Controller.listExchangeRates
 );
 
 financeV2Router.get(
   "/finance/v2/exchange-rates/latest",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeAdminReadRoles),
   validateQuery(latestExchangeRateQuerySchema),
   financeV2Controller.getLatestExchangeRate
 );
@@ -608,7 +607,7 @@ financeV2Router.post(
 // ERP-PAY-1: Salary Scales
 financeV2Router.get(
   "/finance/v2/salary-grades",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   validateQuery(listSalaryGradesQuerySchema),
   financeV2Controller.listSalaryGrades
 );
@@ -639,7 +638,7 @@ financeV2Router.get(
 
 financeV2Router.get(
   "/finance/v2/suppliers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   expensesController.listSuppliers
 );
 
@@ -651,7 +650,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/expense-categories",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   expensesController.listExpenseCategories
 );
 
@@ -663,7 +662,7 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/expenses",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   expensesController.listExpenseInvoices
 );
 
@@ -688,7 +687,7 @@ financeV2Router.post(
 // FA-ASSETS-1: Fixed assets and custody register
 financeV2Router.get(
   "/finance/v2/asset-categories",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   assetsController.listAssetCategories
 );
 
@@ -700,19 +699,19 @@ financeV2Router.post(
 
 financeV2Router.get(
   "/finance/v2/assets",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   assetsController.listFixedAssets
 );
 
 financeV2Router.post(
   "/finance/v2/assets",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles(financeDraftWriteRoles),
   assetsController.createFixedAsset
 );
 
 financeV2Router.get(
   "/finance/v2/asset-custody",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(financeReadRoles),
   assetsController.listCustodyLogs
 );
 
