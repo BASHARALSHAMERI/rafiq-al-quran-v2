@@ -22,12 +22,21 @@ import {
 } from "./reports.validation";
 
 const reportsRouter = Router();
+const reportsFinanceRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.ACCOUNTANT];
+const reportsExportRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.PARENT,
+  Role.ACCOUNTANT
+];
 
 reportsRouter.use(authGuard, attachScope);
 
 reportsRouter.get(
   "/reports/catalog",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   reportsController.catalog
 );
 
@@ -68,7 +77,7 @@ reportsRouter.get(
 
 reportsRouter.get(
   "/reports/finance",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsFinanceRoles),
   validateQuery(financeReportQuerySchema),
   reportsController.finance
 );
@@ -98,14 +107,14 @@ reportsRouter.post(
 
 reportsRouter.post(
   "/reports/export",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   validateBody(exportReportBodySchema),
   reportsController.export
 );
 
 reportsRouter.get(
   "/reports/exports/:id/download",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   validateParams(reportExportIdParamSchema),
   reportsController.download
 );

@@ -37,6 +37,8 @@ const INVALID_CREDENTIALS_MESSAGE = "Invalid login credentials";
 const FORGOT_PASSWORD_GENERIC_MESSAGE =
   "If the provided credentials are valid, reset instructions have been sent.";
 const INVALID_RESET_TOKEN_MESSAGE = "Invalid or expired reset token";
+const WEB_ACCESS_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
+const MOBILE_ACCESS_ROLES: Role[] = [Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT];
 
 const resolveFrontendBaseUrl = () => {
   const base = env.FRONTEND_BASE_URL ?? env.CORS_ORIGIN;
@@ -102,11 +104,11 @@ export const authService = {
     }
 
     if (clientInfo.platform === "web") {
-      if (user.role !== Role.SUPER_ADMIN && user.role !== Role.CENTER_ADMIN) {
+      if (!WEB_ACCESS_ROLES.includes(user.role)) {
         throw new AppError("Web access is restricted to administrators only", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
       }
     } else {
-      if (user.role === Role.SUPER_ADMIN || user.role === Role.CENTER_ADMIN) {
+      if (!MOBILE_ACCESS_ROLES.includes(user.role)) {
         throw new AppError("Mobile access is restricted to teachers, supervisors, students, and parents", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
       }
     }

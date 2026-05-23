@@ -23,8 +23,8 @@ type DateRange = {
   to: Date;
 };
 
-const READ_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR];
-const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN];
+const READ_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.ACCOUNTANT];
+const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
 const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN];
 
 const VOUCHER_TRANSITIONS: Record<VoucherStatus, VoucherStatus[]> = {
@@ -311,4 +311,3 @@ export const financeV2Domain = {
   toDecimal,
   toMoney
 };
-

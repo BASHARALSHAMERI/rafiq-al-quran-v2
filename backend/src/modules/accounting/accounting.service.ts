@@ -56,7 +56,11 @@ type AccountInput = {
 };
 
 const assertAccountingRole = (scope: ScopeContext) => {
-  if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
+  if (
+    scope.role !== Role.SUPER_ADMIN &&
+    scope.role !== Role.CENTER_ADMIN &&
+    scope.role !== Role.ACCOUNTANT
+  ) {
     throw new AppError("Accounting scope denied", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
   }
 };
