@@ -209,6 +209,12 @@ type PostVoucherJournalEntryTxInput = {
   postedById: number;
 };
 
+type PostExpensePaymentSettlementJournalEntryTxInput = {
+  expensePaymentId: number;
+  voucherId: number;
+  postedById: number;
+};
+
 type ReverseVoucherJournalEntryTxInput = {
   originalVoucherId: number;
   reversalVoucherId: number;
@@ -269,6 +275,66 @@ const findRequiredAccountTx = async (
   }
 
   return account;
+};
+
+const findAccountsPayablePostingAccountTx = async (
+  tx: Prisma.TransactionClient,
+  organizationId: number
+) => {
+  const account = await tx.accountingAccount.findFirst({
+    where: {
+      organizationId,
+      type: AccountingAccountType.LIABILITY,
+      isActive: true,
+      children: { none: { isActive: true } },
+      OR: [{ systemKey: "ACCOUNTS_PAYABLE" }, { code: "2130" }, { code: "2100" }]
+    },
+    orderBy: [{ systemKey: "desc" }, { code: "desc" }, { id: "asc" }]
+  });
+
+  if (!account) {
+    throw new AppError(
+      "Accounts payable posting account is missing for expense payment settlement",
+      409,
+      { systemKey: "ACCOUNTS_PAYABLE", fallbackCodes: ["2130", "2100"] },
+      "ACCOUNTING_MAPPING_MISSING"
+    );
+  }
+
+  return account;
+};
+
+const resolveExpenseInvoiceAccountsPayableTx = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    organizationId: number;
+    invoiceId: number;
+  }
+) => {
+  const accrualEntry = await tx.journalEntry.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      sourceType: JournalSourceType.EXPENSE_INVOICE,
+      sourceId: input.invoiceId,
+      status: JournalEntryStatus.POSTED
+    },
+    include: {
+      lines: {
+        where: {
+          credit: { gt: new Prisma.Decimal(0) },
+          account: {
+            type: AccountingAccountType.LIABILITY,
+            isActive: true,
+            children: { none: { isActive: true } }
+          }
+        },
+        include: { account: true },
+        orderBy: { id: "asc" }
+      }
+    }
+  });
+
+  return accrualEntry?.lines[0]?.account ?? findAccountsPayablePostingAccountTx(tx, input.organizationId);
 };
 
 const findFinanceAccountLedgerAccountTx = async (
@@ -920,6 +986,222 @@ export const accountingService = {
           sourceLineId: voucher.id
         }
       ]
+    });
+
+    const created = await tx.journalEntry.findUnique({
+      where: { id: entry.id },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    return normalizeDecimals(created);
+  },
+
+  async postExpensePaymentSettlementJournalEntryTx(
+    tx: Prisma.TransactionClient,
+    scope: ScopeContext,
+    input: PostExpensePaymentSettlementJournalEntryTxInput
+  ) {
+    assertAccountingRole(scope);
+
+    const existingPaymentEntry = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.EXPENSE_PAYMENT,
+        sourceId: input.expensePaymentId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (existingPaymentEntry) {
+      await tx.expensePayment.updateMany({
+        where: {
+          id: input.expensePaymentId,
+          organizationId: scope.organizationId,
+          journalEntryId: null
+        },
+        data: { journalEntryId: existingPaymentEntry.id }
+      });
+      return normalizeDecimals(existingPaymentEntry);
+    }
+
+    const payment = await tx.expensePayment.findFirst({
+      where: {
+        id: input.expensePaymentId,
+        organizationId: scope.organizationId
+      },
+      include: {
+        invoice: {
+          include: {
+            category: {
+              include: {
+                accountingAccount: true
+              }
+            }
+          }
+        },
+        voucher: true
+      }
+    });
+
+    if (!payment) {
+      throw new AppError("Expense payment not found", 404, undefined, "ENTITY_NOT_FOUND");
+    }
+
+    if (payment.voucherId !== input.voucherId) {
+      throw new AppError(
+        "Expense payment voucher does not match settlement input",
+        409,
+        { expensePaymentId: payment.id, paymentVoucherId: payment.voucherId, voucherId: input.voucherId },
+        "EXPENSE_PAYMENT_VOUCHER_MISMATCH"
+      );
+    }
+
+    if (payment.journalEntryId) {
+      const linkedEntry = await tx.journalEntry.findFirst({
+        where: {
+          id: payment.journalEntryId,
+          organizationId: scope.organizationId
+        },
+        include: {
+          lines: {
+            orderBy: { id: "asc" },
+            include: {
+              account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+            }
+          },
+          postedBy: { select: { id: true, fullName: true } }
+        }
+      });
+
+      if (linkedEntry) {
+        return normalizeDecimals(linkedEntry);
+      }
+    }
+
+    const existingVoucherEntry = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.VOUCHER,
+        sourceId: input.voucherId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (existingVoucherEntry) {
+      return normalizeDecimals(existingVoucherEntry);
+    }
+
+    const voucher = payment.voucher;
+    if (!voucher) {
+      throw new AppError("Expense payment voucher not found", 404, undefined, "ENTITY_NOT_FOUND");
+    }
+
+    if (voucher.status !== VoucherStatus.POSTED) {
+      throw new AppError(
+        "Expense payment voucher must be posted before accounting settlement",
+        409,
+        undefined,
+        "VOUCHER_NOT_POSTED"
+      );
+    }
+
+    if (voucher.voucherType !== VoucherType.DISBURSEMENT || voucher.sourceType !== VoucherSourceType.EXPENSE) {
+      throw new AppError(
+        "Voucher is not an expense disbursement voucher",
+        409,
+        { voucherId: voucher.id, voucherType: voucher.voucherType, sourceType: voucher.sourceType },
+        "INVALID_EXPENSE_PAYMENT_VOUCHER"
+      );
+    }
+
+    const centerId = payment.invoice.centerId ?? voucher.centerId;
+    ensureCenterAllowed(scope, centerId);
+
+    const debitAccount = await resolveExpenseInvoiceAccountsPayableTx(tx, {
+      organizationId: payment.organizationId,
+      invoiceId: payment.invoiceId
+    });
+
+    const creditAccount = await findFinanceAccountLedgerAccountTx(tx, {
+      organizationId: payment.organizationId,
+      financeAccountId: voucher.accountId,
+      missingMessage: "Expense payment finance account is not linked to an active asset ledger account"
+    });
+
+    const entryDate = payment.paidAt;
+    const postedAt = new Date();
+
+    await ensurePeriodOpenTx(tx, payment.organizationId, entryDate);
+
+    const entry = await tx.journalEntry.create({
+      data: {
+        organizationId: payment.organizationId,
+        centerId,
+        entryNo: `EXP-PAY-${payment.organizationId}-${payment.id}`,
+        entryDate,
+        sourceType: JournalSourceType.EXPENSE_PAYMENT,
+        sourceId: payment.id,
+        status: JournalEntryStatus.POSTED,
+        description: `Payment settlement for expense invoice ${payment.invoiceId}`,
+        postedById: input.postedById,
+        postedAt
+      }
+    });
+
+    await tx.journalEntryLine.createMany({
+      data: [
+        {
+          organizationId: payment.organizationId,
+          journalEntryId: entry.id,
+          accountId: debitAccount.id,
+          centerId,
+          debit: payment.amount,
+          credit: new Prisma.Decimal(0),
+          memo: `AP settlement for invoice ${payment.invoiceId}`,
+          sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
+          sourceLineId: payment.id
+        },
+        {
+          organizationId: payment.organizationId,
+          journalEntryId: entry.id,
+          accountId: creditAccount.id,
+          centerId,
+          debit: new Prisma.Decimal(0),
+          credit: payment.amount,
+          memo: `Cash/bank payment for invoice ${payment.invoiceId}`,
+          sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
+          sourceLineId: payment.id
+        }
+      ]
+    });
+
+    await tx.expensePayment.update({
+      where: { id: payment.id },
+      data: { journalEntryId: entry.id }
     });
 
     const created = await tx.journalEntry.findUnique({
