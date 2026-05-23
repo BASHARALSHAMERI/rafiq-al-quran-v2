@@ -526,6 +526,11 @@ export const rewardsService = {
             allowOverdraft: policy.allowOverdraft
           });
 
+          await accountingService.postDisbursementVoucherJournalEntryTx(tx, scope, {
+            voucherId: voucher.id,
+            postedById: scope.userId
+          });
+
           await tx.rewardItem.update({
             where: { id: item.id },
             data: {
