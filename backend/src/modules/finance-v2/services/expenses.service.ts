@@ -371,59 +371,11 @@ export const expensesService = {
 
       // TODO: Add audit log for EXPENSE_INVOICE payment (AUDIT-TRAIL-FINANCE-1)
 
-      // Create AP Payment Journal Entry
-      const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
-
-      const creditAccountId = financeAccount.accountingAccountId;
-
-      if (apAccount && creditAccountId) {
-        const entry = await tx.journalEntry.create({
-          data: {
-            organizationId: scope.organizationId,
-            centerId: invoice.centerId,
-            entryNo: `PAY-EXP-${payment.id}`,
-            entryDate: paidAt,
-            sourceType: JournalSourceType.EXPENSE_PAYMENT,
-            sourceId: payment.id,
-            status: JournalEntryStatus.POSTED,
-            description: `Payment for expense invoice ${invoice.id}`,
-            postedById: scope.userId,
-            postedAt: new Date()
-          }
-        });
-
-        await tx.journalEntryLine.createMany({
-          data: [
-            {
-              organizationId: scope.organizationId,
-              journalEntryId: entry.id,
-              accountId: apAccount.id,
-              centerId: invoice.centerId,
-              debit: paymentAmount,
-              credit: new Prisma.Decimal(0),
-              memo: `AP settlement for invoice ${invoice.id}`,
-              sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
-              sourceLineId: payment.id
-            },
-            {
-              organizationId: scope.organizationId,
-              journalEntryId: entry.id,
-              accountId: creditAccountId,
-              centerId: invoice.centerId,
-              debit: new Prisma.Decimal(0),
-              credit: paymentAmount,
-              memo: `Cash payment for invoice ${invoice.id}`,
-              sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
-              sourceLineId: payment.id
-            }
-          ]
-        });
-
-        await tx.expensePayment.update({
-          where: { id: payment.id },
-          data: { journalEntryId: entry.id }
-        });
-      }
+      await accountingService.postExpensePaymentSettlementJournalEntryTx(tx, scope, {
+        expensePaymentId: payment.id,
+        voucherId: voucher.id,
+        postedById: scope.userId
+      });
 
       return payment;
     });
