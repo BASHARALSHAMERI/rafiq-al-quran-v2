@@ -8,6 +8,7 @@
         "build": "tsc",
         "start": "node dist/app/server.js",
         "docs:export": "tsx scripts/export-openapi.ts",
+        "test": "tsx scripts/accountant-access-regression.ts",
         "test:integration:m2-users": "tsx scripts/integration-m2-users.ts",
         "test:smoke:rbac": "tsx scripts/rbac-smoke.ts",
         "test:smoke:rbac:critical": "tsx scripts/rbac-critical-smoke.ts",
