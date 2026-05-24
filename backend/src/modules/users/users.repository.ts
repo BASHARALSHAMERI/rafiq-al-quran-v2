@@ -366,6 +366,7 @@ const resolveRoleProfile = (user: {
     case "PARENT":
       return user.parentProfile ?? null;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       return null;
   }
 };
@@ -726,6 +727,7 @@ const createRoleProfileForUser = async (
       });
       break;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       break;
   }
 };
@@ -859,6 +861,7 @@ const updateRoleProfileForUser = async (
       });
       return;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       return;
   }
 };
