@@ -10,6 +10,7 @@ import {
   UserCheck
 } from "lucide-react";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { FinanceExpensesTab } from "./FinanceExpensesTab";
 import { FinanceSuppliersTab } from "./FinanceSuppliersTab";
@@ -65,6 +66,8 @@ function VouchersKpi({
 export default function FinanceExpensesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canManageExpenses = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const [activeTab, setActiveTab] = useState<ExpenseTab>("expenses");
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -111,7 +114,7 @@ export default function FinanceExpensesPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {activeTab === "suppliers" && (
+                {activeTab === "suppliers" && canManageExpenses && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -122,7 +125,7 @@ export default function FinanceExpensesPage() {
                     {ar ? "مورد جديد" : "New Supplier"}
                   </Button>
                 )}
-                {activeTab === "categories" && (
+                {activeTab === "categories" && canManageExpenses && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -133,7 +136,7 @@ export default function FinanceExpensesPage() {
                     {ar ? "تصنيف جديد" : "New Category"}
                   </Button>
                 )}
-                {activeTab === "expenses" && (
+                {activeTab === "expenses" && canManageExpenses && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -202,21 +205,24 @@ export default function FinanceExpensesPage() {
           {activeTab === "expenses"    && (
             <FinanceExpensesTab
               ar={ar}
-              externalShowForm={showExpenseInvoiceModal}
+              canManage={canManageExpenses}
+              externalShowForm={canManageExpenses && showExpenseInvoiceModal}
               onExternalFormClose={() => setShowExpenseInvoiceModal(false)}
             />
           )}
           {activeTab === "suppliers"   && (
             <FinanceSuppliersTab 
               ar={ar} 
-              externalShowForm={showSupplierModal} 
+              canManage={canManageExpenses}
+              externalShowForm={canManageExpenses && showSupplierModal}
               onExternalFormClose={() => setShowSupplierModal(false)} 
             />
           )}
           {activeTab === "categories"  && (
             <FinanceExpenseCategoriesTab 
               ar={ar} 
-              externalShowForm={showCategoryModal} 
+              canManage={canManageExpenses}
+              externalShowForm={canManageExpenses && showCategoryModal}
               onExternalFormClose={() => setShowCategoryModal(false)} 
             />
           )}

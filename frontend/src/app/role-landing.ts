@@ -1,6 +1,7 @@
 import type { Role } from "../features/auth/types";
 
 export const getRoleLandingPath = (role: Role): string => {
+  if (role === "ACCOUNTANT") return "/finance/invoices";
   if (role === "PARENT") return "/parent/home";
   if (role === "STUDENT") return "/student/home";
   // [PLATFORM POLICY] TEACHER and SUPERVISOR are Mobile-only roles.

@@ -215,6 +215,7 @@ const outputLabelAr: Record<OutputTag, string> = { screen: "شاشة", print: "�
 const sectionBadgeCls: Record<string, string> = { admin: "rcc-badge--blue", educational: "rcc-badge--violet", attendance: "rcc-badge--green", exams: "rcc-badge--amber", golden: "rcc-badge--amber", finance: "rcc-badge--teal", official: "rcc-badge--slate" };
 
 const canSeeCard = (card: ReportCardDef, role: string | undefined): boolean => {
+  if (role === "ACCOUNTANT") return card.section === "finance";
   if (card.visibility === "all") return true;
   if (card.visibility === "super" && role === "SUPER_ADMIN") return true;
   if (card.visibility === "center" && role === "CENTER_ADMIN") return true;

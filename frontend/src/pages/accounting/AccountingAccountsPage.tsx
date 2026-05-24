@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifySuccess } from "../../shared/ui/feedback";
 import {
@@ -100,6 +101,8 @@ function VouchersKpi({
 }
 
 export default function AccountingAccountsPage() {
+  const user = useAuthStore((state) => state.user);
+  const canManageAccounts = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const accountsQ = useAccountingAccountsQuery();
   const trialBalanceQ = useAccountingTrialBalanceQuery();
 
@@ -333,7 +336,7 @@ export default function AccountingAccountsPage() {
             onClick={() => { 
               if (hasChildren) {
                 toggleExpand(node.id);
-              } else if (!node.systemKey) {
+              } else if (canManageAccounts && !node.systemKey) {
                 openEditAccount(node);
               }
             }}
@@ -403,7 +406,7 @@ export default function AccountingAccountsPage() {
             
             <div className="accounting-tree__col accounting-tree__col--actions">
               <div className="flex items-center gap-2">
-                {!node.systemKey && (
+                {canManageAccounts && !node.systemKey && (
                   <button 
                     type="button" 
                     className="fin-action-btn view"
@@ -417,25 +420,27 @@ export default function AccountingAccountsPage() {
                   </button>
                 )}
                 
-                <button 
-                  type="button" 
-                  className="fin-action-btn approve"
-                  title="إضافة حساب فرعي"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingAccount(null);
-                    setAccountForm({
-                      ...emptyAccountForm,
-                      type: node.type,
-                      parentId: String(node.id),
-                      code: nextChildCode(node, allAccounts)
-                    });
-                    setAccountError("");
-                    setAccountModalOpen(true);
-                  }}
-                >
-                  <Plus size={14} />
-                </button>
+                {canManageAccounts ? (
+                  <button
+                    type="button"
+                    className="fin-action-btn approve"
+                    title="إضافة حساب فرعي"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingAccount(null);
+                      setAccountForm({
+                        ...emptyAccountForm,
+                        type: node.type,
+                        parentId: String(node.id),
+                        code: nextChildCode(node, allAccounts)
+                      });
+                      setAccountError("");
+                      setAccountModalOpen(true);
+                    }}
+                  >
+                    <Plus size={14} />
+                  </button>
+                ) : null}
               </div>
             </div>
           </motion.div>
@@ -487,15 +492,17 @@ export default function AccountingAccountsPage() {
                 >
                   طباعة التقرير
                 </Button>
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  className="shadow-lg shadow-brand-500/20" 
-                  leftIcon={<Plus className="w-4 h-4" />} 
-                  onClick={openCreateAccount}
-                >
-                  إضافة حساب
-                </Button>
+                {canManageAccounts ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="shadow-lg shadow-brand-500/20"
+                    leftIcon={<Plus className="w-4 h-4" />}
+                    onClick={openCreateAccount}
+                  >
+                    إضافة حساب
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -600,11 +607,11 @@ export default function AccountingAccountsPage() {
                 <Button variant="secondary" onClick={() => { setSearchTerm(""); setSelectedType("all"); }}>
                   مسح الفلاتر
                 </Button>
-              ) : (
+              ) : canManageAccounts ? (
                 <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateAccount}>
                   إضافة حساب
                 </Button>
-              )}
+              ) : null}
             />
           ) : (
             <div className="accounting-tree">
@@ -628,7 +635,7 @@ export default function AccountingAccountsPage() {
       </div>
 
       <Modal
-        isOpen={accountModalOpen}
+        isOpen={Boolean(accountModalOpen && canManageAccounts)}
         onClose={closeAccountModal}
         title={editingAccount ? "تعديل حساب" : "إضافة حساب"}
         titleIcon={

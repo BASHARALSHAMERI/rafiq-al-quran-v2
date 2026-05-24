@@ -31,6 +31,7 @@ type Props = {
   month: number;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canCreateBatch?: boolean;
   ar: boolean;
   methodLabels: Record<PaymentMethodV2, string>;
   centers: { id: number; name: string }[];
@@ -176,6 +177,8 @@ export default function FinancePayrollTab({
   centerId, 
   year: propYear, 
   month: propMonth,
+  isAdmin,
+  canCreateBatch = isAdmin,
   ar, 
   methodLabels,
   externalShowBatchForm, 
@@ -286,7 +289,7 @@ export default function FinancePayrollTab({
   return (
     <>
       <Modal
-        isOpen={showBatchForm}
+        isOpen={Boolean(showBatchForm && canCreateBatch)}
         onClose={closeBatchModal}
         title={ar ? "إنشاء دفعة رواتب" : "Create Payroll Batch"}
         titleIcon={
@@ -546,7 +549,7 @@ export default function FinancePayrollTab({
                     header: ar ? "الإجراء" : "Action",
                     render: (item) => (
                       <div className="flex items-center gap-2">
-                        {selectedBatch && PAYABLE_BATCH_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
+                        {isAdmin && selectedBatch && PAYABLE_BATCH_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
                           <Button
                             size="sm"
                             variant={item.status === "FAILED" ? "secondary" : "primary"}
@@ -572,7 +575,7 @@ export default function FinancePayrollTab({
       </Modal>
 
       <Modal
-        isOpen={!!paymentDraft}
+        isOpen={Boolean(paymentDraft && isAdmin)}
         onClose={() => setPaymentDraft(null)}
         title={ar ? "صرف راتب موظف" : "Pay employee salary"}
         description={paymentDraft?.item.beneficiary?.fullName}
@@ -690,7 +693,7 @@ export default function FinancePayrollTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {b.status === "DRAFT" && (
+                        {isAdmin && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 

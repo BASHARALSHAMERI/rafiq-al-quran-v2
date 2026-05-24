@@ -8,6 +8,7 @@ import {
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { FinancePageFilters } from "../../features/finance-v2/components/page/FinancePageFilters";
@@ -59,6 +60,9 @@ function PayrollKpi({
 export default function FinancePayrollPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canCreatePayrollBatch = isCoreAdmin || user?.role === "ACCOUNTANT";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -116,7 +120,7 @@ export default function FinancePayrollPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {activeTab === "batches" && (
+                {activeTab === "batches" && canCreatePayrollBatch && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -127,7 +131,7 @@ export default function FinancePayrollPage() {
                     {ar ? "صرف جديد" : "New Disbursement"}
                   </Button>
                 )}
-                {activeTab === "profiles" && (
+                {activeTab === "profiles" && isCoreAdmin && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -138,7 +142,7 @@ export default function FinancePayrollPage() {
                     {ar ? "إنشاء ملف" : "Create Profile"}
                   </Button>
                 )}
-                {activeTab === "grades" && (
+                {activeTab === "grades" && isCoreAdmin && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -237,12 +241,13 @@ export default function FinancePayrollPage() {
               centerId={centerId}
               year={year}
               month={month}
-              isAdmin={true}
-              isSuperAdmin={true}
+              isAdmin={isCoreAdmin}
+              isSuperAdmin={user?.role === "SUPER_ADMIN"}
+              canCreateBatch={canCreatePayrollBatch}
               ar={ar}
               methodLabels={methodLabels}
               centers={centers}
-              externalShowBatchForm={showBatchModal}
+              externalShowBatchForm={canCreatePayrollBatch && showBatchModal}
               onExternalBatchFormClose={() => setShowBatchModal(false)}
             />
           )}
@@ -251,7 +256,8 @@ export default function FinancePayrollPage() {
               centerId={centerId}
               ar={ar}
               centers={centers}
-              externalShowForm={showProfileModal}
+              canManage={isCoreAdmin}
+              externalShowForm={isCoreAdmin && showProfileModal}
               onExternalFormClose={() => setShowProfileModal(false)}
             />
           )}
@@ -259,7 +265,8 @@ export default function FinancePayrollPage() {
             <FinanceSalaryGradesTab
               centerId={centerId}
               ar={ar}
-              externalShowForm={showGradeModal}
+              canManage={isCoreAdmin}
+              externalShowForm={isCoreAdmin && showGradeModal}
               onExternalFormClose={() => setShowGradeModal(false)}
             />
           )}

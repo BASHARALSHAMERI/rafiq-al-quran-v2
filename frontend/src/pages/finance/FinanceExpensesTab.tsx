@@ -5,7 +5,7 @@ import { FinanceDataTable } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 
-export function FinanceExpensesTab({ ar, externalShowForm, onExternalFormClose }: { ar: boolean; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
+export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onExternalFormClose }: { ar: boolean; canManage?: boolean; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
   const [centerId] = useState<number>();
   const [supplierId] = useState<number>();
   const [status] = useState<string>();
@@ -94,12 +94,12 @@ export function FinanceExpensesTab({ ar, externalShowForm, onExternalFormClose }
             header: ar ? "إجراءات" : "Actions",
             render: (row: any) => (
               <div className="flex gap-2">
-                {(row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
+                {canManage && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
                   <Button size="sm" variant="secondary" onClick={() => handleApprove(row.id)}>
                     <Check className="w-4 h-4 mr-1" /> {ar ? "اعتماد" : "Approve"}
                   </Button>
                 )}
-                {(row.status === "APPROVED" || row.status === "PARTIALLY_PAID") && (
+                {canManage && (row.status === "APPROVED" || row.status === "PARTIALLY_PAID") && (
                   <Button size="sm" variant="primary" onClick={() => {
                     setSelectedInvoice(row);
                     setPayAmount(row.amount); // assuming full payment as default
@@ -121,7 +121,7 @@ export function FinanceExpensesTab({ ar, externalShowForm, onExternalFormClose }
 
       {/* Create Expense Invoice Modal */}
       <Modal
-        isOpen={isCreateModalOpen}
+        isOpen={Boolean(isCreateModalOpen && canManage)}
         onClose={handleCreateClose}
         title={ar ? "فاتورة مصروف جديدة" : "New Expense Invoice"}
         titleIcon={
@@ -197,7 +197,7 @@ export function FinanceExpensesTab({ ar, externalShowForm, onExternalFormClose }
       </Modal>
 
       <Modal 
-        isOpen={isPayModalOpen} 
+        isOpen={Boolean(isPayModalOpen && canManage)}
         onClose={() => setIsPayModalOpen(false)} 
         title={ar ? "دفع المصروف" : "Pay Expense"}
         titleIcon={

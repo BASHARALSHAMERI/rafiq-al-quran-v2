@@ -33,6 +33,7 @@ type Props = {
   centerId: number | undefined;
   ar: boolean;
   centers: { id: number; name: string }[];
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 };
@@ -55,7 +56,8 @@ export default function FinancePayrollProfilesTab({
   centerId, 
   ar, 
   externalShowForm, 
-  onExternalFormClose 
+  onExternalFormClose,
+  canManage = true
 }: Props) {
   const profilesQ = useFinanceV2PayrollProfilesQuery(centerId);
   const profiles = useMemo(() => profilesQ.data?.rows ?? [], [profilesQ.data?.rows]);
@@ -76,10 +78,10 @@ export default function FinancePayrollProfilesTab({
 
   // Sync with parent's trigger
   useEffect(() => {
-    if (externalShowForm) {
+    if (externalShowForm && canManage) {
       openNew();
     }
-  }, [externalShowForm]);
+  }, [externalShowForm, canManage]);
 
   const handleClose = () => {
     setFormOpen(false);
@@ -107,6 +109,7 @@ export default function FinancePayrollProfilesTab({
   }, [selectedGrade, isOverride]);
 
   const openNew = () => {
+    if (!canManage) return;
     setFormState(emptyForm());
     setIsOverride(false);
     setSelectedEmployee(null);
@@ -117,6 +120,7 @@ export default function FinancePayrollProfilesTab({
   };
 
   const openEdit = (p: PayrollProfileV2) => {
+    if (!canManage) return;
     const override = p.salarySource === "OVERRIDE";
     setIsOverride(override);
     setEditingId(p.id);
@@ -300,9 +304,11 @@ export default function FinancePayrollProfilesTab({
               {
                 header: ar ? "الإجراءات" : "Actions",
                 render: (p) => (
-                  <button className="fin-action-btn view" onClick={() => openEdit(p)} title={ar ? "تعديل" : "Edit"}>
-                    <Calculator size={16} />
-                  </button>
+                  canManage ? (
+                    <button className="fin-action-btn view" onClick={() => openEdit(p)} title={ar ? "تعديل" : "Edit"}>
+                      <Calculator size={16} />
+                    </button>
+                  ) : null
                 ),
               },
             ]}
@@ -314,7 +320,7 @@ export default function FinancePayrollProfilesTab({
 
       {/* Modal */}
       <Modal
-        isOpen={formOpen}
+        isOpen={Boolean(formOpen && canManage)}
         onClose={handleClose}
         title={
           ar
