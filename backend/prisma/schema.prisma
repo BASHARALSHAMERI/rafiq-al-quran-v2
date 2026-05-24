@@ -3385,7 +3385,7 @@ model ExpensePayment {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invoice        ExpenseInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice        ExpenseInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   financeAccount FinanceAccount? @relation(fields: [financeAccountId], references: [id])
   voucher        FinanceVoucher? @relation(fields: [voucherId], references: [id])
   journalEntry   JournalEntry?   @relation(fields: [journalEntryId], references: [id])
