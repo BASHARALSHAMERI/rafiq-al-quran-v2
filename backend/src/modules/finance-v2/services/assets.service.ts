@@ -265,6 +265,7 @@ export const assetsService = {
     const usefulLifeMonths = optionalPositiveInt(input.usefulLifeMonths, "usefulLifeMonths");
     const status = input.status ?? FixedAssetStatus.ACTIVE;
 
+    financeV2Domain.ensureScopedCenterRequired(scope, centerId);
     await assertCenter(scope, centerId);
     await assertUser(scope.organizationId, custodianUserId);
 
@@ -287,6 +288,7 @@ export const assetsService = {
         where: { id: expenseInvoiceId, organizationId: scope.organizationId }
       });
       if (!invoice) throw new AppError("Expense invoice not found", 404);
+      financeV2Domain.ensureScopedCenterRequired(scope, invoice.centerId);
     }
 
     const purchaseDate = parseDate(input.purchaseDate, "purchaseDate");
@@ -444,6 +446,7 @@ export const assetsService = {
       if (!financeAccount || !financeAccount.accountingAccount || !financeAccount.accountingAccount.isActive || financeAccount.accountingAccount.children.length > 0) {
          throw new AppError("Finance account has no valid posting ledger account", 400);
       }
+      financeV2Domain.ensureCenterAllowed(scope, financeAccount.centerId);
       
       const creditAccount = financeAccount.accountingAccount;
 
