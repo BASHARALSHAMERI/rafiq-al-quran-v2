@@ -25,16 +25,6 @@ function AppProviders({ children }: AppProvidersProps) {
         toastOptions={{
           className: "app-toast",
           duration: 3200,
-          style: {
-            background: "var(--bg-surface-elevated, #fff)",
-            color: "var(--text-primary, #000)",
-            border: "1px solid var(--border-default, #ccc)",
-            boxShadow: "var(--shadow-3)",
-            borderRadius: "16px",
-            padding: "12px 14px",
-            direction: "rtl",
-            maxWidth: "520px"
-          },
           success: {
             className: "app-toast app-toast--success",
             duration: 2800,

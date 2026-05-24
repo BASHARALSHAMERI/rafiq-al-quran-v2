@@ -16,10 +16,18 @@ class PremiumBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     const int homeIndex = 2;
-    final bool isHomeSelected = selectedIndex == homeIndex;
+    final safeSelectedIndex =
+        selectedIndex >= 0 && selectedIndex < items.length ? selectedIndex : 0;
+    final bool canShowHomeButton = items.length > homeIndex;
+    final bool isHomeSelected =
+        canShowHomeButton && safeSelectedIndex == homeIndex;
 
     return Container(
       height: 100, // Safe height to prevent overflow
@@ -50,7 +58,7 @@ class PremiumBottomBar extends StatelessWidget {
                   return const Expanded(child: SizedBox.shrink());
                 }
 
-                final isSelected = selectedIndex == index;
+                final isSelected = safeSelectedIndex == index;
                 final item = items[index];
 
                 return Expanded(
@@ -64,18 +72,20 @@ class PremiumBottomBar extends StatelessWidget {
                         const SizedBox(height: 8),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 7),
                           decoration: BoxDecoration(
-                            color: isSelected && !isHomeSelected 
-                                ? AppColors.primaryLight.withValues(alpha: 0.1) 
+                            color: isSelected && !isHomeSelected
+                                ? AppColors.primaryLight.withValues(alpha: 0.1)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
                             isSelected ? item.selectedIcon : item.icon,
-                            color: isSelected 
-                                ? AppColors.primaryLight 
-                                : AppColors.textSecondaryLight.withValues(alpha: 0.4),
+                            color: isSelected
+                                ? AppColors.primaryLight
+                                : AppColors.textSecondaryLight
+                                    .withValues(alpha: 0.4),
                             size: 24,
                           ),
                         ),
@@ -83,10 +93,12 @@ class PremiumBottomBar extends StatelessWidget {
                         Text(
                           item.label,
                           style: TextStyle(
-                            color: isSelected 
-                                ? AppColors.primaryLight 
-                                : AppColors.textSecondaryLight.withValues(alpha: 0.4),
-                            fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                            color: isSelected
+                                ? AppColors.primaryLight
+                                : AppColors.textSecondaryLight
+                                    .withValues(alpha: 0.4),
+                            fontWeight:
+                                isSelected ? FontWeight.w900 : FontWeight.w600,
                             fontSize: 10,
                           ),
                         ),
@@ -118,7 +130,8 @@ class PremiumBottomBar extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primaryLight.withValues(alpha: 0.4),
+                                color: AppColors.primaryLight
+                                    .withValues(alpha: 0.4),
                                 blurRadius: 18,
                                 offset: const Offset(0, 10),
                               )

@@ -24,6 +24,8 @@ export interface ModalProps {
     hideFooter?: boolean;
     /** Disable closing on backdrop click */
     persistent?: boolean;
+    /** Sticky alert or message below the header */
+    stickyAlert?: React.ReactNode;
 }
 
 const sizeClasses: Record<NonNullable<ModalProps["size"]>, string> = {
@@ -49,6 +51,7 @@ export function Modal({
     hideHeader = false,
     hideFooter = false,
     persistent = false,
+    stickyAlert,
 }: ModalProps) {
     const panelRef = useRef<HTMLDivElement>(null);
     const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -191,6 +194,12 @@ export function Modal({
                                     </div>
                                     <div className="modal-divider" />
                                 </>
+                            )}
+
+                            {stickyAlert && (
+                                <div className="modal-sticky-alert">
+                                    {stickyAlert}
+                                </div>
                             )}
 
                             <div className={`modal-body ${bodyClassName}`.trim()}>{children}</div>
