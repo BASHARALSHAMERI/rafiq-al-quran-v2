@@ -20,6 +20,7 @@ const CenterAdminsPage = lazy(() => import("../pages/CenterAdminsPage"));
 const TeachersPage = lazy(() => import("../pages/TeachersPage"));
 const ParentsPage = lazy(() => import("../pages/ParentsPage"));
 const SupervisorsPage = lazy(() => import("../pages/SupervisorsPage"));
+const AccountantsPage = lazy(() => import("../pages/AccountantsPage"));
 const StaffOperationsPage = lazy(() => import("../pages/StaffOperationsPage"));
 const ExamsPage = lazy(() => import("../pages/ExamsPage"));
 const GoldenRecordsPage = lazy(() => import("../pages/GoldenRecordsPage"));
@@ -76,6 +77,7 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   teachers: <TeachersPage />,
   parents: <ParentsPage />,
   supervisors: <SupervisorsPage />,
+  accountants: <AccountantsPage />,
   staff_attendance: <StaffOperationsPage />,
   exams: <ExamsPage />,
   graduation_candidates: <Navigate to="/golden-records?tab=candidates" replace />,

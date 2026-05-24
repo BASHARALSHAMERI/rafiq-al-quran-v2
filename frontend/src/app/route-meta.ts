@@ -90,7 +90,8 @@ export type AdminRouteId =
   | "reports"
   | "audit"
   | "settings"
-  | "graduation_candidates";
+  | "graduation_candidates"
+  | "accountants";
 
 /* ─── Meta Types ─── */
 
@@ -155,7 +156,7 @@ export const ADMIN_SECTIONS: AdminSectionMeta[] = [
     id: "users",
     get label() { return labels.nav.users; },
     icon: Users,
-    routeIds: ["students", "center_admins", "teachers", "supervisors", "parents"],
+    routeIds: ["students", "center_admins", "teachers", "supervisors", "parents", "accountants"],
   },
   {
     id: "operations",
@@ -314,6 +315,15 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     routeIcon: Users,
     section: "institutional",
     allowedRoles: SUPER_AND_CENTER,
+    sidebar: true,
+  },
+  {
+    id: "accountants",
+    path: "/users/accountants",
+    get label() { return labels.org.accountantsMenu; },
+    routeIcon: Users,
+    section: "users",
+    allowedRoles: SUPER_ONLY,
     sidebar: true,
   },
   {
