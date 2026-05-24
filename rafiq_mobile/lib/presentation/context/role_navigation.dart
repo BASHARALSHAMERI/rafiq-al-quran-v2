@@ -83,6 +83,10 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
       ];
     case 'CENTER_ADMIN':
     case 'SUPER_ADMIN':
+    case 'ACCOUNTANT':
+    case 'FINANCE_MANAGER':
+    case 'TREASURER':
+    case 'AUDITOR':
       return const [];
     case 'PARENT':
       return const [
@@ -159,7 +163,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
         ),
       ];
     case 'TEACHER':
-    default:
       return const [
         RoleNavigationItem(
           label: 'الحلقة',
@@ -201,6 +204,8 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           route: RouteNames.profile,
         ),
       ];
+    default:
+      return const [];
   }
 }
 

@@ -14,7 +14,7 @@ class RoleBasedShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
-    final role = authState.user?.role.toUpperCase() ?? 'TEACHER';
+    final role = authState.user?.role.toUpperCase() ?? '';
     final items = navigationItemsForRole(role);
     final location = GoRouterState.of(context).matchedLocation;
     final selectedIndex = navigationIndexForLocation(items, location);
@@ -22,7 +22,12 @@ class RoleBasedShell extends ConsumerWidget {
     return RoleShellScaffold(
       items: items,
       selectedIndex: selectedIndex,
-      onDestinationSelected: (index) => _navigateTo(context, items[index]),
+      onDestinationSelected: (index) {
+        if (index < 0 || index >= items.length) {
+          return;
+        }
+        _navigateTo(context, items[index]);
+      },
       child: navigationShell,
     );
   }

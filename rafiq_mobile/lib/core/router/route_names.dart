@@ -94,6 +94,10 @@ abstract class RouteNames {
         return supervisorHome;
       case 'SUPER_ADMIN':
       case 'CENTER_ADMIN':
+      case 'ACCOUNTANT':
+      case 'FINANCE_MANAGER':
+      case 'TREASURER':
+      case 'AUDITOR':
         return forbidden;
       case 'STUDENT':
         return studentHome;
