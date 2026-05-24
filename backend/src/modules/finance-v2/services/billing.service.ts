@@ -441,11 +441,11 @@ export const billingService = {
       );
     }
 
-    if (scope.role === Role.CENTER_ADMIN && existing.payments.length > 0) {
+    if (existing.payments.length > 0) {
       throw financeV2Domain.financeError(
-        "Center admin cannot cancel invoice with payments",
-        403,
-        "FINANCE_SCOPE_DENIED"
+        "لا يمكن إلغاء فاتورة مرتبطة بمدفوعات. يجب معالجة المدفوعات أو إصدار تسوية محاسبية.",
+        409,
+        "INVOICE_HAS_PAYMENTS"
       );
     }
 
