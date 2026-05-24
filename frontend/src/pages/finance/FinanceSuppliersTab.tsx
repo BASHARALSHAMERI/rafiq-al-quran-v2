@@ -7,10 +7,12 @@ import { Modal } from "../../components/ui/Modal";
 
 export function FinanceSuppliersTab({ 
   ar,
+  canManage = true,
   externalShowForm,
   onExternalFormClose
 }: { 
   ar: boolean,
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
@@ -24,8 +26,8 @@ export function FinanceSuppliersTab({
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    if (externalShowForm) setIsModalOpen(true);
-  }, [externalShowForm]);
+    if (externalShowForm && canManage) setIsModalOpen(true);
+  }, [externalShowForm, canManage]);
 
   const handleClose = () => {
     setIsModalOpen(false);
@@ -59,7 +61,7 @@ export function FinanceSuppliersTab({
     </div>
 
       <Modal 
-        isOpen={isModalOpen} 
+        isOpen={Boolean(isModalOpen && canManage)}
         onClose={handleClose} 
         title={ar ? "إضافة مورد" : "Add Supplier"}
         titleIcon={

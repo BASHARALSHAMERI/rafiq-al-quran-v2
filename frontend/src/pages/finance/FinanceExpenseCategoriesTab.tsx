@@ -8,10 +8,12 @@ import { useAccountingAccountsQuery } from "../accounting/accounting.hooks";
 
 export function FinanceExpenseCategoriesTab({ 
   ar,
+  canManage = true,
   externalShowForm,
   onExternalFormClose
 }: { 
   ar: boolean,
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
@@ -30,8 +32,8 @@ export function FinanceExpenseCategoriesTab({
   const [accountId, setAccountId] = useState<number | "">("");
 
   useEffect(() => {
-    if (externalShowForm) setIsModalOpen(true);
-  }, [externalShowForm]);
+    if (externalShowForm && canManage) setIsModalOpen(true);
+  }, [externalShowForm, canManage]);
 
   const handleClose = () => {
     setIsModalOpen(false);
@@ -64,7 +66,7 @@ export function FinanceExpenseCategoriesTab({
     </div>
 
       <Modal 
-        isOpen={isModalOpen} 
+        isOpen={Boolean(isModalOpen && canManage)}
         onClose={handleClose} 
         title={ar ? "إضافة تصنيف" : "Add Category"}
         titleIcon={

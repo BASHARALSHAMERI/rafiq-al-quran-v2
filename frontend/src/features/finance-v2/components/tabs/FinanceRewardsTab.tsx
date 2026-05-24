@@ -85,6 +85,7 @@ export default function FinanceRewardsTab({
   centerId, 
   year, 
   month,
+  isAdmin,
   ar, 
   externalShowBatchForm, 
   onExternalBatchFormClose 
@@ -199,7 +200,7 @@ export default function FinanceRewardsTab({
   return (
     <>
       <Modal
-        isOpen={showBatchForm}
+        isOpen={Boolean(showBatchForm && isAdmin)}
         onClose={closeBatchModal}
         title={ar ? "إنشاء دفعة مكافآت" : "Create Reward Batch"}
         titleIcon={
@@ -429,7 +430,7 @@ export default function FinanceRewardsTab({
                 header: ar ? "الإجراء" : "Action",
                 render: (item) => (
                   <div className="flex items-center gap-2">
-                    {selectedBatch && PAYABLE_REWARD_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
+                    {isAdmin && selectedBatch && PAYABLE_REWARD_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
                       <Button
                         size="sm"
                         variant={item.status === "FAILED" ? "secondary" : "primary"}
@@ -450,7 +451,7 @@ export default function FinanceRewardsTab({
       </Modal>
 
       <Modal
-        isOpen={!!paymentDraft}
+        isOpen={Boolean(paymentDraft && isAdmin)}
         onClose={() => setPaymentDraft(null)}
         title={ar ? "صرف مكافأة" : "Pay reward"}
         description={paymentDraft?.item.beneficiary?.fullName}
@@ -565,7 +566,7 @@ export default function FinanceRewardsTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {b.status === "DRAFT" && (
+                        {isAdmin && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 

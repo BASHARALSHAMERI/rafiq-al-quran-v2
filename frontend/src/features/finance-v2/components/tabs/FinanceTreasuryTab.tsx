@@ -26,6 +26,7 @@ type Props = {
   centerId: number | undefined;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canEditLedgerAccount?: boolean;
   ar: boolean;
   externalShowTransfer?: boolean;
   onExternalTransferClose?: () => void;
@@ -36,6 +37,7 @@ const TRANSFER_ENTITY: LocalizedLabel = { ar: "التحويل", en: "transfer" }
 export default function FinanceTreasuryTab({ 
   centerId, 
   isAdmin, 
+  canEditLedgerAccount = isAdmin,
   ar,
   externalShowTransfer,
   onExternalTransferClose 
@@ -59,7 +61,7 @@ export default function FinanceTreasuryTab({
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
   const accountsPagination = useClientPagination(accounts, { initialPageSize: 10 });
-  const accountingAccountsQ = useAccountingAccountsQuery(isAdmin);
+  const accountingAccountsQ = useAccountingAccountsQuery(canEditLedgerAccount);
   const assetAccounts = useMemo(() => {
     const accounts = accountingAccountsQ.data ?? [];
     const parentIds = new Set(accounts.map((account) => account.parentId).filter((id): id is number => Boolean(id)));
@@ -276,7 +278,7 @@ export default function FinanceTreasuryTab({
                   },
                   {
                     header: ar ? "حساب الأستاذ" : "Ledger Account",
-                    render: (acc) => isAdmin ? (
+                    render: (acc) => canEditLedgerAccount ? (
                       <select
                         className="circlemod-select min-w-[220px]"
                         value={acc.accountingAccountId ?? ""}

@@ -118,8 +118,9 @@ const SUPER_AND_CENTER: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
 const CORE_ADMIN: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
 const CORE_STAFF: Role[] = [...CORE_ADMIN];
 const LIBRARY_ROLES: Role[] = [...CORE_ADMIN];
+const ACCOUNTANT_FINANCE_ROLES: Role[] = [...CORE_ADMIN, "ACCOUNTANT"];
 // [PLATFORM POLICY] Mobile roles (TEACHER, SUPERVISOR, PARENT) removed from web routes
-const REPORT_ROLES: Role[] = [...CORE_ADMIN];
+const REPORT_ROLES: Role[] = [...ACCOUNTANT_FINANCE_ROLES];
 const NOTIFICATION_ROLES: Role[] = [...CORE_ADMIN];
 const AUDIT_ROLES: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
 
@@ -367,7 +368,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeDashboard; },
     routeIcon: LayoutDashboard,
     section: "financeReports",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -377,7 +378,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeInvoices; },
     routeIcon: FileText,
     section: "financeRevenue",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -387,7 +388,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financePayments; },
     routeIcon: Wallet,
     section: "financeRevenue",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -397,7 +398,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeVouchers; },
     routeIcon: FileText,
     section: "financeRevenue",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -407,7 +408,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeDonors; },
     routeIcon: HandHeart,
     section: "financeRevenue",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -417,7 +418,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeTreasury; },
     routeIcon: Building2,
     section: "financeLedger",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -427,7 +428,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financePayroll; },
     routeIcon: Users,
     section: "financeExpenditure",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -437,7 +438,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeRewards; },
     routeIcon: Wallet,
     section: "financeExpenditure",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -447,7 +448,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeCurrencies; },
     routeIcon: CircleDollarSign,
     section: "financeLedger",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -457,7 +458,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeExpenses; },
     routeIcon: Receipt,
     section: "financeExpenditure",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -467,7 +468,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "الأصول والعهد" : "Assets & Custody"; },
     routeIcon: PackageCheck,
     section: "financeLedger",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -477,7 +478,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "تمويل وتكلفة المراكز" : "Center Funding & Cost"; },
     routeIcon: Building2,
     section: "financeReports",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -486,7 +487,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "قائمة المركز المالي" : "Financial Position"; },
     routeIcon: Scale,
     section: "financeReports",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -495,7 +496,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "قائمة الأنشطة" : "Statement of Activities"; },
     routeIcon: TrendingUp,
     section: "financeReports",
-    allowedRoles: CORE_ADMIN,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -505,7 +506,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "المحاسبة" : "Accounting"; },
     routeIcon: Table2,
     section: "financeLedger",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: true,
   },
   {
@@ -515,7 +516,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingJournalEntries; },
     routeIcon: FileText,
     section: "financeLedger",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -525,7 +526,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingLedger; },
     routeIcon: BookOpen,
     section: "financeLedger",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {
@@ -535,7 +536,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingTrialBalance; },
     routeIcon: Scale,
     section: "financeLedger",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
     sidebar: false,
   },
   {

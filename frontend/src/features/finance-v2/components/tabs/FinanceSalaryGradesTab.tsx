@@ -38,6 +38,7 @@ const DEFAULT_GRADE_LEVELS = [
 type Props = {
   centerId: number | undefined;
   ar: boolean;
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 };
@@ -45,6 +46,7 @@ type Props = {
 export default function FinanceSalaryGradesTab({ 
   centerId, 
   ar, 
+  canManage = true,
   externalShowForm, 
   onExternalFormClose 
 }: Props) {
@@ -53,10 +55,10 @@ export default function FinanceSalaryGradesTab({
 
   // Sync with parent's trigger
   useEffect(() => {
-    if (externalShowForm) {
+    if (externalShowForm && canManage) {
       openNew();
     }
-  }, [externalShowForm]);
+  }, [externalShowForm, canManage]);
 
   const gradesQ = useFinanceV2SalaryGradesQuery(centerId);
   const grades = useMemo(() => gradesQ.data ?? [], [gradesQ.data]);
@@ -91,12 +93,14 @@ export default function FinanceSalaryGradesTab({
   }, [grades]);
 
   const openNew = () => {
+    if (!canManage) return;
     setFormState({ jobTitle: "", gradeLevel: "", baseSalary: 0, currencyCode: "", isActive: true, notes: "" });
     setEditingGrade(null);
     setFormOpen(true);
   };
 
   const openEdit = (g: SalaryGradeV2) => {
+    if (!canManage) return;
     setFormState({
       jobTitle: g.jobTitle,
       gradeLevel: g.gradeLevel,
@@ -204,6 +208,7 @@ export default function FinanceSalaryGradesTab({
                 header: ar ? "الإجراءات" : "Actions",
                 render: (g) => (
                   <div className="flex items-center gap-2">
+                    {canManage ? (
                     <button
                       className="fin-action-btn view"
                       onClick={() => openEdit(g)}
@@ -211,6 +216,7 @@ export default function FinanceSalaryGradesTab({
                     >
                       <Edit size={16} />
                     </button>
+                    ) : null}
                   </div>
                 ),
               },
@@ -223,7 +229,7 @@ export default function FinanceSalaryGradesTab({
 
       {/* Add / Edit Modal */}
       <Modal
-        isOpen={formOpen}
+        isOpen={Boolean(formOpen && canManage)}
         onClose={handleClose}
         title={
           ar

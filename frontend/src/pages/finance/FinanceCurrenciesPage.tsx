@@ -12,6 +12,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import {
   useCreateCurrencyMutation,
   useCreateExchangeRateMutation,
@@ -68,6 +69,8 @@ function VouchersKpi({
 export default function FinanceCurrenciesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canManageCurrencies = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const [activeTab, setActiveTab] = useState<TabType>("currencies");
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [rateModalOpen, setRateModalOpen] = useState(false);
@@ -297,7 +300,7 @@ export default function FinanceCurrenciesPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {activeTab === "currencies" ? (
+                {canManageCurrencies && activeTab === "currencies" ? (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -307,7 +310,7 @@ export default function FinanceCurrenciesPage() {
                   >
                     {ar ? "إضافة عملة" : "Add Currency"}
                   </Button>
-                ) : (
+                ) : canManageCurrencies ? (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -317,7 +320,7 @@ export default function FinanceCurrenciesPage() {
                   >
                     {ar ? "تسجيل سعر صرف" : "Save Rate"}
                   </Button>
-                )}
+                ) : null}
               </div>
             }
           />
@@ -444,7 +447,7 @@ export default function FinanceCurrenciesPage() {
 
       {/* Modals */}
       <Modal
-        isOpen={currencyModalOpen}
+        isOpen={Boolean(currencyModalOpen && canManageCurrencies)}
         onClose={() => setCurrencyModalOpen(false)}
         title={ar ? "إضافة عملة تشغيلية" : "Add Operating Currency"}
         titleIcon={
@@ -493,7 +496,7 @@ export default function FinanceCurrenciesPage() {
       </Modal>
 
       <Modal
-        isOpen={rateModalOpen}
+        isOpen={Boolean(rateModalOpen && canManageCurrencies)}
         onClose={() => setRateModalOpen(false)}
         title={ar ? "تسجيل سعر صرف جديد" : "Save New Exchange Rate"}
         titleIcon={

@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Archive, ClipboardList, PackageCheck, Plus, Tags } from "lucide-react";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { 
@@ -49,6 +50,9 @@ const displayDate = (value?: string | null) => (value ? value.slice(0, 10) : "-"
 export default function FinanceAssetsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canRegisterAsset = isCoreAdmin || user?.role === "ACCOUNTANT";
   const [activeTab, setActiveTab] = useState<TabId>("assets");
 
   // Lifted Modal States
@@ -65,17 +69,17 @@ export default function FinanceAssetsPage() {
   // Header Actions based on active tab
   const headerActions = (
     <div className="flex items-center gap-3">
-      {activeTab === "categories" && (
+      {activeTab === "categories" && isCoreAdmin && (
         <Button onClick={() => setCatModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "إضافة تصنيف" : "Add category"}
         </Button>
       )}
-      {activeTab === "assets" && (
+      {activeTab === "assets" && canRegisterAsset && (
         <Button onClick={() => setAssetModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "تسجيل أصل" : "Register asset"}
         </Button>
       )}
-      {activeTab === "custody" && (
+      {activeTab === "custody" && isCoreAdmin && (
         <Button onClick={() => setCustodyModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "تسجيل تسليم عهدة" : "Assign Custody"}
         </Button>
@@ -127,6 +131,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={catModalOpen} 
                 setModalOpen={setCatModalOpen} 
+                canManage={isCoreAdmin}
               />
             ) : null}
             {activeTab === "assets" ? (
@@ -134,6 +139,8 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={assetModalOpen} 
                 setModalOpen={setAssetModalOpen} 
+                canRegister={canRegisterAsset}
+                canPost={isCoreAdmin}
               />
             ) : null}
             {activeTab === "custody" ? (
@@ -141,6 +148,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={custodyModalOpen} 
                 setModalOpen={setCustodyModalOpen} 
+                canManage={isCoreAdmin}
               />
             ) : null}
           </motion.div>
@@ -153,11 +161,13 @@ export default function FinanceAssetsPage() {
 function AssetCategoriesTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canManage = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canManage?: boolean;
 }) {
   const categoriesQ = useAssetCategoriesQuery();
   const accountsQ = useAccountingAccountsQuery();
@@ -263,7 +273,7 @@ function AssetCategoriesTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canManage)}
         onClose={() => setModalOpen(false)}
         title={ar ? "إضافة تصنيف أصل" : "Add Asset Category"}
         titleIcon={
@@ -363,11 +373,15 @@ function AssetCategoriesTab({
 function AssetRegisterTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canRegister = true,
+  canPost = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canRegister?: boolean;
+  canPost?: boolean;
 }) {
   const categoriesQ = useAssetCategoriesQuery();
   const assetsQ = useFixedAssetsQuery();
@@ -527,7 +541,7 @@ function AssetRegisterTab({
                       <Badge variant="warning" size="sm">
                         {ar ? "فاتورة" : "Invoice"}
                       </Badge>
-                    ) : !row.acquisitionJournalEntryId ? (
+                    ) : canPost && !row.acquisitionJournalEntryId ? (
                       <Button
                         size="sm"
                         variant="primary"
@@ -544,7 +558,7 @@ function AssetRegisterTab({
                         {ar ? "مرحل" : "Posted"}
                       </Badge>
                     )}
-                    {row.acquisitionJournalEntryId && (
+                    {canPost && row.acquisitionJournalEntryId && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -566,7 +580,7 @@ function AssetRegisterTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canRegister)}
         onClose={() => setModalOpen(false)}
         title={ar ? "تسجيل أصل جديد" : "Register New Asset"}
         titleIcon={
@@ -755,7 +769,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={!!acqModal}
+        isOpen={Boolean(acqModal && canPost)}
         onClose={() => setAcqModal(null)}
         title={ar ? "إنشاء قيد اقتناء الأصل" : "Post Asset Acquisition"}
         titleIcon={
@@ -823,7 +837,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={!!depModal}
+        isOpen={Boolean(depModal && canPost)}
         onClose={() => setDepModal(null)}
         title={ar ? "إهلاك الأصل للشهر" : "Run Asset Depreciation"}
         titleIcon={
@@ -899,11 +913,13 @@ function AssetRegisterTab({
 function AssetCustodyTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canManage = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canManage?: boolean;
 }) {
   const assetsQ = useFixedAssetsQuery();
   const custodyQ = useAssetCustodyLogsQuery();
@@ -998,7 +1014,7 @@ function AssetCustodyTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canManage)}
         onClose={() => setModalOpen(false)}
         title={ar ? "تسجيل تسليم عهدة" : "Assign Custody"}
         titleIcon={
