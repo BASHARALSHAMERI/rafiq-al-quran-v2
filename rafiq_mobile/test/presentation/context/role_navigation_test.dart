@@ -7,24 +7,25 @@ void main() {
     final items = navigationItemsForRole('TEACHER');
 
     expect(items.map((item) => item.route), [
+      RouteNames.teacherHome,
       RouteNames.teacherHalqa,
       RouteNames.homeExams,
-      RouteNames.teacherHome,
+      RouteNames.teacherRecords,
       RouteNames.notifications,
       RouteNames.profile,
     ]);
     expect(
       navigationIndexForLocation(items, RouteNames.teacherStudentProfile(9)),
-      0,
+      1,
     );
     expect(
       navigationIndexForLocation(
           items, RouteNames.attendanceMarkWithDate('2026-03-08')),
-      0,
+      1,
     );
     expect(
       navigationIndexForLocation(items, RouteNames.teacherHalqaReport),
-      0,
+      3,
     );
   });
 
@@ -32,19 +33,20 @@ void main() {
     final items = navigationItemsForRole('SUPERVISOR');
 
     expect(items.map((item) => item.route), [
+      RouteNames.supervisorHome,
       RouteNames.supervisorHalaqat,
       RouteNames.homeExams,
-      RouteNames.supervisorHome,
+      RouteNames.supervisorReports,
       RouteNames.notifications,
       RouteNames.profile,
     ]);
     expect(
       navigationIndexForLocation(items, RouteNames.approvals),
-      0,
+      1,
     );
     expect(
       navigationIndexForLocation(items, RouteNames.supervisorHalqaReport(4)),
-      0,
+      3,
     );
   });
 
@@ -53,15 +55,15 @@ void main() {
 
     expect(
       navigationIndexForLocation(items, RouteNames.parentChildDetail('5')),
-      0,
+      1,
     );
     expect(
       navigationIndexForLocation(items, RouteNames.parentChildAttendance('5')),
-      0,
+      1,
     );
     expect(
       navigationIndexForLocation(items, RouteNames.parentChildResults('5')),
-      0,
+      1,
     );
   });
 }

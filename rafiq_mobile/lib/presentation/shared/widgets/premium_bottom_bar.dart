@@ -22,7 +22,7 @@ class PremiumBottomBar extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    const int homeIndex = 2;
+    const int homeIndex = 0;
     final safeSelectedIndex =
         selectedIndex >= 0 && selectedIndex < items.length ? selectedIndex : 0;
     final bool canShowHomeButton = items.length > homeIndex;
