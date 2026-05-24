@@ -1,0 +1,19 @@
+.app-toast {
+  background: var(--bg-surface-elevated, #fff);
+  color: var(--text-primary, #000);
+  border: 1px solid var(--border-default, #ccc);
+  box-shadow: var(--shadow-3);
+  border-radius: 16px;
+  padding: 12px 14px;
+  direction: rtl;
+  max-width: 520px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
+[data-theme="dark"] .app-toast {
+  background: var(--bg-surface-elevated);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}

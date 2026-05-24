@@ -15,7 +15,7 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => const ForgotPasswordScreen(),
+          builder: (context, state) => const ForgotPasswordScreen(),
         ),
       ],
     );

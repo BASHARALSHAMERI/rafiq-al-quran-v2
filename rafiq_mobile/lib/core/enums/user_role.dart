@@ -13,6 +13,10 @@ import '../theme/app_colors.dart';
 enum UserRole {
   superAdmin,
   centerAdmin,
+  accountant,
+  financeManager,
+  treasurer,
+  auditor,
   supervisor,
   teacher,
   student,
@@ -28,6 +32,14 @@ extension UserRoleExtension on UserRole {
         return 'SUPER_ADMIN';
       case UserRole.centerAdmin:
         return 'CENTER_ADMIN';
+      case UserRole.accountant:
+        return 'ACCOUNTANT';
+      case UserRole.financeManager:
+        return 'FINANCE_MANAGER';
+      case UserRole.treasurer:
+        return 'TREASURER';
+      case UserRole.auditor:
+        return 'AUDITOR';
       case UserRole.supervisor:
         return 'SUPERVISOR';
       case UserRole.teacher:
@@ -41,11 +53,20 @@ extension UserRoleExtension on UserRole {
 
   /// Display name in Arabic
   String get displayName {
+    if (isWebOnly) {
+      return displayNameEn;
+    }
+
     switch (this) {
       case UserRole.superAdmin:
         return 'مدير النظام';
       case UserRole.centerAdmin:
         return 'مدير المركز';
+      case UserRole.accountant:
+      case UserRole.financeManager:
+      case UserRole.treasurer:
+      case UserRole.auditor:
+        return displayNameEn;
       case UserRole.supervisor:
         return 'مشرف';
       case UserRole.teacher:
@@ -64,6 +85,14 @@ extension UserRoleExtension on UserRole {
         return 'Super Admin';
       case UserRole.centerAdmin:
         return 'Center Admin';
+      case UserRole.accountant:
+        return 'Accountant';
+      case UserRole.financeManager:
+        return 'Finance Manager';
+      case UserRole.treasurer:
+        return 'Treasurer';
+      case UserRole.auditor:
+        return 'Auditor';
       case UserRole.supervisor:
         return 'Supervisor';
       case UserRole.teacher:
@@ -81,6 +110,10 @@ extension UserRoleExtension on UserRole {
       case UserRole.superAdmin:
         return AppColors.roleSupervisor;
       case UserRole.centerAdmin:
+      case UserRole.accountant:
+      case UserRole.financeManager:
+      case UserRole.treasurer:
+      case UserRole.auditor:
         return AppColors.roleSupervisor;
       case UserRole.supervisor:
         return AppColors.roleSupervisor;
@@ -100,6 +133,14 @@ extension UserRoleExtension on UserRole {
         return Icons.admin_panel_settings;
       case UserRole.centerAdmin:
         return Icons.account_balance;
+      case UserRole.accountant:
+        return Icons.calculate;
+      case UserRole.financeManager:
+        return Icons.account_balance_wallet;
+      case UserRole.treasurer:
+        return Icons.savings;
+      case UserRole.auditor:
+        return Icons.fact_check;
       case UserRole.supervisor:
         return Icons.supervised_user_circle;
       case UserRole.teacher:
@@ -124,6 +165,19 @@ extension UserRoleExtension on UserRole {
   /// Whether this role can access admin features
   bool get canAccessAdminFeatures {
     return false;
+  }
+
+  /// Whether this backend role is supported by the Flutter mobile app.
+  bool get isMobileSupported {
+    return this == UserRole.supervisor ||
+        this == UserRole.teacher ||
+        this == UserRole.student ||
+        this == UserRole.parent;
+  }
+
+  /// Whether this role is intentionally web-only.
+  bool get isWebOnly {
+    return !isMobileSupported;
   }
 
   /// Whether this role needs center/circle selection
@@ -163,6 +217,10 @@ extension UserRoleExtension on UserRole {
     switch (this) {
       case UserRole.superAdmin:
       case UserRole.centerAdmin:
+      case UserRole.accountant:
+      case UserRole.financeManager:
+      case UserRole.treasurer:
+      case UserRole.auditor:
         return '/forbidden';
       case UserRole.supervisor:
         return '/supervisor';
@@ -209,6 +267,10 @@ extension UserRoleExtension on UserRole {
         ];
       case UserRole.centerAdmin:
       case UserRole.superAdmin:
+      case UserRole.accountant:
+      case UserRole.financeManager:
+      case UserRole.treasurer:
+      case UserRole.auditor:
         return const [];
       case UserRole.student:
         return const [
@@ -268,6 +330,14 @@ UserRole? parseUserRole(String? value) {
       return UserRole.superAdmin;
     case 'CENTER_ADMIN':
       return UserRole.centerAdmin;
+    case 'ACCOUNTANT':
+      return UserRole.accountant;
+    case 'FINANCE_MANAGER':
+      return UserRole.financeManager;
+    case 'TREASURER':
+      return UserRole.treasurer;
+    case 'AUDITOR':
+      return UserRole.auditor;
     case 'SUPERVISOR':
       return UserRole.supervisor;
     case 'TEACHER':
@@ -297,6 +367,10 @@ class RoleGuards {
 
     if (route == '/select-center' || route == '/select-circle') {
       return role.requiresContext;
+    }
+
+    if (!role.isMobileSupported) {
+      return false;
     }
 
     // Teacher routes

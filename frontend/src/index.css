@@ -34,6 +34,7 @@
 @import "./styles/components/exam-setup-wizard.css";
 @import "./styles/components/exam-evaluation.css";
 @import "./styles/components/exam-certification.css";
+@import "./styles/components/toast.css";
 
 @import "./styles/utilities/micro-interactions-v3.css";
 @import "./styles/utilities/light-effects.css";

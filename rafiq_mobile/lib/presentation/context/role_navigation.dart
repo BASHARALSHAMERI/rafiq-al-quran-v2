@@ -172,7 +172,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
         ),
       ];
     case 'TEACHER':
-    default:
       return const [
         RoleNavigationItem(
           label: 'الرئيسية',
@@ -224,6 +223,8 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           route: RouteNames.profile,
         ),
       ];
+    default:
+      return const [];
   }
 }
 

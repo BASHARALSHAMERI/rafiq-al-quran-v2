@@ -137,6 +137,18 @@
   flex-shrink: 0;
 }
 
+.modal-sticky-alert {
+  flex-shrink: 0;
+  padding: var(--space-sm) var(--space-lg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--emerald-50) 80%, transparent), color-mix(in srgb, var(--info-50) 60%, transparent));
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .modal-body {
   padding: var(--space-md) var(--space-lg);
   overflow-y: auto;
@@ -317,6 +329,11 @@
 
 [data-theme="dark"] .modal-title-icon {
   background: rgba(28, 174, 154, 0.12);
+}
+
+[data-theme="dark"] .modal-sticky-alert {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.1), rgba(59, 130, 246, 0.08));
+  border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="dark"] .modal-footer {
