@@ -1,14 +1,12 @@
 import UserRolePage from "../features/users/UserRolePage";
 
 function AccountantsPage() {
+  const isAr = document.documentElement.lang === "ar";
   return (
     <UserRolePage
       role="ACCOUNTANT"
-      description={
-        document.documentElement.lang === "ar"
-          ? "إدارة بيانات المحاسبين"
-          : "Manage accountant accounts"
-      }
+      title={isAr ? "إدارة المحاسبين" : "Accountants"}
+      description={isAr ? "إدارة بيانات المحاسبين" : "Manage accountant records"}
     />
   );
 }
