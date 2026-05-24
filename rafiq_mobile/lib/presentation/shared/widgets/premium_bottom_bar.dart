@@ -18,7 +18,7 @@ class PremiumBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    const int homeIndex = 2;
+    const int homeIndex = 0;
     final bool isHomeSelected = selectedIndex == homeIndex;
 
     return Container(
