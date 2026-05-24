@@ -413,7 +413,7 @@ export const billingService = {
       mapUniqueConflict(
         error,
         "INVALID_STATE_TRANSITION",
-        "Invoice already exists for this student and month"
+        "Invoice of this type already exists for this student and month"
       );
       throw error;
     }

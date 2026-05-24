@@ -1603,7 +1603,7 @@ model Invoice {
   student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Cascade)
   payments      Payment[]
 
-  @@unique([studentId, month, year])
+  @@unique([studentId, month, year, invoiceType])
   @@index([centerId, year, month])
   @@index([studentId])
   @@index([status, dueDate])
