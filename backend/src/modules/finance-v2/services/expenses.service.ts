@@ -14,6 +14,7 @@ import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { accountingService } from "../../accounting/accounting.service";
+import { financeV2Domain } from "../finance-v2.domain";
 import { nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
@@ -27,6 +28,39 @@ const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organization
     },
     orderBy: [{ systemKey: "desc" }, { code: "desc" }, { id: "asc" }]
   });
+};
+
+const resolveExpenseInvoiceCenterWhere = (
+  scope: ScopeContext,
+  centerId?: number
+): Prisma.ExpenseInvoiceWhereInput => {
+  financeV2Domain.ensureCenterAllowed(scope, centerId);
+
+  if (centerId) {
+    return { centerId };
+  }
+
+  if (scope.allAccess) {
+    return {};
+  }
+
+  return { centerId: { in: scope.centerIds } };
+};
+
+const ensureExpenseInvoiceScope = (
+  scope: ScopeContext,
+  invoice: { centerId: number | null }
+) => {
+  financeV2Domain.ensureScopedCenterRequired(scope, invoice.centerId);
+};
+
+const ensureFinanceAccountScope = (
+  scope: ScopeContext,
+  financeAccount: { centerId: number | null }
+) => {
+  if (financeAccount.centerId) {
+    financeV2Domain.ensureCenterAllowed(scope, financeAccount.centerId);
+  }
 };
 
 export const expensesService = {
@@ -97,10 +131,12 @@ export const expensesService = {
     scope: ScopeContext,
     query: { centerId?: number; status?: ExpenseInvoiceStatus; supplierId?: number }
   ) {
+    const centerWhere = resolveExpenseInvoiceCenterWhere(scope, query.centerId);
+
     const invoices = await prisma.expenseInvoice.findMany({
       where: {
         organizationId: scope.organizationId,
-        ...(query.centerId ? { centerId: query.centerId } : {}),
+        ...centerWhere,
         ...(query.status ? { status: query.status } : {}),
         ...(query.supplierId ? { supplierId: query.supplierId } : {})
       },
@@ -128,6 +164,7 @@ export const expensesService = {
     }
   ) {
     const invoiceDate = new Date(input.invoiceDate);
+    financeV2Domain.ensureScopedCenterRequired(scope, input.centerId);
     
     // Check if period open
     await prisma.$transaction(async (tx) => {
@@ -161,6 +198,8 @@ export const expensesService = {
       if (!invoice || invoice.organizationId !== scope.organizationId) {
         throw new AppError("Invoice not found", 404);
       }
+      ensureExpenseInvoiceScope(scope, invoice);
+
       if (invoice.status !== ExpenseInvoiceStatus.DRAFT && invoice.status !== ExpenseInvoiceStatus.PENDING_APPROVAL) {
         throw new AppError("Only DRAFT/PENDING invoices can be approved", 400);
       }
@@ -258,6 +297,8 @@ export const expensesService = {
       if (!invoice || invoice.organizationId !== scope.organizationId) {
         throw new AppError("Invoice not found", 404);
       }
+      ensureExpenseInvoiceScope(scope, invoice);
+
       if (invoice.status !== ExpenseInvoiceStatus.APPROVED && invoice.status !== ExpenseInvoiceStatus.PARTIALLY_PAID) {
         throw new AppError("Invoice must be approved to be paid", 400);
       }
@@ -298,6 +339,7 @@ export const expensesService = {
       if (!financeAccount) {
         throw new AppError("Finance account not found", 404, undefined, "ENTITY_NOT_FOUND");
       }
+      ensureFinanceAccountScope(scope, financeAccount);
 
       if (
         !financeAccount.accountingAccountId ||

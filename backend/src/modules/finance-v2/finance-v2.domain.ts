@@ -153,6 +153,18 @@ export const financeV2Domain = {
     }
   },
 
+  ensureScopedCenterRequired(scope: ScopeContext, centerId?: number | null) {
+    if (scope.allAccess) {
+      return;
+    }
+
+    if (!centerId) {
+      throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
+    }
+
+    this.ensureCenterAllowed(scope, centerId);
+  },
+
   ensureStudentAllowed(scope: ScopeContext, studentId: number) {
     if (scope.allAccess) {
       return;
