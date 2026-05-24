@@ -623,7 +623,7 @@ model StudentCircleEnrollment {
   circle    Circle           @relation(fields: [circleId], references: [id], onDelete: Cascade)
   student   User             @relation("StudentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@index([studentId, circleId])
+  @@unique([studentId, circleId])
   @@index([circleId])
   @@index([status])
   @@index([studentId, status])
