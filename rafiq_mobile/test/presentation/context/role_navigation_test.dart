@@ -41,10 +41,6 @@ void main() {
       RouteNames.profile,
     ]);
     expect(
-      navigationIndexForLocation(items, RouteNames.approvals),
-      1,
-    );
-    expect(
       navigationIndexForLocation(items, RouteNames.supervisorHalqaReport(4)),
       3,
     );

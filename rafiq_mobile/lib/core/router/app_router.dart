@@ -36,7 +36,6 @@ import '../../presentation/student/memorization_log_screen.dart';
 import '../../presentation/student/progress_screen.dart';
 import '../../presentation/student/student_journey_screen.dart';
 import '../../presentation/teacher/students/students_list_screen.dart';
-import '../../presentation/supervisor/supervisor_approvals_screen.dart';
 import '../../presentation/supervisor/supervisor_circles_screen.dart';
 import '../../presentation/supervisor/supervisor_notes_screen.dart';
 import '../../presentation/supervisor/supervisor_reports_screen.dart';
@@ -299,10 +298,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteNames.supervisorNotes,
                 builder: (context, state) => const SupervisorNotesScreen(),
-              ),
-              GoRoute(
-                path: RouteNames.approvals,
-                builder: (context, state) => const SupervisorApprovalsScreen(),
               ),
               // GoRoute(
               //   path: RouteNames.studentAssignments,

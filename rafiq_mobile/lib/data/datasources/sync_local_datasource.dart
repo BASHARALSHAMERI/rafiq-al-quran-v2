@@ -180,19 +180,6 @@ AND (next_retry_at IS NULL OR next_retry_at <= ?)
     );
   }
 
-  Future<void> markMutationResolvedByCorrection(String mutationId) async {
-    final db = await _database();
-    await db.update(
-      'pending_mutations',
-      {
-        'status': 'resolved_by_correction',
-        'next_retry_at': null,
-      },
-      where: 'mutation_id = ?',
-      whereArgs: [mutationId],
-    );
-  }
-
   Future<void> markMutationFailed(String mutationId) async {
     final db = await _database();
     await db.update(

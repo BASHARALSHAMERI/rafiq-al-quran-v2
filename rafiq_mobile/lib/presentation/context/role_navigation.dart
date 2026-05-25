@@ -59,7 +59,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
             RouteNames.supervisorTodayVisits,
             RouteNames.supervisorTeacherEval,
             RouteNames.supervisorNotes,
-            RouteNames.approvals,
           ],
         ),
         RoleNavigationItem(
