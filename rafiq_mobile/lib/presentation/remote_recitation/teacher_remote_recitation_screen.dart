@@ -9,6 +9,7 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/remote_recitation_models.dart';
 import '../shared/widgets/enterprise_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 
 class TeacherRemoteRecitationScreen extends ConsumerWidget {
@@ -50,11 +51,8 @@ class TeacherRemoteRecitationScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          title: const Text('التسميع عن بعد'),
-          centerTitle: true,
-          backgroundColor: const Color(0xFFF7F8F5),
-          surfaceTintColor: Colors.transparent,
+        appBar: StandardAppBar(
+          title: 'التسميع عن بعد',
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(76),
             child: Padding(

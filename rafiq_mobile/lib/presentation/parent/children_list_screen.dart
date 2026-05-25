@@ -10,6 +10,7 @@ import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_gradients.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../../core/utils/data_parsing_helper.dart';
 
@@ -38,10 +39,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          title: const Text('الأبناء'),
-          centerTitle: false,
-        ),
+        appBar: const StandardAppBar(title: 'الأبناء'),
         body: _buildBody(theme, state),
       ),
     );

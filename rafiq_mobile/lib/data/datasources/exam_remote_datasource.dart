@@ -272,9 +272,9 @@ class ExamRemoteDataSourceImpl implements ExamRemoteDataSource {
     required int toSurah,
     required int toAyah,
   }) async {
-    final response = await dio.get(
-      '/quran/range-preview',
-      queryParameters: {
+    final response = await dio.post(
+      '/quran/range/preview',
+      data: {
         'fromSurah': fromSurah,
         'fromAyah': fromAyah,
         'toSurah': toSurah,

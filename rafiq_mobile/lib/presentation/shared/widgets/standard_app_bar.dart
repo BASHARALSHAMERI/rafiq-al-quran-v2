@@ -39,61 +39,41 @@ class StandardAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       automaticallyImplyLeading: false,
-      centerTitle: false,
+      centerTitle: centerTitle,
       actions: actions,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      surfaceTintColor: Colors.transparent,
-      backgroundColor: backgroundColor ?? theme.scaffoldBackgroundColor,
-      foregroundColor: theme.colorScheme.onSurface,
+      backgroundColor: backgroundColor, // Inherits global theme if null
       bottom: bottom,
-      title: InkWell(
-        onTap: showBack 
-          ? (onBackTap ?? () {
-              if (canPop) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            }) 
-          : null,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (showBack) ...[
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: AppColors.textPrimaryLight,
-                ),
-                const SizedBox(width: 8),
-              ],
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  if (subtitle != null && subtitle!.trim().isNotEmpty)
-                    Text(
-                      subtitle!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                ],
+      leading: leading ?? (showBack
+          ? IconButton(
+              icon: const Icon(
+                Icons.chevron_right_rounded,
+                size: 28,
               ),
-            ],
-          ),
-        ),
+              onPressed: onBackTap ?? () {
+                if (canPop) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
+            )
+          : null),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(title),
+          if (subtitle != null && subtitle!.trim().isNotEmpty)
+            Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: theme.brightness == Brightness.dark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
+        ],
       ),
     );
   }

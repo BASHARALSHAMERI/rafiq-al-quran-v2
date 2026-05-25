@@ -6,6 +6,8 @@ import '../../data/repositories_impl/attendance_repository_impl.dart';
 import '../../domain/repositories/attendance_repository.dart';
 import '../auth/auth_providers.dart';
 
+import '../../domain/entities/attendance.dart';
+
 final attendanceLocalDataSourceProvider = Provider((ref) {
   return AttendanceLocalDataSource();
 });
@@ -19,4 +21,11 @@ final attendanceRepositoryProvider = Provider<AttendanceRepository>((ref) {
     ref.watch(attendanceRemoteDataSourceProvider),
     ref.watch(attendanceLocalDataSourceProvider),
   );
+});
+
+final todayAttendanceProvider =
+    FutureProvider.family<List<AttendanceRecord>, String>((ref, circleId) async {
+  final repository = ref.watch(attendanceRepositoryProvider);
+  final today = DateTime.now().toIso8601String().split('T').first;
+  return repository.getAttendanceForDate(circleId, today);
 });

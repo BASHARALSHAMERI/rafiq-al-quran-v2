@@ -15,6 +15,7 @@ import '../shared/states/app_empty_state.dart';
 import '../shared/states/app_error_state.dart';
 import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class TeacherHalqaReportScreen extends ConsumerStatefulWidget {
   final int? halqaId;
@@ -175,17 +176,7 @@ class _TeacherHalqaReportScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text(
-          'تقرير الحلقة الشهري',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimaryLight,
-        surfaceTintColor: Colors.white,
-      ),
+      appBar: const StandardAppBar(title: 'تقرير الحلقة الشهري'),
       body: reportAsync.when(
         loading: () =>
             const AppLoadingState(message: 'جار تحميل التقرير الشهري...'),

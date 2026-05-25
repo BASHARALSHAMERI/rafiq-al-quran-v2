@@ -26,15 +26,23 @@ class AppTheme {
       fontFamily: AppTypography.fontFamily,
       fontFamilyFallback: AppTypography.fallbackFamily,
       textTheme: textTheme,
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
         elevation: 0,
-        backgroundColor: AppColors.cardLight,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.white,
         foregroundColor: AppColors.textPrimaryLight,
-        titleTextStyle: TextStyle(
+        shape: Border(
+          bottom: BorderSide(
+            color: AppColors.borderLight.withValues(alpha: 0.8),
+            width: 1,
+          ),
+        ),
+        titleTextStyle: const TextStyle(
           fontFamily: AppTypography.fontFamily,
-          fontWeight: FontWeight.w700,
-          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
           color: AppColors.textPrimaryLight,
         ),
       ),
@@ -185,10 +193,24 @@ class AppTheme {
       textTheme: textTheme,
       scaffoldBackgroundColor: AppColors.surfaceDark,
       appBarTheme: const AppBarTheme(
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         backgroundColor: AppColors.cardDark,
         foregroundColor: AppColors.textPrimaryDark,
+        shape: Border(
+          bottom: BorderSide(
+            color: AppColors.borderDark,
+            width: 1,
+          ),
+        ),
+        titleTextStyle: TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
+          color: AppColors.textPrimaryDark,
+        ),
       ),
       cardTheme: CardThemeData(
         color: AppColors.cardDark,

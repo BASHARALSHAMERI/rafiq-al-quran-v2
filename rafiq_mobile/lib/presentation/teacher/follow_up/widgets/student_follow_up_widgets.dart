@@ -88,7 +88,6 @@ class StudentFollowUpLastRecords extends StatelessWidget {
     );
   }
 }
-
 class FollowUpNoticeBanner extends StatelessWidget {
   final Color color;
   final String title;
@@ -142,7 +141,6 @@ class FollowUpNoticeBanner extends StatelessWidget {
     );
   }
 }
-
 class FollowUpHorizontalStepper extends StatelessWidget {
   final FollowUpSessionSection activeSection;
   final Map<FollowUpSessionSection, bool> saved;
@@ -246,82 +244,89 @@ class FollowUpHorizontalStepper extends StatelessWidget {
 
 class FollowUpSectionShell extends StatelessWidget {
   final Color color;
-  final IconData icon;
-  final String title;
-  final String description;
+  final IconData? icon;
+  final String? title;
+  final String? description;
   final Widget child;
 
   const FollowUpSectionShell({
     super.key,
     required this.color,
-    required this.icon,
-    required this.title,
-    required this.description,
+    this.icon,
+    this.title,
+    this.description,
     required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showHeader = icon != null || title != null || description != null;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          if (showHeader) ...[
+            Row(
+              children: [
+                if (icon != null)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withValues(alpha: 0.1)),
+                    ),
+                    child: Icon(icon!, size: 20, color: color),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withValues(alpha: 0.1)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (title != null)
+                        Text(
+                          title!,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: AppColors.textPrimaryLight,
+                          ),
+                        ),
+                      if (description != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          description!,
+                          style: const TextStyle(
+                            color: AppColors.textSecondaryLight,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                child: Icon(icon, size: 20, color: color),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: AppColors.textPrimaryLight,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      description,
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
           child,
         ],
       ),
@@ -769,6 +774,685 @@ class _LastRecordCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class AchievementMiniCard extends StatelessWidget {
+  final String title;
+  final FollowUpRecord? record;
+  final IconData icon;
+
+  const AchievementMiniCard({
+    super.key,
+    required this.title,
+    required this.record,
+    required this.icon,
+  });
+
+  String _formatRecordRange(FollowUpRecord? record) {
+    if (record == null) {
+      return 'لم يسجل بعد';
+    }
+    if (record.surah == null) {
+      return record.matnName ?? 'مسجل';
+    }
+    if (record.fromAyah != null && record.toAyah != null) {
+      return '${record.surah} (${record.fromAyah}-${record.toAyah})';
+    }
+    return record.surah!;
+  }
+
+  void _showAchievementDetailsBottomSheet(BuildContext context) {
+    if (record == null) return;
+
+    final formattedDate = record!.recordDate.toIso8601String().split('T').first;
+    final ratingVal = record!.rating ?? 0;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6F3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: const Color(0xFF568A78), size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textSecondaryLight,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                        Text(
+                          _formatRecordRange(record),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimaryLight,
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const Divider(color: AppColors.borderLight, height: 1),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'تاريخ التسجيل:',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.borderLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      formattedDate,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (record!.type != 'MATN' && ratingVal > 0) ...[
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'التقييم:',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    Row(
+                      children: List.generate(5, (index) {
+                        return Icon(
+                          index < ratingVal ? Icons.star_rounded : Icons.star_border_rounded,
+                          color: index < ratingVal ? AppColors.warningLight : AppColors.borderLight,
+                          size: 22,
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ],
+              if (record!.type == 'MATN' && record!.matnStatus != null) ...[
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'حالة الإتقان:',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: record!.matnStatus == 'COMPLETED'
+                            ? AppColors.successLight.withValues(alpha: 0.12)
+                            : AppColors.warningLight.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: record!.matnStatus == 'COMPLETED'
+                              ? AppColors.successLight
+                              : AppColors.warningLight,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        record!.matnStatus == 'COMPLETED' ? 'متقن' : 'يحتاج متابعة',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          color: record!.matnStatus == 'COMPLETED'
+                              ? AppColors.successLight
+                              : AppColors.warningLight,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              if (record!.teacherName != null) ...[
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'بواسطة المعلم:',
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    Text(
+                      record!.teacherName!,
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: AppColors.textPrimaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Text(
+                'ملاحظات وتوجيهات المعلم:',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  color: AppColors.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.borderLight.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Text(
+                  record!.notes ?? 'لا توجد ملاحظات مسجلة.',
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    height: 1.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accentColor = Color(0xFF568A78);
+    final value = _formatRecordRange(record);
+
+    return InteractiveCardWrapper(
+      onTap: () => _showAchievementDetailsBottomSheet(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 13, color: accentColor),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      color: AppColors.textSecondaryLight,
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                color: AppColors.textPrimaryLight,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PlanProgressMiniCard extends StatelessWidget {
+  final String title;
+  final String rangeText;
+  final double executed;
+  final double target;
+  final double rate;
+  final IconData icon;
+
+  const PlanProgressMiniCard({
+    super.key,
+    required this.title,
+    required this.rangeText,
+    required this.executed,
+    required this.target,
+    required this.rate,
+    required this.icon,
+  });
+
+  void _showPlanDetailsBottomSheet(BuildContext context) {
+    final safeRate = rate.isNaN || rate.isInfinite ? 0.0 : rate;
+    final clampedRate = safeRate > 1.0 ? safeRate / 100.0 : safeRate;
+    final displayPercent = (clampedRate * 100).round().clamp(0, 100);
+
+    final safeExecuted = executed.isNaN || executed.isInfinite ? 0.0 : executed;
+    final safeTarget = target.isNaN || target.isInfinite ? 0.0 : target;
+
+    String motivationMessage = 'لم يتم تسجيل أي صفحات من الخطة بعد. فلنبدأ بهمة ونشاط! 💪';
+    if (displayPercent >= 100) {
+      motivationMessage = 'ممتاز! تم إنجاز الخطة الشهرية بالكامل 🥳';
+    } else if (displayPercent >= 50) {
+      motivationMessage = 'رائع! استمر في التقدم والمتابعة لتحقيق الهدف 👏';
+    } else if (displayPercent > 0) {
+      motivationMessage = 'بداية جيدة! خطوة بخطوة نحو تحقيق خطتك 🎯';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderLight,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6F3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: const Color(0xFF568A78), size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF3B6657),
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                        Text(
+                          rangeText,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2C4C41),
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              const Divider(color: AppColors.borderLight, height: 1),
+              const SizedBox(height: 20),
+
+              // Progress Gauge & Numbers
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // Circular Progress Indicator
+                  SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: CircularProgressIndicator(
+                            value: clampedRate.clamp(0.0, 1.0),
+                            strokeWidth: 8,
+                            backgroundColor: const Color(0xFF568A78).withValues(alpha: 0.12),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF568A78)),
+                          ),
+                        ),
+                        Text(
+                          '$displayPercent%',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF3B6657),
+                            fontFamily: 'Cairo',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Details
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow('المنجز:', '${safeExecuted.toStringAsFixed(1)} صفحة'),
+                      const SizedBox(height: 10),
+                      _buildDetailRow('المستهدف:', '${safeTarget.toStringAsFixed(1)} صفحة'),
+                      const SizedBox(height: 10),
+                      _buildDetailRow('المتبقي:', '${(safeTarget - safeExecuted).clamp(0.0, double.infinity).toStringAsFixed(1)} صفحة'),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Motivation box
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6F3),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF568A78).withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  motivationMessage,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Cairo',
+                    fontSize: 13,
+                    height: 1.4,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2C4C41),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondaryLight,
+            fontFamily: 'Cairo',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: AppColors.textPrimaryLight,
+            fontFamily: 'Cairo',
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const accentColor = Color(0xFF568A78);
+    final safeRate = rate.isNaN || rate.isInfinite ? 0.0 : rate;
+    final clampedRate = safeRate > 1.0 ? safeRate / 100.0 : safeRate;
+
+    final safeExecuted = executed.isNaN || executed.isInfinite ? 0.0 : executed;
+    final safeTarget = target.isNaN || target.isInfinite ? 0.0 : target;
+
+    return InteractiveCardWrapper(
+      onTap: () => _showPlanDetailsBottomSheet(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6F3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accentColor.withValues(alpha: 0.5), width: 1.2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 13, color: accentColor),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      color: Color(0xFF3B6657),
+                      fontFamily: 'Cairo',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: clampedRate),
+                  duration: const Duration(milliseconds: 650),
+                  curve: Curves.easeOut,
+                  builder: (context, animValue, child) {
+                    final displayPercent = (animValue * 100).round().clamp(0, 100);
+                    return Text(
+                      '$displayPercent%',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        color: Color(0xFF3B6657),
+                        fontFamily: 'Cairo',
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              rangeText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 12,
+                color: Color(0xFF2C4C41),
+                fontFamily: 'Cairo',
+              ),
+            ),
+            const SizedBox(height: 6),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: clampedRate),
+              duration: const Duration(milliseconds: 650),
+              curve: Curves.easeOut,
+              builder: (context, animValue, child) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: animValue.clamp(0.0, 1.0),
+                    backgroundColor: accentColor.withValues(alpha: 0.15),
+                    valueColor: const AlwaysStoppedAnimation<Color>(accentColor),
+                    minHeight: 3.5,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${safeExecuted.toStringAsFixed(1)} / ${safeTarget.toStringAsFixed(1)} ص',
+              style: const TextStyle(
+                color: Color(0xFF4A7D6C),
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class InteractiveCardWrapper extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const InteractiveCardWrapper({
+    super.key,
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  State<InteractiveCardWrapper> createState() => _InteractiveCardWrapperState();
+}
+
+class _InteractiveCardWrapperState extends State<InteractiveCardWrapper>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 90),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: widget.child,
       ),
     );
   }

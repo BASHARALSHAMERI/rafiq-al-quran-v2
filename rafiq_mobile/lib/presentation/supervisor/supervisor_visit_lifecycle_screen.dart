@@ -253,7 +253,13 @@ class _SupervisorVisitLifecycleScreenState
               subtitle: 'لم يتم العثور على الحلقة ضمن نطاقك الحالي.',
               icon: Icons.group_off_rounded,
               actionLabel: 'العودة',
-              onAction: () => context.pop(),
+              onAction: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
             );
           }
 

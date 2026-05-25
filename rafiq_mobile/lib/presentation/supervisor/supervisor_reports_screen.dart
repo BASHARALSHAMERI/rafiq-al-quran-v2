@@ -11,6 +11,7 @@ import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/supervisor_dtos.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/section_header.dart';
 
@@ -81,10 +82,8 @@ class _SupervisorReportsScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('التقارير الإشرافية'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: StandardAppBar(
+        title: 'التقارير الإشرافية',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),

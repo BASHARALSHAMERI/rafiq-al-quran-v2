@@ -12,6 +12,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/standard_app_bar.dart';
 
 import '../../../../application/follow_up/follow_up_controller.dart';
 import '../../../../data/models/follow_up_dtos.dart';
@@ -178,10 +179,8 @@ class _GroupAchievementScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('الإنجاز الجماعي'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: const StandardAppBar(
+        title: 'الإنجاز الجماعي',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),

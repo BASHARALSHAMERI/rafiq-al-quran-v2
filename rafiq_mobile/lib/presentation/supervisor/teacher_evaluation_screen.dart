@@ -13,6 +13,7 @@ import '../../core/theme/app_shadows.dart';
 import '../../data/models/org_dtos.dart';
 import '../shared/states/app_empty_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
 
 const _criteria = [
@@ -125,20 +126,21 @@ class _TeacherEvaluationScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('تقييم المعلمين'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: StandardAppBar(
+        title: 'تقييم المعلمين',
         leading: _selectedCircle != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 28,
+                ),
                 onPressed: () => setState(() {
                   _selectedCircle = null;
                   _ratings.clear();
                   _notesController.clear();
                 }),
               )
-            : const BackButton(),
+            : null,
       ),
       body: circlesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

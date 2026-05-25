@@ -7,6 +7,7 @@ import '../../application/parent/parent_dashboard_provider.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/section_header.dart';
 
@@ -56,14 +57,10 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
 
     final profile = state.childrenProfiles[cId];
     if (profile == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          title: const Text('نتائج الطالب'),
-          centerTitle: false,
-          backgroundColor: const Color(0xFFF7F8F5),
-        ),
-        body: const PageStateView.loading(message: 'جاري تحميل النتائج...'),
+      return const Scaffold(
+        backgroundColor: Color(0xFFF7F8F5),
+        appBar: StandardAppBar(title: 'نتائج الطالب'),
+        body: PageStateView.loading(message: 'جاري تحميل النتائج...'),
       );
     }
 
@@ -85,10 +82,7 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('نتائج الطالب'),
-        centerTitle: false,
-      ),
+      appBar: const StandardAppBar(title: 'نتائج الطالب'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
