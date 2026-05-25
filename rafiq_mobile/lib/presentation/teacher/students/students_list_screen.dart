@@ -7,13 +7,11 @@ import 'package:go_router/go_router.dart';
 import '../../../application/auth/auth_providers.dart';
 import '../../../application/context/context_controller.dart';
 import '../../../application/follow_up/today_follow_ups_provider.dart';
-import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/data_parsing_helper.dart';
 import '../../shared/states/app_empty_state.dart';
-import '../../shared/widgets/enterprise_card.dart';
 import '../../shared/widgets/skeleton_loader.dart';
 import '../../shared/widgets/standard_app_bar.dart';
 
@@ -58,35 +56,35 @@ Map<String, dynamic> _followUpConfig(StudentFollowUpStatus status) {
       return {
         'label': 'لم تتم المتابعة',
         'icon': Icons.schedule_rounded,
-        'color': AppColors.textSecondaryLight,
+        'color': const Color(0xFF6B7280),
         'bg': const Color(0xFFF3F4F6),
       };
     case StudentFollowUpStatus.hifz:
       return {
         'label': 'تم تسجيل الحفظ',
         'icon': Icons.menu_book_outlined,
-        'color': AppColors.primaryLight,
-        'bg': const Color(0xFFEAF5F0),
+        'color': const Color(0xFF0284C7),
+        'bg': const Color(0xFFE0F2FE),
       };
     case StudentFollowUpStatus.review:
       return {
         'label': 'تم تسجيل المراجعة',
         'icon': Icons.book_outlined,
-        'color': const Color(0xFF6B4C18),
-        'bg': const Color(0xFFD6A848),
+        'color': const Color(0xFFD97706),
+        'bg': const Color(0xFFFEF3C7),
       };
     case StudentFollowUpStatus.mutoon:
       return {
         'label': 'تم تسجيل المتون',
         'icon': Icons.integration_instructions_outlined,
-        'color': AppColors.textPrimaryLight,
-        'bg': const Color(0xFFE5E7EB),
+        'color': const Color(0xFF4B5563),
+        'bg': const Color(0xFFF3F4F6),
       };
     case StudentFollowUpStatus.complete:
       return {
         'label': 'مكتمل',
         'icon': Icons.check_circle_outline_rounded,
-        'color': AppColors.successLight,
+        'color': const Color(0xFF10B981),
         'bg': const Color(0xFFEEF9F1),
       };
   }
@@ -226,21 +224,22 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F8F5),
       appBar: StandardAppBar(
         title: 'متابعة الحلقة',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_forward_ios_rounded, size: 20),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go(RouteNames.teacherHome);
-            }
-          },
-        ),
+        onBackTap: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go(RouteNames.teacherHome);
+          }
+        },
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppColors.textPrimaryLight,
+            ),
             onPressed: () => ref.invalidate(studentsDirectoryProvider),
           ),
         ],
@@ -289,11 +288,9 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
                       ref.invalidate(studentsDirectoryProvider);
                       await ref.read(studentsDirectoryProvider.future);
                     },
-                    child: ListView.separated(
+                    child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       itemCount: items.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (context, index) {
                         final item = items[index];
                         return _FollowUpStudentCard(
@@ -330,101 +327,46 @@ class _CircleFollowUpSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedCircleName = (circleName ?? '').trim();
     final safeProgress = progress.isFinite ? progress.clamp(0.0, 1.0) : 0.0;
 
-    return EnterpriseCard(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      radius: AppRadius.xl,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: AppColors.primaryLight,
+              const Text(
+                'تقدم المتابعة',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: AppColors.textPrimaryLight,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'متابعة طلاب الحلقة',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      resolvedCircleName.isEmpty
-                          ? 'ملف واحد للطلاب والمتابعة دون تكرار في الأدوات.'
-                          : 'الحلقة الحالية: $resolvedCircleName',
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$total طالب',
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.w800,
-                  ),
+              Text(
+                '$completed/$total طالب',
+                style: const TextStyle(
+                  color: AppColors.textSecondaryLight,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _SummaryMetricPill(
-                  label: 'المكتمل',
-                  value: '$completed',
-                  color: AppColors.successLight,
-                  background: const Color(0xFFEEF9F1),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _SummaryMetricPill(
-                  label: 'بانتظار المتابعة',
-                  value: '${total - completed}',
-                  color: AppColors.warningLight,
-                  background: const Color(0xFFFFF8EC),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: safeProgress,
-              minHeight: 8,
-              color: AppColors.primaryLight,
+              minHeight: 6,
+              color: const Color(0xFF568A78), // Green/teal from the mockup image
               backgroundColor: AppColors.borderLight.withValues(alpha: 0.5),
             ),
           ),
@@ -445,177 +387,97 @@ class _FollowUpStudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final config = _followUpConfig(item.followUpStatus);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                _StudentAvatar(name: item.name),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: AppColors.textPrimaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _StudentStatusChip(status: item.followUpStatus),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Icon(
+                  Icons.keyboard_arrow_left_rounded,
+                  size: 20,
+                  color: AppColors.textSecondaryLight,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudentStatusChip extends StatelessWidget {
+  final StudentFollowUpStatus status;
+
+  const _StudentStatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _followUpConfig(status);
     final Color color = config['color'] as Color;
     final Color bgColor = config['bg'] as Color;
     final IconData icon = config['icon'] as IconData;
     final String label = config['label'] as String;
 
-    return EnterpriseCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      radius: AppRadius.xl,
-      child: Row(
-        children: [
-          _StudentAvatar(name: item.name),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StudentMetaChip(
-                      label: item.levelLabel,
-                      color: AppColors.infoLight,
-                      background: AppColors.infoLight.withValues(alpha: 0.10),
-                    ),
-                    _StudentMetaChip(
-                      label: item.statusLabel,
-                      color: item.statusColor,
-                      background: item.statusColor.withValues(alpha: 0.12),
-                    ),
-                    if (item.enrollmentLabel != '-')
-                      _StudentMetaChip(
-                        label: item.enrollmentLabel,
-                        color: AppColors.textSecondaryLight,
-                        background: const Color(0xFFF2F4F5),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(icon, size: 14, color: color),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'افتح الملف لعرض الحفظ والمراجعة والخطة الشهرية من مكان واحد.',
-                  style: TextStyle(
-                    color: AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.keyboard_arrow_left_rounded,
-            size: 20,
-            color: AppColors.textSecondaryLight,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryMetricPill extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final Color background;
-
-  const _SummaryMetricPill({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.background,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StudentMetaChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final Color background;
-
-  const _StudentMetaChip({
-    required this.label,
-    required this.color,
-    required this.background,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              fontFamily: 'Cairo',
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -12,6 +12,7 @@ import '../shared/states/app_error_state.dart';
 import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/app_card.dart';
 import '../shared/widgets/quran_range_picker.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 enum _PlanTab { hifz, review }
 
@@ -141,10 +142,7 @@ class _TeacherMonthlyPlanDetailsScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('الخطة الشهرية'),
-        centerTitle: false,
-      ),
+      appBar: const StandardAppBar(title: 'الخطة الشهرية'),
       body: planAsync.when(
         loading: () => const AppLoadingState(
           message: 'جار تحميل تفاصيل الخطة...',

@@ -13,6 +13,7 @@ import '../../data/models/org_dtos.dart';
 
 import '../shared/states/app_empty_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
 
 class SupervisorNotesScreen extends ConsumerStatefulWidget {
@@ -163,10 +164,8 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('ملاحظات إشرافية'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: StandardAppBar(
+        title: 'ملاحظات إشرافية',
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),

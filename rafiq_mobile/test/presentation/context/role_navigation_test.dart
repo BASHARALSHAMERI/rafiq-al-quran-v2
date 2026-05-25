@@ -9,9 +9,7 @@ void main() {
     expect(items.map((item) => item.route), [
       RouteNames.teacherHome,
       RouteNames.teacherHalqa,
-      RouteNames.homeExams,
-      RouteNames.teacherRecords,
-      RouteNames.notifications,
+      RouteNames.teacherPreparation,
       RouteNames.profile,
     ]);
     expect(
@@ -24,8 +22,8 @@ void main() {
       1,
     );
     expect(
-      navigationIndexForLocation(items, RouteNames.teacherHalqaReport),
-      3,
+      navigationIndexForLocation(items, RouteNames.teacherPreparation),
+      2,
     );
   });
 
@@ -34,15 +32,17 @@ void main() {
 
     expect(items.map((item) => item.route), [
       RouteNames.supervisorHome,
-      RouteNames.supervisorHalaqat,
-      RouteNames.homeExams,
+      RouteNames.supervisorTodayVisits,
       RouteNames.supervisorReports,
-      RouteNames.notifications,
       RouteNames.profile,
     ]);
     expect(
+      navigationIndexForLocation(items, RouteNames.supervisorHalaqat),
+      1,
+    );
+    expect(
       navigationIndexForLocation(items, RouteNames.supervisorHalqaReport(4)),
-      3,
+      2,
     );
   });
 

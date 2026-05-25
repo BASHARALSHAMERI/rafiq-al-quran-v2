@@ -21,7 +21,6 @@ model Organization {
   attendancePolicy         AttendancePolicy?
   auditLogs                AuditLog[]
   centers                  Center[]
-  correctionRequests       CorrectionRequest[]
   donations                Donation[]
   donors                   Donor[]
   ExamGradeScale           ExamGradeScale[]
@@ -109,7 +108,6 @@ model Center {
   centerAdmin              User                      @relation("ManagedCenters", fields: [centerAdminUserId], references: [id])
   organization             Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   circles                  Circle[]
-  correctionRequests       CorrectionRequest[]
   donations                Donation[]
   donors                   Donor[]
   examNominationRequests   ExamNominationRequest[]
@@ -188,7 +186,6 @@ model Circle {
   weeklyScheduleSlots      CircleScheduleSlot[]
   center                   Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
   teacher                  User                      @relation("TeacherCircles", fields: [teacherId], references: [id])
-  correctionRequests       CorrectionRequest[]
   examAttempts             ExamAttempt[]             @relation("ExamAttemptCircle")
   examNominationRequests   ExamNominationRequest[]
   exams                    Exam[]
@@ -349,9 +346,6 @@ model User {
   centerSupervisorLinks                    CenterSupervisor[]           @relation("CenterSupervisorUser")
   managedCenters                           Center[]                     @relation("ManagedCenters")
   taughtCircles                            Circle[]                     @relation("TeacherCircles")
-  correctionRequestsApplied                CorrectionRequest[]          @relation("CorrectionRequestAppliedBy")
-  correctionRequestsCreated                CorrectionRequest[]          @relation("CorrectionRequestRequestedBy")
-  correctionRequestsReviewed               CorrectionRequest[]          @relation("CorrectionRequestReviewedBy")
   examAttemptCommitteeAssignments          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeAssignedBy")
   examAttemptCommitteeMemberships          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeUser")
   examAttemptsApproved                     ExamAttempt[]                @relation("ExamAttemptApprovedBy")
@@ -1040,39 +1034,6 @@ model SupervisorNote {
   @@index([category])
   @@index([status])
   @@map("supervisor_notes")
-}
-
-model CorrectionRequest {
-  id              Int                     @id @default(autoincrement())
-  organizationId  Int                     @map("organization_id")
-  centerId        Int                     @map("center_id")
-  circleId        Int                     @map("circle_id")
-  targetType      CorrectionTargetType    @map("target_type")
-  targetId        Int                     @map("target_id")
-  requestedById   Int                     @map("requested_by_id")
-  requestedByRole Role                    @map("requested_by_role")
-  reason          String
-  proposedChanges Json                    @map("proposed_changes")
-  currentSnapshot Json                    @map("current_snapshot")
-  status          CorrectionRequestStatus @default(PENDING)
-  reviewedById    Int?                    @map("reviewed_by_id")
-  reviewNote      String?                 @map("review_note") @db.VarChar(500)
-  reviewedAt      DateTime?               @map("reviewed_at")
-  appliedById     Int?                    @map("applied_by_id")
-  appliedAt       DateTime?               @map("applied_at")
-  createdAt       DateTime                @default(now()) @map("created_at")
-  updatedAt       DateTime                @updatedAt @map("updated_at")
-  appliedBy       User?                   @relation("CorrectionRequestAppliedBy", fields: [appliedById], references: [id])
-  center          Center                  @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  circle          Circle                  @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestedBy     User                    @relation("CorrectionRequestRequestedBy", fields: [requestedById], references: [id])
-  reviewedBy      User?                   @relation("CorrectionRequestReviewedBy", fields: [reviewedById], references: [id])
-
-  @@index([organizationId, status, createdAt])
-  @@index([targetType, targetId])
-  @@index([requestedById, createdAt])
-  @@map("correction_requests")
 }
 
 model QuranAyahIndex {
@@ -2768,20 +2729,6 @@ enum MatnProgressStatus {
   IN_PROGRESS
   COMPLETED
   PAUSED
-}
-
-enum CorrectionTargetType {
-  ATTENDANCE
-  FOLLOW_UP
-  EXAM_ATTEMPT
-}
-
-enum CorrectionRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  APPLIED
-  CANCELLED
 }
 
 enum ExamStatus {

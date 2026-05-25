@@ -17,6 +17,7 @@ class MemorizationSectionForm extends StatelessWidget {
   final ValueChanged<int> onRatingChanged;
   final String estimatedPages;
   final Widget actions;
+  final Widget? header;
 
   const MemorizationSectionForm({
     super.key,
@@ -32,18 +33,20 @@ class MemorizationSectionForm extends StatelessWidget {
     required this.onRatingChanged,
     required this.estimatedPages,
     required this.actions,
+    this.header,
   });
 
   @override
   Widget build(BuildContext context) {
     return FollowUpSectionShell(
       color: AppColors.secondaryLight,
-      icon: Icons.menu_book_rounded,
-      title: 'تسجيل الحفظ الجديد',
-      description: 'حدد المدى بدقة. أي نطاق غير منطقي سيتم رفضه تلقائياً.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (header != null) ...[
+            header!,
+            const SizedBox(height: 16),
+          ],
           const FollowUpFieldGroupLabel(
             label: 'نطاق الحفظ',
             icon: Icons.straighten_rounded,
@@ -148,6 +151,7 @@ class ReviewSectionForm extends StatelessWidget {
   final ValueChanged<int> onRatingChanged;
   final String estimatedPages;
   final Widget actions;
+  final Widget? header;
 
   const ReviewSectionForm({
     super.key,
@@ -163,18 +167,20 @@ class ReviewSectionForm extends StatelessWidget {
     required this.onRatingChanged,
     required this.estimatedPages,
     required this.actions,
+    this.header,
   });
 
   @override
   Widget build(BuildContext context) {
     return FollowUpSectionShell(
       color: AppColors.infoLight,
-      icon: Icons.autorenew_rounded,
-      title: 'تسجيل المراجعة',
-      description: 'تأكد أن آية النهاية لا تسبق آية البداية.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (header != null) ...[
+            header!,
+            const SizedBox(height: 16),
+          ],
           const FollowUpFieldGroupLabel(
             label: 'نطاق المراجعة',
             icon: Icons.straighten_rounded,
@@ -277,6 +283,7 @@ class MatnSectionForm extends StatelessWidget {
   final VoidCallback onCompletedSelected;
   final VoidCallback onPendingSelected;
   final Widget actions;
+  final Widget? header;
 
   const MatnSectionForm({
     super.key,
@@ -290,18 +297,20 @@ class MatnSectionForm extends StatelessWidget {
     required this.onCompletedSelected,
     required this.onPendingSelected,
     required this.actions,
+    this.header,
   });
 
   @override
   Widget build(BuildContext context) {
     return FollowUpSectionShell(
       color: AppColors.successLight,
-      icon: Icons.bookmark_added_rounded,
-      title: 'تسجيل المتون',
-      description: 'اكتب الدرس بوضوح ليتم إدراجه في السجل النهائي.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (header != null) ...[
+            header!,
+            const SizedBox(height: 16),
+          ],
           const FollowUpFieldGroupLabel(
             label: 'اسم المتن',
             icon: Icons.library_books_rounded,

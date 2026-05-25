@@ -63,6 +63,8 @@ class AttendanceController extends StateNotifier<AttendanceState> {
         );
       }
 
+      _ref.invalidate(todayAttendanceProvider(circleId));
+
       state = state.copyWith(
         isLoading: false,
         isOffline: false,
@@ -170,6 +172,8 @@ class AttendanceController extends StateNotifier<AttendanceState> {
         ),
       );
 
+      _ref.invalidate(todayAttendanceProvider(circleId));
+
       if (result == AttendanceSubmitResult.queuedOffline) {
         state = state.copyWith(
           isSubmitting: false,
@@ -201,6 +205,7 @@ class AttendanceController extends StateNotifier<AttendanceState> {
           },
           description: 'تحضير طلاب حلقة #$circleId',
         );
+        _ref.invalidate(todayAttendanceProvider(circleId));
         state = state.copyWith(
           isSubmitting: false,
           isOffline: true,

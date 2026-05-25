@@ -703,72 +703,6 @@ const paths: Record<string, PathItem> = {
       }
     })
   },
-  "/corrections": {
-    get: secured("Corrections", "List correction requests", {
-      parameters: [
-        authHeader,
-        { name: "status", in: "query", schema: { type: "string", enum: ["PENDING", "APPROVED", "REJECTED", "APPLIED", "CANCELLED"] } },
-        { name: "targetType", in: "query", schema: { type: "string", enum: ["ATTENDANCE", "FOLLOW_UP", "EXAM_ATTEMPT"] } },
-        { name: "centerId", in: "query", schema: { type: "integer", minimum: 1 } },
-        { name: "circleId", in: "query", schema: { type: "integer", minimum: 1 } },
-        ...paginationParams
-      ],
-      responses: {
-        "200": ok("Corrections list", { type: "object", additionalProperties: true }),
-        ...defaultSecuredResponses
-      }
-    }),
-    post: secured("Corrections", "Create correction request", {
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/CreateCorrectionRequest" }
-          }
-        }
-      },
-      responses: {
-        "201": ok("Created correction request", { type: "object", additionalProperties: true }),
-        "422": err("VALIDATION_FAILED"),
-        ...defaultSecuredResponses
-      }
-    })
-  },
-  "/corrections/{id}/approve": {
-    post: secured("Corrections", "Approve correction request", {
-      parameters: [authHeader, idParam],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/ApproveCorrectionRequest" }
-          }
-        }
-      },
-      responses: {
-        "200": ok("Updated correction request", { type: "object", additionalProperties: true }),
-        "409": err("VERSION_CONFLICT"),
-        ...defaultSecuredResponses
-      }
-    })
-  },
-  "/corrections/{id}/reject": {
-    post: secured("Corrections", "Reject correction request", {
-      parameters: [authHeader, idParam],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: { $ref: "#/components/schemas/RejectCorrectionRequest" }
-          }
-        }
-      },
-      responses: {
-        "200": ok("Updated correction request", { type: "object", additionalProperties: true }),
-        ...defaultSecuredResponses
-      }
-    })
-  },
   "/exams": {
     get: secured("Exams", "List exams", {
       parameters: [authHeader],
@@ -1172,7 +1106,6 @@ export const openApiDocument = {
     { name: "FollowUps" },
     { name: "Exams" },
     { name: "Quran" },
-    { name: "Corrections" },
     { name: "Library" },
     { name: "Finance" },
     { name: "Reports" },
@@ -1667,30 +1600,6 @@ export const openApiDocument = {
           toPage: { type: "integer" },
           pagesCount: { type: "integer" },
           source: { type: "string", enum: ["provider", "cache"] }
-        }
-      },
-      CreateCorrectionRequest: {
-        type: "object",
-        required: ["targetType", "targetId", "reason", "proposedChanges"],
-        properties: {
-          targetType: { type: "string", enum: ["ATTENDANCE", "FOLLOW_UP", "EXAM_ATTEMPT"] },
-          targetId: { type: "integer", minimum: 1 },
-          reason: { type: "string", minLength: 3, maxLength: 4000 },
-          proposedChanges: { type: "object", additionalProperties: true }
-        }
-      },
-      ApproveCorrectionRequest: {
-        type: "object",
-        properties: {
-          applyChanges: { type: "boolean", default: true },
-          reviewNote: { type: "string", maxLength: 500 }
-        }
-      },
-      RejectCorrectionRequest: {
-        type: "object",
-        required: ["reviewNote"],
-        properties: {
-          reviewNote: { type: "string", minLength: 3, maxLength: 500 }
         }
       },
       LibraryVisibility: { type: "string", enum: ["ORG", "CENTER", "CIRCLE"] },

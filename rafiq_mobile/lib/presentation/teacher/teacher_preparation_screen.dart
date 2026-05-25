@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
@@ -315,13 +314,8 @@ class _TeacherPreparationScreenState
 
     return Scaffold(
       backgroundColor: _kPageBg,
-      appBar: StandardAppBar(
+      appBar: const StandardAppBar(
         title: 'تحضيري',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_forward_ios_rounded,
-              size: 20, color: Colors.black87),
-          onPressed: () => context.pop(),
-        ),
       ),
       body: preparationAsync.when(
         loading: () =>

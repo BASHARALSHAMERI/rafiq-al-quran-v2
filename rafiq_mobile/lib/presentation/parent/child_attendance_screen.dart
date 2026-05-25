@@ -6,6 +6,7 @@ import '../../application/parent/parent_dashboard_provider.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/section_header.dart';
 
@@ -21,14 +22,10 @@ class ChildAttendanceScreen extends ConsumerWidget {
 
     final profile = state.childrenProfiles[cId];
     if (profile == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          title: const Text('سجل الحضور'),
-          centerTitle: false,
-          backgroundColor: const Color(0xFFF7F8F5),
-        ),
-        body: const PageStateView.loading(message: 'جاري تحميل سجل الحضور...'),
+      return const Scaffold(
+        backgroundColor: Color(0xFFF7F8F5),
+        appBar: StandardAppBar(title: 'سجل الحضور'),
+        body: PageStateView.loading(message: 'جاري تحميل سجل الحضور...'),
       );
     }
 
@@ -47,10 +44,7 @@ class ChildAttendanceScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('سجل الحضور'),
-        centerTitle: false,
-      ),
+      appBar: const StandardAppBar(title: 'سجل الحضور'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

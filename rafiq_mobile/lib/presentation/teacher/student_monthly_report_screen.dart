@@ -12,6 +12,7 @@ import '../shared/states/app_empty_state.dart';
 import '../shared/states/app_error_state.dart';
 import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class StudentMonthlyReportScreen extends ConsumerStatefulWidget {
   final int studentId;
@@ -158,10 +159,7 @@ class _StudentMonthlyReportScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('التقرير الشهري'),
-        centerTitle: false,
-      ),
+      appBar: const StandardAppBar(title: 'التقرير الشهري'),
       body: reportAsync.when(
         loading: () => const AppLoadingState(
           message: 'جار تحميل التقرير الشهري...',
