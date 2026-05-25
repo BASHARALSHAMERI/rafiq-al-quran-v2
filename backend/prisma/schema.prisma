@@ -392,6 +392,7 @@ model User {
   createdLibraryItems                      LibraryItem[]                @relation("LibraryItemCreatedBy")
   monthlyPlansAsStudent                    MonthlyPlan[]                @relation("MonthlyPlanStudent")
   monthlyPlansAsTeacher                    MonthlyPlan[]                @relation("MonthlyPlanTeacher")
+  monthlyPlansApproved                     MonthlyPlan[]                @relation("MonthlyPlanApprovedBy")
   notificationsCreated                     Notification[]               @relation("NotificationCreatedBy")
   notificationsReceived                    Notification[]               @relation("NotificationRecipient")
   createdParentProfiles                    ParentProfile[]              @relation("ParentProfileCreatedBy")
@@ -956,12 +957,15 @@ model FollowUpRecord {
   teacherId               Int                      @map("teacher_id")
   recordDate              DateTime                 @map("record_date") @db.Date
   type                    FollowUpType
+  /// @deprecated Legacy single-surah bridge for older mobile clients. Service (parseLegacySurahNumber) and mobile (student_profile_tabs, follow_up_widgets) still read this. Use fromSurah/toSurah for new writes. Remove in DB-CLEAN-4 after mobile migration confirmed.
   surah                   String?                  @db.VarChar(120)
   fromAyah                Int?                     @map("from_ayah")
   toAyah                  Int?                     @map("to_ayah")
   pagesCount              Decimal?                 @map("pages_count") @db.Decimal(5, 1)
   rating                  Int?
+  /// @deprecated Unstructured display fallback. Mobile reads this (student_profile_tabs). Use matnId FK to MatnCatalog for structured data. Remove in DB-CLEAN-4.
   matnName                String?                  @map("matn_name") @db.VarChar(120)
+  /// @deprecated Free-text mirror field. Mobile reads this (student_profile_tabs). No active enum link (MatnProgressStatus is orphaned). Remove in DB-CLEAN-4.
   matnStatus              String?                  @map("matn_status") @db.VarChar(50)
   notes                   String?                  @db.VarChar(500)
   createdAt               DateTime                 @default(now()) @map("created_at")
@@ -1526,6 +1530,7 @@ model TuitionPlan {
   @@map("tuition_plans")
 }
 
+/// @deprecated Not referenced by any active service or controller. Only appears in prisma/seed.ts for demo data. StudentFeeProfile (billing.service.ts) is the authoritative fee mechanism. Schedule removal in DB-CLEAN-4 after confirming no mobile/reporting dependency.
 model StudentTuitionAssignment {
   id            Int                     @id @default(autoincrement())
   studentId     Int
@@ -1581,9 +1586,11 @@ model Payment {
   receivedAt           DateTime        @default(now())
   createdAt            DateTime        @default(now())
   attachmentStorageKey String?         @map("attachment_storage_key") @db.VarChar(255)
+  /// DB-CLEAN precheck (rafiq_v2_clean_dev): 1 row has centerId IS NULL. Backfill and re-check before enforcing NOT NULL.
   centerId             Int?
   externalTransferRef  String?         @map("external_transfer_ref") @db.VarChar(120)
   idempotencyKey       String?         @db.VarChar(128)
+  /// DB-CLEAN precheck (rafiq_v2_clean_dev): 1 row has organizationId IS NULL. Backfill and re-check before enforcing NOT NULL.
   organizationId       Int?
   voucherId            Int?            @unique
   center               Center?         @relation(fields: [centerId], references: [id], onDelete: Restrict)
@@ -1756,6 +1763,7 @@ model Donation {
   paymentMethod        PaymentMethod
   purpose              String?         @db.VarChar(255)
   status               DonationStatus  @default(PLEDGED)
+  /// @deprecated Redundant with (status == PLEDGED). Actively kept in sync by donors.service.ts. No separate business logic should depend on this field alone. Remove in DB-CLEAN-4 only after donors.service.ts is updated to derive from status.
   isPledge             Boolean         @default(true)
   pledgeDueDate        DateTime?       @db.Date
   receivedDate         DateTime?       @db.Date
@@ -1898,6 +1906,12 @@ model AccountingAccount {
   assetCategoryAssetAccounts                   AssetCategory[]         @relation("AssetCategoryAssetAccount")
   assetCategoryDepreciationExpenseAccounts     AssetCategory[]         @relation("AssetCategoryDepreciationExpenseAccount")
   assetCategoryAccumulatedDepreciationAccounts AssetCategory[]         @relation("AssetCategoryAccumulatedDepreciationAccount")
+  financeSettingsDefaultCash                   FinanceSettings[]       @relation("FinanceSettingsDefaultCash")
+  financeSettingsDefaultBank                   FinanceSettings[]       @relation("FinanceSettingsDefaultBank")
+  financeSettingsDefaultStudentRevenue         FinanceSettings[]       @relation("FinanceSettingsDefaultStudentRevenue")
+  financeSettingsDefaultDonationRevenue        FinanceSettings[]       @relation("FinanceSettingsDefaultDonationRevenue")
+  financeSettingsDefaultPayrollExpense         FinanceSettings[]       @relation("FinanceSettingsDefaultPayrollExpense")
+  financeSettingsDefaultOperatingExpense       FinanceSettings[]       @relation("FinanceSettingsDefaultOperatingExpense")
   organization                                 Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id], onDelete: Restrict)
 
@@ -1923,7 +1937,10 @@ model JournalEntry {
   postedAt               DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
+  /// FK to FiscalPeriod resolved from entryDate at posting time. Nullable during backfill window; enforce NOT NULL after DB-CLEAN-1B backfill script confirms zero nulls.
+  fiscalPeriodId         Int?                    @map("fiscal_period_id")
   center                 Center?                 @relation(fields: [centerId], references: [id])
+  fiscalPeriod           FiscalPeriod?           @relation("JournalEntryFiscalPeriod", fields: [fiscalPeriodId], references: [id])
   lines                  JournalEntryLine[]
   expensePayments        ExpensePayment[]
   organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1937,6 +1954,7 @@ model JournalEntry {
   @@index([organizationId, status, entryDate])
   @@index([centerId, entryDate])
   @@index([postedById])
+  @@index([organizationId, fiscalPeriodId])
   @@map("journal_entries")
 }
 
@@ -2401,6 +2419,7 @@ model MonthlyPlan {
   reviewDailyRate   Decimal?          @map("review_daily_rate") @db.Decimal(5, 2)
   status            MonthlyPlanStatus @default(PENDING)
   approvedAt        DateTime?         @map("approved_at")
+  approvedById      Int?              @map("approved_by_id")
   notes             String?           @db.VarChar(500)
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -2409,8 +2428,10 @@ model MonthlyPlan {
   organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   student           User              @relation("MonthlyPlanStudent", fields: [studentId], references: [id], onDelete: Cascade)
   teacher           User              @relation("MonthlyPlanTeacher", fields: [teacherId], references: [id])
+  approvedBy        User?             @relation("MonthlyPlanApprovedBy", fields: [approvedById], references: [id])
 
   @@unique([studentId, circleId, month, year])
+  @@index([approvedById])
   @@index([circleId, month, year])
   @@index([organizationId, centerId, month, year])
   @@index([teacherId])
@@ -2724,6 +2745,7 @@ enum FollowUpRecordStatus {
   FINAL
 }
 
+/// @deprecated No model field in schema references this enum. Only echoed as free-text in FollowUpRecord.matn_status (also deprecated). Zero rows use any of these values in rafiq_v2_clean_dev. Candidate for removal in DB-CLEAN-4.
 enum MatnProgressStatus {
   NOT_STARTED
   IN_PROGRESS
@@ -2883,6 +2905,7 @@ enum FinanceMovementType {
   PAYROLL_PAYOUT
   REWARD_PAYOUT
   VOID_REVERSAL
+  /// @deprecated Zero rows use this value (rafiq_v2_clean_dev precheck). No active backend code references it. Was a one-time historical import marker. PostgreSQL enum value removal requires full enum recreation — defer to DB-CLEAN-4.
   LEGACY_BACKFILL
 }
 
@@ -3181,7 +3204,13 @@ model FinanceSettings {
   createdAt                        DateTime @default(now())
   updatedAt                        DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization                   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  defaultCashAccount             AccountingAccount? @relation("FinanceSettingsDefaultCash", fields: [defaultCashAccountId], references: [id])
+  defaultBankAccount             AccountingAccount? @relation("FinanceSettingsDefaultBank", fields: [defaultBankAccountId], references: [id])
+  defaultStudentRevenueAccount   AccountingAccount? @relation("FinanceSettingsDefaultStudentRevenue", fields: [defaultStudentRevenueAccountId], references: [id])
+  defaultDonationRevenueAccount  AccountingAccount? @relation("FinanceSettingsDefaultDonationRevenue", fields: [defaultDonationRevenueAccountId], references: [id])
+  defaultPayrollExpenseAccount   AccountingAccount? @relation("FinanceSettingsDefaultPayrollExpense", fields: [defaultPayrollExpenseAccountId], references: [id])
+  defaultOperatingExpenseAccount AccountingAccount? @relation("FinanceSettingsDefaultOperatingExpense", fields: [defaultOperatingExpenseAccountId], references: [id])
 
   @@map("finance_settings")
 }
@@ -3223,7 +3252,8 @@ model FiscalPeriod {
 
   fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  closedBy     User?        @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  closedBy       User?          @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  journalEntries JournalEntry[] @relation("JournalEntryFiscalPeriod")
 
   @@unique([fiscalYearId, periodNumber])
   @@index([organizationId, startDate, endDate])
