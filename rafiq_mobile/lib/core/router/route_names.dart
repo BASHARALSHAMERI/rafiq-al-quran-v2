@@ -76,7 +76,6 @@ abstract class RouteNames {
   static String halqaVisit(int id) => supervisorHalqaVisit(id);
   static const halqaVisitBase = supervisorHalqaVisitBase;
   static const attendance = teacherAttendance;
-  static const approvals = '/supervisor/approvals';
   static const childrenList = parentChildren;
   static String childDetail(String id) => parentChildDetail(id);
   static const homeNotifications = notifications;

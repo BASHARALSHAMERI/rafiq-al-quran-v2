@@ -107,23 +107,12 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
           icon: Icons.fact_check_rounded,
           color: StatColor.success,
         ),
-        MetricData(
-          title: 'اعتمادات معلقة',
-          value: '${metricsData?.pendingTasks ?? 0}',
-          icon: Icons.warning_amber_rounded,
-          color: StatColor.warning,
-        ),
       ],
       actions: [
         ActionData(
-          title: 'الاعتمادات',
-          icon: Icons.rule_folder_rounded,
-          highlighted: true,
-          onTap: () => context.push(RouteNames.approvals),
-        ),
-        ActionData(
           title: 'الحلقات',
           icon: Icons.groups_rounded,
+          highlighted: true,
           onTap: () => context.push(RouteNames.circles),
         ),
         ActionData(
