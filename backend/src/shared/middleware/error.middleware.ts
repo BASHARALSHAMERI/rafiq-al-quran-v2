@@ -26,7 +26,7 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      message: "Validation failed",
+      message: "بيانات الطلب غير صحيحة. يرجى مراجعة الحقول المطلوبة.",
       details: error.flatten()
     };
   }
@@ -40,7 +40,7 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 413,
       code: "PAYLOAD_TOO_LARGE",
-      message: "Request payload too large"
+      message: "حجم البيانات المرسلة كبير جداً. يرجى تقليل حجم الملف."
     };
   }
 
@@ -53,14 +53,14 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "INVALID_JSON",
-      message: "Invalid JSON body"
+      message: "صيغة البيانات المرسلة غير صحيحة."
     };
   }
 
   return {
     statusCode: 500,
     code: "INTERNAL_SERVER_ERROR",
-    message: "Internal server error"
+    message: "تعذر إتمام العملية. يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
   };
 };
 
