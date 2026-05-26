@@ -14,6 +14,7 @@ import '../../application/sync/sync_service.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../shared/widgets/dashboard_stat_card.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/role_home_layout.dart';
@@ -173,15 +174,17 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
         if (!context.mounted) {
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              count > 0
-                  ? 'تمت مزامنة $count عملية بنجاح.'
-                  : 'لا توجد بيانات معلقة للمزامنة.',
-            ),
-          ),
-        );
+        if (count > 0) {
+          AppSnackBar.success(
+            context,
+            'تمت مزامنة $count عملية بنجاح.',
+          );
+        } else {
+          AppSnackBar.info(
+            context,
+            'لا توجد بيانات معلقة للمزامنة.',
+          );
+        }
       },
       emptyTitle: 'لا توجد تحديثات',
       emptySubtitle: 'ستظهر هنا أهم التنبيهات الخاصة بالحلقات المكلف بها.',

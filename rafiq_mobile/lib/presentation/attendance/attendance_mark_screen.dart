@@ -6,6 +6,7 @@ import '../../application/attendance/attendance_controller.dart';
 import '../../application/attendance/attendance_state.dart';
 import '../../application/context/context_controller.dart';
 import '../../core/router/route_names.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../domain/entities/attendance.dart';
 import '../../core/theme/app_colors.dart';
 import '../shared/widgets/page_state_view.dart';
@@ -57,8 +58,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
 
     ref.listen<AttendanceState>(attendanceControllerProvider, (prev, next) {
       if (next.error != null && next.error != prev?.error) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(next.error!)));
+        AppSnackBar.error(context, next.error!);
       }
     });
 
@@ -212,19 +212,24 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                     onPressed: isLocked || att.isSubmitting
                         ? null
                         : () async {
-                            final messenger = ScaffoldMessenger.of(context);
                             final outcome =
                                 await controller.submit(circleId: circleId);
                             if (!context.mounted ||
                                 outcome == AttendanceSubmitOutcome.failed) {
                               return;
                             }
-                            final msg =
-                                outcome == AttendanceSubmitOutcome.queuedOffline
-                                    ? 'تم حفظ الحضور محلياً سيتم رفعه لاحقاً.'
-                                    : 'تم حفظ الحضور نهائياً ✓';
-                            messenger
-                                .showSnackBar(SnackBar(content: Text(msg)));
+                            if (outcome ==
+                                AttendanceSubmitOutcome.queuedOffline) {
+                              AppSnackBar.info(
+                                context,
+                                'تم حفظ الحضور محلياً وسيُرفع تلقائياً عند عودة الاتصال.',
+                              );
+                            } else {
+                              AppSnackBar.success(
+                                context,
+                                'تم حفظ الحضور بنجاح.',
+                              );
+                            }
                           },
                     icon: att.isSubmitting
                         ? const SizedBox.shrink()

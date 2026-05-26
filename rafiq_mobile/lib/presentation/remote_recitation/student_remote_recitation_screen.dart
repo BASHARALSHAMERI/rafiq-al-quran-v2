@@ -7,6 +7,7 @@ import '../../application/remote_recitation/remote_recitation_providers.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/remote_recitation_models.dart';
 import '../shared/widgets/enterprise_card.dart';
 import '../shared/widgets/page_state_view.dart';
@@ -122,7 +123,7 @@ class _StudentSlotsTab extends ConsumerWidget {
     if (slotsAsync.hasError && slotsPage == null) {
       return PageStateView.error(
         title: 'تعذر تحميل المواعيد',
-        message: '${slotsAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -244,7 +245,7 @@ class _StudentUpcomingTab extends ConsumerWidget {
     if (hasBlockingError) {
       return PageStateView.error(
         title: 'تعذر تحميل الجلسات القادمة',
-        message: '${requestedAsync.error ?? approvedAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -326,7 +327,7 @@ class _StudentHistoryTab extends ConsumerWidget {
     if (historyAsync.hasError && historyPage == null) {
       return PageStateView.error(
         title: 'تعذر تحميل السجل',
-        message: '${historyAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -724,35 +725,29 @@ Future<void> _bookSlot(BuildContext context, WidgetRef ref, int slotId) async {
         );
     ref.read(remoteRecitationRefreshProvider.notifier).state++;
     if (context.mounted) {
-      _showSnackBar(context, 'تم إرسال طلب الحجز بنجاح.');
+      AppSnackBar.success(context, 'تم إرسال طلب الحجز بنجاح.');
     }
   } catch (error) {
     if (context.mounted) {
-      _showSnackBar(context, 'تعذر إرسال طلب الحجز: $error');
+      AppSnackBar.error(context, 'تعذّر إرسال طلب الحجز. يرجى التحقق من الاتصال ثم أعد المحاولة.');
     }
   }
 }
 
 Future<void> _launchUrl(BuildContext context, String? rawUrl) async {
   if (rawUrl == null || rawUrl.trim().isEmpty) {
-    _showSnackBar(context, 'الرابط غير متاح بعد.');
+    AppSnackBar.warning(context, 'الرابط غير متاح بعد.');
     return;
   }
 
   final uri = Uri.tryParse(rawUrl);
   if (uri == null) {
-    _showSnackBar(context, 'الرابط غير صالح.');
+    AppSnackBar.warning(context, 'الرابط غير صالح.');
     return;
   }
 
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
-    _showSnackBar(context, 'تعذر فتح الرابط الخارجي.');
+    AppSnackBar.error(context, 'تعذّر فتح الرابط الخارجي. تحقّق من وجود تطبيق مناسب.');
   }
-}
-
-void _showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
 }

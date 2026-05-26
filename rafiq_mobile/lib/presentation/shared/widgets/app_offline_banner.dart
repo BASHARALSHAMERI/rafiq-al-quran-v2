@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_spacing.dart';
+import '../../../core/theme/app_colors.dart';
+
 class AppOfflineBanner extends StatelessWidget {
   final String message;
 
@@ -13,21 +16,24 @@ class AppOfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: Colors.amber.shade100,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      color: AppColors.warningLight.withValues(alpha: 0.12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.wifi_off_rounded,
             size: 18,
-            color: Colors.amber.shade900,
+            color: AppColors.warningLight,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(
-                color: Colors.amber.shade900,
+              style: const TextStyle(
+                color: AppColors.warningLight,
                 fontWeight: FontWeight.w600,
               ),
             ),
