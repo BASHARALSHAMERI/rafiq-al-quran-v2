@@ -73,41 +73,41 @@ export async function runStaffShiftReminderJob() {
       }
     }
 
+    const targetUserIds = Array.from(scheduleByUser.values())
+      .filter((s) => s.user.role !== Role.SUPERVISOR)
+      .map((s) => s.userId);
+
+    const [allAttendances, allExcuses, allLeaves] = await Promise.all([
+      targetUserIds.length > 0 ? prisma.staffAttendanceRecord.findMany({
+        where: { attendanceDate: today, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffExcuseRequest.findMany({
+        where: { absenceDate: today, status: ExcuseRequestStatus.APPROVED, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffLeaveRequest.findMany({
+        where: { status: LeaveRequestStatus.LEAVE_APPROVED, startDate: { lte: today }, endDate: { gte: today }, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([])
+    ]);
+
+    const attendanceSet = new Set(allAttendances.map(a => a.userId));
+    const excuseSet = new Set(allExcuses.map(e => e.userId));
+    const leaveSet = new Set(allLeaves.map(l => l.userId));
+
     for (const schedule of scheduleByUser.values()) {
       if (schedule.user.role === Role.SUPERVISOR) {
         continue;
       }
 
-      const [attendance, approvedExcuse, approvedLeave, effectiveShift] = await Promise.all([
-        prisma.staffAttendanceRecord.findUnique({
-          where: {
-            userId_attendanceDate: {
-              userId: schedule.userId,
-              attendanceDate: today
-            }
-          }
-        }),
-        prisma.staffExcuseRequest.findFirst({
-          where: {
-            userId: schedule.userId,
-            absenceDate: today,
-            status: ExcuseRequestStatus.APPROVED
-          },
-          select: { id: true }
-        }),
-        prisma.staffLeaveRequest.findFirst({
-          where: {
-            userId: schedule.userId,
-            status: LeaveRequestStatus.LEAVE_APPROVED,
-            startDate: { lte: today },
-            endDate: { gte: today }
-          },
-          select: { id: true }
-        }),
-        effectiveShiftService.resolveEffectiveShift(schedule.userId, now, schedule.centerId, org.id)
-      ]);
+      if (attendanceSet.has(schedule.userId) || excuseSet.has(schedule.userId) || leaveSet.has(schedule.userId)) {
+        continue;
+      }
 
-      if (!effectiveShift || attendance || approvedExcuse || approvedLeave) {
+      const effectiveShift = await effectiveShiftService.resolveEffectiveShift(schedule.userId, now, schedule.centerId, org.id);
+
+      if (!effectiveShift) {
         continue;
       }
 

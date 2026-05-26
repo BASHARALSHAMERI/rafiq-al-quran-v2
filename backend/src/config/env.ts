@@ -48,7 +48,7 @@ const envSchema = z.object({
     .optional(),
   ENABLE_COMPRESSION: z
     .enum(["true", "false"])
-    .default("false")
+    .default("true")
     .transform((value) => value === "true"),
   BACKGROUND_JOBS_ENABLED: optionalBool(),
   FINANCE_V2_READ_ENABLED: optionalBool(),

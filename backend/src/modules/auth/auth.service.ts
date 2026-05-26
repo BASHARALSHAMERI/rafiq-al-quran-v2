@@ -212,8 +212,10 @@ export const authService = {
 
         const resetUrl = buildResetPasswordUrl(resetToken);
 
-        // Send Email
-        await emailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
+        // Send Email asynchronously without blocking
+        emailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl).catch((error) => {
+          logger.error({ error, userId: user.id }, "Background email sending failed");
+        });
 
         if (env.NODE_ENV !== "production") {
           logger.info(
