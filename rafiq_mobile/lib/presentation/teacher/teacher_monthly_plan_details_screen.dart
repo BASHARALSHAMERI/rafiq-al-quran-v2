@@ -6,6 +6,7 @@ import '../../application/teacher/teacher_panel_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../core/utils/period_label_formatter.dart';
 import '../../data/models/teacher_panel_dtos.dart';
 import '../shared/states/app_error_state.dart';
@@ -46,9 +47,7 @@ class _TeacherMonthlyPlanDetailsScreenState
   ) async {
     if (!_isValidOrderedRange(result.hifzRange) ||
         !_isValidOrderedRange(result.reviewRange)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تأكد من صحة نطاق الآيات قبل الحفظ.')),
-      );
+      AppSnackBar.warning(context, 'تأكد من صحة نطاق الآيات قبل الحفظ.');
       return;
     }
 
@@ -76,13 +75,12 @@ class _TeacherMonthlyPlanDetailsScreenState
         teacherMonthlyPlansProvider((month: plan.month, year: plan.year)),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ تعديل الخطة الشهرية.')),
-      );
+      AppSnackBar.success(context, 'تم حفظ تعديل الخطة الشهرية.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر حفظ التعديلات: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر حفظ التعديلات. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -103,13 +101,12 @@ class _TeacherMonthlyPlanDetailsScreenState
         teacherMonthlyPlansProvider((month: plan.month, year: plan.year)),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم اعتماد الخطة بنجاح.')),
-      );
+      AppSnackBar.success(context, 'تم اعتماد الخطة بنجاح.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر اعتماد الخطة: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر اعتماد الخطة. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
