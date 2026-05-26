@@ -12,6 +12,7 @@ import '../../application/org/org_providers.dart';
 import '../../application/supervisor/supervisor_visit_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
 import '../../data/models/supervisor_visit_dtos.dart';
 import '../shared/states/app_empty_state.dart';
@@ -145,12 +146,11 @@ class _SupervisorVisitLifecycleScreenState
         _isStarting = false;
       });
       _startTimer(log.startedAt);
-      _showSnack('تم بدء الزيارة الإشرافية.', AppColors.successLight);
+      AppSnackBar.success(context, 'تم بدء الزيارة الإشرافية.');
     } catch (error) {
       if (!mounted) return;
       setState(() => _isStarting = false);
-      _showSnack(
-          'تعذر بدء الزيارة: ${_readError(error)}', AppColors.errorLight);
+      AppSnackBar.error(context, 'تعذر بدء الزيارة: ${_readError(error)}');
     }
   }
 
@@ -162,9 +162,9 @@ class _SupervisorVisitLifecycleScreenState
       (item) => item['key'] == _attendanceTaskKey && item['checked'] == true,
     );
     if (!attendanceTaskCompleted) {
-      _showSnack(
+      AppSnackBar.warning(
+        context,
         'اعتمد مهمة الحضور من القائمة قبل إنهاء الزيارة.',
-        AppColors.warningLight,
       );
       return;
     }
@@ -188,23 +188,12 @@ class _SupervisorVisitLifecycleScreenState
         _visitLog = updated;
         _isEnding = false;
       });
-      _showSnack('تم إنهاء الزيارة وحفظ التقرير.', AppColors.successLight);
+      AppSnackBar.success(context, 'تم إنهاء الزيارة وحفظ التقرير.');
     } catch (error) {
       if (!mounted) return;
       setState(() => _isEnding = false);
-      _showSnack(
-          'تعذر إنهاء الزيارة: ${_readError(error)}', AppColors.errorLight);
+      AppSnackBar.error(context, 'تعذر إنهاء الزيارة: ${_readError(error)}');
     }
-  }
-
-  void _showSnack(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   String _readError(Object error) {
@@ -215,7 +204,7 @@ class _SupervisorVisitLifecycleScreenState
         if (message is String && message.trim().isNotEmpty) return message;
       }
     }
-    return error.toString();
+    return 'تحقق من الاتصال ثم أعد المحاولة.';
   }
 
   @override

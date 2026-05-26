@@ -12,6 +12,7 @@ import '../../application/supervisor/supervisor_visit_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
 import '../../data/models/supervisor_visit_dtos.dart';
 import '../shared/states/app_empty_state.dart';
@@ -81,14 +82,13 @@ class _SupervisorTodayVisitsScreenState
           extra: {'log': log, 'planItemId': item.id},
         );
       } else {
-        _showSnack('تم بدء زيارة المركز الطارئة ضمن سجل اليوم.',
-            AppColors.successLight);
+        AppSnackBar.success(
+            context, 'تم بدء زيارة المركز الطارئة ضمن سجل اليوم.');
       }
     } catch (error) {
       if (!mounted) return;
       setState(() => _startingPlanItemId = null);
-      _showSnack(
-          'تعذر بدء الزيارة: ${_readError(error)}', AppColors.errorLight);
+      AppSnackBar.error(context, 'تعذر بدء الزيارة: ${_readError(error)}');
     }
   }
 
@@ -141,19 +141,9 @@ class _SupervisorTodayVisitsScreenState
     } catch (error) {
       if (!mounted) return;
       setState(() => _startingEmergency = false);
-      _showSnack('تعذر بدء الزيارة الطارئة: ${_readError(error)}',
-          AppColors.errorLight);
+      AppSnackBar.error(
+          context, 'تعذر بدء الزيارة الطارئة: ${_readError(error)}');
     }
-  }
-
-  void _showSnack(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   String _readError(Object error) {
@@ -164,7 +154,7 @@ class _SupervisorTodayVisitsScreenState
         if (message is String && message.trim().isNotEmpty) return message;
       }
     }
-    return error.toString();
+    return 'تحقق من الاتصال ثم أعد المحاولة.';
   }
 
   @override
