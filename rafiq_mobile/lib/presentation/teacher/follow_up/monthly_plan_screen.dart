@@ -8,6 +8,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../../../core/utils/data_parsing_helper.dart';
 import '../../../../core/utils/period_label_formatter.dart';
 import '../../../../data/models/teacher_panel_dtos.dart';
@@ -56,19 +57,17 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
           );
       ref.invalidate(teacherMonthlyPlansProvider(_period));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            automatic
-                ? 'تم اقتراح ${result.generated} خطة تلقائياً للشهر القادم.'
-                : 'تم توليد ${result.generated} خطة مع المحافظة على ${result.preserved} خطة معدلة أو معتمدة.',
-          ),
-        ),
+      AppSnackBar.success(
+        context,
+        automatic
+            ? 'تم اقتراح ${result.generated} خطة تلقائياً للشهر القادم.'
+            : 'تم توليد ${result.generated} خطة مع المحافظة على ${result.preserved} خطة معدلة أو معتمدة.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر توليد الخطط: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر توليد الخطط. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -96,13 +95,12 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
           );
       ref.invalidate(teacherMonthlyPlansProvider(_period));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم اعتماد $approved خطة بنجاح.')),
-      );
+      AppSnackBar.success(context, 'تم اعتماد $approved خطة بنجاح.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر اعتماد جميع الخطط: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر اعتماد جميع الخطط. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {

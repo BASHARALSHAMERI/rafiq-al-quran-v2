@@ -9,6 +9,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../../../data/models/follow_up_dtos.dart';
 import '../providers/follow_up_providers.dart';
 import 'student_follow_up_forms.dart';
@@ -91,7 +92,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
 
     final now = DateTime.now();
     final period = (month: now.month, year: now.year);
-    final plansList = ref.watch(teacherMonthlyPlansProvider(period)).valueOrNull;
+    final plansList =
+        ref.watch(teacherMonthlyPlansProvider(period)).valueOrNull;
 
     TeacherMonthlyPlanDto? plan;
     if (plansList != null) {
@@ -113,7 +115,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         attendanceAsync.isLoading &&
         attendanceAsync.valueOrNull == null;
 
-    final hasAttendanceError = attendanceAsync != null && attendanceAsync.hasError;
+    final hasAttendanceError =
+        attendanceAsync != null && attendanceAsync.hasError;
 
     final attendanceRecords = attendanceAsync?.valueOrNull;
     AttendanceRecord? studentRecord;
@@ -132,8 +135,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     final bool isExcused = studentRecord?.status == AttendanceStatus.excused;
 
     final bool blocksInteraction = !widget.readOnly && (isAbsent || isExcused);
-    final bool blocksFinalRecord =
-        !widget.readOnly && (circleId == null || !hasConfirmedAttendance || isAbsent || isExcused);
+    final bool blocksFinalRecord = !widget.readOnly &&
+        (circleId == null || !hasConfirmedAttendance || isAbsent || isExcused);
     final bool blocksDraft = !widget.readOnly && (isAbsent || isExcused);
 
     if (circleId != null && isAttendanceLoading) {
@@ -154,7 +157,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           120,
         ),
         children: [
-          _buildCompactHeaderRow(FollowUpSessionSection.memorization, plan, records),
+          _buildCompactHeaderRow(
+              FollowUpSessionSection.memorization, plan, records),
           const SizedBox(height: 14),
           _buildCompactHeaderRow(FollowUpSessionSection.review, plan, records),
           const SizedBox(height: 14),
@@ -187,9 +191,11 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           FollowUpNoticeBanner(
             color: AppColors.errorLight,
             title: 'تعذر التحقق من حالة الحضور والتحضير اليوم',
-            message: 'يمكنك إدخال البيانات وحفظها كمسودة، لكن اعتماد المتابعة النهائي يحتاج تحقق الحضور أولاً.',
+            message:
+                'يمكنك إدخال البيانات وحفظها كمسودة، لكن اعتماد المتابعة النهائي يحتاج تحقق الحضور أولاً.',
             action: OutlinedButton.icon(
-              onPressed: () => ref.invalidate(todayAttendanceProvider(circleId.toString())),
+              onPressed: () =>
+                  ref.invalidate(todayAttendanceProvider(circleId.toString())),
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('إعادة المحاولة'),
             ),
@@ -199,21 +205,24 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           const FollowUpNoticeBanner(
             color: AppColors.warningLight,
             title: 'تنبيه: لم يتم تحضير الطالب اليوم',
-            message: 'يمكنك حفظ العمل كمسودة الآن، ويجب تسجيل حضور الطالب قبل اعتماد المتابعة النهائي.',
+            message:
+                'يمكنك حفظ العمل كمسودة الآن، ويجب تسجيل حضور الطالب قبل اعتماد المتابعة النهائي.',
           ),
           const SizedBox(height: 14),
         ] else if (isAbsent) ...[
           const FollowUpNoticeBanner(
             color: AppColors.errorLight,
             title: 'تنبيه: الطالب مسجل غائب اليوم',
-            message: 'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب.',
+            message:
+                'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب.',
           ),
           const SizedBox(height: 14),
         ] else if (isExcused) ...[
           const FollowUpNoticeBanner(
             color: AppColors.errorLight,
             title: 'تنبيه: الطالب مسجل غائب بعذر اليوم',
-            message: 'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب بعذر.',
+            message:
+                'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب بعذر.',
           ),
           const SizedBox(height: 14),
         ],
@@ -278,9 +287,11 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       return null;
     }
 
-    String formatPlanRange(int? fromSurah, int? fromAyah, int? toSurah, int? toAyah) {
+    String formatPlanRange(
+        int? fromSurah, int? fromAyah, int? toSurah, int? toAyah) {
       if (fromSurah == null) return 'غير محددة';
-      final fromSurahName = QuranData.findByNumber(fromSurah)?.name ?? '$fromSurah';
+      final fromSurahName =
+          QuranData.findByNumber(fromSurah)?.name ?? '$fromSurah';
       if (toSurah == null || toSurah == fromSurah) {
         if (fromAyah != null && toAyah != null) {
           return '$fromSurahName ($fromAyah-$toAyah)';
@@ -393,7 +404,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       case FollowUpSessionSection.memorization:
         return MemorizationSectionForm(
           key: const ValueKey('memorization'),
-          header: _buildCompactHeaderRow(FollowUpSessionSection.memorization, plan, records),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.memorization, plan, records),
           fromSurah: _newFromSurah,
           toSurah: _newToSurah,
           fromAyahController: _newFromAyahCtrl,
@@ -443,7 +455,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       case FollowUpSessionSection.review:
         return ReviewSectionForm(
           key: const ValueKey('review'),
-          header: _buildCompactHeaderRow(FollowUpSessionSection.review, plan, records),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.review, plan, records),
           fromSurah: _reviewFromSurah,
           toSurah: _reviewToSurah,
           fromAyahController: _reviewFromAyahCtrl,
@@ -493,7 +506,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       case FollowUpSessionSection.matn:
         return MatnSectionForm(
           key: const ValueKey('matn'),
-          header: _buildCompactHeaderRow(FollowUpSessionSection.matn, plan, records),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.matn, plan, records),
           selectedMatn: _selectedMatn,
           lessonController: _matnLessonCtrl,
           notesController: _matnNotesCtrl,
@@ -581,8 +595,9 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed:
-              draftLocked ? null : () => _submit(section, _SubmissionMode.draft),
+          onPressed: draftLocked
+              ? null
+              : () => _submit(section, _SubmissionMode.draft),
           style: OutlinedButton.styleFrom(
             foregroundColor: accent,
             side: BorderSide(color: accent.withValues(alpha: 0.4)),
@@ -668,15 +683,11 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            mode == _SubmissionMode.draft
-                ? 'تم حفظ المسودة.'
-                : 'تم حفظ المتابعة بنجاح.',
-          ),
-          backgroundColor: AppColors.successLight,
-        ),
+      AppSnackBar.success(
+        context,
+        mode == _SubmissionMode.draft
+            ? 'تم حفظ المسودة.'
+            : 'تم حفظ المتابعة بنجاح.',
       );
     } catch (error) {
       if (!mounted) {
@@ -689,12 +700,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           _friendlyError(error),
         ];
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_friendlyError(error)),
-          backgroundColor: AppColors.errorLight,
-        ),
-      );
+      AppSnackBar.error(context, _friendlyError(error));
     }
   }
 
@@ -870,8 +876,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
   }
 
   String _friendlyError(Object error) {
-    final text = error.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty ? 'تعذر حفظ المتابعة الآن.' : text;
+    return 'تعذر حفظ المتابعة الآن. يرجى المحاولة مرة أخرى.';
   }
 }
 

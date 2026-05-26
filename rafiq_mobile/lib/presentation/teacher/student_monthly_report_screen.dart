@@ -6,6 +6,7 @@ import '../../application/teacher/teacher_panel_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../core/utils/period_label_formatter.dart';
 import '../../core/utils/report_export_helper.dart';
 import '../shared/states/app_empty_state.dart';
@@ -78,19 +79,17 @@ class _StudentMonthlyReportScreenState
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            shareAfterDownload ? 'تمت مشاركة التقرير.' : 'تم فتح التقرير.',
-          ),
-        ),
+      AppSnackBar.success(
+        context,
+        shareAfterDownload ? 'تمت مشاركة التقرير.' : 'تم فتح التقرير.',
       );
     } catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تصدير التقرير: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر تصدير التقرير. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
