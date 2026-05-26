@@ -229,7 +229,7 @@ class _SupervisorVisitLifecycleScreenState
         ),
         error: (error, _) => AppEmptyState(
           title: 'تعذر تحميل الحلقة',
-          subtitle: error.toString(),
+          subtitle: 'تحقق من الاتصال ثم أعد المحاولة.',
           icon: Icons.error_outline_rounded,
           actionLabel: 'إعادة المحاولة',
           onAction: () => ref.invalidate(orgCirclesProvider(centerId)),

@@ -10,6 +10,7 @@ import '../../application/library/library_controller.dart';
 import '../../core/config/env_config.dart';
 import '../../core/enums/user_role.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/library_dtos.dart';
 import '../shared/providers/current_user_role_provider.dart';
 import '../shared/states/app_empty_state.dart';
@@ -100,17 +101,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
 
     if (path == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذر تنزيل الملف أو حفظه محليًا.'),
-        ),
+      AppSnackBar.error(
+        context,
+        'تعذّر تنزيل الملف. يرجى التحقق من الاتصال ثم أعد المحاولة.',
       );
       return;
     }
 
     if (!openAfterDownload) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم حفظ الملف: ${item.fileName}')),
+      AppSnackBar.success(
+        context,
+        'تم حفظ الملف بنجاح.',
       );
       return;
     }
@@ -121,20 +122,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
 
     if (result.type == ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم فتح ${item.fileName}')),
+      AppSnackBar.success(
+        context,
+        'تم فتح الملف بنجاح.',
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result.message.trim().isEmpty
-              ? 'تم تنزيل الملف، لكن لم يتم العثور على تطبيق مناسب لفتحه.'
-              : result.message,
-        ),
-      ),
+    AppSnackBar.warning(
+      context,
+      result.message.trim().isEmpty
+          ? 'تم تنزيل الملف، لكن لم يُعثر على تطبيق مناسب لفتحه.'
+          : 'تعذّر فتح الملف. يرجى التحقق من وجود تطبيق مناسب.',
     );
   }
 

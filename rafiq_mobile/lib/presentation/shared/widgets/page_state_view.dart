@@ -10,6 +10,7 @@ class PageStateView extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final _PageStateVariant _variant;
 
   const PageStateView({
     super.key,
@@ -18,7 +19,7 @@ class PageStateView extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
-  });
+  }) : _variant = _PageStateVariant.generic;
 
   const PageStateView.empty({
     super.key,
@@ -26,7 +27,8 @@ class PageStateView extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
-  }) : icon = Icons.inbox_outlined;
+  })  : icon = Icons.inbox_outlined,
+        _variant = _PageStateVariant.empty;
 
   const PageStateView.error({
     super.key,
@@ -34,34 +36,60 @@ class PageStateView extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
-  }) : icon = Icons.error_outline_rounded;
+  })  : icon = Icons.error_outline_rounded,
+        _variant = _PageStateVariant.error;
 
   const PageStateView.loading({
     super.key,
     this.title = 'جارٍ تحميل البيانات',
     this.message = 'يرجى الانتظار أثناء تجهيز المحتوى.',
   })  : icon = Icons.hourglass_top_rounded,
+        _variant = _PageStateVariant.loading,
         actionLabel = null,
         onAction = null;
+
+  Color _iconContainerColor() {
+    return switch (_variant) {
+      _PageStateVariant.error => AppColors.errorLight.withValues(alpha: 0.10),
+      _PageStateVariant.empty => AppColors.textSecondaryLight.withValues(alpha: 0.08),
+      _ => AppColors.primaryLight.withValues(alpha: 0.08),
+    };
+  }
+
+  Color _iconColor(BuildContext context) {
+    return switch (_variant) {
+      _PageStateVariant.error => AppColors.errorLight,
+      _PageStateVariant.empty => AppColors.textSecondaryLight,
+      _ => Theme.of(context).colorScheme.primary,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final isLoading = actionLabel == null &&
-        onAction == null &&
-        icon == Icons.hourglass_top_rounded;
-
-    if (isLoading) {
+    if (_variant == _PageStateVariant.loading) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 12),
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppColors.primaryLight,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             Text(title, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(message, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondaryLight,
+              ),
+            ),
           ],
         ),
       );
@@ -76,13 +104,13 @@ class PageStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.08),
+                color: _iconContainerColor(),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
                 icon,
                 size: 36,
-                color: theme.colorScheme.primary,
+                color: _iconColor(context),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -115,3 +143,5 @@ class PageStateView extends StatelessWidget {
     );
   }
 }
+
+enum _PageStateVariant { generic, empty, error, loading }
