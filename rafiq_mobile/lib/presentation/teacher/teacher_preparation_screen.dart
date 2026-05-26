@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/teacher_panel_dtos.dart';
 import '../shared/states/app_empty_state.dart';
 import '../shared/states/app_error_state.dart';
@@ -100,23 +101,13 @@ class _TeacherPreparationScreenState
       await _refresh();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: _kGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Row(children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-          const SizedBox(width: 12),
-          Text(
-            isCheckIn ? 'تم تسجيل حضورك بنجاح' : 'تم تسجيل انصرافك بنجاح',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w700),
-          ),
-        ]),
-      ));
+      AppSnackBar.success(
+        context,
+        isCheckIn ? 'تم تسجيل حضورك بنجاح' : 'تم تسجيل انصرافك بنجاح',
+      );
     } catch (error) {
       if (!mounted) return;
-      String message = error.toString();
+      String message = 'تعذر إتمام العملية. تحقق من الاتصال ثم أعد المحاولة.';
       if (error is DioException && error.response?.data != null) {
         final data = error.response!.data;
         if (data is Map && data['message'] != null) {
@@ -127,13 +118,7 @@ class _TeacherPreparationScreenState
           message = data['error']['message'];
         }
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: Colors.red.shade700,
-        content: Text(
-          'تعذر تنفيذ العملية: $message',
-          style: const TextStyle(color: Colors.white),
-        ),
-      ));
+      AppSnackBar.error(context, 'تعذر تنفيذ العملية: $message');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -187,27 +172,13 @@ class _TeacherPreparationScreenState
       await _refresh();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: _kGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: const Row(children: [
-          Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-          SizedBox(width: 12),
-          Text(
-            'تم إرسال طلب العذر بنجاح',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-          ),
-        ]),
-      ));
+      AppSnackBar.success(context, 'تم إرسال طلب العذر بنجاح');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: _kRed,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text('تعذر إرسال الطلب: $error'),
-      ));
+      AppSnackBar.error(
+        context,
+        'تعذر إرسال الطلب. يرجى المحاولة مرة أخرى.',
+      );
     } finally {
       noteController.dispose();
       if (mounted) setState(() => _isRequestingExcuse = false);
@@ -271,27 +242,13 @@ class _TeacherPreparationScreenState
       await _refresh();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: _kGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: const Row(children: [
-          Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-          SizedBox(width: 12),
-          Text(
-            'تم إرسال طلب الإجازة بنجاح',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-          ),
-        ]),
-      ));
+      AppSnackBar.success(context, 'تم إرسال طلب الإجازة بنجاح');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        backgroundColor: _kRed,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text('تعذر إرسال طلب الإجازة: $error'),
-      ));
+      AppSnackBar.error(
+        context,
+        'تعذر إرسال طلب الإجازة. يرجى المحاولة مرة أخرى.',
+      );
     } finally {
       reasonController.dispose();
       startDateController.dispose();
@@ -1406,16 +1363,16 @@ String _fmtTime(DateTime? value) {
 bool _isWithinShift(TeacherEffectiveShiftDto? shift) {
   if (shift == null) return true; // No shift defined, allow check-in
   final now = DateTime.now();
-  
+
   // Add 30 mins grace period before and after
   final start = shift.start.subtract(const Duration(minutes: 30));
   final end = shift.end.add(const Duration(minutes: 30));
-  
+
   // Normalize dates to today for comparison if they are only times
   final nowTime = now.hour * 60 + now.minute;
   final startTime = start.hour * 60 + start.minute;
   final endTime = end.hour * 60 + end.minute;
-  
+
   return nowTime >= startTime && nowTime <= endTime;
 }
 
