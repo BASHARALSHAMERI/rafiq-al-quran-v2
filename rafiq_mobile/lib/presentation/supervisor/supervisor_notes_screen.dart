@@ -9,6 +9,7 @@ import '../../application/supervisor/supervisor_notes_controller.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
 
 import '../shared/states/app_empty_state.dart';
@@ -50,15 +51,7 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
 
   Future<void> _handleSubmit(List<OrgCircleDto> circles) async {
     if (_content.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('يرجى كتابة الملاحظة'),
-          backgroundColor: AppColors.errorLight,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md)),
-        ),
-      );
+      AppSnackBar.warning(context, 'يرجى كتابة الملاحظة');
       return;
     }
 
@@ -84,15 +77,7 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
           );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('تم حفظ الملاحظة بنجاح'),
-          backgroundColor: AppColors.successLight,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md)),
-        ),
-      );
+      AppSnackBar.success(context, 'تم حفظ الملاحظة بنجاح');
       setState(() {
         _showForm = false;
         _content = '';
@@ -104,13 +89,7 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
       if (!mounted) return;
       final error = ref.read(supervisorNotesControllerProvider).actionError ??
           'تعذر الحفظ';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: AppColors.errorLight,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.error(context, error);
     }
   }
 
