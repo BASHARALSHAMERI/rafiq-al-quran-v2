@@ -987,7 +987,6 @@ model FollowUpRecord {
   @@index([circleId, recordDate])
   @@index([status, recordDate])
   @@index([matnId])
-  @@index([teacherId])
   @@map("follow_up_records")
 }
 
@@ -2294,8 +2293,6 @@ model Notification {
 
   @@index([recipientUserId, isRead, createdAt])
   @@index([organizationId, createdAt])
-  @@index([centerId])
-  @@index([circleId])
   @@map("notifications")
 }
 
