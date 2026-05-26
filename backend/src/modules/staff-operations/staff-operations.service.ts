@@ -366,7 +366,10 @@ export const staffOperationsService = {
     scope: ScopeContext,
     query: { date?: string; page: number; limit: number }
   ) {
-    const targetDate = query.date ? toStartOfDay(query.date) : toStartOfDay(new Date());
+    const policy = await attendancePolicyService.getPolicy(scope.organizationId);
+    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const dateInput = query.date ? new Date(query.date) : new Date();
+    const targetDate = getAttendanceDateForTimeZone(dateInput, timezone);
     const skip = (query.page - 1) * query.limit;
 
     let whereClause: Prisma.StaffAttendanceRecordWhereInput = {
@@ -898,12 +901,14 @@ export const staffOperationsService = {
       throw new AppError("لا يوجد دوام محدد لهذا اليوم", 409, undefined, "NO_SHIFT");
     }
 
-    if (now < effectiveShift.start) {
-      throw new AppError("لا يمكن تسجيل الحضور قبل بداية وقت الدوام", 409, undefined, "BEFORE_SHIFT_START");
+    const earlyCheckInCutoff = new Date(effectiveShift.start.getTime() - 60 * 60000);
+    if (now < earlyCheckInCutoff) {
+      throw new AppError("لا يمكن تسجيل الحضور قبل بداية وقت الدوام بأكثر من ساعة", 409, undefined, "BEFORE_SHIFT_START");
     }
 
-    if (now > effectiveShift.end) {
-      throw new AppError("لا يمكن تسجيل الحضور بعد نهاية وقت الدوام", 409, undefined, "AFTER_SHIFT_END");
+    const lateCheckInCutoff = new Date(effectiveShift.end.getTime() + 4 * 60 * 60000);
+    if (now > lateCheckInCutoff) {
+      throw new AppError("لقد انتهى وقت الوردية بفترة طويلة، لا يمكن تسجيل الحضور الآن", 409, undefined, "AFTER_SHIFT_END");
     }
 
     const geoCheck = serializeGeoCheck({
@@ -1043,13 +1048,12 @@ export const staffOperationsService = {
       throw new AppError("لا يوجد دوام محدد لهذا اليوم", 409, undefined, "NO_SHIFT");
     }
 
-    const shiftDurationMinutes = minutesBetween(effectiveShift.end, effectiveShift.start);
     const minimumCheckOutAt = new Date(
-      effectiveShift.start.getTime() + Math.floor(shiftDurationMinutes / 2) * 60_000
+      effectiveShift.start.getTime() + 10 * 60_000
     );
 
     if (now < minimumCheckOutAt) {
-      throw new AppError("لا يمكن تسجيل الانصراف قبل مرور نصف مدة الدوام", 409, undefined, "BEFORE_MINIMUM_CHECKOUT");
+      throw new AppError("لا يمكن تسجيل الانصراف فوراً، يجب مرور 10 دقائق على الأقل من بدء الدوام", 409, undefined, "BEFORE_MINIMUM_CHECKOUT");
     }
 
     const geoCheck = serializeGeoCheck({
