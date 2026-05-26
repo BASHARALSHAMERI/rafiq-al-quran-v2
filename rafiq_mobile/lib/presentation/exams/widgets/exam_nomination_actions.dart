@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/exams/exam_controller.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../data/models/exam_dtos.dart';
 
 class SupervisorReviewNominationSheet extends ConsumerStatefulWidget {
@@ -49,11 +50,10 @@ class _SupervisorReviewNominationSheetState
       if (mounted) {
         Navigator.of(context).pop(true);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ أثناء حفظ المراجعة: $e')),
-        );
+        AppSnackBar.error(
+            context, 'تعذر حفظ المراجعة. يرجى المحاولة مرة أخرى.');
       }
     }
   }

@@ -7,6 +7,7 @@ import '../../application/exams/exam_controller.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/enums/user_role.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/exam_dtos.dart';
 import '../shared/providers/current_user_role_provider.dart';
 import 'widgets/exam_attempt_workspace_sheet.dart';
@@ -110,13 +111,8 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            'تم إرسال ترشيح ${nomination.student?.fullName ?? 'الطالب'} للمراجعة الإشرافية'),
-        backgroundColor: AppColors.successLight,
-      ),
-    );
+    AppSnackBar.success(context,
+        'تم إرسال ترشيح ${nomination.student?.fullName ?? 'الطالب'} للمراجعة الإشرافية');
   }
 
   Future<void> _openSupervisorReviewSheet(
@@ -161,7 +157,8 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
 
     final teacherCanNominate = role == UserRole.teacher;
     final supervisorCanReview = role == UserRole.supervisor;
-    final isStudentOrParent = role == UserRole.student || role == UserRole.parent;
+    final isStudentOrParent =
+        role == UserRole.student || role == UserRole.parent;
     final contextRequired = _requiresContext(role);
 
     final attempts = filterExamAttempts(examState.attempts, _searchQuery);
@@ -219,8 +216,10 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                     children: [
                       if (!isStudentOrParent) ...[
                         ExamsContextSummaryCard(
-                          centerName: contextState.selectedCenterName ?? 'غير محدد',
-                          circleName: contextState.selectedCircleName ?? 'غير محدد',
+                          centerName:
+                              contextState.selectedCenterName ?? 'غير محدد',
+                          circleName:
+                              contextState.selectedCircleName ?? 'غير محدد',
                           examTemplateCount: examState.publishedExams.length,
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -243,7 +242,9 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isStudentOrParent ? 'سجل نتائجي' : 'سجل الاختبارات',
+                                  isStudentOrParent
+                                      ? 'سجل نتائجي'
+                                      : 'سجل الاختبارات',
                                   style: Theme.of(context)
                                       .textTheme
                                       .titleMedium
@@ -314,13 +315,15 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'لا توجد طلبات ترشيح مطابقة حالياً.',
-                              style: TextStyle(color: AppColors.textSecondaryLight),
+                              style: TextStyle(
+                                  color: AppColors.textSecondaryLight),
                             ),
                           )
                         else
                           ...nominations.map(
                             (nomination) => Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                              padding:
+                                  const EdgeInsets.only(bottom: AppSpacing.sm),
                               child: NominationReviewCard(
                                 nomination: nomination,
                                 busy: examState.isSubmitting,
@@ -344,13 +347,15 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'لا توجد طلبات ترشيح بانتظار المراجعة الإشرافية.',
-                              style: TextStyle(color: AppColors.textSecondaryLight),
+                              style: TextStyle(
+                                  color: AppColors.textSecondaryLight),
                             ),
                           )
                         else
                           ...supervisorPendingNominations.map(
                             (nomination) => Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                              padding:
+                                  const EdgeInsets.only(bottom: AppSpacing.sm),
                               child: NominationReviewCard(
                                 nomination: nomination,
                                 busy: examState.isSubmitting,
@@ -392,18 +397,20 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                         )
                       else if (attempts.isEmpty)
                         ExamsEmptyAttemptsCard(
-                          hasPublishedExams: examState.publishedExams.isNotEmpty,
+                          hasPublishedExams:
+                              examState.publishedExams.isNotEmpty,
                           hasSearchQuery: _searchQuery.isNotEmpty,
                           onNominate: !teacherCanNominate ||
                                   examState.publishedExams.isEmpty
                               ? null
-                              : () =>
-                                  _openNominationSheet(examState.publishedExams),
+                              : () => _openNominationSheet(
+                                  examState.publishedExams),
                         )
                       else
                         ...attempts.map(
                           (attempt) => Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: ExamAttemptCard(
                               attempt: attempt,
                               onTapAction: () => _openAttemptSheet(attempt),
