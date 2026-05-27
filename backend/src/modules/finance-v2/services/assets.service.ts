@@ -450,7 +450,7 @@ export const assetsService = {
       
       const creditAccount = financeAccount.accountingAccount;
 
-      await ensurePeriodOpenTx(tx, scope.organizationId, asset.purchaseDate);
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, asset.purchaseDate);
 
       const amount = asset.purchaseCost;
 
@@ -463,6 +463,7 @@ export const assetsService = {
           sourceType: JournalSourceType.ASSET_ACQUISITION,
           sourceId: asset.id,
           status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
           description: `Acquisition of asset ${asset.assetCode} - ${asset.name}`,
           postedById: scope.userId,
           postedAt: new Date(),
@@ -562,7 +563,7 @@ export const assetsService = {
       }
 
       const entryDate = new Date(periodYear, periodMonth, 0);
-      await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
 
       const entry = await tx.journalEntry.create({
         data: {
@@ -573,6 +574,7 @@ export const assetsService = {
           sourceType: JournalSourceType.ASSET_DEPRECIATION,
           sourceId: null,
           status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
           description: `Depreciation for ${asset.name} - ${periodMonth}/${periodYear}`,
           postedById: scope.userId,
           postedAt: new Date(),

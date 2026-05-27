@@ -417,6 +417,8 @@ export const ensurePeriodOpenTx = async (
       "FISCAL_PERIOD_CLOSED"
     );
   }
+
+  return period;
 };
 
 
@@ -640,7 +642,7 @@ export const accountingService = {
       const nonPostingAccountIds = new Set(parentAccounts.map((account) => account.parentId).filter(Boolean));
       const entryDate = parseDate(input.entryDate, "entryDate");
 
-      await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
 
       const entry = await tx.journalEntry.create({
         data: {
@@ -651,6 +653,7 @@ export const accountingService = {
           sourceType: input.sourceType,
           sourceId: input.sourceId ?? null,
           status: JournalEntryStatus.DRAFT,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
           description: input.description?.trim() || null
         }
       });
@@ -776,7 +779,7 @@ export const accountingService = {
     const amount = payment.amount;
     const postedAt = new Date();
 
-    await ensurePeriodOpenTx(tx, payment.organizationId, payment.receivedAt);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, payment.organizationId, payment.receivedAt);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -787,6 +790,7 @@ export const accountingService = {
         sourceType: JournalSourceType.PAYMENT,
         sourceId: payment.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: `Student payment collected for invoice ${payment.invoiceId}`,
         postedById: input.postedById,
         postedAt
@@ -947,7 +951,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = voucher.postedAt || voucher.createdAt;
 
-    await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
 
     // 6. Create Entry
     const entry = await tx.journalEntry.create({
@@ -959,6 +963,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: voucher.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: voucher.notes?.trim() || `Receipt voucher collection: ${voucher.voucherNo}`,
         postedById: input.postedById,
         postedAt
@@ -1159,7 +1164,7 @@ export const accountingService = {
     const entryDate = payment.paidAt;
     const postedAt = new Date();
 
-    await ensurePeriodOpenTx(tx, payment.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, payment.organizationId, entryDate);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -1170,6 +1175,7 @@ export const accountingService = {
         sourceType: JournalSourceType.EXPENSE_PAYMENT,
         sourceId: payment.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: `Payment settlement for expense invoice ${payment.invoiceId}`,
         postedById: input.postedById,
         postedAt
@@ -1333,7 +1339,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = voucher.postedAt || voucher.createdAt;
 
-    await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -1344,6 +1350,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: voucher.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: voucher.notes?.trim() || `Disbursement voucher posting: ${voucher.voucherNo}`,
         postedById: input.postedById,
         postedAt
@@ -1477,7 +1484,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = reversalVoucher.approvedAt || reversalVoucher.createdAt || postedAt;
 
-    await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
 
     // 4. Create the reversal JournalEntry (POSTED) with debit/credit swapped lines.
     //    The unique(org, sourceType, sourceId) constraint prevents any double-reversal.
@@ -1490,6 +1497,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: input.reversalVoucherId,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description:
           input.reason?.trim() ||
           `Reversal of journal entry ${original.entryNo} for voided voucher`,
@@ -1583,7 +1591,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = transfer.postedAt || transfer.createdAt;
 
-    await ensurePeriodOpenTx(tx, transfer.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, transfer.organizationId, entryDate);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -1594,6 +1602,7 @@ export const accountingService = {
         sourceType: JournalSourceType.FUND_TRANSFER,
         sourceId: transfer.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: transfer.notes?.trim() || `Fund transfer from ${fromCenterId || 'ORG'} to ${toCenterId || 'ORG'}`,
         postedById: input.postedById,
         postedAt
@@ -1682,10 +1691,13 @@ export const accountingService = {
         }, "UNBALANCED_JOURNAL_ENTRY");
       }
 
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entry.entryDate);
+
       return tx.journalEntry.update({
         where: { id: entry.id },
         data: {
           status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: entry.fiscalPeriodId ?? fiscalPeriod?.id ?? null,
           postedAt: new Date(),
           postedById: scope.userId
         },

@@ -13,7 +13,7 @@ import {
 import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
-import { accountingService } from "../../accounting/accounting.service";
+import { accountingService, ensurePeriodOpenTx } from "../../accounting/accounting.service";
 import { financeV2Domain } from "../finance-v2.domain";
 import { nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
 
@@ -236,6 +236,8 @@ export const expensesService = {
         const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
 
         if (apAccount) {
+          const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
+
           const entry = await tx.journalEntry.create({
             data: {
               organizationId: scope.organizationId,
@@ -245,6 +247,7 @@ export const expensesService = {
               sourceType: JournalSourceType.EXPENSE_INVOICE,
               sourceId: invoice.id,
               status: JournalEntryStatus.POSTED,
+              fiscalPeriodId: fiscalPeriod?.id ?? null,
               description: invoice.description,
               postedById: scope.userId,
               postedAt: new Date()

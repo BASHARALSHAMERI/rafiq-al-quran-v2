@@ -989,6 +989,7 @@ model FollowUpRecord {
 
   @@index([studentId, recordDate])
   @@index([circleId, recordDate])
+  @@index([teacherId, recordDate])
   @@index([status, recordDate])
   @@index([matnId])
   @@map("follow_up_records")
@@ -1565,8 +1566,8 @@ model Invoice {
   lockVersion   Int           @default(0) @map("lock_version")
   notes         String?       @db.VarChar(500)
   cancelledBy   User?         @relation("InvoiceCancelledBy", fields: [cancelledById], references: [id])
-  center        Center        @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  center        Center        @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Restrict)
   payments      Payment[]
 
   @@unique([studentId, month, year, invoiceType])
@@ -1586,16 +1587,14 @@ model Payment {
   receivedAt           DateTime        @default(now())
   createdAt            DateTime        @default(now())
   attachmentStorageKey String?         @map("attachment_storage_key") @db.VarChar(255)
-  /// DB-CLEAN precheck (rafiq_v2_clean_dev): 1 row has centerId IS NULL. Backfill and re-check before enforcing NOT NULL.
-  centerId             Int?
+  centerId             Int
   externalTransferRef  String?         @map("external_transfer_ref") @db.VarChar(120)
   idempotencyKey       String?         @db.VarChar(128)
-  /// DB-CLEAN precheck (rafiq_v2_clean_dev): 1 row has organizationId IS NULL. Backfill and re-check before enforcing NOT NULL.
-  organizationId       Int?
+  organizationId       Int
   voucherId            Int?            @unique
-  center               Center?         @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  center               Center          @relation(fields: [centerId], references: [id], onDelete: Restrict)
   invoice              Invoice         @relation(fields: [invoiceId], references: [id])
-  organization         Organization?   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   receivedBy           User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   voucher              FinanceVoucher? @relation(fields: [voucherId], references: [id])
 
@@ -1937,13 +1936,13 @@ model JournalEntry {
   postedAt               DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
-  /// FK to FiscalPeriod resolved from entryDate at posting time. Nullable during backfill window; enforce NOT NULL after DB-CLEAN-1B backfill script confirms zero nulls.
+  /// FK to FiscalPeriod resolved from entryDate at posting time. Nullable so postings can proceed when a fiscal calendar is not configured.
   fiscalPeriodId         Int?                    @map("fiscal_period_id")
   center                 Center?                 @relation(fields: [centerId], references: [id])
   fiscalPeriod           FiscalPeriod?           @relation("JournalEntryFiscalPeriod", fields: [fiscalPeriodId], references: [id])
   lines                  JournalEntryLine[]
   expensePayments        ExpensePayment[]
-  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   postedBy               User?                   @relation("JournalEntryPostedBy", fields: [postedById], references: [id])
   assetAcquisition       FixedAsset?             @relation("AssetAcquisitionEntry")
   assetDepreciationEntry AssetDepreciationEntry? @relation("AssetDepreciationEntry")
@@ -1971,7 +1970,7 @@ model JournalEntryLine {
   account        AccountingAccount  @relation(fields: [accountId], references: [id])
   center         Center?            @relation(fields: [centerId], references: [id])
   journalEntry   JournalEntry       @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   organizationId Int
 
   @@index([journalEntryId])
@@ -1995,9 +1994,9 @@ model StudentFeeProfile {
   notes          String?      @db.VarChar(500)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  center         Center       @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  student        User         @relation("StudentFeeProfileStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  center         Center       @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  student        User         @relation("StudentFeeProfileStudent", fields: [studentId], references: [id], onDelete: Restrict)
   tuitionPlan    TuitionPlan? @relation(fields: [tuitionPlanId], references: [id])
 
   @@index([centerId, studentId, isActive])
@@ -2030,8 +2029,8 @@ model PayrollProfile {
   salaryGrade          SalaryGrade?  @relation(fields: [salaryGradeId], references: [id])
   approvedBy           User?         @relation("PayrollProfileApprovedBy", fields: [approvedById], references: [id])
   center               Center?       @relation(fields: [centerId], references: [id])
-  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user                 User          @relation("PayrollProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user                 User          @relation("PayrollProfileUser", fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([centerId, userId, isActive])
   @@index([organizationId, isActive])
@@ -2167,9 +2166,9 @@ model RewardProfile {
   notes             String?               @db.VarChar(500)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  beneficiary       User                  @relation("RewardProfileBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Cascade)
+  beneficiary       User                  @relation("RewardProfileBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Restrict)
   center            Center?               @relation(fields: [centerId], references: [id])
-  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, beneficiaryUserId, isActive])
   @@index([centerId, cycle, isActive])
@@ -2227,7 +2226,7 @@ model RewardItem {
   updatedAt         DateTime              @updatedAt
   batch             RewardBatch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
   beneficiary       User                  @relation("RewardItemBeneficiary", fields: [beneficiaryUserId], references: [id])
-  center            Center                @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center            Center                @relation(fields: [centerId], references: [id], onDelete: Restrict)
   circle            Circle?               @relation(fields: [circleId], references: [id])
   voucher           FinanceVoucher?       @relation(fields: [voucherId], references: [id])
 
@@ -2311,6 +2310,8 @@ model Notification {
 
   @@index([recipientUserId, isRead, createdAt])
   @@index([organizationId, createdAt])
+  @@index([centerId, createdAt])
+  @@index([circleId, createdAt])
   @@map("notifications")
 }
 
