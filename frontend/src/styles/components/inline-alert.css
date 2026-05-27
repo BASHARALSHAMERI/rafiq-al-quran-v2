@@ -1,0 +1,157 @@
+.inline-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--radius-component, 10px);
+  border: 1px solid transparent;
+  background-color: var(--bg-canvas, #f5f7fa);
+  border-inline-start: 4px solid transparent;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.inline-alert__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.125rem;
+}
+
+.inline-alert__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.inline-alert__title {
+  margin: 0;
+  font-size: var(--text-base, 1rem);
+  font-weight: var(--font-semibold, 600);
+  line-height: var(--leading-tight, 1.15);
+}
+
+.inline-alert__body {
+  margin: 0;
+  font-size: var(--text-sm, 0.875rem);
+  line-height: var(--leading-normal, 1.55);
+}
+
+.inline-alert__action {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+}
+
+/* Info Variant */
+.inline-alert--info {
+  background-color: var(--primary-50);
+  border-color: var(--primary-100);
+  border-inline-start-color: var(--primary-500);
+}
+.inline-alert--info .inline-alert__icon {
+  color: var(--primary-600);
+}
+.inline-alert--info .inline-alert__title {
+  color: var(--primary-800);
+}
+.inline-alert--info .inline-alert__body {
+  color: var(--primary-700);
+}
+
+/* Success Variant */
+.inline-alert--success {
+  background-color: var(--success-50);
+  border-color: var(--success-100);
+  border-inline-start-color: var(--success-500);
+}
+.inline-alert--success .inline-alert__icon {
+  color: var(--success-600);
+}
+.inline-alert--success .inline-alert__title {
+  color: var(--success-800);
+}
+.inline-alert--success .inline-alert__body {
+  color: var(--success-700);
+}
+
+/* Warning Variant */
+.inline-alert--warning {
+  background-color: var(--warning-50);
+  border-color: var(--warning-100);
+  border-inline-start-color: var(--warning-500);
+}
+.inline-alert--warning .inline-alert__icon {
+  color: var(--warning-600);
+}
+.inline-alert--warning .inline-alert__title {
+  color: var(--warning-800);
+}
+.inline-alert--warning .inline-alert__body {
+  color: var(--warning-700);
+}
+
+/* Error Variant */
+.inline-alert--error {
+  background-color: var(--error-50);
+  border-color: var(--error-100);
+  border-inline-start-color: var(--error-500);
+}
+.inline-alert--error .inline-alert__icon {
+  color: var(--error-600);
+}
+.inline-alert--error .inline-alert__title {
+  color: var(--error-800);
+}
+.inline-alert--error .inline-alert__body {
+  color: var(--error-700);
+}
+
+/* Dark Theme Adjustments */
+[data-theme="dark"] .inline-alert--info {
+  background-color: rgba(28, 174, 154, 0.1);
+  border-color: rgba(28, 174, 154, 0.2);
+}
+[data-theme="dark"] .inline-alert--info .inline-alert__icon {
+  color: var(--text-brand);
+}
+[data-theme="dark"] .inline-alert--info .inline-alert__title,
+[data-theme="dark"] .inline-alert--info .inline-alert__body {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .inline-alert--success {
+  background-color: rgba(41, 165, 109, 0.1);
+  border-color: rgba(41, 165, 109, 0.2);
+}
+[data-theme="dark"] .inline-alert--success .inline-alert__icon {
+  color: var(--text-success);
+}
+[data-theme="dark"] .inline-alert--success .inline-alert__title,
+[data-theme="dark"] .inline-alert--success .inline-alert__body {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .inline-alert--warning {
+  background-color: rgba(239, 171, 58, 0.1);
+  border-color: rgba(239, 171, 58, 0.2);
+}
+[data-theme="dark"] .inline-alert--warning .inline-alert__icon {
+  color: var(--text-warning);
+}
+[data-theme="dark"] .inline-alert--warning .inline-alert__title,
+[data-theme="dark"] .inline-alert--warning .inline-alert__body {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .inline-alert--error {
+  background-color: rgba(241, 101, 130, 0.1);
+  border-color: rgba(241, 101, 130, 0.2);
+}
+[data-theme="dark"] .inline-alert--error .inline-alert__icon {
+  color: var(--text-error);
+}
+[data-theme="dark"] .inline-alert--error .inline-alert__title,
+[data-theme="dark"] .inline-alert--error .inline-alert__body {
+  color: var(--text-secondary);
+}

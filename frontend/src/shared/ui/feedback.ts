@@ -296,3 +296,21 @@ export const notifyError = (message: string, options?: ToastOptions) => {
     className: ["app-toast", "app-toast--error", options?.className].filter(Boolean).join(" ")
   });
 };
+
+export const notifyWarning = (message: string, options?: ToastOptions) => {
+  toast(message, {
+    ...DEFAULT_TOAST_OPTIONS,
+    icon: '⚠️',
+    ...options,
+    className: ["app-toast", "app-toast--warning", options?.className].filter(Boolean).join(" ")
+  });
+};
+
+export const notifyInfo = (message: string, options?: ToastOptions) => {
+  toast(message, {
+    ...DEFAULT_TOAST_OPTIONS,
+    icon: 'ℹ️',
+    ...options,
+    className: ["app-toast", "app-toast--info", options?.className].filter(Boolean).join(" ")
+  });
+};

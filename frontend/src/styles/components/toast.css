@@ -17,3 +17,52 @@
   border-color: rgba(255, 255, 255, 0.06);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
+
+.app-toast--success {
+  border-color: var(--success-100, #d8f6e6);
+  background-color: var(--success-50, #eefbf4);
+  color: var(--success-800, #144c34);
+}
+
+.app-toast--error {
+  border-color: var(--error-100, #ffdfe3);
+  background-color: var(--error-50, #fff1f2);
+  color: var(--error-800, #7a263f);
+}
+
+.app-toast--warning {
+  border-color: var(--warning-100, #ffebc8);
+  background-color: var(--warning-50, #fff7ea);
+  color: var(--warning-800, #643c15);
+}
+
+.app-toast--info {
+  border-color: var(--primary-100, #d9efec);
+  background-color: var(--primary-50, #eef8f7);
+  color: var(--primary-800, #103f47);
+}
+
+/* Dark mode overrides for variants */
+[data-theme="dark"] .app-toast--success {
+  background-color: rgba(41, 165, 109, 0.1);
+  border-color: rgba(41, 165, 109, 0.2);
+  color: var(--text-success, #8ce0b0);
+}
+
+[data-theme="dark"] .app-toast--error {
+  background-color: rgba(241, 101, 130, 0.1);
+  border-color: rgba(241, 101, 130, 0.2);
+  color: var(--text-error, #ff9fb2);
+}
+
+[data-theme="dark"] .app-toast--warning {
+  background-color: rgba(239, 171, 58, 0.1);
+  border-color: rgba(239, 171, 58, 0.2);
+  color: var(--text-warning, #ffd08e);
+}
+
+[data-theme="dark"] .app-toast--info {
+  background-color: rgba(28, 174, 154, 0.1);
+  border-color: rgba(28, 174, 154, 0.2);
+  color: var(--text-brand, #53d1bf);
+}

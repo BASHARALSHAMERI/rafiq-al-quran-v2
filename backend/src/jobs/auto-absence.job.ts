@@ -50,6 +50,29 @@ export async function runAutoAbsenceJob() {
       }
     }
 
+    const targetUserIds = Array.from(userMap.values())
+      .filter((s) => s.user.role !== Role.SUPERVISOR)
+      .map((s) => s.userId);
+
+    const [allAttendances, allExcuses, allLeaves] = await Promise.all([
+      targetUserIds.length > 0 ? prisma.staffAttendanceRecord.findMany({
+        where: { attendanceDate: today, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffExcuseRequest.findMany({
+        where: { absenceDate: today, status: ExcuseRequestStatus.APPROVED, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffLeaveRequest.findMany({
+        where: { status: LeaveRequestStatus.LEAVE_APPROVED, startDate: { lte: today }, endDate: { gte: today }, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([])
+    ]);
+
+    const attendanceSet = new Set(allAttendances.map(a => a.userId));
+    const excuseSet = new Set(allExcuses.map(e => e.userId));
+    const leaveSet = new Set(allLeaves.map(l => l.userId));
+
     let markedAbsences = 0;
     
     for (const [userId, sched] of userMap.entries()) {
@@ -57,11 +80,7 @@ export async function runAutoAbsenceJob() {
         continue; // Handled by supervisor visit derivation job
       }
 
-      const existingRecord = await prisma.staffAttendanceRecord.findUnique({
-        where: { userId_attendanceDate: { userId, attendanceDate: today } }
-      });
-
-      if (existingRecord) {
+      if (attendanceSet.has(userId)) {
         continue; // They checked in, or were already marked EXCUSED/ON_LEAVE
       }
 
@@ -85,26 +104,13 @@ export async function runAutoAbsenceJob() {
       }
 
       // Check for approved excuse
-      const excuse = await prisma.staffExcuseRequest.findFirst({
-        where: { userId, absenceDate: today, status: ExcuseRequestStatus.APPROVED }
-      });
-
-      if (excuse) {
+      if (excuseSet.has(userId)) {
         await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.EXCUSED, sched.user.role as any);
         continue;
       }
 
       // Check for approved leave
-      const leave = await prisma.staffLeaveRequest.findFirst({
-        where: {
-          userId,
-          status: LeaveRequestStatus.LEAVE_APPROVED,
-          startDate: { lte: today },
-          endDate: { gte: today }
-        }
-      });
-
-      if (leave) {
+      if (leaveSet.has(userId)) {
         await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ON_LEAVE, sched.user.role as any);
         continue;
       }
