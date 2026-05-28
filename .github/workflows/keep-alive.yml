@@ -1,0 +1,23 @@
+name: Keep-Alive Ping
+
+on:
+  schedule:
+    # Every 14 minutes to prevent Render free tier sleep (sleeps after 15 min)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping:
+    name: Ping Backend Health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render backend /health
+        run: |
+          echo "Pinging https://rufaqa-api-demo.onrender.com/health ..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://rufaqa-api-demo.onrender.com/health)
+          echo "Response status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Backend is alive!"
+          else
+            echo "⚠️ Backend returned status $STATUS"
+          fi
