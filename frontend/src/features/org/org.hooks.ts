@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { orgApi } from "./org.api";
 import type {
   CreateCenterPayload,
@@ -21,7 +21,8 @@ export const useOrgBrandingQuery = (options?: { enabled?: boolean }) => {
     queryKey: ORG_QUERY_KEYS.branding(),
     queryFn: () => orgApi.getBranding(),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -30,7 +31,8 @@ export const useCentersQuery = (options?: { enabled?: boolean }) => {
     queryKey: ORG_QUERY_KEYS.centers(),
     queryFn: () => orgApi.getCenters(),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -42,7 +44,8 @@ export const useCirclesQuery = (
     queryKey: ORG_QUERY_KEYS.circles(centerId),
     queryFn: () => orgApi.getCircles({ centerId }),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 };
 
