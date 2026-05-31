@@ -31,7 +31,8 @@ export const useCentersQuery = (options?: { enabled?: boolean }) => {
     queryKey: ORG_QUERY_KEYS.centers(),
     queryFn: () => orgApi.getCenters(),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000,
+    staleTime: 300_000,
+    gcTime: 600_000,
     placeholderData: keepPreviousData
   });
 };
@@ -44,7 +45,8 @@ export const useCirclesQuery = (
     queryKey: ORG_QUERY_KEYS.circles(centerId),
     queryFn: () => orgApi.getCircles({ centerId }),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000,
+    staleTime: 300_000,
+    gcTime: 600_000,
     placeholderData: keepPreviousData
   });
 };

@@ -149,9 +149,9 @@ export default function CircleCard({
   return (
     <motion.article
       className={`ctr-center-card${view === "list" ? " ctr-center-card--list" : ""}${isActive ? "" : " is-inactive"}`}
-      initial={{ opacity: 0, y: 12, scale: 0.99 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
     >
       <div className="ctr-center-card__identity">
         <div className="ctr-center-card__logo" aria-hidden="true">

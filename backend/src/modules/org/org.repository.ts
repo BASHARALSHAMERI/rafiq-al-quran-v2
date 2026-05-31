@@ -216,6 +216,44 @@ const circleSelect = {
   }
 } satisfies Prisma.CircleSelect;
 
+const circleListSelect = {
+  id: true,
+  name: true,
+  gender: true,
+  circleType: true,
+  isActive: true,
+  centerId: true,
+  teacherId: true,
+  mosqueName: true,
+  locationText: true,
+  latitude: true,
+  longitude: true,
+  allowedRadiusMeters: true,
+  createdAt: true,
+  updatedAt: true,
+  center: {
+    select: {
+      id: true,
+      name: true,
+      gender: true,
+      code: true
+    }
+  },
+  teacher: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      isActive: true
+    }
+  },
+  _count: {
+    select: {
+      enrollments: true
+    }
+  }
+} satisfies Prisma.CircleSelect;
+
 const centerCoreSelect = {
   id: true,
   organizationId: true,
@@ -464,7 +502,7 @@ export const orgRepository = {
     return prisma.circle.findMany({
       where,
       orderBy: [{ centerId: "asc" }, { name: "asc" }],
-      select: circleSelect
+      select: circleListSelect
     });
   },
 

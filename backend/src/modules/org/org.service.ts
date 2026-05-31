@@ -364,10 +364,10 @@ const serializeWeeklySchedule = (rows?: CircleScheduleSlotLike[] | null): Circle
   return serialized;
 };
 
-const toCircleResponse = <TCircle extends { weeklyScheduleSlots?: CircleScheduleSlotLike[] | null }>(
+const toCircleResponse = <TCircle extends object>(
   circle: TCircle
 ): Omit<TCircle, "weeklyScheduleSlots"> & { weeklySchedule: CircleScheduleWriteRow[] } => {
-  const { weeklyScheduleSlots, ...rest } = circle;
+  const { weeklyScheduleSlots, ...rest } = circle as TCircle & { weeklyScheduleSlots?: CircleScheduleSlotLike[] | null };
   return {
     ...rest,
     weeklySchedule: serializeWeeklySchedule(weeklyScheduleSlots ?? [])
