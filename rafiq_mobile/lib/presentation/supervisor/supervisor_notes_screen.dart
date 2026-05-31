@@ -94,7 +94,14 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
   }
 
   Future<void> _markResolved(int id) async {
-    await ref.read(supervisorNotesControllerProvider.notifier).markResolved(id);
+    try {
+      await ref.read(supervisorNotesControllerProvider.notifier).markResolved(id);
+      if (!mounted) return;
+      AppSnackBar.success(context, 'تمت المعالجة بنجاح');
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackBar.error(context, 'تعذر تحديث الملاحظة');
+    }
   }
 
   Map<String, dynamic> _getCategoryStyle(String cat) {

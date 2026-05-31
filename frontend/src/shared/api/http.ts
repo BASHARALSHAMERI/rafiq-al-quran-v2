@@ -3,7 +3,7 @@ import axios, {
   AxiosHeaders,
   type InternalAxiosRequestConfig
 } from "axios";
-import { hasRefreshSession } from "../../features/auth/session";
+import { getStoredRefreshToken, hasRefreshSession } from "../../features/auth/session";
 import { useAuthStore } from "../../features/auth/auth.store";
 import type { AuthSessionResponse } from "../../features/auth/types";
 import type { ApiResponse } from "./types";
@@ -67,9 +67,10 @@ const requestRefreshToken = async (): Promise<string | null> => {
   }
 
   try {
+    const storedRefreshToken = getStoredRefreshToken();
     const response = await refreshClient.post<ApiResponse<AuthSessionResponse>>(
       "/auth/refresh",
-      {}
+      storedRefreshToken ? { refreshToken: storedRefreshToken } : {}
     );
 
     const session = response.data.data;

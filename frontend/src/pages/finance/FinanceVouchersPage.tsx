@@ -175,7 +175,7 @@ export default function FinanceVouchersPage() {
     title: string;
     message: string;
     tone: "danger" | "warning" | "info";
-    action: () => Promise<void>;
+    action: (reason?: string) => Promise<void>;
     reasonRequired?: boolean;
     reasonPlaceholder?: string;
   } | null>(null);
@@ -408,8 +408,8 @@ export default function FinanceVouchersPage() {
       tone: "danger",
       reasonRequired: true,
       reasonPlaceholder: ar ? "سبب الرفض..." : "Rejection reason...",
-      action: async () => {
-        await rejectVoucherM.mutateAsync({ voucherId: v.id, reason: reasonValue });
+      action: async (reason?: string) => {
+        await rejectVoucherM.mutateAsync({ voucherId: v.id, reason: reason ?? "" });
         closeConfirmModal();
       }
     });
@@ -438,8 +438,8 @@ export default function FinanceVouchersPage() {
       tone: "danger",
       reasonRequired: true,
       reasonPlaceholder: ar ? "سبب طلب الإلغاء..." : "Void request reason...",
-      action: async () => {
-        await requestVoucherVoidM.mutateAsync({ voucherId: v.id, reason: reasonValue });
+      action: async (reason?: string) => {
+        await requestVoucherVoidM.mutateAsync({ voucherId: v.id, reason: reason ?? "" });
         closeConfirmModal();
       }
     });
@@ -1112,7 +1112,7 @@ export default function FinanceVouchersPage() {
           onClose={closeConfirmModal}
           onConfirm={async () => {
             if (confirmModal.reasonRequired && !reasonValue.trim()) return;
-            await confirmModal.action();
+            await confirmModal.action(reasonValue);
           }}
           title={confirmModal.title}
           message={confirmModal.message}

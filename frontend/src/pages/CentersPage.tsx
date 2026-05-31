@@ -126,6 +126,7 @@ export default function CentersPage() {
   const [statusTarget, setStatusTarget] = useState<Center | null>(null);
   const [quickRole, setQuickRole] = useState<QuickRole | null>(null);
   const [quickErr, setQuickErr] = useState<string | null>(null);
+  const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
 
   const centerAdminSchedulesQ = useStaffSchedulesForCenter(activeCenter?.id, {
     enabled: modalMode === "edit" && Boolean(activeCenter?.id)
@@ -200,6 +201,19 @@ export default function CentersPage() {
   }));
 
   const pending = createM.isPending || updateM.isPending || statusM.isPending;
+
+  useEffect(() => {
+    if (!centersQ.isLoading) {
+      setShowSlowLoadMessage(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowSlowLoadMessage(true);
+    }, 8_000);
+
+    return () => window.clearTimeout(timer);
+  }, [centersQ.isLoading]);
 
   const resetFilters = () => {
     setQ("");
@@ -444,7 +458,7 @@ export default function CentersPage() {
                 />
               ) : null}
 
-              {centersQ.isLoading ? (
+              {centersQ.isLoading && !showSlowLoadMessage ? (
                 <div className={view === "grid" ? "ctr-centers-grid" : "ctr-centers-list"}>
                   {Array.from({ length: view === "grid" ? 6 : 4 }).map((_, index) => (
                     <div
@@ -458,6 +472,19 @@ export default function CentersPage() {
                     />
                   ))}
                 </div>
+              ) : null}
+
+              {centersQ.isLoading && showSlowLoadMessage ? (
+                <ErrorState
+                  title={ar ? "ط§ظ„ط¨ظٹط§ظ†ط§طھ طھط³طھط؛ط±ظ‚ ظˆظ‚طھظ‹ط§ ط£ط·ظˆظ„ ظ…ظ† ط§ظ„ظ…طھظˆظ‚ط¹" : "Data is taking longer than expected"}
+                  description={
+                    ar
+                      ? "ظ„ط§ طھط²ط§ظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط±ط§ظƒط² ظ‚ظٹط¯ ط§ظ„طھط­ظ…ظٹظ„. ظٹظ…ظƒظ†ظƒ ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ط£ظˆ ظپط­طµ ط§طھطµط§ظ„ ط§ظ„ط®ط§ط¯ظ…."
+                      : "Centers data is still loading. Retry or check the server connection."
+                  }
+                  onRetry={() => void refreshAll()}
+                  retryLabel={ar ? "ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©" : "Retry"}
+                />
               ) : null}
 
               {centersQ.isError ? (
