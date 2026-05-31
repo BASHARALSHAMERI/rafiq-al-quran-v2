@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { financeV2Api } from "./finance-v2.api";
 import type {
   CreateFundTransferV2Payload,
@@ -112,7 +112,8 @@ export const useFinanceV2InvoicesQuery = (filters: FinanceInvoicesV2Query) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.invoices(filters),
     queryFn: () => financeV2Api.getInvoices(filters),
-    staleTime: 15_000
+    staleTime: 15_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2InvoicePaymentsQuery = (
@@ -123,14 +124,16 @@ export const useFinanceV2InvoicePaymentsQuery = (
     queryKey: FINANCE_V2_QUERY_KEYS.invoicePayments(invoiceId ?? 0),
     queryFn: () => financeV2Api.getInvoicePayments(invoiceId ?? 0),
     enabled: enabled && Boolean(invoiceId),
-    staleTime: 15_000
+    staleTime: 15_000,
+    placeholderData: keepPreviousData
   });
 
 export const useAssetCategoriesQuery = () =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.assetCategories(),
     queryFn: () => financeV2Api.listAssetCategories(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateAssetCategoryMutation = () => {
@@ -149,7 +152,8 @@ export const useFixedAssetsQuery = (
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets(params),
     queryFn: () => financeV2Api.listFixedAssets(params),
-    staleTime: 30_000
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFixedAssetMutation = () => {
@@ -169,7 +173,8 @@ export const useAssetCustodyLogsQuery = (assetId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.assetCustody(assetId),
     queryFn: () => financeV2Api.listAssetCustodyLogs(assetId),
-    staleTime: 30_000
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
   });
 
 export const useAssignAssetCustodyMutation = () => {
@@ -240,7 +245,8 @@ export const useFinanceV2DonorsQuery = (filters: FinanceDonorsV2Query = {}) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.donors(filters),
     queryFn: () => financeV2Api.getDonors({ page: 1, pageSize: 100, ...filters }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2DonorMutation = () => {
@@ -268,7 +274,8 @@ export const useFinanceV2DonationsQuery = (filters: FinanceDonationsV2Query = {}
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.donations(filters),
     queryFn: () => financeV2Api.getDonations({ page: 1, pageSize: 100, ...filters }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2DonationMutation = () => {
@@ -309,7 +316,8 @@ export const useFinanceV2VouchersQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.vouchers(centerId),
     queryFn: () => financeV2Api.getVouchers({ centerId, page: 1, pageSize: 100 }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2VoucherMutation = () => {
@@ -392,7 +400,8 @@ export const useFinanceV2AccountsQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.accounts(centerId),
     queryFn: () => financeV2Api.getAccounts({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useUpdateFinanceV2AccountLedgerMutation = () => {
@@ -417,7 +426,8 @@ export const useFinanceV2FundTransfersQuery = (centerId?: number) =>
         page: 1,
         pageSize: 100
       }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2FundTransferMutation = () => {
@@ -478,7 +488,8 @@ export const useFinanceV2PayrollBatchesQuery = (
         page: 1,
         pageSize: 100
       }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2PayrollProfilesQuery = (centerId?: number) =>
@@ -491,7 +502,8 @@ export const useFinanceV2PayrollProfilesQuery = (centerId?: number) =>
         page: 1,
         pageSize: 100
       }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2PayrollProfileMutation = () => {
@@ -587,7 +599,8 @@ export const useFinanceV2RewardBatchesQuery = (centerId?: number, periodYear?: n
         page: 1,
         pageSize: 100
       }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2RewardProfilesQuery = (centerId?: number) =>
@@ -600,7 +613,8 @@ export const useFinanceV2RewardProfilesQuery = (centerId?: number) =>
         page: 1,
         pageSize: 100
       }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2RewardProfileMutation = () => {
@@ -691,56 +705,64 @@ export const useFinanceV2ApprovalsQuery = (enabled = true) =>
     queryKey: FINANCE_V2_QUERY_KEYS.approvals(),
     queryFn: () => financeV2Api.getPendingApprovals(),
     enabled,
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportDashboardQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsDashboard(centerId),
     queryFn: () => financeV2Api.getReportDashboard({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportCashflowQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsCashflow(centerId),
     queryFn: () => financeV2Api.getReportCashflow({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportPayrollQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsPayroll(centerId),
     queryFn: () => financeV2Api.getReportPayroll({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportRewardsQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsRewards(centerId),
     queryFn: () => financeV2Api.getReportRewards({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportVouchersQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsVouchers(centerId),
     queryFn: () => financeV2Api.getReportVouchers({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportInvoiceAgingQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.reportsInvoiceAging(centerId),
     queryFn: () => financeV2Api.getReportInvoiceAging({ centerId }),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportCenterFundingQuery = (params: { centerId?: number; from?: string; to?: string }) =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.reportsCenterFunding(params.centerId), params.from, params.to],
     queryFn: () => financeV2Api.getReportCenterFunding(params),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 // FA-UX-4: Currencies
@@ -748,21 +770,24 @@ export const useCurrenciesQuery = () =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.currencies(),
     queryFn: () => financeV2Api.getCurrencies(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const usePredefinedCurrenciesQuery = () =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.predefinedCurrencies(),
     queryFn: () => financeV2Api.getPredefinedCurrencies(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useExchangeRatesQuery = (currencyCode?: string) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.exchangeRates(currencyCode),
     queryFn: () => financeV2Api.getExchangeRates(currencyCode),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 // FA-UX-4B: latest exchange rate for a foreign currency, used to pre-fill the
@@ -772,14 +797,16 @@ export const useLatestExchangeRateQuery = (currencyCode?: string) =>
     queryKey: FINANCE_V2_QUERY_KEYS.latestExchangeRate(currencyCode),
     queryFn: () => financeV2Api.getLatestExchangeRate((currencyCode ?? "").toUpperCase()),
     enabled: Boolean(currencyCode) && currencyCode!.toUpperCase() !== "YER",
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useBaseCurrencyQuery = () =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.baseCurrency(),
     queryFn: () => financeV2Api.getBaseCurrency(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateCurrencyMutation = () => {
@@ -814,7 +841,8 @@ export const useFinanceV2SalaryGradesQuery = (centerId?: number, isActive?: bool
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.salaryGrades(centerId, isActive),
     queryFn: () => financeV2Api.getSalaryGrades({ centerId, isActive }),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateFinanceV2SalaryGradeMutation = () => {
@@ -843,7 +871,8 @@ export const useFinanceV2EligibleEmployeesQuery = (params: { centerId?: number; 
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "eligible-employees", params.centerId ?? null, params.search ?? null] as const,
     queryFn: () => financeV2Api.getEligibleEmployees(params),
-    staleTime: 30_000
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
   });
 
 export const useUpdateFinanceV2PayrollProfileMutation = () => {
@@ -862,7 +891,8 @@ export const useSuppliersQuery = () =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "suppliers"],
     queryFn: () => financeV2Api.listSuppliers(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateSupplierMutation = () => {
@@ -879,7 +909,8 @@ export const useExpenseCategoriesQuery = () =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expense-categories"],
     queryFn: () => financeV2Api.listExpenseCategories(),
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateExpenseCategoryMutation = () => {
@@ -896,7 +927,8 @@ export const useExpenseInvoicesQuery = (params: { centerId?: number; supplierId?
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expenses", params.centerId, params.supplierId, params.status],
     queryFn: () => financeV2Api.listExpenseInvoices(params),
-    staleTime: 15_000
+    staleTime: 15_000,
+    placeholderData: keepPreviousData
   });
 
 export const useCreateExpenseInvoiceMutation = () => {
@@ -934,12 +966,14 @@ export const useFinanceV2ReportFinancialPositionQuery = (params: { centerId?: nu
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.reportsFinancialPosition(params.centerId), params.asOf],
     queryFn: () => financeV2Api.getReportFinancialPosition(params),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
 
 export const useFinanceV2ReportStatementOfActivitiesQuery = (params: { centerId?: number; from?: string; to?: string }) =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.reportsStatementOfActivities(params.centerId), params.from, params.to],
     queryFn: () => financeV2Api.getReportStatementOfActivities(params),
-    staleTime: 20_000
+    staleTime: 20_000,
+    placeholderData: keepPreviousData
   });
