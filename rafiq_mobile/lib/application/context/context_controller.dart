@@ -22,6 +22,19 @@ class ContextController extends StateNotifier<ContextState> {
         selectedCircleId: savedCircleId,
         clearError: true,
       );
+
+      if (savedCenterId != null && savedCenterId.trim().isNotEmpty) {
+        try {
+          final centers = await repo.getMyCenters();
+          final circles = await repo.getMyCircles(centerId: savedCenterId);
+          state = state.copyWith(
+            centers: centers,
+            circles: circles,
+          );
+        } catch (_) {
+          // Ignore network errors during app startup initialization
+        }
+      }
     } catch (_) {
       state = state.copyWith(
         isInitialized: true,
@@ -30,6 +43,7 @@ class ContextController extends StateNotifier<ContextState> {
       );
     }
   }
+
 
   Future<void> loadCenters() async {
     state = state.copyWith(isLoading: true, clearError: true);
