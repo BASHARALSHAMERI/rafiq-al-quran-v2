@@ -38,6 +38,7 @@ import '../../presentation/student/student_journey_screen.dart';
 import '../../presentation/teacher/students/students_list_screen.dart';
 import '../../presentation/supervisor/supervisor_circles_screen.dart';
 import '../../presentation/supervisor/supervisor_notes_screen.dart';
+import '../../presentation/supervisor/supervisor_ops_dashboard_screen.dart';
 import '../../presentation/supervisor/supervisor_reports_screen.dart';
 import '../../presentation/supervisor/supervisor_today_visits_screen.dart';
 import '../../presentation/supervisor/supervisor_visit_lifecycle_screen.dart';
@@ -376,6 +377,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteNames.supervisorReports,
                 builder: (context, state) => const SupervisorReportsScreen(),
+              ),
+              GoRoute(
+                path: RouteNames.supervisorOpsDashboard,
+                builder: (context, state) => const SupervisorOpsDashboardScreen(),
               ),
               GoRoute(
                 path: RouteNames.supervisorHalqaReportPath,

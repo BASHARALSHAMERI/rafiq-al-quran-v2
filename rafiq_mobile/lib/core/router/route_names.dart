@@ -34,6 +34,7 @@ abstract class RouteNames {
   static const supervisorTeacherEval = '/supervisor/teacher-eval';
   static const supervisorNotes = '/supervisor/notes';
   static const supervisorReports = '/supervisor/reports';
+  static const supervisorOpsDashboard = '/supervisor/ops-dashboard';
   static const supervisorHalqaReportBase = '/supervisor/halqa-report';
   static const supervisorHalqaReportPath = '$supervisorHalqaReportBase/:id';
   static String supervisorHalqaReport(int id) => '/supervisor/halqa-report/$id';

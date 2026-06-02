@@ -144,6 +144,11 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
           onTap: () => context.push(RouteNames.supervisorReports),
         ),
         ActionData(
+          title: 'لوحة العمليات',
+          icon: Icons.dashboard_customize_rounded,
+          onTap: () => context.push(RouteNames.supervisorOpsDashboard),
+        ),
+        ActionData(
           title: 'مراجعة الاختبارات',
           icon: Icons.grading_rounded,
           onTap: () => context.push(RouteNames.homeExams),

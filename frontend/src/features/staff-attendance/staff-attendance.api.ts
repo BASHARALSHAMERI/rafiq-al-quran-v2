@@ -389,9 +389,6 @@ export const staffOpsKeys = {
   visitLogs: (filters?: unknown) => [...staffOpsKeys.all, "visitLogs", filters] as const,
   deductionRules: () => [...staffOpsKeys.all, "deductionRules"] as const,
   deductionEvents: (filters?: unknown) => [...staffOpsKeys.all, "deductionEvents", filters] as const,
-  supervisorDashboard: (supervisorId: number | undefined, month: number, year: number) =>
-    [...staffOpsKeys.all, "supervisorDashboard", supervisorId, month, year] as const,
-  supervisorList: () => [...staffOpsKeys.all, "supervisorList"] as const,
   staffSchedules: (filters?: unknown) => [...staffOpsKeys.all, "staffSchedules", filters] as const,
   staffUsers: (role?: string) => [...staffOpsKeys.all, "staffUsers", role] as const,
 };
@@ -409,122 +406,6 @@ export function useStaffAttendance(date: string) {
       return res.data.data.records;
     },
     staleTime: 5 * 60 * 1000,
-  });
-}
-
-// --- Supervisor Visit-Based Types ---
-export interface SupervisorDashboard {
-  profile: {
-    userId: number;
-    fullName: string;
-    status: string;
-    monthlyHoursTarget: number;
-    monthlyVisitsTarget: number;
-  };
-  period: { month: number; year: number };
-  visits: {
-    completed: number;
-    inProgress: number;
-    total: number;
-    target: number;
-    progressPct: number;
-    planPending: number;
-    planMissed: number;
-    planCompleted: number;
-  };
-  hours: {
-    worked: number;
-    target: number;
-    progressPct: number;
-  };
-  assignments: {
-    centersCount: number;
-    circlesCount: number;
-    centerList: Array<{ id: number; name: string }>;
-  };
-  unvisitedCircles: Array<{ id: number; name: string; centerName: string }>;
-  unvisitedCenters: Array<{ id: number; name: string }>;
-  recentVisits: Array<{
-    id: number;
-    centerName: string;
-    circleName: string | null;
-    startedAt: string;
-    endedAt: string | null;
-    durationMinutes: number | null;
-    rating: number | null;
-    observations: string | null;
-  }>;
-  visitPlans: Array<{
-    id: number;
-    centerId: number;
-    centerName: string;
-    status: string;
-    itemsCount: number;
-    completedItems: number;
-  }>;
-}
-
-export interface SupervisorListItem {
-  id: number;
-  fullName: string;
-  supervisorProfile: {
-    monthlyHoursTarget: number;
-    monthlyVisitsTarget: number;
-    status: string;
-  } | null;
-  centerSupervisorLinks: Array<{ centerId: number; center: { name: string } }>;
-}
-
-export function useSupervisorDashboard(
-  params: { supervisorId?: number; month: number; year: number },
-  enabled = true
-) {
-  return useQuery({
-    queryKey: staffOpsKeys.supervisorDashboard(params.supervisorId, params.month, params.year),
-    queryFn: async () => {
-      const res = await apiClient.get<{ data: SupervisorDashboard }>(
-        "/staff-operations/supervisor/dashboard",
-        { params }
-      );
-      return res.data.data;
-    },
-    enabled,
-    staleTime: 2 * 60 * 1000
-  });
-}
-
-export function useSupervisorList() {
-  return useQuery({
-    queryKey: staffOpsKeys.supervisorList(),
-    queryFn: async () => {
-      const res = await apiClient.get<{ data: SupervisorListItem[] }>(
-        "/staff-operations/supervisor/list"
-      );
-      return res.data.data;
-    },
-    staleTime: 5 * 60 * 1000
-  });
-}
-
-export function useUpdateSupervisorTargets() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      userId,
-      monthlyHoursTarget,
-      monthlyVisitsTarget
-    }: {
-      userId: number;
-      monthlyHoursTarget?: number;
-      monthlyVisitsTarget?: number;
-    }) => {
-      const res = await apiClient.patch(
-        `/staff-operations/supervisor/${userId}/targets`,
-        { monthlyHoursTarget, monthlyVisitsTarget }
-      );
-      return res.data;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.all })
   });
 }
 
