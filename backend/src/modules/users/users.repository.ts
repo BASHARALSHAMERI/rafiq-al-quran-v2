@@ -1067,12 +1067,30 @@ export const usersRepository = {
       { includeInactive: input.includeInactive }
     );
 
-    const user = await prisma.user.findFirst({
-      where,
-      select: detailedUserSelect
-    });
+    try {
+      const user = await prisma.user.findFirst({
+        where,
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await prisma.user.findFirst({
+          where,
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async findScopedUserById(input: FindScopedUserByIdInput) {
@@ -1080,12 +1098,30 @@ export const usersRepository = {
       includeInactive: input.includeInactive
     });
 
-    const user = await prisma.user.findFirst({
-      where,
-      select: detailedUserSelect
-    });
+    try {
+      const user = await prisma.user.findFirst({
+        where,
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await prisma.user.findFirst({
+          where,
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async createUser(input: {
@@ -1167,7 +1203,7 @@ export const usersRepository = {
         links: input.links
       });
 
-      return this.findUserByIdWithClient(tx, { userId: user.id });
+      return usersRepository.findUserByIdWithClient(tx, { userId: user.id });
     });
   },
 
@@ -1264,7 +1300,7 @@ export const usersRepository = {
         links: input.links
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1347,7 +1383,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1362,7 +1398,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.userId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.userId })
       };
     });
   },
@@ -1376,7 +1412,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1391,7 +1427,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.userId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.userId })
       };
     });
   },
@@ -1412,7 +1448,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.parentId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.parentId });
     });
   },
 
@@ -1427,7 +1463,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.parentId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.parentId })
       };
     });
   },
@@ -1447,7 +1483,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.studentId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.studentId });
     });
   },
 
@@ -1462,20 +1498,40 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.studentId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.studentId })
       };
     });
   },
 
   async findUserByIdWithClient(tx: Prisma.TransactionClient, input: { userId: number }) {
-    const user = await getClient(tx).user.findUnique({
-      where: {
-        id: input.userId
-      },
-      select: detailedUserSelect
-    });
+    try {
+      const user = await getClient(tx).user.findUnique({
+        where: {
+          id: input.userId
+        },
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await getClient(tx).user.findUnique({
+          where: {
+            id: input.userId
+          },
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async userHasCenterAccess(input: { userId: number; centerId: number }) {

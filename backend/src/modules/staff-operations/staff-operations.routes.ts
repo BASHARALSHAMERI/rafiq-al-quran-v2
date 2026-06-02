@@ -52,7 +52,7 @@ staffOpsRouter.use(authGuard, attachScope, requireRoles(staffRoles));
 // 1. Staff Attendance Tabs
 staffOpsRouter.get(
   "/",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
   validateQuery(listAttendanceQuerySchema),
   staffOperationsController.listAttendance
 );

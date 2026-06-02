@@ -739,6 +739,19 @@ export const usersService = {
         throw mapUserUniqueError(error);
       }
 
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        throw new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");
+      }
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new AppError(
+          "حدث خطأ أثناء إنشاء المستخدم. يرجى المحاولة مرة أخرى.",
+          500,
+          { prismaCode: error.code, prismaMessage: error.message },
+          "USER_CREATE_DB_ERROR"
+        );
+      }
+
       throw error;
     }
   },
@@ -801,6 +814,19 @@ export const usersService = {
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw mapUserUniqueError(error);
+      }
+
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        throw new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");
+      }
+
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new AppError(
+          "حدث خطأ أثناء تحديث المستخدم. يرجى المحاولة مرة أخرى.",
+          500,
+          { prismaCode: error.code, prismaMessage: error.message },
+          "USER_UPDATE_DB_ERROR"
+        );
       }
 
       throw error;
