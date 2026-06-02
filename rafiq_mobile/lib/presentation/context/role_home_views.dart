@@ -162,6 +162,29 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
               subtitle: item.description,
               icon: _feedIcon(item.type),
               color: _feedColor(item.type),
+              onTap: () {
+                final metadata = item.metadata;
+                switch (item.type.toUpperCase()) {
+                  case 'EXAM':
+                    context.push(RouteNames.homeExams);
+                    break;
+                  case 'ATTENDANCE':
+                    final circleId = metadata != null
+                        ? int.tryParse(metadata['circleId']?.toString() ?? '')
+                        : null;
+                    if (circleId != null && circleId > 0) {
+                      context.push(RouteNames.supervisorHalqaVisit(circleId));
+                    } else {
+                      context.push(RouteNames.circles);
+                    }
+                    break;
+                  case 'FOLLOW_UP':
+                  case 'ACHIEVEMENT':
+                  default:
+                    context.push(RouteNames.circles);
+                    break;
+                }
+              },
             ),
           )
           .toList(growable: false),
@@ -243,7 +266,7 @@ class _ParentHomeViewState extends ConsumerState<ParentHomeView> {
     final parentLinks = DataParsingHelper.asMapList(parentState.parentData?['parentLinks']);
     final childrenCount = parentLinks.length;
     final readyProfiles = parentState.childrenProfiles.length;
-    final updates = _buildParentUpdates(parentState.childrenProfiles);
+    final updates = _buildParentUpdates(context, parentState.childrenProfiles);
 
     return RoleHomeLayout(
       greeting: 'أهلاً، ${auth.user?.name ?? 'ولي الأمر'}',
@@ -369,7 +392,7 @@ class _StudentHomeViewState extends ConsumerState<StudentHomeView> {
     final currentJuzz = DataParsingHelper.readInt(profile['currentJuzz']) ??
         DataParsingHelper.readInt(metrics['memorizedJuzz']) ??
         0;
-    final updates = _buildStudentUpdates(data);
+    final updates = _buildStudentUpdates(context, data);
 
     return RoleHomeLayout(
       greeting: 'أهلاً، ${auth.user?.name ?? 'الطالب'}',
@@ -470,11 +493,14 @@ class _ScrollableStatePage extends StatelessWidget {
 }
 
 List<HomeUpdateData> _buildParentUpdates(
+  BuildContext context,
   Map<int, Map<String, dynamic>> childrenProfiles,
 ) {
   final updates = <HomeUpdateData>[];
 
-  for (final profile in childrenProfiles.values) {
+  for (final entry in childrenProfiles.entries) {
+    final childId = entry.key;
+    final profile = entry.value;
     final studentName = DataParsingHelper.readString(profile['fullName'], fallback: 'الابن');
     final followUps = DataParsingHelper.asMapList(profile['followUpsAsStudent']);
     if (followUps.isNotEmpty) {
@@ -486,6 +512,7 @@ List<HomeUpdateData> _buildParentUpdates(
               '${DataParsingHelper.readString(followUp['surah'], fallback: 'غير محدد')} • ${DataParsingHelper.ratingLabel(followUp['rating'])}',
           icon: Icons.menu_book_rounded,
           color: DataParsingHelper.ratingColor(followUp['rating']),
+          onTap: () => context.push(RouteNames.parentChildDetail(childId.toString())),
         ),
       );
     } else {
@@ -498,6 +525,7 @@ List<HomeUpdateData> _buildParentUpdates(
             subtitle: DataParsingHelper.attendanceStatusLabel(attendance['status']),
             icon: Icons.calendar_month_rounded,
             color: DataParsingHelper.attendanceStatusColor(attendance['status']),
+            onTap: () => context.push(RouteNames.parentChildDetail(childId.toString())),
           ),
         );
       }
@@ -511,7 +539,7 @@ List<HomeUpdateData> _buildParentUpdates(
   return updates;
 }
 
-List<HomeUpdateData> _buildStudentUpdates(Map<String, dynamic>? data) {
+List<HomeUpdateData> _buildStudentUpdates(BuildContext context, Map<String, dynamic>? data) {
   final updates = <HomeUpdateData>[];
   final followUps = DataParsingHelper.asMapList(data?['followUpsAsStudent']);
   for (final followUp in followUps.take(4)) {
@@ -525,6 +553,7 @@ List<HomeUpdateData> _buildStudentUpdates(Map<String, dynamic>? data) {
             '${_followUpTypeLabel(followUp['type'])} • ${DataParsingHelper.ratingLabel(followUp['rating'])}',
         icon: Icons.auto_stories_rounded,
         color: DataParsingHelper.ratingColor(followUp['rating']),
+        onTap: () => context.push(RouteNames.studentJourney),
       ),
     );
   }
@@ -541,6 +570,7 @@ List<HomeUpdateData> _buildStudentUpdates(Map<String, dynamic>? data) {
         subtitle: DataParsingHelper.attendanceStatusLabel(attendance['status']),
         icon: Icons.calendar_today_rounded,
         color: DataParsingHelper.attendanceStatusColor(attendance['status']),
+        onTap: () => context.push(RouteNames.studentJourney),
       ),
     );
   }

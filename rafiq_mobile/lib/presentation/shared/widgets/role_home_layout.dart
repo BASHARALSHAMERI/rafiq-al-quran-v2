@@ -45,12 +45,14 @@ class HomeUpdateData {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const HomeUpdateData({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 }
 
@@ -172,6 +174,7 @@ class SectionTitle extends StatelessWidget {
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
+                fontFamily: 'Cairo',
               ),
         ),
       ],
@@ -356,6 +359,7 @@ class HomeUpdateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return EnterpriseCard(
       accentColor: data.color,
+      onTap: data.onTap,
       child: Row(
         children: [
           Container(
