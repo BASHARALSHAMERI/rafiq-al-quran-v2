@@ -212,7 +212,8 @@ class _StudentMonthlyReportScreenState
                   completionRate:
                       '${_asDouble(kpis['overallCompletionRate']).toStringAsFixed(0)}%',
                   isExporting: _isExporting,
-                  onExport: _showExportSheet,
+                  onExportPdf: (share) => _handleExport(format: 'PDF', shareAfterDownload: share),
+                  onMoreOptions: _showExportSheet,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 const _SectionHeader(
@@ -223,41 +224,46 @@ class _StudentMonthlyReportScreenState
                 AppCard(
                   child: Column(
                     children: [
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: AppSpacing.sm,
-                        crossAxisSpacing: AppSpacing.sm,
-                        childAspectRatio: 1.65,
+                      Row(
                         children: [
-                          _AttendanceStatCard(
-                            label: 'إجمالي',
-                            value: '${_asInt(attendance['total'])}',
-                            icon: Icons.calendar_month_rounded,
-                            color: AppColors.textPrimaryLight,
-                            background: const Color(0xFFF5F4F0),
+                          Expanded(
+                            child: _AttendanceStatCard(
+                              label: 'إجمالي',
+                              value: '${_asInt(attendance['total'])}',
+                              icon: Icons.calendar_month_rounded,
+                              color: AppColors.textPrimaryLight,
+                              background: const Color(0xFFF5F4F0),
+                            ),
                           ),
-                          _AttendanceStatCard(
-                            label: 'بدون عذر',
-                            value: '${_asInt(attendance['absent'])}',
-                            icon: Icons.cancel_outlined,
-                            color: AppColors.errorLight,
-                            background: const Color(0xFFFFF4F4),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _AttendanceStatCard(
+                              label: 'حاضر',
+                              value: '${_asInt(attendance['present'])}',
+                              icon: Icons.check_circle_outline_rounded,
+                              color: AppColors.successLight,
+                              background: const Color(0xFFF1FAF4),
+                            ),
                           ),
-                          _AttendanceStatCard(
-                            label: 'بعذر',
-                            value: '${_asInt(attendance['excused'])}',
-                            icon: Icons.shield_outlined,
-                            color: AppColors.warningLight,
-                            background: const Color(0xFFFFF8EC),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _AttendanceStatCard(
+                              label: 'بعذر',
+                              value: '${_asInt(attendance['excused'])}',
+                              icon: Icons.shield_outlined,
+                              color: AppColors.warningLight,
+                              background: const Color(0xFFFFF8EC),
+                            ),
                           ),
-                          _AttendanceStatCard(
-                            label: 'حاضر',
-                            value: '${_asInt(attendance['present'])}',
-                            icon: Icons.check_circle_outline_rounded,
-                            color: AppColors.successLight,
-                            background: const Color(0xFFF1FAF4),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _AttendanceStatCard(
+                              label: 'بدون عذر',
+                              value: '${_asInt(attendance['absent'])}',
+                              icon: Icons.cancel_outlined,
+                              color: AppColors.errorLight,
+                              background: const Color(0xFFFFF4F4),
+                            ),
                           ),
                         ],
                       ),
@@ -425,6 +431,7 @@ class _MonthSelector extends StatelessWidget {
                   'الفترة الحالية',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
                       ),
                 ),
                 const SizedBox(height: 4),
@@ -435,6 +442,7 @@ class _MonthSelector extends StatelessWidget {
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         height: 1.2,
+                        fontFamily: 'Cairo',
                       ),
                 ),
               ],
@@ -482,7 +490,8 @@ class _StudentHeroCard extends StatelessWidget {
   final String monthlyGrade;
   final String completionRate;
   final bool isExporting;
-  final VoidCallback onExport;
+  final ValueChanged<bool> onExportPdf;
+  final VoidCallback onMoreOptions;
 
   const _StudentHeroCard({
     required this.periodTitle,
@@ -491,76 +500,87 @@ class _StudentHeroCard extends StatelessWidget {
     required this.monthlyGrade,
     required this.completionRate,
     required this.isExporting,
-    required this.onExport,
+    required this.onExportPdf,
+    required this.onMoreOptions,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       padding: EdgeInsets.zero,
-      child: DecoratedBox(
+      child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFFF8FBF8),
-              Colors.white,
-            ],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-          borderRadius: BorderRadius.circular(24),
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.10),
-                child: Text(
-                  studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 26,
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primaryLight.withValues(alpha: 0.15),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
+                    style: const TextStyle(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      fontFamily: 'Cairo',
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
-                periodTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
                 studentName,
                 style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimaryLight,
+                  fontFamily: 'Cairo',
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                circleName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
+                '$periodTitle · $circleName',
+                style: const TextStyle(
+                  color: AppColors.textSecondaryLight,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontFamily: 'Cairo',
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 16),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1FAF4),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.successLight.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -573,7 +593,7 @@ class _StudentHeroCard extends StatelessWidget {
                     ),
                     Container(
                       width: 1,
-                      height: 54,
+                      height: 38,
                       color: AppColors.borderLight,
                     ),
                     Expanded(
@@ -586,29 +606,81 @@ class _StudentHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isExporting ? null : onExport,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
-                    foregroundColor: Colors.white,
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: isExporting ? null : () => onExportPdf(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryLight,
+                        side: BorderSide(
+                          color: AppColors.primaryLight.withValues(alpha: 0.25),
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: isExporting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: AppColors.primaryLight,
+                              ),
+                            )
+                          : const Icon(Icons.download_rounded, size: 16),
+                      label: const Text(
+                        'تنزيل PDF',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
                   ),
-                  icon: isExporting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.download_rounded),
-                  label: Text(
-                    isExporting ? 'جار تجهيز التقرير...' : 'تصدير / مشاركة',
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: isExporting ? null : () => onExportPdf(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryLight,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      icon: const Icon(Icons.share_rounded, size: 16),
+                      label: const Text(
+                        'مشاركة',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: isExporting ? null : onMoreOptions,
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFF1F3F0),
+                      foregroundColor: AppColors.textPrimaryLight,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(11),
+                    ),
+                    icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                  ),
+                ],
               ),
             ],
           ),
@@ -637,22 +709,24 @@ class _HeroMetric extends StatelessWidget {
           value,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             color: color,
+            fontFamily: 'Cairo',
             height: 1.1,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           label,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryLight,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-                height: 1.3,
-              ),
+          style: const TextStyle(
+            color: AppColors.textSecondaryLight,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+            fontFamily: 'Cairo',
+            height: 1.2,
+          ),
         ),
       ],
     );
@@ -675,18 +749,23 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+          style: const TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontWeight: FontWeight.w800,
+            fontSize: 16,
+            fontFamily: 'Cairo',
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryLight,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-              ),
+          style: const TextStyle(
+            color: AppColors.textSecondaryLight,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            fontFamily: 'Cairo',
+            height: 1.35,
+          ),
         ),
       ],
     );
@@ -711,34 +790,37 @@ class _AttendanceStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 10),
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 18,
               fontWeight: FontWeight.w900,
               color: color,
-              height: 1,
+              fontFamily: 'Cairo',
+              height: 1.1,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w700,
-                  height: 1.3,
-                ),
+            style: const TextStyle(
+              color: AppColors.textSecondaryLight,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              fontFamily: 'Cairo',
+              height: 1.1,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -766,6 +848,7 @@ class _ProgressLine extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondaryLight,
                     fontWeight: FontWeight.w700,
+                    fontFamily: 'Cairo',
                   ),
             ),
             const Spacer(),
@@ -774,6 +857,7 @@ class _ProgressLine extends StatelessWidget {
               style: const TextStyle(
                 color: AppColors.primaryLight,
                 fontWeight: FontWeight.w900,
+                fontFamily: 'Cairo',
               ),
             ),
           ],
@@ -840,8 +924,9 @@ class _PlanSectionCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'Cairo',
                     height: 1.2,
                   ),
                 ),
@@ -851,7 +936,8 @@ class _PlanSectionCard extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.w900,
-                  fontSize: 24,
+                  fontSize: 18,
+                  fontFamily: 'Cairo',
                   height: 1,
                 ),
               ),
@@ -869,7 +955,9 @@ class _PlanSectionCard extends StatelessWidget {
                       detail.label,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppColors.textSecondaryLight,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Cairo',
+                            fontSize: 13,
                             height: 1.35,
                           ),
                     ),
@@ -881,6 +969,8 @@ class _PlanSectionCard extends StatelessWidget {
                       textAlign: TextAlign.end,
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
                         height: 1.35,
                       ),
                     ),
@@ -936,8 +1026,9 @@ class _MetricCard extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.w900,
+              fontFamily: 'Cairo',
               height: 1,
             ),
           ),
@@ -948,6 +1039,8 @@ class _MetricCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondaryLight,
                   fontWeight: FontWeight.w700,
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
                   height: 1.3,
                 ),
           ),
@@ -994,7 +1087,8 @@ class _ActivityCard extends StatelessWidget {
                   activity['title']?.toString() ?? 'نشاط',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 17,
+                    fontSize: 15,
+                    fontFamily: 'Cairo',
                     height: 1.2,
                   ),
                 ),
@@ -1004,6 +1098,8 @@ class _ActivityCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondaryLight,
                         fontWeight: FontWeight.w600,
+                        fontFamily: 'Cairo',
+                        fontSize: 12,
                         height: 1.35,
                       ),
                 ),
