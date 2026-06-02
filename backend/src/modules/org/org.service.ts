@@ -22,6 +22,10 @@ type CreateCenterInput = {
   gender: Gender;
   logoUrl?: string | null;
   mosqueName?: string;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string;
   centerAdminUserId: number;
   supervisorUserIds?: number[];
@@ -35,6 +39,10 @@ type UpdateCenterInput = {
   gender?: Gender;
   logoUrl?: string | null;
   mosqueName?: string;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string;
   centerAdminUserId?: number;
   supervisorUserIds?: number[];
@@ -499,6 +507,10 @@ export const orgService = {
           gender: input.gender,
           logoUrl: logoUrl ?? null,
           mosqueName: mosqueName ?? null,
+          locationText: input.locationText ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
+          allowedRadiusMeters: input.allowedRadiusMeters ?? null,
           timezone: timezone ?? "Asia/Riyadh",
           centerAdminUserId: input.centerAdminUserId,
           supervisorUserIds,
@@ -595,6 +607,10 @@ export const orgService = {
         gender: input.gender,
         logoUrl,
         mosqueName,
+        locationText: input.locationText,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        allowedRadiusMeters: input.allowedRadiusMeters,
         timezone,
         centerAdminUserId: input.centerAdminUserId,
         supervisorUserIds,

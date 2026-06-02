@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+﻿import React, { useCallback, useMemo } from "react";
 import {
   AlertCircle,
   Building2,
@@ -183,9 +183,9 @@ export function CenterFormModal({
   onOpenQuick
 }: CenterFormModalProps) {
   const copy = copyByLanguage[ar ? "ar" : "en"];
-  const scheduleTitle = ar ? "جدول دوام مدير المركز" : "Center Admin Duty Schedule";
+  const scheduleTitle = ar ? "ط¬ط¯ظˆظ„ ط¯ظˆط§ظ… ظ…ط¯ظٹط± ط§ظ„ظ…ط±ظƒط²" : "Center Admin Duty Schedule";
   const scheduleHint = ar
-    ? "حدد وقت بدء الدوام لكل يوم. يمكنك نسخ اليوم على بقية الأيام المفعلة."
+    ? "ط­ط¯ط¯ ظˆظ‚طھ ط¨ط¯ط، ط§ظ„ط¯ظˆط§ظ… ظ„ظƒظ„ ظٹظˆظ…. ظٹظ…ظƒظ†ظƒ ظ†ط³ط® ط§ظ„ظٹظˆظ… ط¹ظ„ظ‰ ط¨ظ‚ظٹط© ط§ظ„ط£ظٹط§ظ… ط§ظ„ظ…ظپط¹ظ„ط©."
     : "Define center-admin duty slots. You can copy one configured day to all enabled days.";
 
   const handleChange = useCallback(
@@ -277,6 +277,59 @@ export function CenterFormModal({
               />
             </div>
           </div>
+        </div>
+
+
+        {/* Section: Geo Location */}
+        <div className="circlemod-section">
+          <div className="circlemod-section-head">
+            <MapPin size={15} className="circlemod-section-icon" />
+            <span>{ar ? "الموقع الجغرافي للمركز" : "Center Geo Location"}</span>
+          </div>
+          <div className="circlemod-row">
+            <div className="circlemod-field circlemod-field--sm">
+              <label htmlFor="ctr-lat">{ar ? "خط العرض" : "Latitude"}</label>
+              <input
+                id="ctr-lat"
+                type="number"
+                step="any"
+                className="circlemod-input"
+                value={draft.latitude}
+                onChange={(e) => handleChange("latitude", e.target.value)}
+                placeholder="24.7136"
+                disabled={pending}
+              />
+            </div>
+            <div className="circlemod-field circlemod-field--sm">
+              <label htmlFor="ctr-lng">{ar ? "خط الطول" : "Longitude"}</label>
+              <input
+                id="ctr-lng"
+                type="number"
+                step="any"
+                className="circlemod-input"
+                value={draft.longitude}
+                onChange={(e) => handleChange("longitude", e.target.value)}
+                placeholder="46.6753"
+                disabled={pending}
+              />
+            </div>
+            <div className="circlemod-field circlemod-field--sm">
+              <label htmlFor="ctr-radius">{ar ? "النطاق (متر)" : "Radius (m)"}</label>
+              <input
+                id="ctr-radius"
+                type="number"
+                min="50"
+                className="circlemod-input"
+                value={draft.allowedRadiusMeters}
+                onChange={(e) => handleChange("allowedRadiusMeters", e.target.value)}
+                placeholder="500"
+                disabled={pending}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">
+            {ar ? "اتركه فارغاً لتعطيل التحقق الجغرافي من الحضور." : "Leave blank to disable geo-attendance enforcement."}
+          </p>
         </div>
 
         {/* Section 2: Governance & Team */}

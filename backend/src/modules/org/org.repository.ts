@@ -48,6 +48,10 @@ type CreateCenterInput = {
   gender: Gender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone: string;
   centerAdminUserId: number;
   supervisorUserIds: number[];
@@ -61,6 +65,10 @@ type UpdateCenterInput = {
   gender?: Gender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string | null;
   centerAdminUserId?: number;
   supervisorUserIds?: number[];
@@ -589,6 +597,10 @@ export const orgRepository = {
           gender: input.gender,
           logoUrl: input.logoUrl ?? null,
           mosqueName: input.mosqueName ?? null,
+          locationText: input.locationText ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
+          allowedRadiusMeters: input.allowedRadiusMeters ?? null,
           timezone: input.timezone,
           centerAdminUserId: input.centerAdminUserId,
           code: input.code,
@@ -653,6 +665,10 @@ export const orgRepository = {
           ...(input.gender !== undefined ? { gender: input.gender } : {}),
           ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl ?? null } : {}),
           ...(input.mosqueName !== undefined ? { mosqueName: input.mosqueName ?? null } : {}),
+          ...(input.locationText !== undefined ? { locationText: input.locationText ?? null } : {}),
+          ...(input.latitude !== undefined ? { latitude: input.latitude ?? null } : {}),
+          ...(input.longitude !== undefined ? { longitude: input.longitude ?? null } : {}),
+          ...(input.allowedRadiusMeters !== undefined ? { allowedRadiusMeters: input.allowedRadiusMeters ?? null } : {}),
           ...(input.timezone !== undefined ? { timezone: input.timezone ?? "Asia/Riyadh" } : {}),
           ...(input.centerAdminUserId !== undefined
             ? { centerAdminUserId: input.centerAdminUserId }

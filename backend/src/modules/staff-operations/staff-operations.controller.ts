@@ -183,4 +183,87 @@ export const staffOperationsController = {
       next(error);
     }
   }) as RequestHandler,
+
+  createVisitLog: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const body = res.locals.validatedBody as any;
+      const result = await staffOperationsService.createVisitLog(req.scope, body);
+      res.status(201).json({ ok: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  endVisitLog: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const visitId = parseInt(req.params.id as string, 10);
+      const body = res.locals.validatedBody as any;
+      const result = await staffOperationsService.endVisitLog(req.scope, visitId, body);
+      res.json({ ok: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  exportMonthlyReport: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const { month, year } = res.locals.validatedQuery as { month: number; year: number };
+      const { workDays, report } = await staffOperationsService.getMonthlyReport(req.scope, month, year);
+
+      const roleLabel = (role: string) => {
+        const map: Record<string, string> = {
+          TEACHER: "معلم", CENTER_ADMIN: "مدير مركز", SUPERVISOR: "مشرف",
+          ACCOUNTANT: "محاسب", FINANCE_MANAGER: "مدير مالي",
+          TREASURER: "أمين صندوق", AUDITOR: "مدقق حسابات"
+        };
+        return map[role] ?? role;
+      };
+
+      const headers = [
+        "م", "اسم الموظف", "الدور الوظيفي",
+        "أيام الحضور", "أيام الغياب", "أيام التأخر",
+        "أيام الإجازة", "أيام الأعذار",
+        "ساعات الدوام الفعلية", "الساعات المتوقعة",
+        "الزيارات الإشرافية", "الاستقطاعات المعلقة (ريال)",
+        `أيام العمل المقررة: ${workDays}`
+      ];
+
+      const rows = (report as any[]).map((s, i) => [
+        i + 1,
+        s.fullName,
+        roleLabel(s.role),
+        s.presentDays,
+        s.absentDays,
+        s.lateDays,
+        s.onLeaveDays,
+        s.excusedDays,
+        s.workingHours.toFixed(1),
+        s.expectedHours.toFixed(1),
+        s.visitsCount ?? 0,
+        s.pendingDeductions.toFixed(2),
+        ""
+      ]);
+
+      const escape = (v: string | number) => {
+        const str = String(v);
+        return str.includes(",") || str.includes('"') || str.includes("\n")
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+      };
+
+      const BOM = "\uFEFF";
+      const csvLines = [headers, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+      const csv = BOM + csvLines;
+
+      const filename = `attendance-report-${year}-${String(month).padStart(2, "0")}.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
 };

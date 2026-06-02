@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -17,7 +17,7 @@ import { DataTable } from "../../../components/ui/DataTable";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import type { StaffMonthlyReport } from "../staff-attendance.api";
-import { useStaffMonthlyReport } from "../staff-attendance.api";
+import { useStaffMonthlyReport, useExportMonthlyReport } from "../staff-attendance.api";
 import {
   useClientPagination
 } from "../../../shared/ui/useClientPagination";
@@ -53,6 +53,7 @@ export function MonthlyStaffReportView() {
   const staff = reportQuery.data?.report ?? [];
   const workDays = reportQuery.data?.workDays ?? 0;
   const pagination = useClientPagination(staff, { initialPageSize: 25 });
+  const exportM = useExportMonthlyReport();
 
   const totalPresent = staff.reduce((sum, employee) => sum + employee.presentDays, 0);
   const totalVisits = staff.reduce((sum, employee) => sum + (employee.visitsCount || 0), 0);
@@ -227,6 +228,16 @@ export function MonthlyStaffReportView() {
             disabled={monthStr === DEFAULT_MONTH}
           >
             {ar ? "الشهر الحالي" : "Current Month"}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => exportM.mutate({ month, year })}
+            disabled={exportM.isPending || staff.length === 0}
+            className="flex items-center gap-1.5"
+          >
+            <Download size={14} />
+            {exportM.isPending ? (ar ? "\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631..." : "Exporting...") : (ar ? "\u062a\u0635\u062f\u064a\u0631 CSV" : "Export CSV")}
           </Button>
         </div>
       </div>

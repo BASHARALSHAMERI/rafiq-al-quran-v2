@@ -497,18 +497,20 @@ model TeacherProfile {
 }
 
 model SupervisorProfile {
-  userId             Int                     @id
-  assignedAt         DateTime?               @db.Date
-  status             SupervisorProfileStatus @default(ACTIVE)
-  educationLevel     String?                 @db.VarChar(120)
-  yearsExperience    Int?
-  quranQualification KhatmType?
-  professionalNotes  String?                 @db.VarChar(500)
-  createdByUserId    Int?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  createdByUser      User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
-  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               Int                     @id
+  assignedAt           DateTime?               @db.Date
+  status               SupervisorProfileStatus @default(ACTIVE)
+  educationLevel       String?                 @db.VarChar(120)
+  yearsExperience      Int?
+  quranQualification   KhatmType?
+  professionalNotes    String?                 @db.VarChar(500)
+  monthlyHoursTarget   Int                     @default(80) @map("monthly_hours_target")
+  monthlyVisitsTarget  Int                     @default(20) @map("monthly_visits_target")
+  createdByUserId      Int?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  createdByUser        User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([createdByUserId])
@@ -3074,6 +3076,7 @@ enum NotificationType {
   SUPERVISOR_VISIT_ASSIGNED
   STAFF_SHIFT_REMINDER
   STAFF_LATE_ALERT
+  STAFF_ABSENCE_MARKED
 }
 
 enum AuditEntityType {

@@ -3,6 +3,7 @@ import { prisma } from "../shared/db/prisma";
 import { attendancePolicyService } from "../modules/staff-operations/attendance-policy.service";
 import { effectiveShiftService } from "../modules/staff-operations/effective-shift.service";
 import { notificationsService } from "../modules/notifications/notifications.service";
+import { logger } from "../shared/logger/logger";
 
 const toStartOfDay = (date: Date) => {
   const d = new Date(date);
@@ -13,7 +14,7 @@ const toStartOfDay = (date: Date) => {
 const REMINDER_LEAD_MINUTES = 30;
 
 export async function runStaffShiftReminderJob() {
-  console.log("[StaffShiftReminderJob] Starting shift reminder job...");
+  logger.info({ job: "shift-reminder" }, "Starting staff shift reminder job");
   const now = new Date();
   const today = toStartOfDay(now);
   const orgs = await prisma.organization.findMany();
@@ -156,5 +157,5 @@ export async function runStaffShiftReminderJob() {
     }
   }
 
-  console.log("[StaffShiftReminderJob] Completed.");
+  logger.info({ job: "shift-reminder" }, "Staff shift reminder job completed");
 }

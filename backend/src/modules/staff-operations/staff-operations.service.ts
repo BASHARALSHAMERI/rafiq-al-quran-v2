@@ -7,7 +7,8 @@ import {
   LeaveType,
   DeductionEventStatus,
   StaffRoleType,
-  Role
+  Role,
+  GeoState
 } from "@prisma/client";
 import { prisma } from "../../shared/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
@@ -490,6 +491,13 @@ export const staffOperationsService = {
       }
     }
 
+    const userIds = [...new Set(records.map((r) => r.userId))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, role: true }
+    });
+    const roleByUserId = new Map(users.map((u) => [u.id, u.role]));
+
     return prisma.$transaction(
       records.map((record) =>
         prisma.staffAttendanceRecord.upsert({
@@ -513,7 +521,7 @@ export const staffOperationsService = {
             note: record.note,
             markedById: scope.userId,
             source: AttendanceSource.MANUAL,
-            staffRole: resolveStaffRole(Role.TEACHER), // Fallback, will be updated by trigger or later
+            staffRole: resolveStaffRole(roleByUserId.get(record.userId) ?? Role.TEACHER),
           },
         })
       )
@@ -1532,6 +1540,132 @@ export const staffOperationsService = {
     };
   },
 
+  async createVisitLog(
+    scope: ScopeContext,
+    input: {
+      centerId: number;
+      circleId?: number | null;
+      planItemId?: number | null;
+      startLatitude?: number | null;
+      startLongitude?: number | null;
+      observations?: string | null;
+    }
+  ) {
+    if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
+      throw new AppError("Access denied", 403);
+    }
+
+    const supervisorId = scope.userId;
+
+    const center = await prisma.center.findFirst({
+      where: { id: input.centerId, organizationId: scope.organizationId },
+      select: { id: true, latitude: true, longitude: true, allowedRadiusMeters: true, locationText: true }
+    });
+
+    if (!center) throw new AppError("Center not found", 404);
+
+    let startGeoState: GeoState = GeoState.NOT_SENT;
+    let startDistanceMeters: number | null = null;
+
+    if (input.startLatitude != null && input.startLongitude != null && center.latitude != null && center.longitude != null && center.allowedRadiusMeters != null) {
+      startDistanceMeters = Math.round(haversineMeters({
+        fromLat: input.startLatitude,
+        fromLng: input.startLongitude,
+        toLat: Number(center.latitude),
+        toLng: Number(center.longitude)
+      }));
+      startGeoState = startDistanceMeters <= center.allowedRadiusMeters ? GeoState.INSIDE : GeoState.OUTSIDE;
+    }
+
+    const visitLog = await prisma.supervisorVisitLog.create({
+      data: {
+        organizationId: scope.organizationId,
+        supervisorId,
+        centerId: input.centerId,
+        circleId: input.circleId ?? null,
+        planItemId: input.planItemId ?? null,
+        startedAt: new Date(),
+        startLatitude: input.startLatitude ?? null,
+        startLongitude: input.startLongitude ?? null,
+        startGeoState,
+        startDistanceMeters,
+        observations: input.observations ?? null
+      },
+      include: {
+        supervisor: { select: { id: true, fullName: true } },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
+      }
+    });
+
+    return { ...visitLog, status: "PENDING", visitType: visitLog.planItemId ? "PLANNED" : "EMERGENCY" };
+  },
+
+  async endVisitLog(
+    scope: ScopeContext,
+    visitId: number,
+    input: {
+      endLatitude?: number | null;
+      endLongitude?: number | null;
+      rating?: number | null;
+      observations?: string | null;
+      checklist?: unknown[];
+    }
+  ) {
+    if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
+      throw new AppError("Access denied", 403);
+    }
+
+    const existing = await prisma.supervisorVisitLog.findFirst({
+      where: { id: visitId, organizationId: scope.organizationId },
+      include: { center: { select: { latitude: true, longitude: true, allowedRadiusMeters: true } } }
+    });
+
+    if (!existing) throw new AppError("Visit log not found", 404);
+    if (existing.supervisorId !== scope.userId && scope.role !== Role.SUPER_ADMIN) {
+      throw new AppError("Access denied", 403);
+    }
+    if (existing.endedAt) throw new AppError("Visit already ended", 409);
+
+    const endedAt = new Date();
+    const durationMinutes = Math.round((endedAt.getTime() - existing.startedAt.getTime()) / 60_000);
+
+    let endGeoState: GeoState = GeoState.NOT_SENT;
+    let endDistanceMeters: number | null = null;
+
+    if (input.endLatitude != null && input.endLongitude != null && existing.center.latitude != null && existing.center.longitude != null && existing.center.allowedRadiusMeters != null) {
+      endDistanceMeters = Math.round(haversineMeters({
+        fromLat: input.endLatitude,
+        fromLng: input.endLongitude,
+        toLat: Number(existing.center.latitude),
+        toLng: Number(existing.center.longitude)
+      }));
+      endGeoState = endDistanceMeters <= existing.center.allowedRadiusMeters ? GeoState.INSIDE : GeoState.OUTSIDE;
+    }
+
+    const updated = await prisma.supervisorVisitLog.update({
+      where: { id: visitId },
+      data: {
+        endedAt,
+        durationMinutes,
+        endLatitude: input.endLatitude ?? null,
+        endLongitude: input.endLongitude ?? null,
+        endGeoState,
+        endDistanceMeters,
+        rating: input.rating ?? null,
+        observations: input.observations ?? existing.observations,
+        checklist: input.checklist ? (input.checklist as object[]) : undefined
+      },
+      include: {
+        supervisor: { select: { id: true, fullName: true } },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
+      }
+    });
+
+    return { ...updated, status: "COMPLETED", visitType: updated.planItemId ? "PLANNED" : "EMERGENCY" };
+  },
+
   // ==========================================
   // 4. Monthly Report
   // ==========================================
@@ -1710,30 +1844,23 @@ async function resolveTeacherCircle(scope: ScopeContext, circleId?: number) {
   return circle;
 }
 
-async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?: number) {
-  if (scope.role !== Role.CENTER_ADMIN) {
-    throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
-  }
-
+async function resolveCenterByScope(
+  scope: ScopeContext,
+  centerId?: number,
+  accessConditions: Prisma.CenterWhereInput[] = []
+) {
   const resolvedCenterId = centerId ?? scope.centerIds[0];
-  const directCenterAccess = [
-    { centerAdminUserId: scope.userId },
-    { userCenterAccesses: { some: { userId: scope.userId } } }
-  ];
-  const scopedCenterAccess = scope.centerIds.length ? [{ id: { in: scope.centerIds } }] : [];
+  const scopeFilter: Prisma.CenterWhereInput[] = scope.centerIds.length
+    ? [{ id: { in: scope.centerIds } }]
+    : [];
+  const combinedAccess = [...accessConditions, ...scopeFilter];
 
   const center = await prisma.center.findFirst({
     where: {
       organizationId: scope.organizationId,
       isActive: true,
-      ...(resolvedCenterId
-        ? {
-            id: resolvedCenterId,
-            OR: [...directCenterAccess, ...scopedCenterAccess]
-          }
-        : {
-            OR: [...directCenterAccess, ...scopedCenterAccess]
-          })
+      ...(resolvedCenterId ? { id: resolvedCenterId } : {}),
+      ...(combinedAccess.length > 0 ? { OR: combinedAccess } : {})
     },
     select: {
       id: true,
@@ -1746,12 +1873,25 @@ async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?
     }
   });
 
+  return center;
+}
+
+async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  if (scope.role !== Role.CENTER_ADMIN) {
+    throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
+  }
+
+  const center = await resolveCenterByScope(scope, centerId, [
+    { centerAdminUserId: scope.userId },
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
   if (!center) {
     throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
   }
 
   return {
-    id: 0,
+    id: center.id,
     centerId: center.id,
     latitude: center.latitude,
     longitude: center.longitude,
@@ -1762,12 +1902,70 @@ async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?
   };
 }
 
+async function resolveSupervisorAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  const center = await resolveCenterByScope(scope, centerId, [
+    { centerSupervisors: { some: { supervisorUserId: scope.userId, isActive: true } } },
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
+  if (!center) {
+    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+  }
+
+  return {
+    id: center.id,
+    centerId: center.id,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    allowedRadiusMeters: center.allowedRadiusMeters,
+    name: center.name,
+    locationText: center.locationText ?? center.name,
+    timezone: center.timezone
+  };
+}
+
+async function resolveFinanceStaffAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  const center = await resolveCenterByScope(scope, centerId, [
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
+  if (!center) {
+    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+  }
+
+  return {
+    id: center.id,
+    centerId: center.id,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    allowedRadiusMeters: center.allowedRadiusMeters,
+    name: center.name,
+    locationText: center.locationText ?? center.name,
+    timezone: center.timezone
+  };
+}
+
+const financeRoles: Role[] = [
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+
 async function resolveSelfAttendanceTarget(
   scope: ScopeContext,
   input: { centerId?: number; circleId?: number }
 ) {
   if (scope.role === Role.CENTER_ADMIN) {
     return resolveCenterAdminAttendanceCenter(scope, input.centerId);
+  }
+
+  if (scope.role === Role.SUPERVISOR) {
+    return resolveSupervisorAttendanceCenter(scope, input.centerId);
+  }
+
+  if (financeRoles.includes(scope.role)) {
+    return resolveFinanceStaffAttendanceCenter(scope, input.centerId);
   }
 
   return resolveTeacherCircle(scope, input.circleId);

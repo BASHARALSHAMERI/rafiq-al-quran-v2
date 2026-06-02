@@ -1,4 +1,4 @@
-import type { CenterGender } from "../../../org/types";
+﻿import type { CenterGender } from "../../../org/types";
 import {
   createEmptyScheduleDraftRows,
   type CircleScheduleDraftRow
@@ -16,6 +16,9 @@ export type CenterDraft = {
   gender: CenterGender | "";
   logoUrl: string;
   mosqueName: string;
+  latitude: string;
+  longitude: string;
+  allowedRadiusMeters: string;
   centerAdminUserId: number | "";
   supervisorUserIds: number[];
   scheduleRows: CircleScheduleDraftRow[];
@@ -26,6 +29,9 @@ export const emptyCenterDraft: CenterDraft = {
   gender: "",
   logoUrl: "",
   mosqueName: "",
+  latitude: "",
+  longitude: "",
+  allowedRadiusMeters: "500",
   centerAdminUserId: "",
   supervisorUserIds: [],
   scheduleRows: createEmptyScheduleDraftRows()

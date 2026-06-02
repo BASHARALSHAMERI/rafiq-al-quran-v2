@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -193,11 +193,11 @@ export default function CentersPage() {
 
   const adminOpts = admins.map((userOption) => ({
     id: userOption.id,
-    label: `${userOption.fullName}${userOption.isActive ? "" : ar ? " (معطل)" : " (inactive)"}`
+    label: `${userOption.fullName}${userOption.isActive ? "" : ar ? " (ظ…ط¹ط·ظ„)" : " (inactive)"}`
   }));
   const supOpts = supervisors.map((userOption) => ({
     id: userOption.id,
-    label: `${userOption.fullName}${userOption.isActive ? "" : ar ? " (معطل)" : " (inactive)"}`
+    label: `${userOption.fullName}${userOption.isActive ? "" : ar ? " (ظ…ط¹ط·ظ„)" : " (inactive)"}`
   }));
 
   const pending = createM.isPending || updateM.isPending || statusM.isPending;
@@ -245,6 +245,9 @@ export default function CentersPage() {
       gender: center.gender || "",
       logoUrl: String(center.logoUrl ?? ""),
       mosqueName: String(center.mosqueName ?? ""),
+      latitude: (center as any).latitude != null ? String((center as any).latitude) : "",
+      longitude: (center as any).longitude != null ? String((center as any).longitude) : "",
+      allowedRadiusMeters: (center as any).allowedRadiusMeters != null ? String((center as any).allowedRadiusMeters) : "500",
       centerAdminUserId: typeof center.centerAdminUserId === "number" ? center.centerAdminUserId : "",
       supervisorUserIds: (center.centerSupervisors ?? []).map((item) => item.supervisorUserId),
       scheduleRows: createEmptyScheduleDraftRows()
@@ -275,7 +278,7 @@ export default function CentersPage() {
     }
 
     if (!draft.gender) {
-      setFormErr(ar ? "الجنس مطلوب" : "Gender required");
+      setFormErr(ar ? "ط§ظ„ط¬ظ†ط³ ظ…ط·ظ„ظˆط¨" : "Gender required");
       return;
     }
 
@@ -288,6 +291,9 @@ export default function CentersPage() {
       gender: draft.gender,
       logoUrl: draft.logoUrl.trim() ? draft.logoUrl.trim() : null,
       mosqueName: draft.mosqueName.trim() || undefined,
+      latitude: draft.latitude ? Number(draft.latitude) : null,
+      longitude: draft.longitude ? Number(draft.longitude) : null,
+      allowedRadiusMeters: draft.allowedRadiusMeters ? Number(draft.allowedRadiusMeters) : null,
       centerAdminUserId: Number(draft.centerAdminUserId),
       supervisorUserIds: draft.supervisorUserIds
     };
@@ -301,7 +307,7 @@ export default function CentersPage() {
       setModalMode(null);
       await refreshAll();
     } catch (error) {
-      setFormErr(getApiErrorMessage(error, ar ? "تعذر الحفظ" : "Save failed"));
+      setFormErr(getApiErrorMessage(error, ar ? "طھط¹ط°ط± ط§ظ„ط­ظپط¸" : "Save failed"));
     }
   };
 
@@ -317,7 +323,7 @@ export default function CentersPage() {
       setStatusTarget(null);
       await refreshAll();
     } catch (error) {
-      setActionErr(getApiErrorMessage(error, ar ? "تعذر التحديث" : "Update failed"));
+      setActionErr(getApiErrorMessage(error, ar ? "طھط¹ط°ط± ط§ظ„طھط­ط¯ظٹط«" : "Update failed"));
     }
   };
 
@@ -346,7 +352,7 @@ export default function CentersPage() {
 
       await qc.invalidateQueries({ queryKey: USERS_QUERY_KEYS.all });
     } catch (error) {
-      setQuickErr(getApiErrorMessage(error, ar ? "تعذر الإنشاء" : "Creation failed"));
+      setQuickErr(getApiErrorMessage(error, ar ? "طھط¹ط°ط± ط§ظ„ط¥ظ†ط´ط§ط،" : "Creation failed"));
     }
   };
 
@@ -356,8 +362,8 @@ export default function CentersPage() {
         <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-6">
           <motion.div variants={fadeUp}>
             <PageHeader
-              title={ar ? "إدارة المراكز" : "Centers Management"}
-              description={ar ? "تنظيم المراكز والحلقات والإشراف" : "Organize centers, circles, and supervision"}
+              title={ar ? "ط¥ط¯ط§ط±ط© ط§ظ„ظ…ط±ط§ظƒط²" : "Centers Management"}
+              description={ar ? "طھظ†ط¸ظٹظ… ط§ظ„ظ…ط±ط§ظƒط² ظˆط§ظ„ط­ظ„ظ‚ط§طھ ظˆط§ظ„ط¥ط´ط±ط§ظپ" : "Organize centers, circles, and supervision"}
               icon={<Building2 className="w-6 h-6" />}
               actions={
                 <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -369,11 +375,11 @@ export default function CentersPage() {
                     onClick={() => void refreshAll()}
                     disabled={centersQ.isFetching}
                   >
-                    {ar ? "تحديث" : "Refresh"}
+                    {ar ? "طھط­ط¯ظٹط«" : "Refresh"}
                   </Button>
                   {canManage ? (
                     <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
-                      {ar ? "إضافة مركز" : "Add Center"}
+                      {ar ? "ط¥ط¶ط§ظپط© ظ…ط±ظƒط²" : "Add Center"}
                     </Button>
                   ) : null}
                 </div>
@@ -396,9 +402,9 @@ export default function CentersPage() {
                     setPage(1);
                   }}
                 >
-                  <option value="ALL">{ar ? "كل الحالات" : "All statuses"}</option>
-                  <option value="ACTIVE">{ar ? "نشط" : "Active"}</option>
-                  <option value="INACTIVE">{ar ? "معطل" : "Inactive"}</option>
+                  <option value="ALL">{ar ? "ظƒظ„ ط§ظ„ط­ط§ظ„ط§طھ" : "All statuses"}</option>
+                  <option value="ACTIVE">{ar ? "ظ†ط´ط·" : "Active"}</option>
+                  <option value="INACTIVE">{ar ? "ظ…ط¹ط·ظ„" : "Inactive"}</option>
                 </select>
 
                 <select
@@ -409,17 +415,17 @@ export default function CentersPage() {
                     setPage(1);
                   }}
                 >
-                  <option value="ALL">{ar ? "كل الفئات" : "All genders"}</option>
-                  <option value="MALE">{ar ? "ذكور" : "Male"}</option>
-                  <option value="FEMALE">{ar ? "إناث" : "Female"}</option>
+                  <option value="ALL">{ar ? "ظƒظ„ ط§ظ„ظپط¦ط§طھ" : "All genders"}</option>
+                  <option value="MALE">{ar ? "ط°ظƒظˆط±" : "Male"}</option>
+                  <option value="FEMALE">{ar ? "ط¥ظ†ط§ط«" : "Female"}</option>
                 </select>
 
-                <div className="ctr-view-toggle" role="tablist" aria-label={ar ? "طرق العرض" : "View modes"}>
+                <div className="ctr-view-toggle" role="tablist" aria-label={ar ? "ط·ط±ظ‚ ط§ظ„ط¹ط±ط¶" : "View modes"}>
                   <button
                     type="button"
                     className={`ctr-view-btn ${view === "list" ? "active" : ""}`}
                     onClick={() => setView("list")}
-                    aria-label={ar ? "عرض القائمة" : "List view"}
+                    aria-label={ar ? "ط¹ط±ط¶ ط§ظ„ظ‚ط§ط¦ظ…ط©" : "List view"}
                   >
                     <List size={16} />
                   </button>
@@ -427,7 +433,7 @@ export default function CentersPage() {
                     type="button"
                     className={`ctr-view-btn ${view === "grid" ? "active" : ""}`}
                     onClick={() => setView("grid")}
-                    aria-label={ar ? "عرض البطاقات" : "Grid view"}
+                    aria-label={ar ? "ط¹ط±ط¶ ط§ظ„ط¨ط·ط§ظ‚ط§طھ" : "Grid view"}
                   >
                     <LayoutGrid size={16} />
                   </button>
@@ -444,7 +450,7 @@ export default function CentersPage() {
                     setPage(1);
                   }}
                   className="ctr-search-input"
-                  placeholder={ar ? "البحث بالاسم أو الرمز..." : "Search by name, code, or manager..."}
+                  placeholder={ar ? "ط§ظ„ط¨ط­ط« ط¨ط§ظ„ط§ط³ظ… ط£ظˆ ط§ظ„ط±ظ…ط²..." : "Search by name, code, or manager..."}
                 />
               </div>
             </div>
@@ -453,7 +459,7 @@ export default function CentersPage() {
               {actionErr ? (
                 <ErrorState
                   className="ctr-inline-state"
-                  title={ar ? "تعذر تحديث المركز" : "Unable to update center"}
+                  title={ar ? "طھط¹ط°ط± طھط­ط¯ظٹط« ط§ظ„ظ…ط±ظƒط²" : "Unable to update center"}
                   description={actionErr}
                 />
               ) : null}
@@ -476,43 +482,43 @@ export default function CentersPage() {
 
               {centersQ.isLoading && showSlowLoadMessage ? (
                 <ErrorState
-                  title={ar ? "ط§ظ„ط¨ظٹط§ظ†ط§طھ طھط³طھط؛ط±ظ‚ ظˆظ‚طھظ‹ط§ ط£ط·ظˆظ„ ظ…ظ† ط§ظ„ظ…طھظˆظ‚ط¹" : "Data is taking longer than expected"}
+                  title={ar ? "ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·ع¾ط·آ³ط·ع¾ط·ط›ط·آ±ط¸â€ڑ ط¸ث†ط¸â€ڑط·ع¾ط¸â€¹ط·آ§ ط·آ£ط·آ·ط¸ث†ط¸â€‍ ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط¸ث†ط¸â€ڑط·آ¹" : "Data is taking longer than expected"}
                   description={
                     ar
-                      ? "ظ„ط§ طھط²ط§ظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط±ط§ظƒط² ظ‚ظٹط¯ ط§ظ„طھط­ظ…ظٹظ„. ظٹظ…ظƒظ†ظƒ ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ط£ظˆ ظپط­طµ ط§طھطµط§ظ„ ط§ظ„ط®ط§ط¯ظ…."
+                      ? "ط¸â€‍ط·آ§ ط·ع¾ط·آ²ط·آ§ط¸â€‍ ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط·آ§ط¸ئ’ط·آ² ط¸â€ڑط¸ظ¹ط·آ¯ ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€¦ط¸ظ¹ط¸â€‍. ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸ئ’ ط·آ¥ط·آ¹ط·آ§ط·آ¯ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€‍ط·آ© ط·آ£ط¸ث† ط¸ظ¾ط·آ­ط·آµ ط·آ§ط·ع¾ط·آµط·آ§ط¸â€‍ ط·آ§ط¸â€‍ط·آ®ط·آ§ط·آ¯ط¸â€¦."
                       : "Centers data is still loading. Retry or check the server connection."
                   }
                   onRetry={() => void refreshAll()}
-                  retryLabel={ar ? "ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©" : "Retry"}
+                  retryLabel={ar ? "ط·آ¥ط·آ¹ط·آ§ط·آ¯ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€‍ط·آ©" : "Retry"}
                 />
               ) : null}
 
               {centersQ.isError ? (
                 <ErrorState
-                  title={ar ? "تعذر تحميل المراكز" : "Unable to load centers"}
+                  title={ar ? "طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظ…ط±ط§ظƒط²" : "Unable to load centers"}
                   description={getApiErrorMessage(centersQ.error)}
                   onRetry={() => void refreshAll()}
-                  retryLabel={ar ? "إعادة المحاولة" : "Retry"}
+                  retryLabel={ar ? "ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©" : "Retry"}
                 />
               ) : null}
 
               {!centersQ.isLoading && !centersQ.isError && paged.length === 0 ? (
                 <EmptyState
-                  title={q.trim() || gFilter !== "ALL" || sFilter !== "ALL" ? (ar ? "لا توجد نتائج" : "No results") : ar ? "لا توجد مراكز" : "No centers"}
+                  title={q.trim() || gFilter !== "ALL" || sFilter !== "ALL" ? (ar ? "ظ„ط§ طھظˆط¬ط¯ ظ†طھط§ط¦ط¬" : "No results") : ar ? "ظ„ط§ طھظˆط¬ط¯ ظ…ط±ط§ظƒط²" : "No centers"}
                   description={
                     q.trim() || gFilter !== "ALL" || sFilter !== "ALL"
                       ? ar
-                        ? "جرّب تعديل البحث أو الفلاتر لعرض نتائج أخرى."
+                        ? "ط¬ط±ظ‘ط¨ طھط¹ط¯ظٹظ„ ط§ظ„ط¨ط­ط« ط£ظˆ ط§ظ„ظپظ„ط§طھط± ظ„ط¹ط±ط¶ ظ†طھط§ط¦ط¬ ط£ط®ط±ظ‰."
                         : "Try adjusting the search or filters."
                       : ar
-                        ? "ابدأ بإنشاء أول مركز."
+                        ? "ط§ط¨ط¯ط£ ط¨ط¥ظ†ط´ط§ط، ط£ظˆظ„ ظ…ط±ظƒط²."
                         : "Create your first center to get started."
                   }
                   icon={<Building2 className="w-8 h-8" />}
                   action={
                     canManage ? (
                       <Button size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreate}>
-                        {ar ? "إضافة مركز" : "Add Center"}
+                        {ar ? "ط¥ط¶ط§ظپط© ظ…ط±ظƒط²" : "Add Center"}
                       </Button>
                     ) : undefined
                   }
@@ -557,7 +563,7 @@ export default function CentersPage() {
                     className="ctr-page-btn"
                     onClick={() => setPage((current) => Math.max(1, current - 1))}
                     disabled={curPage === 1}
-                    aria-label={ar ? "الصفحة السابقة" : "Previous page"}
+                    aria-label={ar ? "ط§ظ„طµظپط­ط© ط§ظ„ط³ط§ط¨ظ‚ط©" : "Previous page"}
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -567,7 +573,7 @@ export default function CentersPage() {
                     className="ctr-page-btn"
                     onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                     disabled={curPage === totalPages}
-                    aria-label={ar ? "الصفحة التالية" : "Next page"}
+                    aria-label={ar ? "ط§ظ„طµظپط­ط© ط§ظ„طھط§ظ„ظٹط©" : "Next page"}
                   >
                     <ChevronLeft size={16} />
                   </button>
@@ -575,12 +581,12 @@ export default function CentersPage() {
 
                 <div className="ctr-page-info">
                   {ar
-                    ? `عرض ${rangeFrom} - ${rangeTo} من ${totalCenters} مركز`
+                    ? `ط¹ط±ط¶ ${rangeFrom} - ${rangeTo} ظ…ظ† ${totalCenters} ظ…ط±ظƒط²`
                     : `Showing ${rangeFrom} - ${rangeTo} of ${totalCenters} centers`}
                 </div>
 
                 <div className="ctr-page-size">
-                  <span>{ar ? "الصفوف لكل صفحة:" : "Rows per page:"}</span>
+                  <span>{ar ? "ط§ظ„طµظپظˆظپ ظ„ظƒظ„ طµظپط­ط©:" : "Rows per page:"}</span>
                   <select
                     value={pageSize}
                     onChange={(event) => {
@@ -650,28 +656,28 @@ export default function CentersPage() {
             statusTarget
               ? statusTarget.isActive ?? true
                 ? ar
-                  ? "تعطيل المركز"
+                  ? "طھط¹ط·ظٹظ„ ط§ظ„ظ…ط±ظƒط²"
                   : "Deactivate center"
                 : ar
-                  ? "تفعيل المركز"
+                  ? "طھظپط¹ظٹظ„ ط§ظ„ظ…ط±ظƒط²"
                   : "Activate center"
               : ar
-                ? "تحديث حالة المركز"
+                ? "طھط­ط¯ظٹط« ط­ط§ظ„ط© ط§ظ„ظ…ط±ظƒط²"
                 : "Update center status"
           }
           description={
             statusTarget
               ? statusTarget.isActive ?? true
                 ? ar
-                  ? `سيتم تعطيل ${statusTarget.name} مع إبقاء البيانات الحالية كما هي.`
+                  ? `ط³ظٹطھظ… طھط¹ط·ظٹظ„ ${statusTarget.name} ظ…ط¹ ط¥ط¨ظ‚ط§ط، ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ط§ظ„ظٹط© ظƒظ…ط§ ظ‡ظٹ.`
                   : `${statusTarget.name} will be deactivated while keeping its data intact.`
                 : ar
-                  ? `سيتم إعادة تفعيل ${statusTarget.name}.`
+                  ? `ط³ظٹطھظ… ط¥ط¹ط§ط¯ط© طھظپط¹ظٹظ„ ${statusTarget.name}.`
                   : `${statusTarget.name} will be activated again.`
               : undefined
           }
-          confirmLabel={statusTarget && (statusTarget.isActive ?? true) ? (ar ? "تعطيل" : "Deactivate") : ar ? "تفعيل" : "Activate"}
-          cancelLabel={ar ? "إلغاء" : "Cancel"}
+          confirmLabel={statusTarget && (statusTarget.isActive ?? true) ? (ar ? "طھط¹ط·ظٹظ„" : "Deactivate") : ar ? "طھظپط¹ظٹظ„" : "Activate"}
+          cancelLabel={ar ? "ط¥ظ„ط؛ط§ط،" : "Cancel"}
           isConfirming={statusM.isPending}
           confirmVariant={statusTarget && (statusTarget.isActive ?? true) ? "danger" : "primary"}
         >
@@ -679,10 +685,10 @@ export default function CentersPage() {
             <p className="ctr-confirm-copy">
               {statusTarget.isActive ?? true
                 ? ar
-                  ? "سيتم إخفاء المركز من القوائم النشطة دون حذف أي بيانات."
+                  ? "ط³ظٹطھظ… ط¥ط®ظپط§ط، ط§ظ„ظ…ط±ظƒط² ظ…ظ† ط§ظ„ظ‚ظˆط§ط¦ظ… ط§ظ„ظ†ط´ط·ط© ط¯ظˆظ† ط­ط°ظپ ط£ظٹ ط¨ظٹط§ظ†ط§طھ."
                   : "The center will be removed from active lists without deleting any data."
                 : ar
-                  ? "سيعود المركز إلى القوائم النشطة بنفس الإعدادات الحالية."
+                  ? "ط³ظٹط¹ظˆط¯ ط§ظ„ظ…ط±ظƒط² ط¥ظ„ظ‰ ط§ظ„ظ‚ظˆط§ط¦ظ… ط§ظ„ظ†ط´ط·ط© ط¨ظ†ظپط³ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط­ط§ظ„ظٹط©."
                   : "The center will return to active lists with its current settings."}
             </p>
           ) : null}
