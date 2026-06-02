@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -66,7 +67,7 @@ class _SupervisorOpsDashboardScreenState
         loading: () => const PageStateView.loading(),
         error: (err, stack) => PageStateView.error(
           title: 'حدث خطأ في التحميل',
-          message: err.toString(),
+          message: _formatError(err),
           actionLabel: 'إعادة المحاولة',
           onAction: () =>
               ref.invalidate(supervisorOpsDashboardProvider(reportKey)),
@@ -74,6 +75,14 @@ class _SupervisorOpsDashboardScreenState
         data: (dashboard) => _buildContent(context, theme, dashboard),
       ),
     );
+  }
+
+  String _formatError(Object err) {
+    if (err is DioException) {
+      final msg = err.message;
+      if (msg != null && msg.trim().isNotEmpty) return msg.trim();
+    }
+    return err.toString();
   }
 
   Widget _buildContent(

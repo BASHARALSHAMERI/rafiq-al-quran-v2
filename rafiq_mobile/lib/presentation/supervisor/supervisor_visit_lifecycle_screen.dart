@@ -11,6 +11,7 @@ import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
 import '../../application/supervisor/supervisor_active_visit_provider.dart';
 import '../../application/supervisor/supervisor_visit_providers.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_snack_bar.dart';
@@ -287,6 +288,9 @@ class _SupervisorVisitLifecycleScreenState
               _checklist.where((item) => item['checked'] == true).length;
           final isOpen = _visitLog?.isOpen == true;
           final isDone = _visitLog != null && !isOpen;
+          final attendanceTaskCompleted = _checklist.any(
+            (item) => item['key'] == _attendanceTaskKey && item['checked'] == true,
+          );
 
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -305,11 +309,50 @@ class _SupervisorVisitLifecycleScreenState
                   isLoading: _isStarting,
                 )
               else if (isOpen)
-                PrimaryButton(
-                  label: 'إنهاء الزيارة وحفظ التقرير',
-                  onPressed: _isEnding ? null : _endVisit,
-                  icon: Icons.stop_circle_rounded,
-                  isLoading: _isEnding,
+                Column(
+                  children: [
+                    PrimaryButton(
+                      label: 'إنهاء الزيارة وحفظ التقرير',
+                      onPressed: (_isEnding || !attendanceTaskCompleted)
+                          ? null
+                          : _endVisit,
+                      icon: Icons.stop_circle_rounded,
+                      isLoading: _isEnding,
+                    ),
+                    if (!attendanceTaskCompleted) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningLight.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(
+                            color: AppColors.warningLight.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: AppColors.warningLight,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'يجب اعتماد "سجل الحضور مكتمل" من قائمة التحقق أولاً.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.warningLight,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 )
               else
                 const _CompletedVisitBanner(),
@@ -320,15 +363,21 @@ class _SupervisorVisitLifecycleScreenState
               const SizedBox(height: AppSpacing.sm),
               ...List.generate(
                 _checklist.length,
-                (index) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _ChecklistItemCard(
-                    label: _checklist[index]['label'] as String,
-                    checked: _checklist[index]['checked'] as bool,
-                    enabled: isOpen,
-                    onTap: () => _toggleItem(index),
-                  ).animate().fadeIn(delay: (35 * index).ms),
-                ),
+                (index) {
+                  final item = _checklist[index];
+                  final isAttendanceTask = item['key'] == _attendanceTaskKey;
+                  final isUncheckedAttendance = isAttendanceTask && item['checked'] != true;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _ChecklistItemCard(
+                      label: item['label'] as String,
+                      checked: item['checked'] as bool,
+                      enabled: isOpen,
+                      isRequired: isUncheckedAttendance,
+                      onTap: () => _toggleItem(index),
+                    ).animate().fadeIn(delay: (35 * index).ms),
+                  );
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
               const SectionHeader(title: 'التقييم العام'),
@@ -452,12 +501,14 @@ class _ChecklistItemCard extends StatelessWidget {
   final String label;
   final bool checked;
   final bool enabled;
+  final bool isRequired;
   final VoidCallback onTap;
 
   const _ChecklistItemCard({
     required this.label,
     required this.checked,
     required this.enabled,
+    this.isRequired = false,
     required this.onTap,
   });
 
@@ -477,15 +528,36 @@ class _ChecklistItemCard extends StatelessWidget {
               checked ? Icons.check_circle_rounded : Icons.circle_outlined,
               color: checked
                   ? AppColors.successLight
-                  : AppColors.textSecondaryLight,
+                  : isRequired
+                      ? AppColors.warningLight
+                      : AppColors.textSecondaryLight,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isRequired ? AppColors.warningLight : null,
+                ),
               ),
             ),
+            if (isRequired)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.warningLight.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'مطلوب',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.warningLight,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

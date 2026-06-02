@@ -127,7 +127,7 @@ export const supervisorService = {
     return {
       profile: {
         userId: targetUserId,
-        fullName: profile?.user.fullName ?? "",
+        fullName: profile?.user?.fullName ?? "",
         status: profile?.status ?? "ACTIVE",
         monthlyHoursTarget,
         monthlyVisitsTarget

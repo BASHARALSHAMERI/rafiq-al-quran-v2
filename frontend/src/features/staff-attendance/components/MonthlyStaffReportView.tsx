@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
@@ -8,7 +8,8 @@ import {
   Users,
   ChevronRight,
   ChevronLeft,
-  ArrowUpRight
+  ArrowUpRight,
+  Download
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Badge } from "../../../components/ui/Badge";

@@ -7,8 +7,7 @@ import {
   DollarSign,
   MapPin,
   Settings,
-  FileText,
-  Users
+  FileText
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { useAuthStore } from "../../auth/auth.store";
