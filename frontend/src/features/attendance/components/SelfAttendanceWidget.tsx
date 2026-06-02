@@ -305,8 +305,8 @@ export function SelfAttendanceWidget() {
         title={ar ? "تحضيري" : "My Attendance"}
         description={
           ar
-            ? "تسجيل حضور وانصراف مدير المركز حسب المركز المسند ونطاقه الجغرافي."
-            : "Center manager check-in and check-out for the assigned center and its geographic range."
+            ? "تسجيل حضور وانصرافك اليومي وإرسال طلبات الأعذار."
+            : "Daily check-in, check-out, and excuse request submission."
         }
         icon={<CalendarDays className="w-6 h-6" />}
         actions={

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../application/student/student_dashboard_provider.dart';
 import '../../core/constants/app_spacing.dart';
+import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/data_parsing_helper.dart';
 import '../shared/widgets/page_state_view.dart';
@@ -72,6 +73,8 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
     final metrics = DataParsingHelper.asMap(data['metrics']);
     final profile = DataParsingHelper.asMap(data['studentProfile']);
     final followUps = DataParsingHelper.asMapList(data['followUpsAsStudent']);
+    final monthlyPlans = DataParsingHelper.asMapList(data['monthlyPlansAsStudent']);
+    final activePlan = monthlyPlans.isNotEmpty ? monthlyPlans.first : null;
 
     return Column(
       children: [
@@ -81,8 +84,16 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
           child: TabBarView(
             controller: _tabController,
             children: [
-              _OverviewTab(metrics: metrics, followUps: followUps, profile: profile),
-              _HistoryTab(followUps: followUps),
+              _OverviewTab(
+                metrics: metrics,
+                followUps: followUps,
+                profile: profile,
+                activePlan: activePlan,
+              ),
+              _HistoryTab(
+                followUps: followUps,
+                activePlan: activePlan,
+              ),
             ],
           ),
         ),
@@ -120,11 +131,11 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
                   ),
                   const Text(
                     'طالب قرآن',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontFamily: 'Cairo'),
                   ),
                 ],
               ),
@@ -153,7 +164,7 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
         ),
         labelColor: Colors.white,
         unselectedLabelColor: AppColors.textSecondaryLight,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, fontFamily: 'Cairo'),
         tabs: const [
           Tab(text: 'نظرة عامة'),
           Tab(text: 'سجل التسميع'),
@@ -191,7 +202,7 @@ class _Avatar extends StatelessWidget {
         backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
         child: Text(
           name.isNotEmpty ? name[0] : 'ط',
-          style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900, fontSize: 20),
+          style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo'),
         ),
       ),
     );
@@ -213,8 +224,8 @@ class _RatingPill extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(score, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.successLight)),
-          const Text('التقييم', style: TextStyle(fontSize: 10, color: AppColors.successLight, fontWeight: FontWeight.w700)),
+          Text(score, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.successLight, fontFamily: 'Cairo')),
+          const Text('التقييم', style: TextStyle(fontSize: 10, color: AppColors.successLight, fontWeight: FontWeight.w700, fontFamily: 'Cairo')),
         ],
       ),
     );
@@ -225,27 +236,217 @@ class _OverviewTab extends StatelessWidget {
   final Map<String, dynamic> metrics;
   final List<Map<String, dynamic>> followUps;
   final Map<String, dynamic> profile;
+  final Map<String, dynamic>? activePlan;
 
-  const _OverviewTab({required this.metrics, required this.followUps, required this.profile});
+  const _OverviewTab({
+    required this.metrics,
+    required this.followUps,
+    required this.profile,
+    this.activePlan,
+  });
+
+  String _formatPages(double val) {
+    if (val == val.roundToDouble()) {
+      return val.toStringAsFixed(0);
+    }
+    return val.toStringAsFixed(1);
+  }
+
+  bool _isJuzTargeted(int juzNum, Map<String, dynamic>? plan) {
+    if (plan == null) return false;
+    final fromSurah = DataParsingHelper.readInt(plan['hifzFromSurah']) ?? 0;
+    final toSurah = DataParsingHelper.readInt(plan['hifzToSurah']) ?? 0;
+    if (fromSurah == 0 || toSurah == 0) return false;
+
+    final startSurahObj = QuranData.findByNumber(fromSurah);
+    final toSurahObj = QuranData.findByNumber(toSurah);
+    if (startSurahObj == null || toSurahObj == null) return false;
+
+    final planStartPage = startSurahObj.startPage;
+    final nextSurahObj = QuranData.findByNumber(toSurah + 1);
+    final planEndPage = nextSurahObj != null ? nextSurahObj.startPage - 1 : 604;
+
+    final juzStartPage = juzNum == 1 ? 1 : (juzNum - 1) * 20 + 2;
+    final juzEndPage = juzNum == 30 ? 604 : juzNum * 20 + 1;
+
+    return !(planStartPage > juzEndPage || planEndPage < juzStartPage);
+  }
 
   @override
   Widget build(BuildContext context) {
+    double executedPages = 0;
+    double targetPages = 0;
+    double dailyRate = 0;
+    String rangeLabel = '';
+    double progressPercent = 0;
+
+    if (activePlan != null) {
+      final planMonth = DataParsingHelper.readInt(activePlan!['month']);
+      final planYear = DataParsingHelper.readInt(activePlan!['year']);
+      targetPages = DataParsingHelper.asDouble(activePlan!['hifzTargetPages']) ?? 0.0;
+      dailyRate = DataParsingHelper.asDouble(activePlan!['hifzDailyRate']) ?? 0.0;
+      final fromSurah = DataParsingHelper.readInt(activePlan!['hifzFromSurah']) ?? 0;
+      final fromAyah = DataParsingHelper.readInt(activePlan!['hifzFromAyah']) ?? 0;
+      final toSurah = DataParsingHelper.readInt(activePlan!['hifzToSurah']) ?? 0;
+      final toAyah = DataParsingHelper.readInt(activePlan!['hifzToAyah']) ?? 0;
+
+      final fromSurahName = QuranData.findByNumber(fromSurah)?.name ?? 'سورة $fromSurah';
+      final toSurahName = QuranData.findByNumber(toSurah)?.name ?? 'سورة $toSurah';
+      rangeLabel = '$fromSurahName ($fromAyah) ← $toSurahName ($toAyah)';
+
+      for (final followUp in followUps) {
+        final dateStr = followUp['recordDate']?.toString() ?? '';
+        final date = DateTime.tryParse(dateStr);
+        if (date != null && date.month == planMonth && date.year == planYear) {
+          final type = followUp['type']?.toString().toUpperCase();
+          if (type == 'HIFZ') {
+            executedPages += DataParsingHelper.asDouble(followUp['pagesCount']) ?? 0.0;
+          }
+        }
+      }
+      progressPercent = targetPages > 0 ? (executedPages / targetPages).clamp(0.0, 1.0) : 0.0;
+    }
+
+    final currentJuz = DataParsingHelper.readInt(profile['currentJuzz']) ??
+        DataParsingHelper.readInt(profile['currentJuz']) ??
+        0;
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
+        if (activePlan != null) ...[
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF115E59)],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.stars_rounded, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'خطة الحفظ للشهر الحالي',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${(progressPercent * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'النطاق المستهدف:',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  rangeLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'معدل الإنجاز: ${_formatPages(executedPages)} من ${_formatPages(targetPages)} صفحة',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    Text(
+                      'المعدل اليومي: ${_formatPages(dailyRate)} صفحة',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progressPercent,
+                    minHeight: 8,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    color: const Color(0xFF34D399),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
         const SectionHeader(title: 'مسار الحفظ'),
         const SizedBox(height: AppSpacing.md),
         
-        // The Roadmap Path
         ...List.generate(30, (index) {
-          final juzNumber = 30 - index; // Reversing to show 30 down to 1 or 1 to 30
-          final isCompleted = (DataParsingHelper.readInt(profile['currentJuz']) ?? 0) >= juzNumber;
-          final isCurrent = (DataParsingHelper.readInt(profile['currentJuz']) ?? 0) == juzNumber;
+          final juzNumber = 30 - index;
+          final isCompleted = currentJuz > juzNumber;
+          final isCurrent = currentJuz == juzNumber;
+          final isTargeted = _isJuzTargeted(juzNumber, activePlan);
           
           return _JuzMilestone(
             juzNumber: juzNumber,
             isCompleted: isCompleted,
             isCurrent: isCurrent,
+            isTargeted: isTargeted,
             isLast: index == 29,
           );
         }),
@@ -261,11 +462,13 @@ class _JuzMilestone extends StatelessWidget {
   final bool isCompleted;
   final bool isCurrent;
   final bool isLast;
+  final bool isTargeted;
 
   const _JuzMilestone({
     required this.juzNumber,
     required this.isCompleted,
     required this.isCurrent,
+    required this.isTargeted,
     required this.isLast,
   });
 
@@ -298,6 +501,7 @@ class _JuzMilestone extends StatelessWidget {
                   color: isCompleted || isCurrent ? Colors.white : const Color(0xFF94A3B8),
                   fontWeight: FontWeight.w900,
                   fontSize: 18,
+                  fontFamily: 'Cairo',
                 ),
               ),
             ),
@@ -321,17 +525,51 @@ class _JuzMilestone extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'الجزء $juzNumber',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: isCompleted || isCurrent ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'الجزء $juzNumber',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Cairo',
+                        color: isCompleted || isCurrent ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    if (isTargeted) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.gps_fixed_rounded, color: AppColors.primaryLight, size: 10),
+                            SizedBox(width: 4),
+                            Text(
+                              'مستهدف هذا الشهر',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppColors.primaryLight,
+                                fontWeight: FontWeight.w800,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
                   isCompleted ? 'تم الختم بنجاح 🎉' : (isCurrent ? 'أنت هنا الآن 📍' : 'المحطة القادمة 🔜'),
                   style: TextStyle(
                     fontSize: 11,
+                    fontFamily: 'Cairo',
                     color: isCompleted ? AppColors.successLight : (isCurrent ? AppColors.primaryLight : const Color(0xFF94A3B8)),
                     fontWeight: FontWeight.w700,
                   ),
@@ -347,54 +585,249 @@ class _JuzMilestone extends StatelessWidget {
 
 class _HistoryTab extends StatelessWidget {
   final List<Map<String, dynamic>> followUps;
-  const _HistoryTab({required this.followUps});
+  final Map<String, dynamic>? activePlan;
+
+  const _HistoryTab({
+    required this.followUps,
+    this.activePlan,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        _RecitationTargetCard(followUps: followUps, activePlan: activePlan),
+        const SizedBox(height: AppSpacing.sm),
+        if (followUps.isEmpty)
+          const SizedBox(
+            height: 200,
+            child: Center(
+              child: Text(
+                'لا توجد سجلات سابقة',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700),
+              ),
+            ),
+          )
+        else
+          ...followUps.map((item) {
+            final dateStr = item['recordDate']?.toString() ?? '';
+            final date = dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null;
+            final formattedDate = date != null ? DateFormat('d MMMM y', 'ar').format(date) : '-';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.menu_book_rounded, color: AppColors.primaryLight, size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DataParsingHelper.readString(item['surah'], fallback: 'سورة غير محددة'),
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, fontFamily: 'Cairo'),
+                        ),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12, fontFamily: 'Cairo'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _Stars(rating: DataParsingHelper.ratingToScore(item['rating'])),
+                ],
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
+
+class _RecitationTargetCard extends StatelessWidget {
+  final List<Map<String, dynamic>> followUps;
+  final Map<String, dynamic>? activePlan;
+
+  const _RecitationTargetCard({
+    required this.followUps,
+    this.activePlan,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (followUps.isEmpty) {
-      return const Center(child: Text('لا توجد سجلات سابقة'));
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 24),
+            SizedBox(height: 8),
+            Text(
+              'ابدأ رحلتك القرآنية اليوم بالتسميع مع معلمك ليظهر لك هنا ورد الغد المقترح والتحفيز اليومي.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: followUps.length,
-      itemBuilder: (context, index) {
-        final item = followUps[index];
-        final dateStr = item['recordDate']?.toString() ?? '';
-        final date = dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null;
-        final formattedDate = date != null ? DateFormat('d MMMM y', 'ar').format(date) : '-';
+    final latest = followUps.first;
+    final dateStr = latest['recordDate']?.toString() ?? '';
+    final latestDate = DateTime.tryParse(dateStr);
+    
+    bool hasRecitedToday = false;
+    if (latestDate != null) {
+      final now = DateTime.now();
+      hasRecitedToday = latestDate.year == now.year &&
+          latestDate.month == now.month &&
+          latestDate.day == now.day;
+    }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.borderLight),
-          ),
-          child: Row(
+    final now = DateTime.now();
+    final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
+    final quotes = [
+      '«خيركم من تعلم القرآن وعلمه» - حلقة اليوم بانتظارك، لا تدع يومك يمضي دون ورد من كتاب الله 📖✨',
+      'حفظ القرآن رحلة ممتدة خطوة بخطوة، غيابك اليوم ليس نهاية المطاف، بادر بالتسميع وعاود مسيرتك المباركة! 💪🌱',
+      '«ورتّل القرآن ترتيلاً» - ننتظرك لتنير يومك بالقرآن الكريم، عُد إلى وردك بنشاط وتسميع جديد! ☀️💡',
+      'كلام الله ربيع القلوب، بانتظارك غداً لتسميع وردك الجديد ومواصلة طريق النور 🌹🌟',
+      '«إن هذا القرآن يهدي للتي هي أقوم» - خطوة صغيرة اليوم تصنع إنجازاً عظيماً غداً، لا تتوقف عن وردك اليومي 🎯💫',
+    ];
+    final quote = quotes[dayOfYear % quotes.length];
+
+    final lastSurahName = DataParsingHelper.readString(latest['surah']);
+    final lastToAyah = DataParsingHelper.readInt(latest['toAyah']) ?? 0;
+    
+    String nextTargetLabel = '';
+    final surahDetail = QuranData.findByName(lastSurahName);
+    if (surahDetail != null) {
+      if (lastToAyah < surahDetail.ayahCount) {
+        nextTargetLabel = 'متابعة حفظ سورة $lastSurahName بدءاً من آية ${lastToAyah + 1}';
+      } else {
+        final nextSurahNum = surahDetail.number + 1;
+        final nextSurah = QuranData.findByNumber(nextSurahNum);
+        if (nextSurah != null) {
+          nextTargetLabel = 'البدء في حفظ سورة ${nextSurah.name} من آية 1';
+        } else {
+          nextTargetLabel = 'مبارك الختم! استمر في تثبيت ومراجعة السور 💐';
+        }
+      }
+    } else {
+      nextTargetLabel = 'متابعة الورد التالي من خطتك النشطة مع معلمك';
+    }
+
+    final cardColor = hasRecitedToday ? const Color(0xFFF1FAF4) : const Color(0xFFFFF8EC);
+    final borderColor = hasRecitedToday ? AppColors.successLight : AppColors.warningLight;
+    final iconColor = hasRecitedToday ? AppColors.successLight : AppColors.warningLight;
+    final title = hasRecitedToday ? 'تم إنجاز ورد اليوم! 🎉' : 'توجيه وتحفيز اليوم 💡';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor.withValues(alpha: 0.25), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: AppColors.primaryLight.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.menu_book_rounded, color: AppColors.primaryLight, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(DataParsingHelper.readString(item['surah'], fallback: 'سورة غير محددة'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                    Text(formattedDate, style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12)),
-                  ],
+              Icon(hasRecitedToday ? Icons.check_circle_outline_rounded : Icons.lightbulb_outline_rounded, color: iconColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: iconColor,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  fontFamily: 'Cairo',
                 ),
               ),
-              _Stars(rating: DataParsingHelper.ratingToScore(item['rating'])),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 10),
+          Text(
+            hasRecitedToday 
+                ? 'أحسنت! لقد قمت بالتسميع اليوم وخطوت خطوة مباركة نحو إتمام خطتك. استمر على هذه الهمة العالية! 🚀🌟'
+                : quote,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Cairo',
+              color: Color(0xFF475569),
+              height: 1.4,
+            ),
+          ),
+          const Divider(height: 24, thickness: 1, color: Color(0xFFE2E8F0)),
+          Row(
+            children: [
+              const Icon(Icons.gps_fixed_rounded, color: Color(0xFF64748B), size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  hasRecitedToday ? 'ورد الغد المقترح:' : 'الورد المتبقي/المقترح للتسميع:',
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Text(
+              nextTargetLabel,
+              style: const TextStyle(
+                color: Color(0xFF1E293B),
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(right: 24),
+            child: Text(
+              'آخر تسميع: $lastSurahName (آية $lastToAyah)',
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                fontFamily: 'Cairo',
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1598,6 +1598,32 @@ export const usersRepository = {
               select: { fullName: true }
             }
           }
+        },
+        monthlyPlansAsStudent: {
+          where: { status: "APPROVED" },
+          orderBy: [
+            { year: "desc" },
+            { month: "desc" }
+          ],
+          take: 1,
+          select: {
+            id: true,
+            month: true,
+            year: true,
+            hifzFromSurah: true,
+            hifzFromAyah: true,
+            hifzToSurah: true,
+            hifzToAyah: true,
+            hifzTargetPages: true,
+            hifzDailyRate: true,
+            reviewFromSurah: true,
+            reviewFromAyah: true,
+            reviewToSurah: true,
+            reviewToAyah: true,
+            reviewTargetPages: true,
+            reviewDailyRate: true,
+            status: true
+          }
         }
       }
     });

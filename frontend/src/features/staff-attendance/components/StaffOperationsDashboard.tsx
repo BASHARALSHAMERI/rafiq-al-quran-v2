@@ -20,7 +20,6 @@ import { StaffExcusesRequestsView } from "./StaffExcusesRequestsView";
 import { SupervisorVisitsView } from "./SupervisorVisitsView";
 import { VisitPlanManagement } from "./VisitPlanManagement";
 import { MonthlyStaffReportView } from "./MonthlyStaffReportView";
-import { SupervisorDashboardView } from "./SupervisorDashboardView";
 import { StaffSchedulesView } from "./StaffSchedulesView";
 
 import "../../../styles/pages/staff-operations-v1.css";
@@ -34,7 +33,6 @@ type StaffOpsTabId =
   | "finance"
   | "report"
   | "policy"
-  | "supervisor"
   | "schedules";
 
 type StaffOpsTab = {
@@ -57,9 +55,7 @@ export function StaffOperationsDashboard() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const [activeTab, setActiveTab] = useState<StaffOpsTabId>(
-    user?.role === "SUPERVISOR" ? "supervisor" : "daily"
-  );
+  const [activeTab, setActiveTab] = useState<StaffOpsTabId>("daily");
 
   const { data: pendingExcuses } = useStaffExcuses("PENDING");
   const { data: pendingLeaves } = useLeaveRequests({ status: "LEAVE_PENDING" });
@@ -67,34 +63,18 @@ export function StaffOperationsDashboard() {
   
   const isOpsAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const isSupervisor = user?.role === "SUPERVISOR";
 
   const tabs: StaffOpsTab[] = [
-    ...(isSupervisor
-      ? [
-          {
-            id: "supervisor" as const,
-            label: ar ? "لوحتي الإشرافية" : "My Dashboard",
-            icon: <Users size={16} />
-          },
-          {
-            id: "visits" as const,
-            label: ar ? "زياراتي" : "My Visits",
-            icon: <MapPin size={16} />
-          }
-        ]
-      : [
-          {
-            id: "daily" as const,
-            label: ar ? "الحضور اليومي" : "Daily Attendance",
-            icon: <Calendar size={16} />
-          },
-          {
-            id: "visits" as const,
-            label: ar ? "الزيارات الإشرافية" : "Supervisor Visits",
-            icon: <MapPin size={16} />
-          }
-        ]),
+    {
+      id: "daily" as const,
+      label: ar ? "الحضور اليومي" : "Daily Attendance",
+      icon: <Calendar size={16} />
+    },
+    {
+      id: "visits" as const,
+      label: ar ? "الزيارات الإشرافية" : "Supervisor Visits",
+      icon: <MapPin size={16} />
+    },
     ...(isOpsAdmin
       ? [
           {
@@ -184,7 +164,6 @@ export function StaffOperationsDashboard() {
                 {activeTab === "daily" && <DailyStaffAttendanceView />}
                 {activeTab === "requests" && <StaffExcusesRequestsView />}
                 {activeTab === "visits" && <SupervisorVisitsView />}
-                {activeTab === "supervisor" && <SupervisorDashboardView />}
                 {activeTab === "plans" && isOpsAdmin && <VisitPlanManagement />}
                 {activeTab === "finance" && isOpsAdmin && <FinanceDeductionReview />}
                 {activeTab === "report" && isOpsAdmin && <MonthlyStaffReportView />}
