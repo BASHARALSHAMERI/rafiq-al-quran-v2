@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
+import '../../application/supervisor/supervisor_active_visit_provider.dart';
 import '../../application/supervisor/supervisor_visit_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
@@ -74,10 +75,37 @@ class _SupervisorVisitLifecycleScreenState
   @override
   void initState() {
     super.initState();
-    _visitLog = widget.initialLog;
+    final persisted = ref.read(activeVisitProvider);
+    if (widget.initialLog != null) {
+      _visitLog = widget.initialLog;
+    } else if (persisted.log?.isOpen == true &&
+        persisted.log?.circleId == widget.circleId) {
+      _visitLog = persisted.log;
+      _checklist.clear();
+      _checklist.addAll(
+        persisted.checklist.isNotEmpty
+            ? persisted.checklist.map((e) => Map<String, dynamic>.from(e)).toList()
+            : _defaultChecklist.map((item) => {
+                  'key': item['key'],
+                  'label': item['label'],
+                  'checked': false,
+                }).toList(),
+      );
+      if (persisted.checklist.isNotEmpty) {
+        _notesController.text = _extractNotesFromChecklist(persisted.checklist);
+      }
+    }
     if (_visitLog?.isOpen == true) {
       _startTimer(_visitLog!.startedAt);
     }
+  }
+
+  String _extractNotesFromChecklist(List<Map<String, dynamic>> list) {
+    final noteItem = list.cast<Map<String, dynamic>?>().firstWhere(
+      (e) => e?['key'] == 'observations_notes',
+      orElse: () => null,
+    );
+    return noteItem?['value']?.toString() ?? '';
   }
 
   @override
@@ -100,6 +128,7 @@ class _SupervisorVisitLifecycleScreenState
     setState(() {
       _checklist[index]['checked'] = !(_checklist[index]['checked'] as bool);
     });
+    ref.read(activeVisitProvider.notifier).updateChecklist(_checklist);
   }
 
   Future<Position?> _resolveCurrentLocation() async {
@@ -140,6 +169,7 @@ class _SupervisorVisitLifecycleScreenState
                 longitude: position?.longitude,
               );
       ref.invalidate(supervisorTodayVisitsProvider);
+      ref.read(activeVisitProvider.notifier).startVisit(log);
       if (!mounted) return;
       setState(() {
         _visitLog = log;
@@ -182,6 +212,7 @@ class _SupervisorVisitLifecycleScreenState
                 observations: _notesController.text,
               );
       ref.invalidate(supervisorTodayVisitsProvider);
+      ref.read(activeVisitProvider.notifier).endVisit();
       if (!mounted) return;
       _timer?.cancel();
       setState(() {

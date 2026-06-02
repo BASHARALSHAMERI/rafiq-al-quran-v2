@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/supervisor_visit_remote_datasource.dart';
 import '../../data/models/supervisor_ops_dtos.dart';
+import 'supervisor_visit_providers.dart';
 
 final supervisorOpsDashboardProvider = FutureProvider.autoDispose.family<
     SupervisorOpsDashboardDto,

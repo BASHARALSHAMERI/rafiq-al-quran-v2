@@ -75,10 +75,38 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
     final followUps = DataParsingHelper.asMapList(data['followUpsAsStudent']);
     final monthlyPlans = DataParsingHelper.asMapList(data['monthlyPlansAsStudent']);
     final activePlan = monthlyPlans.isNotEmpty ? monthlyPlans.first : null;
+    final enrollments = DataParsingHelper.asMapList(data['studentEnrollments']);
+    final userProfile = DataParsingHelper.asMap(data['profile']);
+
+    // Extract dynamic student name
+    final name = DataParsingHelper.readString(data['fullName'], fallback: 'الطالب');
+    
+    // Extract dynamic circle & center name
+    String circleSubTitle = 'طالب قرآن';
+    if (enrollments.isNotEmpty) {
+      final circle = DataParsingHelper.asMap(enrollments.first['circle']);
+      final circleName = DataParsingHelper.readString(circle['name']);
+      final center = DataParsingHelper.asMap(circle['center']);
+      final centerName = DataParsingHelper.readString(center['name']);
+      if (circleName.isNotEmpty) {
+        circleSubTitle = circleName;
+        if (centerName.isNotEmpty) {
+          circleSubTitle += ' • $centerName';
+        }
+      }
+    }
+
+    // Extract avatar url
+    final avatarUrl = DataParsingHelper.readString(userProfile['avatarUrl']);
 
     return Column(
       children: [
-        _buildHeader(profile, followUps),
+        _buildHeader(
+          name: name,
+          subTitle: circleSubTitle,
+          avatarUrl: avatarUrl,
+          followUps: followUps,
+        ),
         _buildTabBar(),
         Expanded(
           child: TabBarView(
@@ -101,8 +129,12 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> profile, List<Map<String, dynamic>> followUps) {
-    final name = DataParsingHelper.readString(profile['fullName'], fallback: 'الطالب');
+  Widget _buildHeader({
+    required String name,
+    required String subTitle,
+    required String avatarUrl,
+    required List<Map<String, dynamic>> followUps,
+  }) {
     final averageScore = _calculateAvgRating(followUps);
 
     return Container(
@@ -123,7 +155,7 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
         ),
         child: Row(
           children: [
-            _Avatar(name: name),
+            _Avatar(name: name, avatarUrl: avatarUrl),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -133,9 +165,9 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
                     name,
                     style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
                   ),
-                  const Text(
-                    'طالب قرآن',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontFamily: 'Cairo'),
+                  Text(
+                    subTitle,
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontFamily: 'Cairo'),
                   ),
                 ],
               ),
@@ -187,7 +219,8 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
 
 class _Avatar extends StatelessWidget {
   final String name;
-  const _Avatar({required this.name});
+  final String avatarUrl;
+  const _Avatar({required this.name, required this.avatarUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -200,10 +233,13 @@ class _Avatar extends StatelessWidget {
       child: CircleAvatar(
         radius: 26,
         backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
-        child: Text(
-          name.isNotEmpty ? name[0] : 'ط',
-          style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo'),
-        ),
+        backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+        child: avatarUrl.isEmpty
+            ? Text(
+                name.isNotEmpty ? name[0] : 'ط',
+                style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo'),
+              )
+            : null,
       ),
     );
   }
@@ -433,149 +469,388 @@ class _OverviewTab extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        const SectionHeader(title: 'مسار الحفظ'),
+        const SectionHeader(title: 'مسار الحفظ والأجزاء'),
         const SizedBox(height: AppSpacing.md),
-        
-        ...List.generate(30, (index) {
-          final juzNumber = 30 - index;
-          final isCompleted = currentJuz > juzNumber;
-          final isCurrent = currentJuz == juzNumber;
-          final isTargeted = _isJuzTargeted(juzNumber, activePlan);
-          
-          return _JuzMilestone(
-            juzNumber: juzNumber,
-            isCompleted: isCompleted,
-            isCurrent: isCurrent,
-            isTargeted: isTargeted,
-            isLast: index == 29,
-          );
-        }),
-        
+        _JuzGrid(
+          currentJuz: currentJuz,
+          activePlan: activePlan,
+          isJuzTargeted: _isJuzTargeted,
+        ),
         const SizedBox(height: 40),
       ],
     ).animate().fadeIn();
   }
 }
 
-class _JuzMilestone extends StatelessWidget {
-  final int juzNumber;
-  final bool isCompleted;
-  final bool isCurrent;
-  final bool isLast;
-  final bool isTargeted;
+class _JuzGrid extends StatefulWidget {
+  final int currentJuz;
+  final Map<String, dynamic>? activePlan;
+  final bool Function(int juzNum, Map<String, dynamic>? plan) isJuzTargeted;
 
-  const _JuzMilestone({
-    required this.juzNumber,
-    required this.isCompleted,
-    required this.isCurrent,
-    required this.isTargeted,
-    required this.isLast,
+  const _JuzGrid({
+    required this.currentJuz,
+    required this.activePlan,
+    required this.isJuzTargeted,
   });
 
   @override
+  State<_JuzGrid> createState() => _JuzGridState();
+}
+
+class _JuzGridState extends State<_JuzGrid> {
+  int? _selectedJuz;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedJuz = widget.currentJuz > 0 && widget.currentJuz <= 30 ? widget.currentJuz : 30;
+  }
+
+  static const Map<int, String> juzRanges = {
+    1: 'سورة الفاتحة (1) ← سورة البقرة (141)',
+    2: 'سورة البقرة (142) ← سورة البقرة (252)',
+    3: 'سورة البقرة (253) ← سورة آل عمران (92)',
+    4: 'سورة آل عمران (93) ← سورة النساء (23)',
+    5: 'سورة النساء (24) ← سورة النساء (147)',
+    6: 'سورة النساء (148) ← سورة المائدة (81)',
+    7: 'سورة المائدة (82) ← سورة الأنعام (110)',
+    8: 'سورة الأنعام (111) ← سورة الأعراف (87)',
+    9: 'سورة الأعراف (88) ← سورة الأنفال (40)',
+    10: 'سورة الأنفال (41) ← سورة التوبة (92)',
+    11: 'سورة التوبة (93) ← سورة هود (5)',
+    12: 'سورة هود (6) ← سورة يوسف (52)',
+    13: 'سورة يوسف (53) ← سورة إبراهيم (52)',
+    14: 'سورة الحجر (1) ← سورة النحل (128)',
+    15: 'سورة الإسراء (1) ← سورة الكهف (74)',
+    16: 'سورة الكهف (75) ← سورة طه (135)',
+    17: 'سورة الأنبياء (1) ← سورة الحج (78)',
+    18: 'سورة المؤمنون (1) ← سورة الفرقان (20)',
+    19: 'سورة الفرقان (21) ← سورة النمل (55)',
+    20: 'سورة النمل (56) ← سورة العنكبوت (45)',
+    21: 'سورة العنكبوت (46) ← سورة الأحزاب (30)',
+    22: 'سورة الأحزاب (31) ← سورة يس (27)',
+    23: 'سورة يس (28) ← سورة الزمر (31)',
+    24: 'سورة الزمر (32) ← سورة فصلت (46)',
+    25: 'سورة فصلت (47) ← سورة الجاثية (37)',
+    26: 'سورة الأحقاف (1) ← سورة الذاريات (30)',
+    27: 'سورة الذاريات (31) ← سورة الحديد (29)',
+    28: 'سورة المجادلة (1) ← سورة التحريم (12)',
+    29: 'سورة الملك (1) ← سورة المرسلات (50)',
+    30: 'سورة النبأ (1) ← سورة الناس (6)',
+  };
+
+  @override
   Widget build(BuildContext context) {
-    final color = isCompleted ? AppColors.successLight : (isCurrent ? AppColors.primaryLight : const Color(0xFFE2E8F0));
-    
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: isCompleted || isCurrent ? 1.0 : 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isCurrent ? AppColors.primaryLight : Colors.transparent,
-                  width: 3,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.map_rounded, color: AppColors.primaryLight, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'خريطة إنجاز الأجزاء الثلاثين',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 30,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 1.0,
                 ),
-                boxShadow: isCurrent ? [
-                  BoxShadow(color: AppColors.primaryLight.withValues(alpha: 0.3), blurRadius: 10)
-                ] : null,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '$juzNumber',
-                style: TextStyle(
-                  color: isCompleted || isCurrent ? Colors.white : const Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-            ),
-            if (!isLast)
-              Container(
-                width: 4,
-                height: 40,
-                color: color.withValues(alpha: 0.3),
-              ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isCurrent ? AppColors.primaryLight.withValues(alpha: 0.3) : AppColors.borderLight),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'الجزء $juzNumber',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'Cairo',
-                        color: isCompleted || isCurrent ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
+                itemBuilder: (context, index) {
+                  final juzNumber = index + 1;
+                  final isCompleted = widget.currentJuz > juzNumber;
+                  final isCurrent = widget.currentJuz == juzNumber;
+                  final isTargeted = widget.isJuzTargeted(juzNumber, widget.activePlan);
+                  final isSelected = _selectedJuz == juzNumber;
+
+                  Color bgColor;
+                  Color textColor;
+                  Border? border;
+
+                  if (isCurrent) {
+                    bgColor = AppColors.primaryLight;
+                    textColor = Colors.white;
+                    if (isSelected) {
+                      border = Border.all(color: Colors.amber, width: 3);
+                    }
+                  } else if (isCompleted) {
+                    bgColor = AppColors.successLight;
+                    textColor = Colors.white;
+                    if (isSelected) {
+                      border = Border.all(color: Colors.amber, width: 3);
+                    }
+                  } else if (isTargeted) {
+                    bgColor = const Color(0xFFEFF6FF);
+                    textColor = AppColors.primaryLight;
+                    border = Border.all(
+                      color: isSelected ? Colors.amber : AppColors.primaryLight.withValues(alpha: 0.5),
+                      width: isSelected ? 3 : 1.5,
+                    );
+                  } else {
+                    bgColor = const Color(0xFFF8FAFC);
+                    textColor = const Color(0xFF94A3B8);
+                    if (isSelected) {
+                      border = Border.all(color: Colors.amber, width: 3);
+                    } else {
+                      border = Border.all(color: const Color(0xFFE2E8F0));
+                    }
+                  }
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedJuz = juzNumber;
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        shape: BoxShape.circle,
+                        border: border,
+                        boxShadow: isCurrent
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                )
+                              ]
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            '$juzNumber',
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              fontFamily: 'Cairo',
+                            ),
+                          ),
+                          if (isCompleted)
+                            Positioned(
+                              bottom: 2,
+                              right: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(1),
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: AppColors.successLight,
+                                  size: 10,
+                                ),
+                              ),
+                            ),
+                          if (isCurrent)
+                            const Positioned(
+                              top: 2,
+                              left: 2,
+                              child: Icon(
+                                Icons.location_on_rounded,
+                                color: Colors.white,
+                                size: 10,
+                              ),
+                            ),
+                          if (isTargeted && !isCurrent && !isCompleted)
+                            const Positioned(
+                              top: 2,
+                              left: 2,
+                              child: Icon(
+                                Icons.gps_fixed_rounded,
+                                color: AppColors.primaryLight,
+                                size: 8,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (isTargeted) ...[
-                      const Spacer(),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildLegendItem('تم الختم', AppColors.successLight, isCircle: true),
+                  _buildLegendItem('أنت هنا الآن', AppColors.primaryLight, isCircle: true),
+                  _buildLegendItem('مستهدف للشهر', const Color(0xFFEFF6FF), isCircle: true, border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.5))),
+                  _buildLegendItem('غير منجز بعد', const Color(0xFFF8FAFC), isCircle: true, border: Border.all(color: const Color(0xFFE2E8F0))),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_selectedJuz != null) ...[
+          Builder(builder: (context) {
+            final juz = _selectedJuz!;
+            final isCompleted = widget.currentJuz > juz;
+            final isCurrent = widget.currentJuz == juz;
+            final isTargeted = widget.isJuzTargeted(juz, widget.activePlan);
+            final rangeText = juzRanges[juz] ?? '';
+
+            String statusLabel = '';
+            Color statusColor;
+            IconData statusIcon;
+
+            if (isCurrent) {
+              statusLabel = 'أنت هنا الآن 📍';
+              statusColor = AppColors.primaryLight;
+              statusIcon = Icons.location_on_rounded;
+            } else if (isCompleted) {
+              statusLabel = 'تم الختم بنجاح 🎉';
+              statusColor = AppColors.successLight;
+              statusIcon = Icons.check_circle_rounded;
+            } else if (isTargeted) {
+              statusLabel = 'مستهدف خطة هذا الشهر 🎯';
+              statusColor = AppColors.primaryLight;
+              statusIcon = Icons.gps_fixed_rounded;
+            } else {
+              statusLabel = 'المحطة القادمة 🔜';
+              statusColor = const Color(0xFF64748B);
+              statusIcon = Icons.lock_outline_rounded;
+            }
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.borderLight),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.01),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
+                          color: statusColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.gps_fixed_rounded, color: AppColors.primaryLight, size: 10),
-                            SizedBox(width: 4),
+                            Icon(statusIcon, color: statusColor, size: 14),
+                            const SizedBox(width: 6),
                             Text(
-                              'مستهدف هذا الشهر',
+                              statusLabel,
                               style: TextStyle(
-                                fontSize: 9,
-                                color: AppColors.primaryLight,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w800,
                                 fontFamily: 'Cairo',
+                                color: statusColor,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      const Spacer(),
+                      Text(
+                        'الجزء $juz',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: 'Cairo',
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
                     ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isCompleted ? 'تم الختم بنجاح 🎉' : (isCurrent ? 'أنت هنا الآن 📍' : 'المحطة القادمة 🔜'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFamily: 'Cairo',
-                    color: isCompleted ? AppColors.successLight : (isCurrent ? AppColors.primaryLight : const Color(0xFF94A3B8)),
-                    fontWeight: FontWeight.w700,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'محتوى السور والآيات:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    rangeText,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color, {required bool isCircle, Border? border}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+            borderRadius: isCircle ? null : BorderRadius.circular(3),
+            border: border,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'Cairo',
+            color: Color(0xFF475569),
           ),
         ),
       ],
