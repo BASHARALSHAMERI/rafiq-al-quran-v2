@@ -10,9 +10,8 @@ import {
   RefreshCcw,
   CalendarCheck,
   CalendarX,
-  Description,
-  BeachAccess,
-  LogIn,
+  FileText,
+  Umbrella,
   LogOut,
   Send,
   Info
@@ -225,13 +224,13 @@ export function SelfAttendanceView() {
     {
       label: ar ? "أعذار مقبولة" : "Excused",
       value: data?.excuses?.filter((e) => e.status === "APPROVED").length ?? 0,
-      icon: <Description size={20} />,
+      icon: <FileText size={20} />,
       color: "text-amber-600 bg-amber-50",
     },
     {
       label: ar ? "أيام الإجازة" : "On Leave",
       value: stats?.onLeaveDays ?? 0,
-      icon: <BeachAccess size={20} />,
+      icon: <Umbrella size={20} />,
       color: "text-amber-600 bg-amber-50",
     },
   ];
@@ -322,7 +321,7 @@ export function SelfAttendanceView() {
                   disabled={isBtnDisabled}
                   onClick={() => setShowExcuseModal(true)}
                 >
-                  <Description className="me-1.5" size={14} />
+                  <FileText className="me-1.5" size={14} />
                   {ar ? "طلب عذر" : "Excuse"}
                 </Button>
                 <Button
@@ -344,7 +343,7 @@ export function SelfAttendanceView() {
                 disabled={isBtnDisabled}
                 onClick={() => setShowLeaveModal(true)}
               >
-                <BeachAccess className="me-1.5" size={14} />
+                <Umbrella className="me-1.5" size={14} />
                 {ar ? "طلب إجازة" : "Request Leave"}
               </Button>
             </>
