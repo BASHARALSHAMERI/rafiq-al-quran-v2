@@ -94,7 +94,7 @@ const resolvePrayerToHHmm = async (
   centerId: number,
   date: Date,
   prayerName: PrayerName
-): Promise<string> => {
+): Promise<string | null> => {
   return prayerTimeService.resolvePrayerTime(centerId, date, prayerName);
 };
 
@@ -170,12 +170,14 @@ export const effectiveShiftService = {
 
           const resolvedCenter = assignment.centerId || centerId;
           const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.fromPrayer);
+          if (!fromHHmm) continue; // Center has no GPS / prayer times unavailable
 
           start = zonedWallTimeToDate(date, fromHHmm, resolvedTimeZone);
           start = addMinutes(start, slot.fromPrayerOffsetMinutes ?? 0);
 
           if (slot.toPrayer) {
             const toHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.toPrayer);
+            if (!toHHmm) continue;
             end = zonedWallTimeToDate(date, toHHmm, resolvedTimeZone);
             end = addMinutes(end, slot.toPrayerOffsetMinutes ?? 0);
           } else {

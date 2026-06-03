@@ -83,7 +83,7 @@ const fetchFromAladhan = async (latitude: number, longitude: number, date: Date)
  * 6. If API fails and no cache at all, throw.
  */
 export const prayerTimeService = {
-  async getPrayerTimes(centerId: number, date: Date): Promise<PrayerTimes> {
+  async getPrayerTimes(centerId: number, date: Date): Promise<PrayerTimes | null> {
     const dateOnly = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 
     // 1. Check cache
@@ -115,7 +115,8 @@ export const prayerTimeService = {
         // Return stale cache if center has no coordinates
         return { fajr: cached.fajr, dhuhr: cached.dhuhr, asr: cached.asr, maghrib: cached.maghrib, isha: cached.isha };
       }
-      throw new Error(`Center ${centerId} has no GPS coordinates for prayer time lookup`);
+      // Gracefully return null when center has no GPS and no cache
+      return null;
     }
 
     // 3. Fetch from API
@@ -160,8 +161,9 @@ export const prayerTimeService = {
   /**
    * Resolve a specific prayer time to HH:mm string for a center and date.
    */
-  async resolvePrayerTime(centerId: number, date: Date, prayerName: string): Promise<string> {
+  async resolvePrayerTime(centerId: number, date: Date, prayerName: string): Promise<string | null> {
     const times = await this.getPrayerTimes(centerId, date);
+    if (!times) return null;
     const key = prayerName.toLowerCase() as keyof PrayerTimes;
     const value = times[key];
     if (!value) {

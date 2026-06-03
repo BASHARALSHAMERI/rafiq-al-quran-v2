@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ChevronLeft,
   UserCheck,
-  Edit2,
   Calendar,
   User
 } from "lucide-react";
@@ -19,9 +18,8 @@ import { Badge } from "../../../components/ui/Badge";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { Button } from "../../../components/ui/Button";
-import type { StaffAttendanceRecord, AttendanceStatus } from "../staff-attendance.api";
-import { useStaffAttendance, useMarkStaffAttendance } from "../staff-attendance.api";
-import { useAuthStore } from "../../auth/auth.store";
+import type { StaffAttendanceRecord } from "../staff-attendance.api";
+import { useStaffAttendance } from "../staff-attendance.api";
 import {
   useClientPagination
 } from "../../../shared/ui/useClientPagination";
@@ -155,110 +153,9 @@ const formatTime = (value: string | undefined, ar: boolean) => {
   });
 };
 
-const STATUS_OPTIONS: { value: AttendanceStatus; labelAr: string; labelEn: string }[] = [
-  { value: "PRESENT",  labelAr: "حاضر",      labelEn: "Present"  },
-  { value: "LATE",     labelAr: "متأخر",      labelEn: "Late"     },
-  { value: "ABSENT",   labelAr: "غائب",       labelEn: "Absent"   },
-  { value: "EXCUSED",  labelAr: "بعذر",       labelEn: "Excused"  },
-  { value: "ON_LEAVE", labelAr: "إجازة",      labelEn: "On Leave" },
-];
-
-interface ManualAttendanceModalProps {
-  record: StaffAttendanceRecord;
-  date: string;
-  ar: boolean;
-  onClose: () => void;
-}
-
-function ManualAttendanceModal({ record, date, ar, onClose }: ManualAttendanceModalProps) {
-  const [status, setStatus] = useState<AttendanceStatus>(record.status);
-  const [note, setNote]     = useState(record.note ?? "");
-  const mutation = useMarkStaffAttendance();
-
-  const handleSave = () => {
-    mutation.mutate(
-      { date, records: [{ userId: record.userId, centerId: record.centerId, status, note: note.trim() || undefined }] },
-      { onSuccess: onClose }
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
-        dir={ar ? "rtl" : "ltr"}
-      >
-        <h3 className="text-base font-bold text-slate-800 mb-1">
-          {ar ? "تعديل الحضور يدوياً" : "Manual Attendance Edit"}
-        </h3>
-        <p className="text-xs text-slate-400 mb-5">{record.user.fullName}</p>
-
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">
-              {ar ? "الحالة" : "Status"}
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {ar ? opt.labelAr : opt.labelEn}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">
-              {ar ? "ملاحظة (اختياري)" : "Note (optional)"}
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder={ar ? "أضف ملاحظة..." : "Add a note..."}
-            />
-          </div>
-        </div>
-
-        {mutation.isError && (
-          <p className="text-xs text-rose-600 mt-3">
-            {ar ? "فشل الحفظ. حاول مرة أخرى." : "Save failed. Please try again."}
-          </p>
-        )}
-
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={handleSave}
-            disabled={mutation.isPending}
-            className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2 rounded-xl transition disabled:opacity-60"
-          >
-            {mutation.isPending ? (ar ? "جاري الحفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 border border-slate-200 text-slate-600 text-sm font-semibold py-2 rounded-xl hover:bg-slate-50 transition"
-          >
-            {ar ? "إلغاء" : "Cancel"}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 export function DailyStaffAttendanceView() {
   const { language } = useI18n();
   const ar = language === "ar";
-  const user = useAuthStore((s) => s.user);
-  const canEdit = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-
-  const [editingRecord, setEditingRecord] = useState<StaffAttendanceRecord | null>(null);
   const [date, setDate] = useState(DEFAULT_DATE);
   const [search, setSearch] = useState("");
 
@@ -485,16 +382,6 @@ export function DailyStaffAttendanceView() {
                         {lateMinutes > 0 ? (ar ? `${lateMinutes} دقيقة` : `${lateMinutes} min`) : (ar ? "لا يوجد" : "None")}
                       </span>
                     </div>
-                    
-                    {canEdit && (
-                      <button
-                        onClick={() => setEditingRecord(record)}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-700 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-xl transition"
-                      >
-                        <Edit2 size={12} />
-                        {ar ? "تعديل" : "Edit"}
-                      </button>
-                    )}
                   </div>
                 </motion.div>
               );
@@ -564,14 +451,6 @@ export function DailyStaffAttendanceView() {
             </div>
           </div>
         </div>
-      )}
-      {editingRecord && (
-        <ManualAttendanceModal
-          record={editingRecord}
-          date={date}
-          ar={ar}
-          onClose={() => setEditingRecord(null)}
-        />
       )}
     </section>
   );

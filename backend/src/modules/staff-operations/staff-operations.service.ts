@@ -15,15 +15,16 @@ import { AppError } from "../../shared/errors/app-error";
 import { ScopeContext } from "../../shared/types/auth.types";
 import { effectiveShiftService } from "./effective-shift.service";
 import { attendancePolicyService } from "./attendance-policy.service";
+import { logger } from "../../shared/logger/logger";
 
 const toStartOfDay = (value: string | Date) => {
-  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  const date = new Date(value);
   date.setHours(0, 0, 0, 0);
   return date;
 };
 
 const toEndOfDay = (value: string | Date) => {
-  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  const date = new Date(value);
   date.setHours(23, 59, 59, 999);
   return date;
 };
@@ -370,43 +371,106 @@ export const staffOperationsService = {
     const targetDate = query.date ? toStartOfDay(query.date) : toStartOfDay(new Date());
     const skip = (query.page - 1) * query.limit;
 
-    let whereClause: Prisma.StaffAttendanceRecordWhereInput = {
+    logger.info(
+      { scopeUserId: scope.userId, scopeRole: scope.role, allAccess: scope.allAccess, centerIds: scope.centerIds, targetDate: targetDate.toISOString(), page: query.page, limit: query.limit },
+      "[listAttendance] start"
+    );
+
+    let userWhereClause: Prisma.UserWhereInput = {
       organizationId: scope.organizationId,
-      attendanceDate: targetDate,
+      isActive: true,
+      role: {
+        in: [
+          Role.CENTER_ADMIN,
+          Role.TEACHER,
+          Role.ACCOUNTANT,
+          Role.FINANCE_MANAGER,
+          Role.TREASURER,
+          Role.AUDITOR
+        ]
+      }
     };
 
     if (!scope.allAccess && scope.centerIds.length > 0) {
-      whereClause.centerId = { in: scope.centerIds };
+      userWhereClause.OR = [
+        { managedCenters: { some: { id: { in: scope.centerIds } } } },
+        { centerSupervisorLinks: { some: { centerId: { in: scope.centerIds } } } },
+        { taughtCircles: { some: { centerId: { in: scope.centerIds } } } },
+        { staffSchedules: { some: { centerId: { in: scope.centerIds }, isActive: true } } },
+        { centerAccesses: { some: { centerId: { in: scope.centerIds } } } }
+      ];
     }
 
     if (scope.role === Role.TEACHER) {
-      whereClause.userId = scope.userId;
+      userWhereClause.id = scope.userId;
     }
 
-    const [records, total] = await prisma.$transaction([
-      (prisma as any).staffAttendanceRecord.findMany({
-        where: whereClause,
+    const [users, total] = await prisma.$transaction([
+      prisma.user.findMany({
+        where: userWhereClause,
         include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              role: true,
-              profile: { select: { phone: true, gender: true } },
-              taughtCircles: {
-                include: { weeklyScheduleSlots: true }
-              }
-            },
+          profile: { select: { phone: true, gender: true } },
+          taughtCircles: {
+            include: { weeklyScheduleSlots: true }
           },
+          staffAttendances: {
+            where: { attendanceDate: targetDate }
+          }
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { fullName: "asc" },
         skip,
         take: query.limit,
       }),
-      prisma.staffAttendanceRecord.count({
-        where: whereClause,
+      prisma.user.count({
+        where: userWhereClause,
       })
     ]);
+
+    logger.info(
+      { usersFound: users.length, totalUsers: total, targetDate: targetDate.toISOString() },
+      "[listAttendance] query complete"
+    );
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const targetDateStr = targetDate.toISOString().slice(0, 10);
+    const isToday = todayStr === targetDateStr;
+
+    const records = users
+      .map((user: any) => {
+        const attendance = user.staffAttendances?.[0];
+        if (attendance) {
+          return { ...attendance, user };
+        }
+        // Do not pre-mark ABSENT for today before shift ends; show empty state instead
+        if (isToday) {
+          return null;
+        }
+        return {
+          id: -(user.id),
+          organizationId: scope.organizationId,
+          centerId: scope.centerIds[0] || 0,
+          userId: user.id,
+          attendanceDate: targetDate,
+          status: "ABSENT",
+          checkInTime: null,
+          checkOutTime: null,
+          markedById: null,
+          note: null,
+          createdAt: targetDate,
+          updatedAt: targetDate,
+          earlyDepartureMinutes: null,
+          lateMinutes: null,
+          source: "SYSTEM",
+          staffRole: user.role,
+          user: user
+        };
+      })
+      .filter(Boolean);
+
+    logger.info(
+      { recordsCount: records.length, hasAttendance: records.filter((r: any) => r.id > 0).length, absentCount: records.filter((r: any) => r.id < 0).length },
+      "[listAttendance] records mapped"
+    );
 
     const supervisorIds: number[] = Array.from(
       new Set(
@@ -435,17 +499,26 @@ export const staffOperationsService = {
       visitCounts.map((visit) => [visit.supervisorId, visit._count._all ?? 0])
     );
 
-    const effectiveShifts = await Promise.all(
-      records.map(async (record: any) => {
-        const shift = await effectiveShiftService.resolveEffectiveShift(
-          record.userId,
-          new Date(record.attendanceDate),
-          record.centerId,
-          scope.organizationId
-        );
-        return [record.id, shift] as const;
-      })
-    );
+    let effectiveShifts: Array<readonly [number, { start: Date; end: Date } | null]> = [];
+    try {
+      effectiveShifts = await Promise.all(
+        records.map(async (record: any) => {
+          const shift = await effectiveShiftService.resolveEffectiveShift(
+            record.userId,
+            new Date(record.attendanceDate),
+            record.centerId,
+            scope.organizationId
+          );
+          return [record.id, shift] as const;
+        })
+      );
+    } catch (err) {
+      logger.error(
+        { err: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, recordsCount: records.length },
+        "[listAttendance] effectiveShifts failed"
+      );
+      throw err;
+    }
 
     const shiftByRecordId = new Map<number, { start: Date; end: Date } | null>(effectiveShifts);
 
@@ -532,10 +605,18 @@ export const staffOperationsService = {
     scope: ScopeContext,
     query: { centerId?: number; circleId?: number; month?: number; year?: number }
   ) {
+    logger.info(
+      { scopeUserId: scope.userId, scopeRole: scope.role, centerId: query.centerId, circleId: query.circleId },
+      "[getSelfAttendance] start"
+    );
     const circle = await resolveSelfAttendanceTarget(scope, {
       centerId: query.centerId,
       circleId: query.circleId
     });
+    logger.info(
+      { circleId: circle.id, centerId: (circle as any).centerId },
+      "[getSelfAttendance] target resolved"
+    );
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
     const timezone = policy.timezone ?? "Asia/Riyadh";
