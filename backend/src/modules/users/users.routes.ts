@@ -36,9 +36,19 @@ usersRouter.post(
   usersController.createUser
 );
 
-usersRouter.get("/", validateQuery(usersQuerySchema), usersController.listUsers);
+usersRouter.get(
+  "/",
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT]),
+  validateQuery(usersQuerySchema),
+  usersController.listUsers
+);
 
-usersRouter.get("/:id", validateParams(userIdParamSchema), usersController.getUserById);
+usersRouter.get(
+  "/:id",
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT]),
+  validateParams(userIdParamSchema),
+  usersController.getUserById
+);
 
 usersRouter.get(
   "/:id/student-profile",

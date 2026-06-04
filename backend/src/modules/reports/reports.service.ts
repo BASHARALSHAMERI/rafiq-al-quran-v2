@@ -12,6 +12,7 @@ import { auditLogger } from "../../shared/audit/audit-log";
 import { prisma } from "../../shared/db/prisma";
 import type { ScopeContext } from "../../shared/types/auth.types";
 import { AppError } from "../../shared/errors/app-error";
+import { ensureCenterAllowed, ensureCircleAllowed } from "../../shared/scoping/scope.domain";
 import { reportsDomain, type ReportFilterInput } from "./reports.domain";
 import { reportsExport } from "./reports.export";
 import { reportsRepository } from "./reports.repository";
@@ -1461,6 +1462,9 @@ export const reportsService = {
 
   /** REPORTS-1: Circles summary report */
   async circlesSummary(scope: ScopeContext, filters: { centerId?: number }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const circleScope = scope.allAccess ? undefined : scope.circleIds;
     const rows = await reportsRepository.circlesSummary({
@@ -1487,6 +1491,12 @@ export const reportsService = {
 
   /** REPORTS-1: Students summary report */
   async studentsSummary(scope: ScopeContext, filters: { centerId?: number; circleId?: number; activeOnly?: boolean }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
+    if (filters.circleId) {
+      ensureCircleAllowed(scope, filters.circleId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const circleScope = filters.circleId ? [filters.circleId] : (scope.allAccess ? undefined : scope.circleIds);
     const rows = await reportsRepository.studentsSummary({
@@ -1514,6 +1524,9 @@ export const reportsService = {
 
   /** REPORTS-1: Golden Records summary report */
   async goldenRecordsSummary(scope: ScopeContext, filters: { centerId?: number }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const rows = await reportsRepository.goldenRecordsSummary({
       organizationId: scope.organizationId,

@@ -733,6 +733,22 @@ export const usersService = {
     assertRoleSpecificPayloadMatchesRole(input.role, input);
 
     const normalized = normalizeCreateUserPayload(input);
+
+    // Enforce center binding for CENTER_ADMIN-created STUDENT/PARENT users
+    if (
+      scope.role === Role.CENTER_ADMIN &&
+      (input.role === Role.STUDENT || input.role === Role.PARENT) &&
+      (!normalized.links || !normalized.links.centerIds || normalized.links.centerIds.length === 0)
+    ) {
+      if (!scope.centerIds.length) {
+        throw new AppError("لا يمكن إنشاء مستخدم بدون مركز مرتبط.", 400);
+      }
+      normalized.links = {
+        ...(normalized.links ?? {}),
+        centerIds: scope.centerIds
+      };
+    }
+
     await validateLinksWithinScope(scope, input.role, normalized.links);
     
     const activationToken = randomBytes(32).toString("hex");

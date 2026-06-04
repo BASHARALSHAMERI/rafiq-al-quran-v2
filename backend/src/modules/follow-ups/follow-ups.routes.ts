@@ -8,6 +8,7 @@ import {
   validateParams,
   validateQuery
 } from "../../shared/middleware/validate.middleware";
+import { verifyScope } from "../../shared/middleware/verify-scope.middleware";
 import { followUpsController } from "./follow-ups.controller";
 import {
   createFollowUpBodySchema,
@@ -24,6 +25,8 @@ followUpsRouter.get(
   "/",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
   validateQuery(listFollowUpsQuerySchema),
+  verifyScope("center", "query", "centerId"),
+  verifyScope("circle", "query", "circleId"),
   followUpsController.listFollowUps
 );
 

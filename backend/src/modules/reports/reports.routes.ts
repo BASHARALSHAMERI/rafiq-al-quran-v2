@@ -1,8 +1,9 @@
-import { Role } from "@prisma/client";
+﻿import { Role } from "@prisma/client";
 import { Router } from "express";
 import { authGuard } from "../../shared/middleware/auth.middleware";
 import { requireRoles } from "../../shared/middleware/rbac.middleware";
 import { attachScope } from "../../shared/middleware/scope.middleware";
+import { verifyScope } from "../../shared/middleware/verify-scope.middleware";
 import { validateBody, validateParams, validateQuery } from "../../shared/middleware/validate.middleware";
 import { reportsController } from "./reports.controller";
 import {
@@ -17,6 +18,8 @@ import {
   studentMonthlyExportParamSchema,
   studentMonthlyReportQuerySchema,
   supervisorDashboardQuerySchema,
+  summaryCenterCircleQuerySchema,
+  summaryCenterQuerySchema,
   teacherMonthlyExportBodySchema,
   teacherMonthlyHalqaQuerySchema
 } from "./reports.validation";
@@ -140,19 +143,32 @@ reportsRouter.get(
 reportsRouter.get(
   "/reports/summary/circles",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterQuerySchema),
+  verifyScope("center", "query", "centerId"),
   reportsController.circlesSummary
 );
 
 reportsRouter.get(
   "/reports/summary/students",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterCircleQuerySchema),
+  verifyScope("center", "query", "centerId"),
+  verifyScope("circle", "query", "circleId"),
   reportsController.studentsSummary
 );
 
 reportsRouter.get(
   "/reports/summary/golden-records",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterQuerySchema),
+  verifyScope("center", "query", "centerId"),
   reportsController.goldenRecordsSummary
 );
 
 export default reportsRouter;
+
+
+
+
+
+

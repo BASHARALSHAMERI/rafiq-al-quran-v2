@@ -1,4 +1,4 @@
-import type { RequestHandler } from "express";
+﻿import type { RequestHandler } from "express";
 import { AppError } from "../../shared/errors/app-error";
 import { buildAttachmentContentDisposition } from "../../shared/utils/files";
 import { reportsService } from "./reports.service";
@@ -185,9 +185,9 @@ export const reportsController = {
   circlesSummary: (async (req, res, next) => {
     try {
       if (!req.scope) throw new AppError("Scope not resolved", 500);
-      const query = req.query as { centerId?: string };
+      const query = res.locals.validatedQuery as { centerId?: number };
       const data = await reportsService.circlesSummary(req.scope, {
-        centerId: query.centerId ? Number(query.centerId) : undefined
+        centerId: query.centerId
       });
       res.json({ ok: true, data });
     } catch (error) { next(error); }
@@ -197,11 +197,11 @@ export const reportsController = {
   studentsSummary: (async (req, res, next) => {
     try {
       if (!req.scope) throw new AppError("Scope not resolved", 500);
-      const query = req.query as { centerId?: string; circleId?: string; activeOnly?: string };
+      const query = res.locals.validatedQuery as { centerId?: number; circleId?: number; activeOnly?: boolean };
       const data = await reportsService.studentsSummary(req.scope, {
-        centerId: query.centerId ? Number(query.centerId) : undefined,
-        circleId: query.circleId ? Number(query.circleId) : undefined,
-        activeOnly: query.activeOnly === "true" ? true : query.activeOnly === "false" ? false : undefined
+        centerId: query.centerId,
+        circleId: query.circleId,
+        activeOnly: query.activeOnly
       });
       res.json({ ok: true, data });
     } catch (error) { next(error); }
@@ -211,9 +211,9 @@ export const reportsController = {
   goldenRecordsSummary: (async (req, res, next) => {
     try {
       if (!req.scope) throw new AppError("Scope not resolved", 500);
-      const query = req.query as { centerId?: string };
+      const query = res.locals.validatedQuery as { centerId?: number };
       const data = await reportsService.goldenRecordsSummary(req.scope, {
-        centerId: query.centerId ? Number(query.centerId) : undefined
+        centerId: query.centerId
       });
       res.json({ ok: true, data });
     } catch (error) { next(error); }
@@ -236,4 +236,6 @@ export const reportsController = {
     }
   }) as RequestHandler
 };
+
+
 
