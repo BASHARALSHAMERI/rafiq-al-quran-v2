@@ -40,7 +40,7 @@ export const usersDomain = {
 
   assertCanManageUsers(scope: ScopeContext) {
     if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
-      throw new AppError("Forbidden", 403);
+      throw new AppError("ليس لديك الصلاحية لإدارة المستخدمين.", 403);
     }
   },
 
@@ -52,7 +52,7 @@ export const usersDomain = {
     }
 
     if (!CENTER_ADMIN_MANAGED_ROLES.has(requestedRole)) {
-      throw new AppError("Forbidden", 403);
+      throw new AppError("لا يمكنك إنشاء مستخدم بهذا الدور.", 403);
     }
   },
 
@@ -64,7 +64,7 @@ export const usersDomain = {
     }
 
     if (!CENTER_ADMIN_MANAGED_ROLES.has(targetRole)) {
-      throw new AppError("Forbidden", 403);
+      throw new AppError("لا يمكنك إدارة مستخدم بهذا الدور.", 403);
     }
   },
 
@@ -97,7 +97,7 @@ export const usersDomain = {
       input.activeSuperAdminsCount <= 1
     ) {
       throw new AppError(
-        "Cannot disable the last active super admin",
+        "لا يمكن تعطيل آخر مشرف مفعل.",
         409,
         undefined,
         "LAST_SUPER_ADMIN_FORBIDDEN"
@@ -105,7 +105,7 @@ export const usersDomain = {
     }
 
     if (!input.nextIsActive && input.actorUserId === input.targetUserId) {
-      throw new AppError("Cannot disable your own account", 400, undefined, "SELF_DISABLE_FORBIDDEN");
+      throw new AppError("لا يمكنك تعطيل حسابك الخاص.", 400, undefined, "SELF_DISABLE_FORBIDDEN");
     }
   },
 
@@ -116,7 +116,7 @@ export const usersDomain = {
       targetRole !== Role.TEACHER
     ) {
       throw new AppError(
-        "Center access link is only allowed for center admin, supervisor, or teacher",
+        "ربط المركز متاح فقط لمدير المركز أو المشرف أو المعلم.",
         400
       );
     }
@@ -124,23 +124,23 @@ export const usersDomain = {
 
   assertCircleAccessLinkAllowed(targetRole: Role) {
     if (targetRole !== Role.SUPERVISOR && targetRole !== Role.TEACHER) {
-      throw new AppError("Circle access link is only allowed for supervisor or teacher", 400);
+      throw new AppError("ربط الحلقة متاح فقط للمشرف أو المعلم.", 400);
     }
   },
 
   assertParentLinkAllowed(targetRole: Role, studentRole: Role) {
     if (targetRole !== Role.PARENT) {
-      throw new AppError("Target user is not a parent", 400);
+      throw new AppError("المستخدم المستهدف ليس ولي أمر.", 400);
     }
 
     if (studentRole !== Role.STUDENT) {
-      throw new AppError("Linked user is not a student", 400);
+      throw new AppError("المستخدم المرتبط ليس طالباً.", 400);
     }
   },
 
   assertEnrollmentLinkAllowed(targetRole: Role) {
     if (targetRole !== Role.STUDENT) {
-      throw new AppError("Target user is not a student", 400);
+      throw new AppError("المستخدم المستهدف ليس طالباً.", 400);
     }
   }
 };

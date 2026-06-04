@@ -4,6 +4,8 @@ import { env } from "../../config/env";
 import { AppError } from "../errors/app-error";
 import { logger } from "../logger/logger";
 import { metrics } from "../metrics/metrics";
+import { t, type Lang } from "../i18n";
+import { messages } from "../i18n/messages";
 
 type NormalizedError = {
   statusCode: number;
@@ -12,12 +14,12 @@ type NormalizedError = {
   details?: unknown;
 };
 
-const toNormalizedError = (error: unknown): NormalizedError => {
+const toNormalizedError = (error: unknown, lang: Lang): NormalizedError => {
   if (error instanceof AppError) {
     return {
       statusCode: error.statusCode,
       code: error.code,
-      message: error.message,
+      message: error.localized ? t(error.localized, lang) : error.message,
       details: error.details
     };
   }
@@ -26,7 +28,7 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      message: "بيانات الطلب غير صحيحة. يرجى مراجعة الحقول المطلوبة.",
+      message: t(messages.system.zodValidationError, lang),
       details: error.flatten()
     };
   }
@@ -40,7 +42,7 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 413,
       code: "PAYLOAD_TOO_LARGE",
-      message: "حجم البيانات المرسلة كبير جداً. يرجى تقليل حجم الملف."
+      message: t(messages.system.payloadTooLarge, lang)
     };
   }
 
@@ -53,19 +55,20 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "INVALID_JSON",
-      message: "صيغة البيانات المرسلة غير صحيحة."
+      message: t(messages.system.invalidJson, lang)
     };
   }
 
   return {
     statusCode: 500,
     code: "INTERNAL_SERVER_ERROR",
-    message: "تعذر إتمام العملية. يرجى المحاولة مرة أخرى أو التواصل مع الدعم."
+    message: t(messages.system.internalServerError, lang)
   };
 };
 
 export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => {
-  const normalized = toNormalizedError(error);
+  const lang = req.lang ?? "ar";
+  const normalized = toNormalizedError(error, lang);
   const requestId = req.requestId ?? "unknown";
   metrics.recordError({
     code: normalized.code,

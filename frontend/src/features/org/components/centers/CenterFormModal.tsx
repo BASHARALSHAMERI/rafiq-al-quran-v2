@@ -260,8 +260,8 @@ export function CenterFormModal({
     const L = (window as any).L;
     if (!L) return;
 
-    const initLat = parseFloat(draft.latitude) || 24.7136;
-    const initLng = parseFloat(draft.longitude) || 46.6753;
+    const initLat = parseFloat(draft.latitude) || 13.5795;
+    const initLng = parseFloat(draft.longitude) || 44.0209;
     const hasCoords = !isNaN(parseFloat(draft.latitude)) && !isNaN(parseFloat(draft.longitude));
 
     // Custom Leaflet marker icons resolution
@@ -624,6 +624,9 @@ export function CenterFormModal({
               <MapPin size={15} className="circlemod-section-icon" />
               <span>{ar ? "الموقع الجغرافي للمركز" : "Center Geo Location"}</span>
             </div>
+            <span style={{ fontSize: "11px", color: "#6b7280", marginRight: ar ? "0" : "auto", marginLeft: ar ? "auto" : "0", padding: "0 8px" }}>
+              {ar ? "مطلوب لحساب مواقيت الصلاة بدقة" : "Required for accurate prayer times"}
+            </span>
             <div className="flex items-center gap-2">
               {(draft.latitude || draft.longitude) && (
                 <button

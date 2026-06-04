@@ -13,16 +13,15 @@ auditRouter.use(authGuard, attachScope);
 
 auditRouter.get(
   "/audit",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
+  requireRoles([Role.SUPER_ADMIN]),
   validateQuery(listAuditQuerySchema),
   auditController.list
 );
 
 auditRouter.get(
   "/audit/catalog",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
+  requireRoles([Role.SUPER_ADMIN]),
   auditController.catalog
 );
 
 export default auditRouter;
-

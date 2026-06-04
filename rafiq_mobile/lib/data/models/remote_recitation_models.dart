@@ -86,7 +86,7 @@ class RemoteRecitationCenterRefDto {
     return RemoteRecitationCenterRefDto(
       id: _asInt(json['id']) ?? 0,
       name: _asString(json['name']),
-      timezone: _asString(json['timezone'], fallback: 'Asia/Riyadh'),
+      timezone: _asString(json['timezone'], fallback: 'Asia/Aden'),
       isActive: _asBool(json['isActive'], fallback: true),
     );
   }

@@ -22,7 +22,9 @@ import {
   listLeavesQuerySchema,
   requestLeaveBodySchema,
   updateLeaveStatusBodySchema,
-  leaveIdParamSchema
+  leaveIdParamSchema,
+  prayerTimesQuerySchema,
+  centerIdParamSchema
 } from "./staff-operations.validation";
 
 const staffOpsRouter = Router();
@@ -39,6 +41,7 @@ const staffRoles = [
 ];
 
 const selfAttendanceRoles = [
+  Role.SUPER_ADMIN,
   Role.CENTER_ADMIN,
   Role.TEACHER,
   Role.ACCOUNTANT,
@@ -220,6 +223,15 @@ staffOpsRouter.patch(
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
   validateBody(supervisorTargetsBodySchema),
   supervisorController.upsertTargets
+);
+
+// 7. Prayer Times
+staffOpsRouter.get(
+  "/prayer-times/:centerId",
+  requireRoles(staffRoles),
+  validateParams(centerIdParamSchema),
+  validateQuery(prayerTimesQuerySchema),
+  staffOperationsController.getPrayerTimes
 );
 
 export default staffOpsRouter;

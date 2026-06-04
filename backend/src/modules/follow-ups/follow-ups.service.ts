@@ -191,7 +191,7 @@ const resolveCreateQuranRange = async (input: {
   const allProvided = [fromSurah, fromAyah, toSurah, toAyah].every((item) => typeof item === "number");
   if (!allProvided) {
     throw new AppError(
-      "Quran range requires fromSurah/fromAyah/toSurah/toAyah together",
+      "نطاق القرآن يتطلب رقم السورة والآية البداية والنهاية معاً",
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -315,7 +315,7 @@ const resolveUpdateQuranRange = async (
 
   if (!allProvided) {
     throw new AppError(
-      "Quran range requires fromSurah/fromAyah/toSurah/toAyah together",
+      "نطاق القرآن يتطلب رقم السورة والآية البداية والنهاية معاً",
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -352,7 +352,7 @@ const ensureCircleAccessible = async (scope: ScopeContext, circleId: number) => 
   });
 
   if (!circle) {
-    throw new AppError("Access denied for requested circle", 403);
+    throw new AppError("ليس لديك صلاحية الوصول للحلقة المطلوبة", 403);
   }
 
   return circle;
@@ -471,7 +471,7 @@ export const followUpsService = {
     });
 
     if (!enrollment) {
-      throw new AppError("Student is not actively enrolled in this circle", 400);
+      throw new AppError("الطالب غير مسجل بشكل نشط في هذه الحلقة", 400);
     }
 
     const status = followUpDomain.normalizeStatus(input.status);
@@ -530,7 +530,7 @@ export const followUpsService = {
     const existing = await followUpsRepository.findRecordById(followUpId, scope.organizationId);
 
     if (!existing) {
-      throw new AppError("Follow-up record was not found", 404);
+      throw new AppError("سجل المتابعة غير موجود", 404);
     }
 
     await ensureCircleAccessible(scope, existing.circleId);
@@ -546,7 +546,7 @@ export const followUpsService = {
     });
 
     if (existing.status === "FINAL") {
-      throw new AppError("Follow-up record is already finalized", 409);
+      throw new AppError("سجل المتابعة مكتمل بالفعل", 409);
     }
 
     const nextType = input.type ?? existing.type;
@@ -610,7 +610,7 @@ export const followUpsService = {
       }, existing.lockVersion, tx);
 
       if (!updated) {
-        throw new AppError("Follow-up record version conflict", 409, { id: followUpId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار سجل المتابعة", 409, { id: followUpId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -637,7 +637,7 @@ export const followUpsService = {
     const existing = await followUpsRepository.findRecordById(followUpId, scope.organizationId);
 
     if (!existing) {
-      throw new AppError("Follow-up record was not found", 404);
+      throw new AppError("سجل المتابعة غير موجود", 404);
     }
 
     await ensureCircleAccessible(scope, existing.circleId);
@@ -654,7 +654,7 @@ export const followUpsService = {
     const finalizedResponse = await prisma.$transaction(async (tx) => {
       const finalized = await followUpsRepository.finalizeRecord(followUpId, existing.lockVersion, tx);
       if (!finalized) {
-        throw new AppError("Follow-up record version conflict", 409, { id: followUpId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار سجل المتابعة", 409, { id: followUpId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({

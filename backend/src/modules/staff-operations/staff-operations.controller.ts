@@ -1,6 +1,8 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../../shared/errors/app-error";
 import { staffOperationsService } from "./staff-operations.service";
+import { prayerTimeService } from "./prayer-time.service";
+import { attendancePolicyService } from "./attendance-policy.service";
 
 export const staffOperationsController = {
   listAttendance: (async (req, res, next) => {
@@ -262,6 +264,20 @@ export const staffOperationsController = {
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  getPrayerTimes: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const { centerId } = res.locals.validatedParams as { centerId: number };
+      const { date } = res.locals.validatedQuery as { date?: string };
+      const targetDate = date ? new Date(date + "T00:00:00Z") : new Date();
+      const policy = await attendancePolicyService.getPolicy(req.scope.organizationId);
+      const times = await prayerTimeService.getPrayerTimes(centerId, targetDate, policy.prayerApiSource);
+      res.json({ ok: true, data: times });
     } catch (error) {
       next(error);
     }

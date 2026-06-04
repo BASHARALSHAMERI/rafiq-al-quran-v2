@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../shared/api/http";
+import { useAuthStore } from "../auth/auth.store";
 
 type PaginatedResponse<T> = {
   records: T[];
@@ -244,6 +245,7 @@ export interface SelfAttendanceResponse {
     holidays: AttendanceHolidayPeriod[];
     geoEnforcement: "REQUIRED" | "OPTIONAL";
     timezone: string;
+    timeFormat?: "HOUR_12" | "HOUR_24";
   };
   eligibility?: {
     canCheckIn: boolean;
@@ -305,6 +307,15 @@ export interface AttendancePolicy {
   timezone: string;
   defaultShiftDurationMinutes: number;
   prayerApiSource: string;
+  timeFormat: "HOUR_12" | "HOUR_24";
+}
+
+export interface PrayerTimes {
+  fajr: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
 }
 
 export interface VisitPlanItem {
@@ -391,6 +402,7 @@ export const staffOpsKeys = {
   deductionEvents: (filters?: unknown) => [...staffOpsKeys.all, "deductionEvents", filters] as const,
   staffSchedules: (filters?: unknown) => [...staffOpsKeys.all, "staffSchedules", filters] as const,
   staffUsers: (role?: string) => [...staffOpsKeys.all, "staffUsers", role] as const,
+  prayerTimes: (centerId: number, date?: string) => [...staffOpsKeys.all, "prayerTimes", centerId, date] as const,
 };
 
 
@@ -585,7 +597,14 @@ export function useUpdatePolicy() {
       const res = await apiClient.put<{ data: AttendancePolicy }>("/attendance-policy", payload);
       return res.data.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.policy() }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.policy() });
+      // Keep AuthStore in sync so useTimeFormat() reflects the change immediately
+      const user = useAuthStore.getState().user;
+      if (user && data.timeFormat) {
+        useAuthStore.getState().setUser({ ...user, timeFormat: data.timeFormat });
+      }
+    },
   });
 }
 
@@ -854,7 +873,10 @@ export function useCreateStaffSchedule() {
       const res = await apiClient.post<{ data: StaffScheduleAssignment }>("/staff-schedules", payload);
       return res.data.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
   });
 }
 
@@ -865,7 +887,10 @@ export function useUpdateStaffSchedule() {
       const res = await apiClient.put<{ data: StaffScheduleAssignment }>(`/staff-schedules/${id}`, payload);
       return res.data.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
   });
 }
 
@@ -875,7 +900,10 @@ export function useDeactivateStaffSchedule() {
     mutationFn: async (id: number) => {
       await apiClient.delete(`/staff-schedules/${id}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
   });
 }
 
@@ -960,5 +988,18 @@ export function useReviewDeduction() {
       return res.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.all }),
+  });
+}
+
+export function usePrayerTimes(centerId: number, date?: string, enabled = true) {
+  return useQuery({
+    queryKey: staffOpsKeys.prayerTimes(centerId, date),
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: PrayerTimes | null }>(`/staff-operations/prayer-times/${centerId}`, {
+        params: date ? { date } : undefined
+      });
+      return res.data.data;
+    },
+    enabled: enabled && !!centerId
   });
 }

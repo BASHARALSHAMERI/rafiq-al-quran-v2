@@ -102,7 +102,7 @@ function VouchersKpi({
 
 export default function AccountingAccountsPage() {
   const user = useAuthStore((state) => state.user);
-  const canManageAccounts = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canManageAccounts = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const accountsQ = useAccountingAccountsQuery();
   const trialBalanceQ = useAccountingTrialBalanceQuery();
 

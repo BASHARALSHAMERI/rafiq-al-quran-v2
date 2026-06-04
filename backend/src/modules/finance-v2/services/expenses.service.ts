@@ -112,7 +112,7 @@ export const expensesService = {
         }
       });
       if (!account) {
-        throw new AppError("Expense posting account not found", 404);
+        throw new AppError("حساب ترحيل المصروفات غير موجود", 404);
       }
     }
 
@@ -196,12 +196,12 @@ export const expensesService = {
       });
 
       if (!invoice || invoice.organizationId !== scope.organizationId) {
-        throw new AppError("Invoice not found", 404);
+        throw new AppError("الفاتورة غير موجودة", 404);
       }
       ensureExpenseInvoiceScope(scope, invoice);
 
       if (invoice.status !== ExpenseInvoiceStatus.DRAFT && invoice.status !== ExpenseInvoiceStatus.PENDING_APPROVAL) {
-        throw new AppError("Only DRAFT/PENDING invoices can be approved", 400);
+        throw new AppError("فقط الفواتير المسودة أو المعلقة يمكن اعتمادها", 400);
       }
 
       await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
@@ -229,7 +229,7 @@ export const expensesService = {
           }
         });
         if (!categoryAccount) {
-          throw new AppError("Expense category is not linked to a posting expense account", 409);
+          throw new AppError("التصنيف غير مرتبط بحساب مصروفات ترحيل", 409);
         }
 
         // Find AP Account
@@ -298,18 +298,18 @@ export const expensesService = {
       });
 
       if (!invoice || invoice.organizationId !== scope.organizationId) {
-        throw new AppError("Invoice not found", 404);
+        throw new AppError("الفاتورة غير موجودة", 404);
       }
       ensureExpenseInvoiceScope(scope, invoice);
 
       if (invoice.status !== ExpenseInvoiceStatus.APPROVED && invoice.status !== ExpenseInvoiceStatus.PARTIALLY_PAID) {
-        throw new AppError("Invoice must be approved to be paid", 400);
+        throw new AppError("الفاتورة يجب أن تكون معتمدة للدفع", 400);
       }
 
       const paymentAmount = new Prisma.Decimal(input.amount);
       const paidAt = new Date();
       if (paymentAmount.lte(0)) {
-        throw new AppError("Payment amount must be greater than zero", 400);
+        throw new AppError("مبلغ الدفع يجب أن يكون أكبر من صفر", 400);
       }
 
       const existingPayments = await tx.expensePayment.aggregate({
@@ -319,7 +319,7 @@ export const expensesService = {
       const alreadyPaid = existingPayments._sum.amount || new Prisma.Decimal(0);
       const remainingAmount = invoice.amount.minus(alreadyPaid);
       if (paymentAmount.gt(remainingAmount)) {
-        throw new AppError("Payment exceeds expense invoice remaining balance", 409, {
+        throw new AppError("الدفعة تتجاوز الرصيد المتبقي للفاتورة", 409, {
           invoiceId: invoice.id,
           remainingAmount: remainingAmount.toFixed(2),
           paymentAmount: paymentAmount.toFixed(2)
@@ -340,7 +340,7 @@ export const expensesService = {
       });
 
       if (!financeAccount) {
-        throw new AppError("Finance account not found", 404, undefined, "ENTITY_NOT_FOUND");
+        throw new AppError("الحساب المالي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
       }
       ensureFinanceAccountScope(scope, financeAccount);
 
@@ -359,7 +359,7 @@ export const expensesService = {
         })) > 0
       ) {
         throw new AppError(
-          "Finance account is not linked to an active posting asset ledger account",
+          "الحساب المالي غير مرتبط بحساب أصول ترحيل نشط",
           409,
           { financeAccountId: financeAccount.id, expectedType: AccountingAccountType.ASSET },
           "FINANCE_ACCOUNT_LEDGER_MAPPING_MISSING"

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { VisitPlanStatus, VisitPriority } from "@prisma/client";
 
 const positiveId = z.coerce.number().int().positive();
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, expected YYYY-MM-DD");
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ غير صحيحة، الصيغة المطلوبة: YYYY-MM-DD");
 
 const visitPlanStatusInputSchema = z.enum([
   VisitPlanStatus.VISIT_PLAN_DRAFT,

@@ -5,7 +5,6 @@ import {
   Calendar,
   Clock,
   DollarSign,
-  Fingerprint,
   MapPin,
   Settings,
 } from "lucide-react";
@@ -19,13 +18,10 @@ import { StaffExcusesRequestsView } from "./StaffExcusesRequestsView";
 import { SupervisorVisitsView } from "./SupervisorVisitsView";
 import { VisitPlanManagement } from "./VisitPlanManagement";
 import { StaffSchedulesView } from "./StaffSchedulesView";
-import { SelfAttendanceView } from "./SelfAttendanceView";
 
 import "../../../styles/pages/staff-operations-v1.css";
-import "../../../styles/pages/centers-modern.css";
 
 type StaffOpsTabId =
-  | "self_attendance"
   | "daily"
   | "requests"
   | "visits"
@@ -63,20 +59,7 @@ export function StaffOperationsDashboard() {
   const isOpsAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const canReviewFinanceDeductions = user?.role === "SUPER_ADMIN";
-  const canUseSelfAttendance =
-    user?.role === "TEACHER" ||
-    user?.role === "SUPERVISOR" ||
-    user?.role === "CENTER_ADMIN" ||
-    user?.role === "ACCOUNTANT" ||
-    user?.role === "FINANCE_MANAGER" ||
-    user?.role === "TREASURER" ||
-    user?.role === "AUDITOR";
   const tabs: StaffOpsTab[] = [
-    {
-      id: "self_attendance" as const,
-      label: ar ? "تحضيري" : "My Attendance",
-      icon: <Fingerprint size={16} />
-    },
     ...(isOpsAdmin
       ? [
           {
@@ -135,7 +118,6 @@ export function StaffOperationsDashboard() {
             aria-label={ar ? "تبويبات شؤون الموظفين" : "Staff operations tabs"}
           >
             {tabs
-              .filter((tab) => tab.id !== "self_attendance" || canUseSelfAttendance)
               .filter((tab) => tab.id !== "finance" || canReviewFinanceDeductions)
               .map((tab) => {
               const isActive = activeTab === tab.id;
@@ -171,7 +153,6 @@ export function StaffOperationsDashboard() {
                 exit={{ opacity: 0, x: ar ? -15 : 15 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
-                {activeTab === "self_attendance" && canUseSelfAttendance && <SelfAttendanceView />}
                 {activeTab === "daily" && isOpsAdmin && <DailyStaffAttendanceView />}
                 {activeTab === "requests" && isOpsAdmin && <StaffExcusesRequestsView />}
                 {activeTab === "visits" && isOpsAdmin && <SupervisorVisitsView />}

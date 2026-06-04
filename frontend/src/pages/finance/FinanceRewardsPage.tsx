@@ -59,7 +59,10 @@ export default function FinanceRewardsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canCreateRewardBatch =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canPayReward =
+    canCreateRewardBatch || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultYear = now.getFullYear();
@@ -107,7 +110,7 @@ export default function FinanceRewardsPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {isCoreAdmin ? (
+                {canCreateRewardBatch ? (
                   <Button
                     variant="primary"
                     size="sm"
@@ -173,11 +176,12 @@ export default function FinanceRewardsPage() {
             centerId={centerId}
             year={year}
             month={month}
-            isAdmin={isCoreAdmin}
+            isAdmin={canPayReward}
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
+            canCreateBatch={canCreateRewardBatch}
             ar={ar}
             centers={centers}
-            externalShowBatchForm={isCoreAdmin && showBatchModal}
+            externalShowBatchForm={canCreateRewardBatch && showBatchModal}
             onExternalBatchFormClose={() => setShowBatchModal(false)}
           />
         </Suspense>

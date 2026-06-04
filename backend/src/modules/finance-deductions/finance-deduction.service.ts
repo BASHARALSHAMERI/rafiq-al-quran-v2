@@ -132,8 +132,13 @@ export const financeDeductionService = {
   // Rules
   // ==========================================
   async listRules(scope: ScopeContext) {
-    if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
-      throw new AppError("Access denied", 403);
+    if (
+      scope.role !== Role.SUPER_ADMIN &&
+      scope.role !== Role.ACCOUNTANT &&
+      scope.role !== Role.FINANCE_MANAGER &&
+      scope.role !== Role.AUDITOR
+    ) {
+      throw new AppError("ليس لديك صلاحية", 403);
     }
     const rules = await prisma.financeDeductionRule.findMany({
       where: { organizationId: scope.organizationId }
@@ -153,7 +158,7 @@ export const financeDeductionService = {
     }
   ) {
     if (scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Only SUPER_ADMIN can manage deduction rules", 403);
+      throw new AppError("فقط مدير النظام يمكنه إدارة قواعد الخصم", 403);
     }
 
     const deductionType = mapDeductionTypeToDb(input.deductionType);
@@ -191,7 +196,7 @@ export const financeDeductionService = {
   // ==========================================
   async generateMonthlyDeductions(scope: ScopeContext, month: number, year: number) {
     if (scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Only SUPER_ADMIN can generate deductions", 403);
+      throw new AppError("فقط مدير النظام يمكنه توليد الاستقطاعات", 403);
     }
 
     const orgId = scope.organizationId;
@@ -392,7 +397,7 @@ export const financeDeductionService = {
       } else if (scope.centerIds.length > 0) {
         whereClause.centerId = { in: scope.centerIds };
       } else {
-        throw new AppError("Access denied", 403);
+        throw new AppError("ليس لديك صلاحية", 403);
       }
     }
 
@@ -402,7 +407,7 @@ export const financeDeductionService = {
     if (query.year) whereClause.year = query.year;
     const mappedStatus = mapDeductionStatusToDb(query.status);
     if (query.status && !mappedStatus) {
-      throw new AppError("Invalid deduction status filter", 400, undefined, "VALIDATION_FAILED");
+      throw new AppError("فلتر حالة الخصم غير صالح", 400, undefined, "VALIDATION_FAILED");
     }
     if (mappedStatus) whereClause.status = mappedStatus;
     if (query.triggerType) whereClause.triggerType = query.triggerType;
@@ -429,7 +434,7 @@ export const financeDeductionService = {
 
   async reviewEvent(scope: ScopeContext, eventId: number, action: DeductionEventStatus | string, reviewNote?: string) {
     if (scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Only SUPER_ADMIN can review and approve deduction events", 403);
+      throw new AppError("فقط مدير النظام يمكنه مراجعة واعتماد أحداث الخصم", 403);
     }
 
     const mappedAction = mapDeductionStatusToDb(action);
@@ -438,14 +443,14 @@ export const financeDeductionService = {
       mappedAction === DeductionEventStatus.DEDUCTION_PENDING ||
       mappedAction === DeductionEventStatus.DEDUCTION_INCLUDED_IN_PAYROLL
     ) {
-      throw new AppError("Invalid deduction review action", 400, undefined, "VALIDATION_FAILED");
+      throw new AppError("إجراء المراجعة غير صالح", 400, undefined, "VALIDATION_FAILED");
     }
 
     const event = await prisma.financeDeductionEvent.findFirst({
       where: { id: eventId, organizationId: scope.organizationId }
     });
 
-    if (!event) throw new AppError("Deduction event not found", 404);
+    if (!event) throw new AppError("حدث الخصم غير موجود", 404);
 
     // B7: Block modification of deductions already included in a payroll batch
     if (event.status === DeductionEventStatus.DEDUCTION_INCLUDED_IN_PAYROLL) {

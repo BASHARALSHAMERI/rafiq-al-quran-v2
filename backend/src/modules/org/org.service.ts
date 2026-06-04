@@ -125,7 +125,7 @@ type CircleScheduleSlotLike = {
 const normalizeRequiredName = (input: { name?: string; nameAr?: string }) => {
   const resolved = (input.nameAr ?? input.name ?? "").trim();
   if (!resolved) {
-    throw new AppError("Center/Circle Arabic name is required", 400);
+    throw new AppError("الاسم العربي للمركز/الحلقة مطلوب", 400);
   }
   return resolved;
 };
@@ -191,15 +191,15 @@ const ensureOrgUserActiveWithRole = async (
   });
 
   if (!user) {
-    throw new AppError(`${label} not found`, 404);
+    throw new AppError(`${label} غير موجود`, 404);
   }
 
   if (user.role !== role) {
-    throw new AppError(`${label} role is invalid`, 400);
+    throw new AppError(`دور ${label} غير صالح`, 400);
   }
 
   if (!user.isActive) {
-    throw new AppError(`${label} must be active`, 400);
+    throw new AppError(`${label} يجب أن يكون نشطاً`, 400);
   }
 
   return user;
@@ -244,10 +244,10 @@ const prayerRank = new Map<PrayerName, number>(PRAYER_ORDER.map((name, index) =>
 
 const assertValidClockRange = (fromTime: string, toTime: string) => {
   if (!HHMM_RE.test(fromTime) || !HHMM_RE.test(toTime)) {
-    throw new AppError("weeklySchedule CLOCK rows require HH:mm time values", 400);
+    throw new AppError("جداول نظام الساعة تتطلب قيم وقت HH:mm", 400);
   }
   if (fromTime >= toTime) {
-    throw new AppError("weeklySchedule CLOCK range must be within the same day and fromTime < toTime", 400);
+    throw new AppError("نطاق الساعة في الجدول الأسبوعي يجب أن يكون في نفس اليوم و fromTime < toTime", 400);
   }
 };
 
@@ -255,10 +255,10 @@ const assertValidPrayerRange = (fromPrayer: PrayerName, toPrayer: PrayerName) =>
   const fromIndex = prayerRank.get(fromPrayer);
   const toIndex = prayerRank.get(toPrayer);
   if (fromIndex === undefined || toIndex === undefined) {
-    throw new AppError("weeklySchedule PRAYER values are invalid", 400);
+    throw new AppError("قيم الصلاة في الجدول الأسبوعي غير صالحة", 400);
   }
   if (fromIndex >= toIndex) {
-    throw new AppError("weeklySchedule PRAYER range must be within the same day and ordered", 400);
+    throw new AppError("نطاق الصلاة في الجدول الأسبوعي يجب أن يكون في نفس اليوم ومرتباً", 400);
   }
 };
 
@@ -267,10 +267,10 @@ const normalizeWeeklySchedule = (
 ): CircleScheduleRepoRow[] | undefined => {
   if (input === undefined) return undefined;
   if (!Array.isArray(input)) {
-    throw new AppError("weeklySchedule must be an array", 400);
+    throw new AppError("الجدول الأسبوعي يجب أن يكون مصفوفة", 400);
   }
   if (input.length > 7) {
-    throw new AppError("weeklySchedule cannot exceed 7 rows", 400);
+    throw new AppError("الجدول الأسبوعي لا يمكن أن يتجاوز 7 أيام", 400);
   }
 
   const seen = new Set<Weekday>();
@@ -278,11 +278,11 @@ const normalizeWeeklySchedule = (
 
   for (const row of input) {
     if (!row || typeof row !== "object") {
-      throw new AppError("weeklySchedule row is invalid", 400);
+      throw new AppError("صف الجدول الأسبوعي غير صالح", 400);
     }
 
     if (seen.has(row.day)) {
-      throw new AppError(`weeklySchedule has duplicate day: ${row.day}`, 400);
+      throw new AppError(`الجدول الأسبوعي يحتوي على يوم مكرر: ${row.day}`, 400);
     }
     seen.add(row.day);
 
@@ -305,7 +305,7 @@ const normalizeWeeklySchedule = (
       const fromPrayer = row.fromPrayer;
       const toPrayer = row.toPrayer;
       if (!fromPrayer || !toPrayer) {
-        throw new AppError("weeklySchedule PRAYER rows require fromPrayer and toPrayer", 400);
+        throw new AppError("جداول الصلاة تتطلب fromPrayer و toPrayer", 400);
       }
       assertValidPrayerRange(fromPrayer, toPrayer);
       normalized.push({
@@ -319,7 +319,7 @@ const normalizeWeeklySchedule = (
       continue;
     }
 
-    throw new AppError("weeklySchedule row mode is invalid", 400);
+    throw new AppError("نمط الجدول الأسبوعي غير صالح", 400);
   }
 
   return normalized;
@@ -411,7 +411,7 @@ export const orgService = {
   async getBranding(scope: ScopeContext) {
     const branding = await orgRepository.getOrganizationBranding(scope.organizationId);
     if (!branding) {
-      throw new AppError("Organization not found", 404);
+      throw new AppError("المنظمة غير موجودة", 404);
     }
     return branding;
   },
@@ -421,7 +421,7 @@ export const orgService = {
 
     const existing = await orgRepository.getOrganizationBranding(scope.organizationId);
     if (!existing) {
-      throw new AppError("Organization not found", 404);
+      throw new AppError("المنظمة غير موجودة", 404);
     }
 
     const name =
@@ -511,7 +511,7 @@ export const orgService = {
           latitude: input.latitude ?? null,
           longitude: input.longitude ?? null,
           allowedRadiusMeters: input.allowedRadiusMeters ?? null,
-          timezone: timezone ?? "Asia/Riyadh",
+          timezone: timezone ?? "Asia/Aden",
           centerAdminUserId: input.centerAdminUserId,
           supervisorUserIds,
           code: generatedCode
@@ -560,7 +560,7 @@ export const orgService = {
     }
 
     if (isUniqueViolation(lastError)) {
-      throw new AppError("Failed to generate a unique center code", 409);
+      throw new AppError("تعذر إنشاء كود فريد للمركز", 409);
     }
 
     throw lastError;
@@ -576,7 +576,7 @@ export const orgService = {
     });
 
     if (!existingCenter) {
-      throw new AppError("Center not found", 404);
+      throw new AppError("المركز غير موجود", 404);
     }
 
     const name =
@@ -671,7 +671,7 @@ export const orgService = {
       return center;
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new AppError("Center update conflicts with existing unique data", 409);
+        throw new AppError("تتعارض بيانات تحديث المركز مع بيانات موجودة مسبقاً", 409);
       }
       throw error;
     }
@@ -687,7 +687,7 @@ export const orgService = {
     });
 
     if (!existingCenter) {
-      throw new AppError("Center not found", 404);
+      throw new AppError("المركز غير موجود", 404);
     }
 
     const center = await orgRepository.updateCenter({
@@ -724,12 +724,12 @@ export const orgService = {
     });
 
     if (!center) {
-      throw new AppError("Center not found", 404);
+      throw new AppError("المركز غير موجود", 404);
     }
 
     const teacherUserId = input.primaryTeacherUserId ?? input.teacherId;
     if (!teacherUserId) {
-      throw new AppError("primaryTeacherUserId is required", 400);
+      throw new AppError("المعلم الأساسي مطلوب", 400);
     }
 
     await ensureTeacherAssignableToCenter(scope, {
@@ -785,7 +785,7 @@ export const orgService = {
       return toCircleResponse(circle);
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new AppError("Circle Arabic name already exists in center", 409);
+        throw new AppError("الاسم العربي للحلقة موجود مسبقاً في هذا المركز", 409);
       }
       throw error;
     }
@@ -803,7 +803,7 @@ export const orgService = {
     });
 
     if (!existingCircle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة", 404);
     }
 
     const nextTeacherUserId = input.primaryTeacherUserId ?? input.teacherId;
@@ -888,7 +888,7 @@ export const orgService = {
       return toCircleResponse(circle);
     } catch (error) {
       if (isUniqueViolation(error)) {
-        throw new AppError("Circle Arabic name already exists in center", 409);
+        throw new AppError("الاسم العربي للحلقة موجود مسبقاً في هذا المركز", 409);
       }
       throw error;
     }
@@ -906,7 +906,7 @@ export const orgService = {
     });
 
     if (!existingCircle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة", 404);
     }
 
     const circle = await orgRepository.updateCircle({

@@ -22,14 +22,24 @@ import {
 } from "./reports.validation";
 
 const reportsRouter = Router();
-const reportsFinanceRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.ACCOUNTANT];
+const reportsFinanceRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
 const reportsExportRoles = [
   Role.SUPER_ADMIN,
   Role.CENTER_ADMIN,
   Role.SUPERVISOR,
   Role.TEACHER,
   Role.PARENT,
-  Role.ACCOUNTANT
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
 ];
 
 reportsRouter.use(authGuard, attachScope);

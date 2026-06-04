@@ -126,6 +126,8 @@ const centerSelect = {
   gender: true,
   logoUrl: true,
   mosqueName: true,
+  latitude: true,
+  longitude: true,
   timezone: true,
   centerAdminUserId: true,
   code: true,
@@ -669,7 +671,7 @@ export const orgRepository = {
           ...(input.latitude !== undefined ? { latitude: input.latitude ?? null } : {}),
           ...(input.longitude !== undefined ? { longitude: input.longitude ?? null } : {}),
           ...(input.allowedRadiusMeters !== undefined ? { allowedRadiusMeters: input.allowedRadiusMeters ?? null } : {}),
-          ...(input.timezone !== undefined ? { timezone: input.timezone ?? "Asia/Riyadh" } : {}),
+          ...(input.timezone !== undefined ? { timezone: input.timezone ?? "Asia/Aden" } : {}),
           ...(input.centerAdminUserId !== undefined
             ? { centerAdminUserId: input.centerAdminUserId }
             : {}),

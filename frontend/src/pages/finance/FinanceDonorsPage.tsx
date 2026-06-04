@@ -131,7 +131,8 @@ export default function FinanceDonorsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canManageDonors = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canManageDonors =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
 
   const [centerId, setCenterId] = useState<number | undefined>();
   const [q, setQ] = useState("");

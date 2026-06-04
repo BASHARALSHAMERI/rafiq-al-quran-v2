@@ -11,6 +11,8 @@ import { AppError } from "../shared/errors/app-error";
 import { requestIdMiddleware } from "../shared/middleware/request-id.middleware";
 import { httpLoggerMiddleware } from "../shared/middleware/http-logger.middleware";
 import { errorMiddleware } from "../shared/middleware/error.middleware";
+import { localeMiddleware, t } from "../shared/i18n";
+import { messages } from "../shared/i18n/messages";
 import { metrics } from "../shared/metrics/metrics";
 import { notFoundHandler } from "../shared/middleware/not-found.middleware";
 
@@ -60,14 +62,16 @@ const buildCorsOptions: CorsOptionsDelegate = (req, callback) => {
 };
 
 const buildRateLimitResponse = (req: express.Request, max: number, windowMs: number) => {
+  const lang = req.lang ?? "ar";
+  const msg = t(messages.errors.auth.rateLimited, lang);
   return {
     ok: false as const,
     error: {
       code: "RATE_LIMITED",
-      message: "Too many requests. Please try again later.",
+      message: msg,
       requestId: req.requestId ?? "unknown"
     },
-    message: "Too many requests. Please try again later.",
+    message: msg,
     details: {
       limit: max,
       windowMs
@@ -103,6 +107,7 @@ const generalLimiter = rateLimit({
 });
 
 app.use(requestIdMiddleware);
+app.use(localeMiddleware);
 app.use(httpLoggerMiddleware);
 app.use(
   helmet(

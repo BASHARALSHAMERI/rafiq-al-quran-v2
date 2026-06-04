@@ -196,13 +196,13 @@ const ensureCircleAccess = async (scope: ScopeContext, circleId: number) => {
   );
 
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   if (!scope.allAccess) {
     const hasAccess = scope.circleIds.includes(circleId) || scope.centerIds.includes(circle.centerId);
     if (!hasAccess) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
   }
 
@@ -469,7 +469,7 @@ export const monthlyPlansService = {
   async getById(scope: ScopeContext, id: number) {
     const plan = await monthlyPlansRepository.findPlanById(id, scope.organizationId);
     if (!plan) {
-      throw new AppError("Plan not found", 404);
+      throw new AppError("الخطة غير موجودة", 404);
     }
     const periodStart = new Date(plan.year, plan.month - 1, 1);
     const periodEnd = new Date(plan.year, plan.month, 0, 23, 59, 59, 999);
@@ -482,7 +482,7 @@ export const monthlyPlansService = {
   async update(scope: ScopeContext, id: number, input: UpdateMonthlyPlanDto) {
     const plan = await monthlyPlansRepository.findPlanById(id, scope.organizationId);
     if (!plan) {
-      throw new AppError("Plan not found", 404);
+      throw new AppError("الخطة غير موجودة", 404);
     }
 
     if (plan.status === MonthlyPlanStatus.APPROVED) {
@@ -559,7 +559,7 @@ export const monthlyPlansService = {
 
     const reloadedPlan = await monthlyPlansRepository.findPlanById(id, scope.organizationId);
     if (!reloadedPlan) {
-      throw new AppError("Plan not found", 404);
+      throw new AppError("الخطة غير موجودة", 404);
     }
 
     const periodStart = new Date(reloadedPlan.year, reloadedPlan.month - 1, 1);
@@ -573,7 +573,7 @@ export const monthlyPlansService = {
   async approve(scope: ScopeContext, id: number) {
     const plan = await monthlyPlansRepository.findPlanById(id, scope.organizationId);
     if (!plan) {
-      throw new AppError("Plan not found", 404);
+      throw new AppError("الخطة غير موجودة", 404);
     }
 
     if (plan.status === MonthlyPlanStatus.APPROVED) {
@@ -588,7 +588,7 @@ export const monthlyPlansService = {
     await monthlyPlansRepository.approvePlan(id);
     const reloadedPlan = await monthlyPlansRepository.findPlanById(id, scope.organizationId);
     if (!reloadedPlan) {
-      throw new AppError("Plan not found", 404);
+      throw new AppError("الخطة غير موجودة", 404);
     }
 
     const periodStart = new Date(reloadedPlan.year, reloadedPlan.month - 1, 1);

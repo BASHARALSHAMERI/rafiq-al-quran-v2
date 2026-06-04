@@ -20,6 +20,7 @@ import { ErrorState } from "../../../components/ui/ErrorState";
 import { Button } from "../../../components/ui/Button";
 import type { StaffAttendanceRecord } from "../staff-attendance.api";
 import { useStaffAttendance } from "../staff-attendance.api";
+import { useTimeFormat, fmtTime } from "../../../shared/utils/time-format";
 import {
   useClientPagination
 } from "../../../shared/ui/useClientPagination";
@@ -103,14 +104,17 @@ const getGeoStateBadge = (state: string | null | undefined, ar: boolean) => {
   }
 };
 
-const getScheduleDetails = (record: StaffAttendanceRecord, date: string) => {
+const getScheduleDetails = (record: StaffAttendanceRecord, date: string, hour12 = true) => {
   if (record.effectiveShiftStart && record.effectiveShiftEnd) {
-    const start = new Date(record.effectiveShiftStart);
-    const end = new Date(record.effectiveShiftEnd);
-    const expectedHours = (end.getTime() - start.getTime()) / 3_600_000;
-    const fmt = (d: Date) =>
-      d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: false });
-    return { scheduledTime: `${fmt(start)} - ${fmt(end)}`, expectedHours };
+    const expectedHours =
+      (new Date(record.effectiveShiftEnd).getTime() -
+        new Date(record.effectiveShiftStart).getTime()) /
+      3_600_000;
+    const locale = hour12 ? "ar-SA" : "ar-SA-u-nu-latn";
+    return {
+      scheduledTime: `${fmtTime(record.effectiveShiftStart, locale, hour12)} - ${fmtTime(record.effectiveShiftEnd, locale, hour12)}`,
+      expectedHours
+    };
   }
 
   if (record.user.role !== "TEACHER") {
@@ -142,17 +146,6 @@ const getScheduleDetails = (record: StaffAttendanceRecord, date: string) => {
   };
 };
 
-const formatTime = (value: string | undefined, ar: boolean) => {
-  if (!value) {
-    return "—";
-  }
-
-  return new Date(value).toLocaleTimeString(ar ? "ar-EG" : "en-US", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-};
-
 export function DailyStaffAttendanceView() {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -161,6 +154,7 @@ export function DailyStaffAttendanceView() {
 
   const attendanceQuery = useStaffAttendance(date);
   const records = attendanceQuery.data ?? [];
+  const { hour12 } = useTimeFormat();
 
   const filteredRecords = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -307,7 +301,7 @@ export function DailyStaffAttendanceView() {
         ) : (
           <div className="ctr-grid-modern">
             {pagination.pagedRows.map((record) => {
-              const { expectedHours, scheduledTime } = getScheduleDetails(record, date);
+              const { expectedHours, scheduledTime } = getScheduleDetails(record, date, hour12);
               const lateMinutes = record.lateMinutes ?? 0;
               const actualHours =
                 record.checkInTime && record.checkOutTime
@@ -346,12 +340,12 @@ export function DailyStaffAttendanceView() {
                   <div className="ctr-card-details bg-slate-50/30 p-3 rounded-xl mt-3 space-y-2">
                     <div className="ctr-card-detail-row">
                       <span className="ctr-card-detail-label text-[10px]">{ar ? "وقت الحضور" : "Check-in"}</span>
-                      <span className="ctr-card-detail-val text-[11px] font-bold">{formatTime(record.checkInTime, ar)}</span>
+                      <span className="ctr-card-detail-val text-[11px] font-bold">{fmtTime(record.checkInTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}</span>
                     </div>
 
                     <div className="ctr-card-detail-row">
                       <span className="ctr-card-detail-label text-[10px]">{ar ? "وقت الانصراف" : "Check-out"}</span>
-                      <span className="ctr-card-detail-val text-[11px] font-bold">{formatTime(record.checkOutTime, ar)}</span>
+                      <span className="ctr-card-detail-val text-[11px] font-bold">{fmtTime(record.checkOutTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}</span>
                     </div>
 
                     <div className="ctr-card-detail-row">

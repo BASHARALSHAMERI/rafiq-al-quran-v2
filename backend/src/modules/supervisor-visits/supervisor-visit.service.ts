@@ -39,7 +39,7 @@ const mapPlanStatusToDb = (status: VisitPlanStatus | string): VisitPlanStatus =>
   if (normalized === "DRAFT" || normalized === "VISIT_PLAN_DRAFT") return VisitPlanStatus.VISIT_PLAN_DRAFT;
   if (normalized === "ACTIVE" || normalized === "VISIT_PLAN_ACTIVE") return VisitPlanStatus.VISIT_PLAN_ACTIVE;
   if (normalized === "COMPLETED" || normalized === "VISIT_PLAN_COMPLETED") return VisitPlanStatus.VISIT_PLAN_COMPLETED;
-  throw new AppError("Invalid visit plan status", 400, undefined, "VALIDATION_FAILED");
+  throw new AppError("حالة خطة الزيارة غير صالحة", 400, undefined, "VALIDATION_FAILED");
 };
 
 const mapPlanStatusToApi = (status: VisitPlanStatus): "DRAFT" | "ACTIVE" | "COMPLETED" => {
@@ -146,7 +146,7 @@ export const supervisorVisitService = {
       select: { id: true }
     });
 
-    if (!existing) throw new AppError("Visit plan not found", 404);
+    if (!existing) throw new AppError("خطة الزيارة غير موجودة", 404);
 
     const updated = await prisma.supervisorVisitPlan.update({
       where: { id: planId },
@@ -208,7 +208,7 @@ export const supervisorVisitService = {
         supervisorId: true
       }
     });
-    if (!plan) throw new AppError("Visit plan not found", 404);
+    if (!plan) throw new AppError("خطة الزيارة غير موجودة", 404);
 
     const item = await prisma.supervisorVisitPlanItem.create({
       data: {
@@ -267,7 +267,7 @@ export const supervisorVisitService = {
         }
       }
     });
-    if (!existing) throw new AppError("Visit plan item not found", 404);
+    if (!existing) throw new AppError("عنصر خطة الزيارة غير موجود", 404);
 
     const nextCenterId = data.centerId ?? existing.centerId;
 
@@ -280,7 +280,7 @@ export const supervisorVisitService = {
         select: { id: true }
       });
       if (!center) {
-        throw new AppError("Center not found in organization scope", 404);
+        throw new AppError("المركز غير موجود في نطاق المنظمة", 404);
       }
     }
 
@@ -294,7 +294,7 @@ export const supervisorVisitService = {
         select: { id: true }
       });
       if (!circle) {
-        throw new AppError("Circle not found in center scope", 404);
+        throw new AppError("الحلقة غير موجودة في نطاق المركز", 404);
       }
     }
 
@@ -336,7 +336,7 @@ export const supervisorVisitService = {
       where: { id: itemId, plan: { organizationId: scope.organizationId } },
       select: { id: true }
     });
-    if (!existing) throw new AppError("Visit plan item not found", 404);
+    if (!existing) throw new AppError("عنصر خطة الزيارة غير موجود", 404);
 
     return prisma.supervisorVisitPlanItem.delete({
       where: { id: itemId }
@@ -397,7 +397,7 @@ export const supervisorVisitService = {
         select: { id: true }
       });
       if (!planItem) {
-        throw new AppError("Plan item not found in your scope", 404);
+        throw new AppError("عنصر الخطة خارج نطاق صلاحياتك", 404);
       }
     }
     
@@ -452,12 +452,12 @@ export const supervisorVisitService = {
 
   async endVisit(scope: ScopeContext, logId: number, data: { latitude?: number; longitude?: number; checklist?: any; rating?: number; observations?: string }) {
     const log = await prisma.supervisorVisitLog.findUnique({ where: { id: logId } });
-    if (!log) throw new AppError("Visit log not found", 404);
+    if (!log) throw new AppError("سجل الزيارة غير موجود", 404);
     if (log.organizationId !== scope.organizationId || log.supervisorId !== scope.userId) {
-      throw new AppError("Access denied to this visit log", 403);
+      throw new AppError("ليس لديك صلاحية الوصول لسجل الزيارة", 403);
     }
     if (log.endedAt) {
-      throw new AppError("Visit is already ended", 409, undefined, "INVALID_STATE");
+      throw new AppError("الزيارة منتهية بالفعل", 409, undefined, "INVALID_STATE");
     }
 
     const now = new Date();

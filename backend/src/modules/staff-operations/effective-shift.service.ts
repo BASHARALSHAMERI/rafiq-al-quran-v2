@@ -93,9 +93,10 @@ const addMinutes = (date: Date, minutes: number): Date => {
 const resolvePrayerToHHmm = async (
   centerId: number,
   date: Date,
-  prayerName: PrayerName
+  prayerName: PrayerName,
+  prayerApiSource?: string
 ): Promise<string | null> => {
-  return prayerTimeService.resolvePrayerTime(centerId, date, prayerName);
+  return prayerTimeService.resolvePrayerTime(centerId, date, prayerName, prayerApiSource);
 };
 
 export const effectiveShiftService = {
@@ -118,11 +119,16 @@ export const effectiveShiftService = {
     timeZone?: string
   ): Promise<EffectiveShift | null> {
     const policy = await attendancePolicyService.getPolicy(organizationId);
-    const resolvedTimeZone = timeZone ?? policy.timezone ?? "Asia/Riyadh";
+    const resolvedTimeZone = timeZone ?? policy.timezone ?? "Asia/Aden";
     const localDate = getTimeZoneParts(date, resolvedTimeZone);
     const dayOfWeek = WEEKDAY_JS_MAP[
       new Date(Date.UTC(localDate.year, localDate.month - 1, localDate.day)).getUTCDay()
     ];
+
+    // ── Diagnostic logging ──
+    console.info(
+      `[resolveEffectiveShift] userId=${userId} date=${date.toISOString()} dayOfWeek=${dayOfWeek} centerId=${centerId} tz=${resolvedTimeZone}`
+    );
 
     // 1. Find active assignments with their slots for today
     const assignments = await prisma.staffScheduleAssignment.findMany({
@@ -142,7 +148,24 @@ export const effectiveShiftService = {
       }
     });
 
-    if (assignments.length === 0) return null;
+    console.info(
+      `[resolveEffectiveShift] found ${assignments.length} active assignment(s) for user ${userId}`,
+      assignments.map(a => ({
+        id: a.id,
+        staffRole: a.staffRole,
+        centerId: a.centerId,
+        effectiveFrom: a.effectiveFrom,
+        effectiveTo: a.effectiveTo,
+        sourceType: a.sourceType,
+        slotsForToday: a.slots.length,
+        slots: a.slots.map(s => ({ day: s.dayOfWeek, mode: s.mode, from: s.fromTime, to: s.toTime }))
+      }))
+    );
+
+    if (assignments.length === 0) {
+      console.warn(`[resolveEffectiveShift] → null: no active assignment found for userId=${userId}`);
+      return null;
+    }
 
     // 2. Collect all resolved time ranges
     const ranges: Array<{ start: Date; end: Date; assignmentId: number; circleId: number | null; mode: string }> = [];
@@ -169,14 +192,14 @@ export const effectiveShiftService = {
           if (!slot.fromPrayer) continue;
 
           const resolvedCenter = assignment.centerId || centerId;
-          const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.fromPrayer);
+          const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.fromPrayer, policy.prayerApiSource);
           if (!fromHHmm) continue; // Center has no GPS / prayer times unavailable
 
           start = zonedWallTimeToDate(date, fromHHmm, resolvedTimeZone);
           start = addMinutes(start, slot.fromPrayerOffsetMinutes ?? 0);
 
           if (slot.toPrayer) {
-            const toHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.toPrayer);
+            const toHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.toPrayer, policy.prayerApiSource);
             if (!toHHmm) continue;
             end = zonedWallTimeToDate(date, toHHmm, resolvedTimeZone);
             end = addMinutes(end, slot.toPrayerOffsetMinutes ?? 0);
@@ -198,7 +221,13 @@ export const effectiveShiftService = {
       }
     }
 
-    if (ranges.length === 0) return null;
+    if (ranges.length === 0) {
+      console.warn(
+        `[resolveEffectiveShift] → null: assignment(s) found but no slot resolved for dayOfWeek=${dayOfWeek}. ` +
+        `Check that slots exist for this day and have valid fromTime/fromPrayer.`
+      );
+      return null;
+    }
 
     // 3. Merge: earliest start, latest end
     let mergedStart = ranges[0].start;
@@ -227,7 +256,7 @@ export const effectiveShiftService = {
   async getActiveCirclesForDay(
     userId: number,
     date: Date,
-    timeZone = "Asia/Riyadh"
+    timeZone = "Asia/Aden"
   ): Promise<Array<{ circleId: number; assignmentId: number; circleName: string }>> {
     const localDate = getTimeZoneParts(date, timeZone);
     const dayOfWeek = WEEKDAY_JS_MAP[

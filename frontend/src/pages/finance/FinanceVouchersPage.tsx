@@ -141,8 +141,11 @@ export default function FinanceVouchersPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const canCreateVoucher = isCoreAdmin || user?.role === "ACCOUNTANT";
+  const canCreateVoucher =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canApproveVoucher = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+  const canPostVoucher =
+    canCreateVoucher || user?.role === "TREASURER";
 
   // Search and filter state
   const [search, setSearch] = useState("");
@@ -546,7 +549,7 @@ export default function FinanceVouchersPage() {
             </button>
 
             {/* Status-specific actions */}
-            {isCoreAdmin && v.status === "DRAFT" && (
+            {canCreateVoucher && v.status === "DRAFT" && (
               <button
                 type="button"
                 onClick={() => handleSubmit(v)}
@@ -557,7 +560,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {isCoreAdmin && v.status === "SUBMITTED" && (
+            {canApproveVoucher && v.status === "SUBMITTED" && (
               <>
                 <button
                   type="button"
@@ -578,7 +581,7 @@ export default function FinanceVouchersPage() {
               </>
             )}
 
-            {isCoreAdmin && v.status === "APPROVED" && (
+            {canPostVoucher && v.status === "APPROVED" && (
               <button
                 type="button"
                 onClick={() => handlePost(v)}
@@ -589,7 +592,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {isCoreAdmin && v.status === "POSTED" && (
+            {canCreateVoucher && v.status === "POSTED" && (
               <button
                 type="button"
                 onClick={() => handleRequestVoid(v)}
@@ -600,7 +603,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {isCoreAdmin && v.status === "VOID_REQUESTED" && (
+            {canApproveVoucher && v.status === "VOID_REQUESTED" && (
               <button
                 type="button"
                 onClick={() => handleApproveVoid(v)}
@@ -614,7 +617,7 @@ export default function FinanceVouchersPage() {
         );
       })
     ],
-    [ar, isCoreAdmin]
+    [ar, canApproveVoucher, canCreateVoucher, canPostVoucher]
   );
 
   return (

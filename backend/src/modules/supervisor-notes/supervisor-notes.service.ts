@@ -96,17 +96,17 @@ export const supervisorNotesService = {
         }
       });
       if (!existingCircle) {
-        throw new AppError("Circle not found", 404);
+        throw new AppError("الحلقة غير موجودة", 404);
       }
       resolvedCenterId = existingCircle.centerId;
     }
 
     if (!resolvedCenterId && !scope.allAccess) {
-      throw new AppError("Supervisor must belong to at least one center", 400);
+      throw new AppError("يجب أن ينتمي المشرف إلى مركز واحد على الأقل", 400);
     }
 
     if (!resolvedCenterId) {
-      throw new AppError("centerId is required for this note", 400);
+      throw new AppError("معرف المركز مطلوب لهذه الملاحظة", 400);
     }
 
     const row = await supervisorNotesRepository.create({
@@ -130,7 +130,7 @@ export const supervisorNotesService = {
   async updateStatus(scope: ScopeContext, id: number, status: SupervisorNoteStatus) {
     const existing = await supervisorNotesRepository.findById(id, scope.organizationId);
     if (!existing) {
-      throw new AppError("Supervisor note not found", 404);
+      throw new AppError("ملاحظة المشرف غير موجودة", 404);
     }
 
     if (!scope.allAccess) {

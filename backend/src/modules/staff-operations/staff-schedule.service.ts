@@ -56,6 +56,12 @@ type SyncCenterAdminInput = {
   effectiveFrom?: Date;
 };
 
+const FIELD_STAFF_SCHEDULE_ROLES: StaffRoleType[] = [StaffRoleType.TEACHER, StaffRoleType.SUPERVISOR];
+
+function isFieldStaffScheduleRole(role: StaffRoleType) {
+  return FIELD_STAFF_SCHEDULE_ROLES.includes(role);
+}
+
 export const staffScheduleService = {
   // =========================================================
   // CRUD Operations
@@ -67,7 +73,14 @@ export const staffScheduleService = {
     };
 
     if (filters.centerId) where.centerId = filters.centerId;
-    if (filters.staffRole) where.staffRole = filters.staffRole;
+    if (filters.staffRole) {
+      if (isFieldStaffScheduleRole(filters.staffRole)) {
+        return [];
+      }
+      where.staffRole = filters.staffRole;
+    } else {
+      where.staffRole = { notIn: FIELD_STAFF_SCHEDULE_ROLES };
+    }
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
     if (filters.userId) where.userId = filters.userId;
 
@@ -92,7 +105,8 @@ export const staffScheduleService = {
     const assignment = await prisma.staffScheduleAssignment.findFirst({
       where: {
         id: assignmentId,
-        organizationId: scope.organizationId
+        organizationId: scope.organizationId,
+        staffRole: { notIn: FIELD_STAFF_SCHEDULE_ROLES }
       },
       include: {
         slots: { orderBy: { dayOfWeek: "asc" } },
@@ -103,16 +117,16 @@ export const staffScheduleService = {
     });
 
     if (!assignment) {
-      throw new AppError("Schedule assignment not found", 404);
+      throw new AppError("تعيين الجدول غير موجود", 404);
     }
 
     return assignment;
   },
 
   async createManualAssignment(scope: ScopeContext, input: CreateManualInput) {
-    if (input.staffRole === StaffRoleType.TEACHER) {
-      throw new AppError(
-        "Teacher schedules are managed from circle schedules and cannot be created manually.",
+    if (isFieldStaffScheduleRole(input.staffRole)) {
+throw new AppError(
+        "جداول المعلمين والمشرفين لا تُدار من هنا",
         400
       );
     }
@@ -155,18 +169,19 @@ export const staffScheduleService = {
     const existing = await prisma.staffScheduleAssignment.findFirst({
       where: {
         id: assignmentId,
-        organizationId: scope.organizationId
+        organizationId: scope.organizationId,
+        staffRole: { notIn: FIELD_STAFF_SCHEDULE_ROLES }
       }
     });
 
     if (!existing) {
-      throw new AppError("Schedule assignment not found", 404);
+      throw new AppError("تعيين الجدول غير موجود", 404);
     }
 
     // If this is a CIRCLE_SYNC assignment, don't allow slot edits (read-only)
     if (existing.sourceType === ScheduleSourceType.CIRCLE_SYNC && input.slots) {
       throw new AppError(
-        "Cannot manually edit slots on a circle-synced assignment. Edit the circle schedule instead.",
+        "لا يمكن تعديل مواعيد مرتبطة بجدول الحلقة. قم بتعديل جدول الحلقة مباشرة.",
         400
       );
     }
@@ -223,17 +238,18 @@ export const staffScheduleService = {
     const existing = await prisma.staffScheduleAssignment.findFirst({
       where: {
         id: assignmentId,
-        organizationId: scope.organizationId
+        organizationId: scope.organizationId,
+        staffRole: { notIn: FIELD_STAFF_SCHEDULE_ROLES }
       }
     });
 
     if (!existing) {
-      throw new AppError("Schedule assignment not found", 404);
+      throw new AppError("تعيين الجدول غير موجود", 404);
     }
 
     if (existing.sourceType === ScheduleSourceType.CIRCLE_SYNC) {
       throw new AppError(
-        "Circle-synced schedules cannot be deactivated manually. Update the circle instead.",
+        "الجداول المرتبطة بالحلقات لا يمكن إلغاء تفعيلها يدوياً. قم بتحديث الحلقة.",
         400
       );
     }

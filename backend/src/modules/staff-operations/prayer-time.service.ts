@@ -18,7 +18,19 @@ type PrayerTimes = {
 
 const PRAYER_KEYS: (keyof PrayerTimes)[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
-const ALADHAN_METHOD = 4; // Umm Al-Qura
+/**
+ * Aladhan API method mapping per prayerApiSource policy value.
+ * See: https://aladhan.com/prayer-times-api#Methods
+ */
+const METHOD_MAP: Record<string, number> = {
+  ALADHAN: 1,
+  UMM_AL_QURA: 4,
+  MWL: 3,
+  ISNA: 2,
+  EGYPTIAN: 5
+};
+
+const resolveMethod = (source?: string): number => METHOD_MAP[source?.toUpperCase() ?? ""] ?? METHOD_MAP.ALADHAN;
 
 const CACHE_FRESHNESS_HOURS = 24;
 
@@ -40,9 +52,9 @@ const extractHHmm = (timeString: string): string => {
   return match ? match[1] : timeString.trim().slice(0, 5);
 };
 
-const fetchFromAladhan = async (latitude: number, longitude: number, date: Date): Promise<PrayerTimes> => {
+const fetchFromAladhan = async (latitude: number, longitude: number, date: Date, method: number): Promise<PrayerTimes> => {
   const dateStr = formatDateForAladhan(date);
-  const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${latitude}&longitude=${longitude}&method=${ALADHAN_METHOD}`;
+  const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
 
   const response = await fetch(url, {
     signal: AbortSignal.timeout(10_000),
@@ -83,8 +95,13 @@ const fetchFromAladhan = async (latitude: number, longitude: number, date: Date)
  * 6. If API fails and no cache at all, throw.
  */
 export const prayerTimeService = {
-  async getPrayerTimes(centerId: number, date: Date): Promise<PrayerTimes | null> {
+  async getPrayerTimes(
+    centerId: number,
+    date: Date,
+    prayerApiSource?: string
+  ): Promise<PrayerTimes | null> {
     const dateOnly = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const method = resolveMethod(prayerApiSource);
 
     // 1. Check cache
     const cached = await prisma.prayerTimeCache.findUnique({
@@ -121,7 +138,7 @@ export const prayerTimeService = {
 
     // 3. Fetch from API
     try {
-      const times = await fetchFromAladhan(lat, lng, dateOnly);
+      const times = await fetchFromAladhan(lat, lng, dateOnly, method);
 
       // Validate
       for (const key of PRAYER_KEYS) {
@@ -161,8 +178,8 @@ export const prayerTimeService = {
   /**
    * Resolve a specific prayer time to HH:mm string for a center and date.
    */
-  async resolvePrayerTime(centerId: number, date: Date, prayerName: string): Promise<string | null> {
-    const times = await this.getPrayerTimes(centerId, date);
+  async resolvePrayerTime(centerId: number, date: Date, prayerName: string, prayerApiSource?: string): Promise<string | null> {
+    const times = await this.getPrayerTimes(centerId, date, prayerApiSource);
     if (!times) return null;
     const key = prayerName.toLowerCase() as keyof PrayerTimes;
     const value = times[key];

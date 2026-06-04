@@ -52,6 +52,8 @@ export type Center = {
   gender?: CenterGender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   timezone?: string;
   centerAdminUserId?: number | null;
   organizationId: number | null;

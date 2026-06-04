@@ -34,7 +34,7 @@ import { stagger, fadeUp } from "../shared/pageAnimations";
    HELPERS
    ═══════════════════════════════════════════════════════════════ */
 const PAGE_SIZES = [10, 20, 50] as const;
-const WRITE_ROLES = new Set<Role>(["SUPER_ADMIN", "CENTER_ADMIN", "SUPERVISOR", "TEACHER"]);
+const WRITE_ROLES = new Set<Role>(["SUPER_ADMIN", "CENTER_ADMIN"]);
 const LIBRARY_FILE_ENTITY: LocalizedLabel = { ar: "الملف", en: "file" };
 const LIBRARY_FILES_ENTITY: LocalizedLabel = { ar: "الملفات", en: "files" };
 const posInt = (v: string): number | undefined => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : undefined; };

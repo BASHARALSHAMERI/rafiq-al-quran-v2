@@ -1,147 +1,352 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
 import {
-  Clock,
-  MapPin,
-  CheckCircle,
-  ShieldAlert,
   AlertCircle,
-  Fingerprint,
-  RefreshCcw,
   CalendarCheck,
   CalendarX,
+  CheckCircle,
+  Clock,
   FileText,
-  Umbrella,
+  Fingerprint,
+  Info,
   LogOut,
+  MapPin,
+  RefreshCcw,
   Send,
-  Info
+  ShieldAlert,
+  Umbrella,
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Button } from "../../../components/ui/Button";
-import { Badge } from "../../../components/ui/Badge";
+import { Modal } from "../../../components/ui/Modal";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { notifyError, notifySuccess } from "../../../shared/ui/feedback";
-import { fadeUp } from "../../../shared/pageAnimations";
-import { useSelfAttendance, useSelfCheckIn, useSelfCheckOut, useRequestStaffExcuse, useSubmitLeave } from "../staff-attendance.api";
-import { Modal } from "../../../components/ui/Modal";
+import {
+  useSelfAttendance,
+  useSelfCheckIn,
+  useSelfCheckOut,
+  useRequestStaffExcuse,
+  useSubmitLeave,
+  type SelfAttendanceRecord,
+  type LeaveType,
+} from "../staff-attendance.api";
+import { PrayerTimesWidget } from "./PrayerTimesWidget";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
-import "../../../styles/pages/self-attendance-v1.css";
+import { useTimeFormat, fmtTime } from "../../../shared/utils/time-format";
+import "../../../styles/pages/self-attendance-v2.css";
 
+// ─── Constants ───────────────────────────────────────
+/** أنواع الأعذار الموحّدة */
+export const EXCUSE_TYPES = [
+  { ar: "مرض", en: "Medical" },
+  { ar: "سفر", en: "Travel" },
+  { ar: "ظرف عائلي", en: "Family matter" },
+  { ar: "مهمة رسمية", en: "Official duty" },
+  { ar: "موعد رسمي", en: "Official appointment" },
+  { ar: "أخرى", en: "Other" },
+] as const;
+
+const LEAVE_TYPES: { value: LeaveType; ar: string; en: string }[] = [
+  { value: "MEDICAL",  ar: "إجازة مرضية",     en: "Medical Leave" },
+  { value: "OFFICIAL", ar: "إجازة رسمية",     en: "Official Leave" },
+  { value: "PERSONAL", ar: "إجازة شخصية",     en: "Personal Leave" },
+  { value: "UNPAID",   ar: "إجازة بدون راتب", en: "Unpaid Leave" },
+];
+
+// ─── Helpers ─────────────────────────────────────────
+function fmtDate(value: string, locale = "ar-SA"): string {
+  try {
+    const d = new Date(value);
+    return d.toLocaleDateString(locale, { weekday: "long", day: "2-digit", month: "long" });
+  } catch {
+    return value;
+  }
+}
+
+type StatusTone = "success" | "danger" | "warning" | "info" | "neutral";
+
+function getStatusTone(status: string): StatusTone {
+  switch (status?.toUpperCase()) {
+    case "PRESENT":
+    case "APPROVED":
+      return "success";
+    case "ABSENT":
+    case "REJECTED":
+      return "danger";
+    case "LATE":
+    case "PENDING":
+    case "EXCUSED":
+      return "warning";
+    case "ON_LEAVE":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
+
+function getStatusLabel(status: string, ar: boolean): string {
+  switch (status?.toUpperCase()) {
+    case "PRESENT":   return ar ? "حاضر"            : "Present";
+    case "ABSENT":    return ar ? "غائب"             : "Absent";
+    case "LATE":      return ar ? "متأخر"            : "Late";
+    case "EXCUSED":   return ar ? "بعذر"             : "Excused";
+    case "ON_LEAVE":  return ar ? "إجازة"            : "On Leave";
+    case "APPROVED":  return ar ? "مقبول"            : "Approved";
+    case "REJECTED":  return ar ? "مرفوض"            : "Rejected";
+    case "PENDING":   return ar ? "بانتظار المراجعة" : "Pending";
+    default:          return ar ? "غير محدد"         : "Unknown";
+  }
+}
+
+// ─── Skeleton ─────────────────────────────────────────
+function AttendanceSkeleton() {
+  return (
+    <div className="sa2-skeleton">
+      <div className="sa2-skeleton__hero" />
+      <div className="sa2-skeleton__stats">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="sa2-skeleton__stat" />
+        ))}
+      </div>
+      <div className="sa2-skeleton__row" />
+      <div className="sa2-skeleton__row" />
+      <div className="sa2-skeleton__row" />
+    </div>
+  );
+}
+
+// ─── History row ──────────────────────────────────────
+function HistoryRow({ record, locale, ar, hour12 }: { record: SelfAttendanceRecord; locale: string; ar: boolean; hour12: boolean }) {
+  const tone = getStatusTone(record.status);
+  const label = getStatusLabel(record.status, ar);
+
+  // إصلاح: عرض الوقت بالاتجاه الصحيح دخول → خروج
+  const timeRange =
+    record.checkInTime && record.checkOutTime
+      ? `${fmtTime(record.checkInTime, locale, hour12)} ← ${fmtTime(record.checkOutTime, locale, hour12)}`
+      : record.checkInTime
+      ? `${ar ? "دخول" : "In"}: ${fmtTime(record.checkInTime, locale, hour12)}`
+      : "";
+
+  return (
+    <div className="sa2-history-row">
+      <span className={`sa2-history-dot sa2-history-dot--${tone}`} />
+      <div className="sa2-history-body">
+        <span className="sa2-history-date">{fmtDate(record.attendanceDate, locale)}</span>
+        {timeRange && <span className="sa2-history-sub">{timeRange}</span>}
+        {record.note && <span className="sa2-history-sub">{record.note}</span>}
+      </div>
+      <span className={`sa2-pill sa2-pill--${tone}`}>{label}</span>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────
 export function SelfAttendanceView() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
 
+  // ── Queries & mutations
   const attendanceQuery = useSelfAttendance();
-  const checkInMutation = useSelfCheckIn();
+  const checkInMutation  = useSelfCheckIn();
   const checkOutMutation = useSelfCheckOut();
-  const excuseMutation = useRequestStaffExcuse();
-  const leaveMutation = useSubmitLeave();
+  const excuseMutation   = useRequestStaffExcuse();
+  const leaveMutation    = useSubmitLeave();
 
+  // ── Geo location state
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+
+  // ── Modal state
   const [showExcuseModal, setShowExcuseModal] = useState(false);
-  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showLeaveModal,  setShowLeaveModal]  = useState(false);
+
+  // ── Excuse form
   const [excuseType, setExcuseType] = useState("");
   const [excuseNote, setExcuseNote] = useState("");
-  const [leaveType, setLeaveType] = useState<"MEDICAL" | "OFFICIAL" | "PERSONAL" | "UNPAID">("MEDICAL");
-  const [leaveStart, setLeaveStart] = useState("");
-  const [leaveEnd, setLeaveEnd] = useState("");
+
+  // ── Leave form
+  const [leaveType,   setLeaveType]   = useState<LeaveType>("MEDICAL");
+  const [leaveStart,  setLeaveStart]  = useState("");
+  const [leaveEnd,    setLeaveEnd]    = useState("");
   const [leaveReason, setLeaveReason] = useState("");
 
+  // ── Geolocation: request once on mount
   useEffect(() => {
-    if (navigator.geolocation) {
-      setLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-          setLocating(false);
-        },
-        (err) => {
-          console.warn("Geolocation warning:", err.message);
-          setGeoError(ar ? "تعذر تحديد الموقع الجغرافي" : "Unable to determine location");
-          setLocating(false);
-        }
-      );
-    }
-  }, [ar]);
-
-  if (attendanceQuery.isError) {
-    const errMsg = (attendanceQuery.error as any)?.response?.data?.message
-      || (attendanceQuery.error as any)?.message
-      || "";
-    return (
-      <ErrorState
-        title={ar ? "خطأ في تحميل التحضير" : "Error loading attendance"}
-        description={errMsg}
-        onRetry={() => attendanceQuery.refetch()}
-      />
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setLocating(false);
+      },
+      (err) => {
+        console.warn("Geo warning:", err.message);
+        setGeoError(ar ? "تعذر تحديد الموقع" : "Location unavailable");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
-  }
-
-  if (attendanceQuery.isLoading) {
-    return (
-      <div className="self-attendance ctr-workspace">
-        <div className="self-attendance__hero animate-pulse bg-slate-100 border-none" style={{ minHeight: 168 }}></div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 rounded-xl bg-slate-100 animate-pulse"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const data = attendanceQuery.data;
-  if (!data) return null;
+  const { hour12 } = useTimeFormat();
 
-  const { today, stats, eligibility, effectiveShift, target } = data;
+  const today = data?.today;
+  const stats = data?.stats;
+  const eligibility = data?.eligibility;
+  const effectiveShift = data?.effectiveShift;
+  const target = data?.target;
+  const excuses = data?.excuses;
+  
   const todayStatus = today?.status ?? "not_checked_in";
+  const todayAtt    = today?.attendance;
 
-  const handleCheckIn = () => {
-    checkInMutation.mutate(
-      {
-        centerId: target?.centerId,
-        circleId: target?.type === "CIRCLE" ? target.id : undefined,
-        latitude: location?.latitude ?? null,
-        longitude: location?.longitude ?? null,
+  // ── Hero state config
+  type HeroState = { heroClass: string; icon: React.ReactNode; title: string; desc: string };
+  const heroState = useMemo<HeroState>(() => {
+    if (todayStatus === "checked_out")
+      return {
+        heroClass: "sa2-hero--done",
+        icon: <CheckCircle size={28} />,
+        title: ar ? "تم تسجيل الحضور والانصراف ✅" : "Attendance Complete ✅",
+        desc:  ar ? "أنهيت يومك، أحسنت!"              : "Great job, see you tomorrow!",
+      };
+    if (todayStatus === "checked_in")
+      return {
+        heroClass: "sa2-hero--active",
+        icon: <CheckCircle size={28} />,
+        title: ar ? "أنت مسجّل حضور الآن"   : "You are Checked In",
+        desc:  ar ? "يمكنك تسجيل انصرافك عند الانتهاء" : "Check out when done",
+      };
+    if (todayStatus === "on_leave")
+      return {
+        heroClass: "sa2-hero--warning",
+        icon: <ShieldAlert size={28} />,
+        title: ar ? "أنت في إجازة اليوم" : "On Leave Today",
+        desc:  ar ? "لا يتطلب تسجيل حضور" : "No attendance required",
+      };
+    if (todayStatus === "excuse_requested")
+      return {
+        heroClass: "sa2-hero--warning",
+        icon: <FileText size={28} />,
+        title: ar ? "طلب عذر قيد المراجعة" : "Excuse Pending Review",
+        desc:  ar ? "تم رفع طلب العذر وبانتظار الموافقة" : "Excuse request submitted",
+      };
+    // not_checked_in
+    return {
+      heroClass: "sa2-hero--ready",
+      icon: <Fingerprint size={28} />,
+      title: ar ? "جاهز لتسجيل الحضور" : "Ready to Check In",
+      desc:  ar ? "اضغط على الزر لتسجيل حضورك" : "Press the button to check in",
+    };
+  }, [todayStatus, ar]);
+
+  // ── Shift window check (±30 min)
+  const shiftInRange = useMemo(() => {
+    if (!effectiveShift) return true;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const parse = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+    return nowMin >= parse(effectiveShift.start) - 30 && nowMin <= parse(effectiveShift.end) + 30;
+  }, [effectiveShift]);
+
+  // ── History: combine attendance + excuses
+  const historyRows = useMemo(() => {
+    const map = new Map<string, SelfAttendanceRecord & { _excuseReason?: string }>();
+    for (const rec of data?.history ?? []) {
+      if (rec.attendanceDate) map.set(rec.attendanceDate.slice(0, 10), rec);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate))
+      .slice(0, 15);
+  }, [data?.history]);
+
+  const handleVerifyLocation = () => {
+    if (!navigator.geolocation) {
+      notifyError(ar ? "المتصفح لا يدعم تحديد الموقع" : "Geolocation not supported");
+      return;
+    }
+    
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        setLocation({ latitude: lat, longitude: lon });
+        setLocating(false);
+        setGeoError(null);
+
+        if (target?.latitude && target?.longitude) {
+          const R = 6371e3;
+          const p1 = lat * Math.PI/180;
+          const p2 = target.latitude * Math.PI/180;
+          const dp = (target.latitude - lat) * Math.PI/180;
+          const dl = (target.longitude - lon) * Math.PI/180;
+          const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const distance = Math.round(R * c);
+          
+          const radius = target.allowedRadiusMeters || 150;
+          if (distance <= radius) {
+            notifySuccess(ar ? `أنت داخل النطاق المسموح (المسافة: ${distance}م)` : `Within range (${distance}m)`);
+          } else {
+            notifyError(ar ? `أنت خارج النطاق (المسافة: ${distance}م)` : `Outside range (${distance}m)`);
+          }
+        } else {
+          notifySuccess(ar ? "تم تحديث الموقع بنجاح" : "Location updated");
+        }
       },
-      {
-        onSuccess: () => notifySuccess(ar ? "تم تسجيل الحضور بنجاح ✅" : "Checked in successfully ✅"),
-        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الحضور" : "Error checking in" })),
-      }
+      () => {
+        setGeoError(ar ? "تعذر تحديد الموقع" : "Location unavailable");
+        setLocating(false);
+        notifyError(ar ? "يرجى تفعيل صلاحية الموقع من المتصفح" : "Please enable location permission");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
+  // ── Handlers
+  const isBusy = locating || checkInMutation.isPending || checkOutMutation.isPending ||
+                 excuseMutation.isPending || leaveMutation.isPending;
+
+  const buildGeoPayload = () => ({
+    centerId:  target?.centerId,
+    circleId:  target?.type === "CIRCLE" ? target.id : undefined,
+    latitude:  location?.latitude  ?? null,
+    longitude: location?.longitude ?? null,
+  });
+
+  const handleCheckIn = () => {
+    checkInMutation.mutate(buildGeoPayload(), {
+      onSuccess: () => notifySuccess(ar ? "تم تسجيل الحضور ✅" : "Checked in ✅"),
+      onError:   (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الحضور" : "Check-in failed" })),
+    });
+  };
+
   const handleCheckOut = () => {
-    checkOutMutation.mutate(
-      {
-        centerId: target?.centerId,
-        circleId: target?.type === "CIRCLE" ? target.id : undefined,
-        latitude: location?.latitude ?? null,
-        longitude: location?.longitude ?? null,
-      },
-      {
-        onSuccess: () => notifySuccess(ar ? "تم تسجيل الانصراف بنجاح ✅" : "Checked out successfully ✅"),
-        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الانصراف" : "Error checking out" })),
-      }
-    );
+    checkOutMutation.mutate(buildGeoPayload(), {
+      onSuccess: () => notifySuccess(ar ? "تم تسجيل الانصراف ✅" : "Checked out ✅"),
+      onError:   (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الانصراف" : "Check-out failed" })),
+    });
   };
 
   const handleSubmitExcuse = () => {
     if (!excuseType || !target?.centerId) return;
-    const todayStr = new Date().toISOString().slice(0, 10);
     const reason = excuseNote.trim() ? `${excuseType} - ${excuseNote.trim()}` : excuseType;
+    const dateStr = today?.date ?? new Date().toISOString().slice(0, 10);
     excuseMutation.mutate(
-      { centerId: target.centerId, date: todayStr, reason },
+      { centerId: target.centerId, date: dateStr, reason },
       {
         onSuccess: () => {
-          notifySuccess(ar ? "تم إرسال طلب العذر بنجاح" : "Excuse request sent");
+          notifySuccess(ar ? "تم إرسال طلب العذر" : "Excuse submitted");
           setShowExcuseModal(false);
           setExcuseType("");
           setExcuseNote("");
         },
-        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "تعذر إرسال الطلب" : "Failed to send request" })),
+        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "تعذر إرسال الطلب" : "Failed to submit" })),
       }
     );
   };
@@ -152,438 +357,419 @@ export function SelfAttendanceView() {
       { centerId: target.centerId, leaveType, startDate: leaveStart, endDate: leaveEnd, reason: leaveReason.trim() },
       {
         onSuccess: () => {
-          notifySuccess(ar ? "تم إرسال طلب الإجازة بنجاح" : "Leave request sent");
+          notifySuccess(ar ? "تم إرسال طلب الإجازة" : "Leave submitted");
           setShowLeaveModal(false);
           setLeaveStart("");
           setLeaveEnd("");
           setLeaveReason("");
         },
-        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "تعذر إرسال الطلب" : "Failed to send request" })),
+        onError: (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "تعذر إرسال الطلب" : "Failed to submit" })),
       }
     );
   };
 
-  // Determine hero state
-  let heroClass = "self-attendance__hero--warning";
-  let heroIcon = <Fingerprint size={32} className="text-indigo-600" />;
-  let heroTitle = ar ? "بانتظار تسجيل الحضور" : "Waiting for Check-in";
-  let heroDesc = ar ? "قم بتسجيل حضورك لبدء اليوم" : "Check in to start your day";
 
-  if (todayStatus === "not_checked_in") {
-    heroClass = "self-attendance__hero--ready";
-    heroIcon = <Fingerprint size={32} className="text-emerald-600" />;
-    heroTitle = ar ? "جاهز لتسجيل الحضور" : "Ready to Check In";
-    heroDesc = ar ? "اضغط على الزر لتسجيل حضورك" : "Press the button to check in";
-  } else if (todayStatus === "checked_in") {
-    heroClass = "self-attendance__hero--active";
-    heroIcon = <CheckCircle size={32} className="text-blue-600" />;
-    heroTitle = ar ? "أنت مسجل حضور الآن" : "You are Checked In";
-    heroDesc = ar ? "يمكنك تسجيل انصرافك عند الانتهاء" : "You can check out when done";
-  } else if (todayStatus === "checked_out") {
-    heroClass = "self-attendance__hero--done";
-    heroIcon = <CheckCircle size={32} className="text-emerald-600" />;
-    heroTitle = ar ? "تم تسجيل الحضور والانصراف ✅" : "Attendance Complete ✅";
-    heroDesc = ar ? "أنهيت يومك، أحسنت!" : "You finished your day, well done!";
-  } else if (todayStatus === "on_leave") {
-    heroClass = "self-attendance__hero--warning";
-    heroIcon = <ShieldAlert size={32} className="text-amber-500" />;
-    heroTitle = ar ? "أنت في إجازة اليوم" : "You are on Leave Today";
-    heroDesc = ar ? "لا يتطلب تسجيل حضور" : "No attendance required";
+  // ── Error state
+  if (attendanceQuery.isError) {
+    return (
+      <ErrorState
+        title={ar ? "خطأ في تحميل التحضير" : "Error loading attendance"}
+        description={getLocalizedApiErrorMessage(attendanceQuery.error, {
+          ar,
+          fallback: ar ? "تعذر تحميل بيانات التحضير" : "Unable to load attendance data",
+        })}
+        onRetry={() => attendanceQuery.refetch()}
+      />
+    );
   }
 
-  const isBtnDisabled = locating || checkInMutation.isPending || checkOutMutation.isPending || excuseMutation.isPending || leaveMutation.isPending;
-  const shiftInRange = !effectiveShift ? true : (() => {
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const parse = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
-    const startMin = parse(effectiveShift.start) - 30;
-    const endMin = parse(effectiveShift.end) + 30;
-    return nowMin >= startMin && nowMin <= endMin;
-  })();
+  // ── Loading state
+  if (attendanceQuery.isLoading || !data) {
+    return <AttendanceSkeleton />;
+  }
 
-  // Stats cards
-  const statCards = [
-    {
-      label: ar ? "الإجمالي" : "Total",
-      value: stats?.totalDays ?? 0,
-      icon: <CalendarCheck size={20} />,
-      color: "text-emerald-600 bg-emerald-50",
-    },
-    {
-      label: ar ? "أيام الغياب" : "Absent",
-      value: stats?.absentDays ?? 0,
-      icon: <CalendarX size={20} />,
-      color: "text-rose-600 bg-rose-50",
-    },
-    {
-      label: ar ? "أيام الحضور" : "Present",
-      value: stats?.presentDays ?? 0,
-      icon: <CheckCircle size={20} />,
-      color: "text-emerald-600 bg-emerald-50",
-    },
-    {
-      label: ar ? "أعذار مقبولة" : "Excused",
-      value: data?.excuses?.filter((e) => e.status === "APPROVED").length ?? 0,
-      icon: <FileText size={20} />,
-      color: "text-amber-600 bg-amber-50",
-    },
-    {
-      label: ar ? "أيام الإجازة" : "On Leave",
-      value: stats?.onLeaveDays ?? 0,
-      icon: <Umbrella size={20} />,
-      color: "text-amber-600 bg-amber-50",
-    },
-  ];
-
+  // ──────────────────────────────────────────────────
   return (
-    <motion.section variants={fadeUp} initial="hidden" animate="visible" className="self-attendance ctr-workspace">
-      {/* ── Hero Card ── */}
-      <div className={`self-attendance__hero ${heroClass}`}>
-        <div className="self-attendance__hero-main">
-          <div className="self-attendance__hero-icon">{heroIcon}</div>
-          <div className="self-attendance__hero-text">
-            <h2 className="self-attendance__hero-title">{heroTitle}</h2>
-            <p className="self-attendance__hero-desc">{heroDesc}</p>
+    <div className="sa2" dir={ar ? "rtl" : "ltr"} aria-label={ar ? "تحضيري" : "My Attendance"}>
 
-            <div className="mt-3 flex items-center gap-4 text-xs font-medium text-slate-500 flex-wrap">
-              {effectiveShift && (
-                <div className="flex items-center gap-1.5">
-                  <Clock size={14} className="text-slate-400" />
-                  <span>
-                    {ar ? "فترة الدوام:" : "Shift:"} {effectiveShift.start} - {effectiveShift.end}
-                  </span>
-                </div>
-              )}
-              {target?.name && (
-                <div className="flex items-center gap-1.5">
-                  <MapPin size={14} className="text-slate-400" />
-                  <span>{target.name}</span>
-                </div>
-              )}
-              {today?.attendance?.checkInTime && (
-                <Badge variant="success" size="sm">
-                  {ar ? "دخول:" : "In:"} {today.attendance.checkInTime}
-                </Badge>
-              )}
-              {today?.attendance?.checkOutTime && (
-                <Badge variant="info" size="sm">
-                  {ar ? "خروج:" : "Out:"} {today.attendance.checkOutTime}
-                </Badge>
-              )}
+      {/* ══════════════════════════════════════════════
+          TOP ROW: Hero (left) + Stats column (right)
+          ══════════════════════════════════════════════ */}
+      <div className="sa2-top-row">
+
+        {/* ── Hero Card ── */}
+        <div className={`sa2-hero ${heroState.heroClass}`}>
+          <div className="sa2-hero__status-row">
+            <div className="sa2-hero__icon">{heroState.icon}</div>
+            <div className="sa2-hero__text">
+              <div className="sa2-hero__eyebrow">
+                <Clock size={11} />
+                {today?.date ? fmtDate(today.date, locale) : (ar ? "اليوم" : "Today")}
+              </div>
+              <h2 className="sa2-hero__title">{heroState.title}</h2>
+              <p className="sa2-hero__desc">{heroState.desc}</p>
             </div>
+          </div>
 
-            {/* Geo check info */}
-            {today?.geoCheck && today.geoCheck.state !== "unavailable" && (
-              <div
-                className={`mt-2 flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded w-fit ${
-                  today.geoCheck.isWithinRange
-                    ? "text-emerald-600 bg-emerald-50"
-                    : "text-rose-600 bg-rose-50"
-                }`}
-              >
-                <MapPin size={14} />
-                <span>{today.geoCheck.message || (today.geoCheck.isWithinRange ? (ar ? "ضمن النطاق" : "Within range") : (ar ? "خارج النطاق" : "Outside range"))}</span>
-                {today.geoCheck.distanceMeters != null && (
-                  <span className="text-slate-400 font-normal ms-1">({Math.round(today.geoCheck.distanceMeters)}m)</span>
-                )}
+          {/* Meta chips */}
+          <div className="sa2-hero__meta">
+            {effectiveShift && (
+              <span className="sa2-hero__chip">
+                <Clock size={11} />
+                {fmtTime(effectiveShift.start, locale, hour12)} – {fmtTime(effectiveShift.end, locale, hour12)}
+              </span>
+            )}
+            {target?.name && (
+              <span className="sa2-hero__chip sa2-hero__chip--neutral">
+                <MapPin size={11} />
+                {target.name}
+              </span>
+            )}
+            {todayAtt?.checkInTime && (
+              <span className="sa2-hero__chip">
+                ✓ {ar ? "دخول" : "In"}: {fmtTime(todayAtt.checkInTime, locale, hour12)}
+              </span>
+            )}
+            {todayAtt?.checkOutTime && (
+              <span className="sa2-hero__chip sa2-hero__chip--neutral">
+                ✓ {ar ? "خروج" : "Out"}: {fmtTime(todayAtt.checkOutTime, locale, hour12)}
+              </span>
+            )}
+          </div>
+
+          {/* Eligibility warnings */}
+          {eligibility?.warnings && eligibility.warnings.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+              {eligibility.warnings.map((w, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:"0.375rem", padding:"0.35rem 0.5rem", borderRadius:"0.5rem", background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.2)", color:"#92400e", fontSize:"0.75rem", fontWeight:600 }}>
+                  <AlertCircle size={12} />
+                  {w}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Action buttons ── */}
+          <div className="sa2-hero__actions">
+            {/* Shift time warning */}
+            {!shiftInRange && todayStatus === "not_checked_in" && (
+              <div className="sa2-shift-warning">
+                <Info size={13} />
+                {ar
+                  ? "الحضور متاح خلال وقت الوردية فقط (±30 دقيقة)"
+                  : "Check-in only during shift window (±30 min)"}
               </div>
             )}
 
-            {/* Eligibility warnings */}
-            {eligibility?.warnings && eligibility.warnings.length > 0 && (
-              <div className="mt-2 flex flex-col gap-1">
-                {eligibility.warnings.map((w, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded w-fit">
-                    <AlertCircle size={14} />
-                    <span>{w}</span>
-                  </div>
-                ))}
+            {/* not_checked_in */}
+            {todayStatus === "not_checked_in" && (
+              <>
+                <Button
+                  variant="primary"
+                  size="md"
+                  disabled={isBusy || !shiftInRange}
+                  isLoading={checkInMutation.isPending}
+                  onClick={handleCheckIn}
+                  fullWidth
+                >
+                  {locating
+                    ? <RefreshCcw size={14} className="animate-spin" style={{ marginInlineEnd: "0.375rem" }} />
+                    : <Fingerprint size={14} style={{ marginInlineEnd: "0.375rem" }} />}
+                  {locating ? (ar ? "تحديد الموقع..." : "Locating...") : (ar ? "تسجيل الحضور" : "Check In")}
+                </Button>
+                <div className="sa2-hero__secondary-btns">
+                  <Button variant="secondary" size="sm" disabled={isBusy} onClick={() => setShowExcuseModal(true)} fullWidth>
+                    <FileText size={13} style={{ marginInlineEnd: "0.25rem" }} />
+                    {ar ? "عذر" : "Excuse"}
+                  </Button>
+                  <Button variant="secondary" size="sm" disabled={isBusy} onClick={() => setShowLeaveModal(true)} fullWidth>
+                    <Umbrella size={13} style={{ marginInlineEnd: "0.25rem" }} />
+                    {ar ? "إجازة" : "Leave"}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* checked_in */}
+            {todayStatus === "checked_in" && (
+              <Button variant="secondary" size="md" disabled={isBusy} isLoading={checkOutMutation.isPending} onClick={handleCheckOut} fullWidth>
+                <LogOut size={14} style={{ marginInlineEnd: "0.375rem" }} />
+                {ar ? "تسجيل الانصراف" : "Check Out"}
+              </Button>
+            )}
+
+            {/* checked_out */}
+            {todayStatus === "checked_out" && (
+              <div className="sa2-done-badge">
+                <CheckCircle size={15} />
+                {ar ? "اكتمل التحضير اليوم" : "Attendance complete"}
               </div>
+            )}
+
+            {/* excuse_requested */}
+            {todayStatus === "excuse_requested" && (
+              <div className="sa2-excuse-badge">
+                <FileText size={15} />
+                {ar ? "طلب العذر بانتظار المراجعة" : "Excuse pending review"}
+              </div>
+            )}
+
+            {/* on_leave */}
+            {todayStatus === "on_leave" && (
+              <div className="sa2-leave-badge">
+                <Umbrella size={15} />
+                {ar ? "في إجازة اليوم" : "On leave today"}
+              </div>
+            )}
+
+            {/* Geo verify button — only when policy requires it */}
+            {data?.policy?.geoEnforcement === "REQUIRED" && (
+              <button
+                onClick={handleVerifyLocation}
+                disabled={isBusy}
+                className={`sa2-geo ${geoError ? "sa2-geo--warning" : location ? "sa2-geo--ok" : "sa2-geo--muted"}`}
+                style={{ border:"none", background:"none", cursor:"pointer", padding:"0.2rem 0", fontFamily:"inherit", textDecoration:"underline dotted" }}
+              >
+                {locating ? <RefreshCcw size={11} className="animate-spin" /> : <MapPin size={11} />}
+                {geoError
+                  ? geoError
+                  : location
+                    ? (ar ? "الموقع متوفر (انقر للتحقق)" : "Location active (click to verify)")
+                    : (ar ? "انقر لتحديد الموقع" : "Click to locate")}
+              </button>
             )}
           </div>
         </div>
 
-        <div className="self-attendance__hero-actions flex flex-col gap-2 min-w-[200px]">
-          {!shiftInRange && todayStatus === "not_checked_in" && (
-            <div className="text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg font-bold flex items-center gap-1.5">
-              <Info size={14} />
-              {ar ? "تسجيل الحضور متاح فقط خلال موعد الوردية (±30 دقيقة)" : "Check-in only during shift (±30 min)"}
+        {/* ── Stats Column ── */}
+        <div className="sa2-stats-col">
+          <div className="sa2-stat-card sa2-stat-card--present">
+            <div className="sa2-stat-icon"><CalendarCheck size={17} /></div>
+            <div className="sa2-stat-body">
+              <span className="sa2-stat-value">{stats?.presentDays ?? 0}</span>
+              <span className="sa2-stat-label">{ar ? "أيام الحضور" : "Present Days"}</span>
             </div>
-          )}
-
-          {todayStatus === "not_checked_in" && (
-            <>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="md"
-                  className="flex-1"
-                  disabled={isBtnDisabled}
-                  onClick={() => setShowExcuseModal(true)}
-                >
-                  <FileText className="me-1.5" size={14} />
-                  {ar ? "طلب عذر" : "Excuse"}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="flex-[2]"
-                  disabled={isBtnDisabled || !shiftInRange}
-                  isLoading={checkInMutation.isPending}
-                  onClick={handleCheckIn}
-                >
-                  {locating ? <RefreshCcw className="animate-spin me-1.5" size={14} /> : <Fingerprint className="me-1.5" size={16} />}
-                  {locating ? (ar ? "تحديد..." : "Locating...") : ar ? "تسجيل الحضور" : "Check In"}
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="md"
-                className="w-full"
-                disabled={isBtnDisabled}
-                onClick={() => setShowLeaveModal(true)}
-              >
-                <Umbrella className="me-1.5" size={14} />
-                {ar ? "طلب إجازة" : "Request Leave"}
-              </Button>
-            </>
-          )}
-
-          {todayStatus === "checked_in" && (
-            <Button
-              variant="secondary"
-              size="lg"
-              className="w-full"
-              disabled={isBtnDisabled}
-              isLoading={checkOutMutation.isPending}
-              onClick={handleCheckOut}
-            >
-              <LogOut className="me-2" size={18} />
-              {ar ? "تسجيل المغادرة" : "Check Out"}
-            </Button>
-          )}
-
-          {todayStatus === "checked_out" && (
-            <div className="text-center py-2.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm">
-              ✓ {ar ? "تم تسجيل الحضور والمغادرة" : "Attendance complete"}
+          </div>
+          <div className="sa2-stat-card sa2-stat-card--absent">
+            <div className="sa2-stat-icon"><CalendarX size={17} /></div>
+            <div className="sa2-stat-body">
+              <span className="sa2-stat-value">{stats?.absentDays ?? 0}</span>
+              <span className="sa2-stat-label">{ar ? "أيام الغياب" : "Absent Days"}</span>
             </div>
-          )}
-
-          {todayStatus === "excuse_requested" && (
-            <div className="text-center py-2.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-sm">
-              {ar ? "تم رفع طلب العذر وبانتظار المراجعة" : "Excuse pending review"}
+          </div>
+          <div className="sa2-stat-card sa2-stat-card--total">
+            <div className="sa2-stat-icon"><Clock size={17} /></div>
+            <div className="sa2-stat-body">
+              <span className="sa2-stat-value">{stats?.totalDays ?? 0}</span>
+              <span className="sa2-stat-label">{ar ? "إجمالي الأيام" : "Total Days"}</span>
             </div>
-          )}
-
-          {todayStatus === "on_leave" && (
-            <div className="text-center py-2.5 rounded-lg bg-amber-50 text-amber-700 font-bold text-sm">
-              {ar ? "أنت في إجازة اليوم" : "On leave today"}
+          </div>
+          <div className="sa2-stat-card sa2-stat-card--excuse">
+            <div className="sa2-stat-icon"><FileText size={17} /></div>
+            <div className="sa2-stat-body">
+              <span className="sa2-stat-value">{excuses?.filter((e) => e.status === "APPROVED").length ?? 0}</span>
+              <span className="sa2-stat-label">{ar ? "أعذار مقبولة" : "Approved Excuses"}</span>
             </div>
-          )}
+          </div>
+          <div className="sa2-stat-card sa2-stat-card--leave">
+            <div className="sa2-stat-icon"><Umbrella size={17} /></div>
+            <div className="sa2-stat-body">
+              <span className="sa2-stat-value">{stats?.onLeaveDays ?? 0}</span>
+              <span className="sa2-stat-label">{ar ? "أيام الإجازة" : "Leave Days"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          {geoError && <span className="text-xs text-rose-500 font-medium">{geoError}</span>}
-          {location && !geoError && (
-            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-              <MapPin size={10} /> {ar ? "الموقع متوفر" : "Location available"}
+      {/* ── Prayer Times ── */}
+      {target?.centerId && (
+        <PrayerTimesWidget centerId={target.centerId} ar={ar} />
+      )}
+
+      {/* ── History Panel ── */}
+      <div className="sa2-section">
+        <div className="sa2-section__head">
+          <h3 className="sa2-section__title">
+            <CalendarCheck size={15} />
+            {ar ? "سجل الحضور" : "Attendance History"}
+          </h3>
+          {historyRows.length > 0 && (
+            <span style={{ padding:"0.15rem 0.5rem", borderRadius:"9999px", background:"rgba(4,120,87,0.08)", color:"#047857", fontSize:"0.75rem", fontWeight:700, border:"1px solid rgba(4,120,87,0.15)" }}>
+              {historyRows.length}
             </span>
+          )}
+        </div>
+        <div className="sa2-section__body">
+          {historyRows.length === 0 ? (
+            <div className="sa2-empty">
+              <CalendarCheck size={32} />
+              <p>{ar ? "لا توجد سجلات لهذا الشهر" : "No records this month"}</p>
+            </div>
+          ) : (
+            <div className="sa2-history-list">
+              {historyRows.map((rec) => (
+                <HistoryRow key={rec.id} record={rec} locale={locale} ar={ar} hour12={hour12} />
+              ))}
+            </div>
           )}
         </div>
       </div>
 
-      {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-        {statCards.map((card) => (
-          <motion.div
-            key={card.label}
-            variants={fadeUp}
-            className="flex items-center gap-4 p-4 rounded-xl border border-slate-100 bg-white shadow-sm"
-          >
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${card.color}`}>
-              {card.icon}
-            </div>
-            <div>
-              <div className="text-2xl font-black text-slate-800">{card.value}</div>
-              <div className="text-xs text-slate-500 font-medium">{card.label}</div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── History Timeline ── */}
-      {data.history && data.history.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">{ar ? "سجل الحضور" : "Attendance History"}</h3>
-          <div className="flex flex-col gap-3">
-            {data.history.slice(0, 15).map((record) => {
-              const isExcused = record.status === "EXCUSED";
-              const isAbsent = record.status === "ABSENT";
-              const isOnLeave = record.status === "ON_LEAVE";
-              const showBadge = isExcused || isAbsent || isOnLeave;
-              const badgeColor = isAbsent ? "text-rose-700 bg-rose-50" : "text-amber-700 bg-amber-50";
-              const badgeLabel = isOnLeave ? (ar ? "إجازة" : "Leave") : isExcused ? (ar ? "عذر" : "Excused") : (ar ? "غياب" : "Absent");
-              const inTime = record.checkInTime ? new Date(record.checkInTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true }) : "";
-              const outTime = record.checkOutTime ? new Date(record.checkOutTime).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true }) : "";
-              const timeRange = record.checkInTime && record.checkOutTime ? `${outTime} → ${inTime}` : inTime || outTime || "";
-              const dateObj = new Date(record.attendanceDate);
-
-              return (
-                <motion.div
-                  key={record.id}
-                  variants={fadeUp}
-                  className="flex items-center gap-3 p-4 rounded-xl bg-white border border-slate-100 shadow-sm"
-                >
-                  <div className={showBadge ? "text-rose-500" : "text-emerald-500"}>
-                    {showBadge ? <Info size={20} /> : <LogOut size={20} />}
+      {/* ── Excuses Panel ── */}
+      {excuses && excuses.length > 0 && (
+        <div className="sa2-section">
+          <div className="sa2-section__head">
+            <h3 className="sa2-section__title">
+              <FileText size={15} />
+              {ar ? "طلبات الأعذار" : "Excuse Requests"}
+            </h3>
+            <span style={{ padding:"0.15rem 0.5rem", borderRadius:"9999px", background:"rgba(180,83,9,0.08)", color:"#92400e", fontSize:"0.75rem", fontWeight:700, border:"1px solid rgba(180,83,9,0.15)" }}>
+              {excuses.length}
+            </span>
+          </div>
+          <div className="sa2-section__body">
+            <div className="sa2-excuse-list">
+              {excuses.map((ex) => {
+                const tone = getStatusTone(ex.status);
+                return (
+                  <div key={ex.id} className="sa2-excuse-card">
+                    <div className="sa2-excuse-card__meta">
+                      <div className="sa2-excuse-card__date">{fmtDate(ex.absenceDate, locale)}</div>
+                      <div className="sa2-excuse-card__reason">{ex.reason}</div>
+                    </div>
+                    <span className={`sa2-pill sa2-pill--${tone}`}>{getStatusLabel(ex.status, ar)}</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-slate-800">
-                      {dateObj.toLocaleDateString("ar-SA", { weekday: "long" })}
-                    </div>
-                    <div className="text-xs text-slate-400 font-medium">
-                      {dateObj.toLocaleDateString("ar-SA")}
-                    </div>
-                    {record.note && <div className="text-xs text-slate-500 italic mt-1">{record.note}</div>}
-                  </div>
-                  {showBadge ? (
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${badgeColor}`}>{badgeLabel}</span>
-                  ) : timeRange ? (
-                    <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                      <MapPin size={12} className="text-emerald-500" />
-                      {timeRange}
-                    </div>
-                  ) : null}
-                </motion.div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── Excuse Modal ── */}
+      {/* ══════════════════════════════════════════
+          EXCUSE MODAL
+          ══════════════════════════════════════════ */}
       <Modal
         isOpen={showExcuseModal}
         onClose={() => setShowExcuseModal(false)}
         title={ar ? "طلب عذر غياب" : "Request Excuse"}
         size="sm"
         footer={
-          <div className="flex gap-3 w-full">
-            <Button variant="ghost" className="flex-1" onClick={() => setShowExcuseModal(false)}>
+          <div style={{ display: "flex", gap: "0.75rem", width: "100%" }}>
+            <Button variant="ghost" style={{ flex: 1 }} onClick={() => setShowExcuseModal(false)}>
               {ar ? "إلغاء" : "Cancel"}
             </Button>
             <Button
               variant="primary"
-              className="flex-[2]"
+              style={{ flex: 2 }}
               disabled={!excuseType || excuseMutation.isPending}
               isLoading={excuseMutation.isPending}
               onClick={handleSubmitExcuse}
             >
-              <Send className="me-2" size={16} />
+              <Send size={13} style={{ marginInlineEnd: "0.375rem" }} />
               {ar ? "إرسال الطلب" : "Submit"}
             </Button>
           </div>
         }
       >
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "نوع العذر" : "Excuse Type"}</label>
-            <select
-              value={excuseType}
-              onChange={(e) => setExcuseType(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            >
-              <option value="">{ar ? "اختر نوع العذر" : "Select type..."}</option>
-              {["مرض", "سفر", "ظرف عائلي", "موعد رسمي", "أخرى"].map((t) => (
-                <option key={t} value={t}>{t}</option>
+        <div className="sa2-form">
+          <div className="sa2-field">
+            <label className="sa2-label">{ar ? "نوع العذر" : "Excuse Type"}</label>
+            <select className="sa2-select" value={excuseType} onChange={(e) => setExcuseType(e.target.value)}>
+              <option value="">{ar ? "اختر نوع العذر..." : "Select type..."}</option>
+              {EXCUSE_TYPES.map((t) => (
+                <option key={t.ar} value={t.ar}>{ar ? t.ar : t.en}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "وصف العذر (اختياري)" : "Note (optional)"}</label>
+          <div className="sa2-field">
+            <label className="sa2-label">{ar ? "وصف إضافي (اختياري)" : "Note (optional)"}</label>
             <textarea
+              className="sa2-textarea"
               value={excuseNote}
               onChange={(e) => setExcuseNote(e.target.value)}
               rows={3}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder={ar ? "اكتب تفاصيل العذر..." : "Describe your excuse..."}
+              maxLength={500}
+              placeholder={ar ? "اكتب تفاصيل العذر إن وجدت..." : "Add details if needed..."}
             />
           </div>
         </div>
       </Modal>
 
-      {/* ── Leave Modal ── */}
+      {/* ══════════════════════════════════════════
+          LEAVE MODAL
+          ══════════════════════════════════════════ */}
       <Modal
         isOpen={showLeaveModal}
         onClose={() => setShowLeaveModal(false)}
         title={ar ? "طلب إجازة" : "Request Leave"}
         size="sm"
         footer={
-          <div className="flex gap-3 w-full">
-            <Button variant="ghost" className="flex-1" onClick={() => setShowLeaveModal(false)}>
+          <div style={{ display: "flex", gap: "0.75rem", width: "100%" }}>
+            <Button variant="ghost" style={{ flex: 1 }} onClick={() => setShowLeaveModal(false)}>
               {ar ? "إلغاء" : "Cancel"}
             </Button>
             <Button
               variant="primary"
-              className="flex-[2]"
+              style={{ flex: 2 }}
               disabled={!leaveStart || !leaveEnd || leaveMutation.isPending}
               isLoading={leaveMutation.isPending}
               onClick={handleSubmitLeave}
             >
-              <Send className="me-2" size={16} />
+              <Send size={13} style={{ marginInlineEnd: "0.375rem" }} />
               {ar ? "إرسال الطلب" : "Submit"}
             </Button>
           </div>
         }
       >
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "نوع الإجازة" : "Leave Type"}</label>
+        <div className="sa2-form">
+          <div className="sa2-field">
+            <label className="sa2-label">{ar ? "نوع الإجازة" : "Leave Type"}</label>
             <select
+              className="sa2-select"
               value={leaveType}
-              onChange={(e) => setLeaveType(e.target.value as any)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              onChange={(e) => setLeaveType(e.target.value as LeaveType)}
             >
-              {[
-                { value: "MEDICAL", label: ar ? "إجازة مرضية" : "Medical" },
-                { value: "OFFICIAL", label: ar ? "إجازة رسمية" : "Official" },
-                { value: "PERSONAL", label: ar ? "إجازة شخصية" : "Personal" },
-                { value: "UNPAID", label: ar ? "إجازة بدون راتب" : "Unpaid" },
-              ].map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              {LEAVE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {ar ? t.ar : t.en}
+                </option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "تاريخ البداية" : "Start Date"}</label>
+          <div className="sa2-form-row">
+            <div className="sa2-field">
+              <label className="sa2-label">{ar ? "تاريخ البداية" : "Start Date"}</label>
               <input
                 type="date"
+                className="sa2-input"
                 value={leaveStart}
                 onChange={(e) => setLeaveStart(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "تاريخ النهاية" : "End Date"}</label>
+            <div className="sa2-field">
+              <label className="sa2-label">{ar ? "تاريخ النهاية" : "End Date"}</label>
               <input
                 type="date"
+                className="sa2-input"
                 value={leaveEnd}
+                min={leaveStart}
                 onChange={(e) => setLeaveEnd(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               />
             </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-slate-600 block mb-2">{ar ? "السبب (اختياري)" : "Reason (optional)"}</label>
+          <div className="sa2-field sa2-field--full">
+            <label className="sa2-label">{ar ? "السبب (اختياري)" : "Reason (optional)"}</label>
             <textarea
+              className="sa2-textarea"
               value={leaveReason}
               onChange={(e) => setLeaveReason(e.target.value)}
               rows={2}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder={ar ? "اكتب سبب الإجازة..." : "Reason for leave..."}
             />
           </div>
         </div>
       </Modal>
-    </motion.section>
+    </div>
   );
 }

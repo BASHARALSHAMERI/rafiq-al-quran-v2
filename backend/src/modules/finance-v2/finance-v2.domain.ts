@@ -23,9 +23,15 @@ type DateRange = {
   to: Date;
 };
 
-const READ_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.ACCOUNTANT];
-const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
-const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN];
+const READ_ROLES: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ACCOUNTANT, Role.FINANCE_MANAGER];
+const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
 
 const VOUCHER_TRANSITIONS: Record<VoucherStatus, VoucherStatus[]> = {
   DRAFT: [VoucherStatus.SUBMITTED, VoucherStatus.CANCELLED],

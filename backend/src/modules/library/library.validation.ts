@@ -63,6 +63,6 @@ export const updateLibraryItemBodySchema = z
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 

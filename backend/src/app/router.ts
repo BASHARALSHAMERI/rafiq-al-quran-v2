@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { env } from "../config/env";
+import { healthRouter } from "./health";
 import authRouter from "../modules/auth/auth.routes";
 import orgRouter from "../modules/org/org.routes";
 import usersRouter from "../modules/users/users.routes";
@@ -40,6 +41,8 @@ if (env.DOCS_ENABLED) {
 if (env.METRICS_ENABLED) {
   router.use(metricsRouter);
 }
+
+router.use(healthRouter());
 
 router.use(systemRouter);
 

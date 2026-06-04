@@ -26,6 +26,7 @@ import {
   PackageCheck,
   TrendingUp,
   Receipt,
+  Fingerprint,
 } from "lucide-react";
 import { labels } from "../constants/labels";
 import type { Role } from "../features/auth/types";
@@ -65,6 +66,7 @@ export type AdminRouteId =
   | "parents"
   | "supervisors"
   | "staff_attendance"
+  | "self_attendance"
   | "exams"
   | "golden_records"
   | "library"
@@ -119,11 +121,18 @@ const SUPER_AND_CENTER: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
 const CORE_ADMIN: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
 const CORE_STAFF: Role[] = [...CORE_ADMIN];
 const LIBRARY_ROLES: Role[] = [...CORE_ADMIN];
-const ACCOUNTANT_FINANCE_ROLES: Role[] = [...CORE_ADMIN, "ACCOUNTANT"];
+const FINANCE_WEB_ROLES: Role[] = [
+  "SUPER_ADMIN",
+  "ACCOUNTANT",
+  "FINANCE_MANAGER",
+  "TREASURER",
+  "AUDITOR"
+];
 // [PLATFORM POLICY] Mobile roles (TEACHER, SUPERVISOR, PARENT) removed from web routes
-const REPORT_ROLES: Role[] = [...ACCOUNTANT_FINANCE_ROLES];
+const REPORT_ROLES: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN", "ACCOUNTANT", "FINANCE_MANAGER", "TREASURER", "AUDITOR"];
+const SELF_ATTENDANCE_ROLES: Role[] = ["CENTER_ADMIN", "ACCOUNTANT", "FINANCE_MANAGER", "TREASURER", "AUDITOR"];
 const NOTIFICATION_ROLES: Role[] = [...CORE_ADMIN];
-const AUDIT_ROLES: Role[] = ["SUPER_ADMIN", "CENTER_ADMIN"];
+const AUDIT_ROLES: Role[] = ["SUPER_ADMIN"];
 
 /* ─── Sections ─── */
 /*
@@ -162,7 +171,7 @@ export const ADMIN_SECTIONS: AdminSectionMeta[] = [
     id: "operations",
     get label() { return labels.nav.operations; },
     icon: CalendarDays,
-    routeIds: ["staff_attendance", "exams", "graduation_candidates", "golden_records", "library"],
+    routeIds: ["self_attendance", "staff_attendance", "exams", "graduation_candidates", "golden_records", "library"],
   },
   {
     // UI-NAV-FINANCE-SIDEBAR-RESTRUCTURE-2B: Revenue inflows — invoices, payments, vouchers, donors
@@ -260,7 +269,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.org.centersMenu; },
     routeIcon: Building2,
     section: "institutional",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: SUPER_ONLY,
     sidebar: true,
   },
   {
@@ -287,7 +296,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.org.centerAdminsMenu; },
     routeIcon: ShieldCheck,
     section: "users",
-    allowedRoles: SUPER_AND_CENTER,
+    allowedRoles: SUPER_ONLY,
     sidebar: true,
   },
   {
@@ -324,6 +333,15 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     routeIcon: Users,
     section: "users",
     allowedRoles: SUPER_ONLY,
+    sidebar: true,
+  },
+  {
+    id: "self_attendance",
+    path: "/daily/self-attendance",
+    get label() { return labels.org.selfAttendanceMenu; },
+    routeIcon: Fingerprint,
+    section: "operations",
+    allowedRoles: SELF_ATTENDANCE_ROLES,
     sidebar: true,
   },
   {
@@ -378,7 +396,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeDashboard; },
     routeIcon: LayoutDashboard,
     section: "financeReports",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -388,7 +406,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeInvoices; },
     routeIcon: FileText,
     section: "financeRevenue",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -398,7 +416,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financePayments; },
     routeIcon: Wallet,
     section: "financeRevenue",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -408,7 +426,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeVouchers; },
     routeIcon: FileText,
     section: "financeRevenue",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -418,7 +436,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeDonors; },
     routeIcon: HandHeart,
     section: "financeRevenue",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -428,7 +446,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeTreasury; },
     routeIcon: Building2,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -438,7 +456,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financePayroll; },
     routeIcon: Users,
     section: "financeExpenditure",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -448,7 +466,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeRewards; },
     routeIcon: Wallet,
     section: "financeExpenditure",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -458,7 +476,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeCurrencies; },
     routeIcon: CircleDollarSign,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -468,7 +486,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.financeExpenses; },
     routeIcon: Receipt,
     section: "financeExpenditure",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -478,7 +496,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "الأصول والعهد" : "Assets & Custody"; },
     routeIcon: PackageCheck,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -488,7 +506,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "تمويل وتكلفة المراكز" : "Center Funding & Cost"; },
     routeIcon: Building2,
     section: "financeReports",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -497,7 +515,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "قائمة المركز المالي" : "Financial Position"; },
     routeIcon: Scale,
     section: "financeReports",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -506,7 +524,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "قائمة الأنشطة" : "Statement of Activities"; },
     routeIcon: TrendingUp,
     section: "financeReports",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -516,7 +534,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return document.documentElement.lang === "ar" ? "المحاسبة" : "Accounting"; },
     routeIcon: Table2,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
   },
   {
@@ -526,7 +544,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingJournalEntries; },
     routeIcon: FileText,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -536,7 +554,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingLedger; },
     routeIcon: BookOpen,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {
@@ -546,7 +564,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.accountingTrialBalance; },
     routeIcon: Scale,
     section: "financeLedger",
-    allowedRoles: ACCOUNTANT_FINANCE_ROLES,
+    allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,
   },
   {

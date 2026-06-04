@@ -60,7 +60,11 @@ export default function FinancePaymentsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canRecordPayment = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canRecordPayment =
+    user?.role === "SUPER_ADMIN" ||
+    user?.role === "ACCOUNTANT" ||
+    user?.role === "FINANCE_MANAGER" ||
+    user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;

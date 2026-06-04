@@ -17,9 +17,19 @@ import {
 } from "./accounting.validation";
 
 const accountingRouter = Router();
-const accountingAdminRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN];
-const accountingReadRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
-const accountingDraftWriteRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.ACCOUNTANT];
+const accountingAdminRoles = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
+const accountingReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+const accountingDraftWriteRoles = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER
+];
 
 accountingRouter.use(authGuard, attachScope);
 

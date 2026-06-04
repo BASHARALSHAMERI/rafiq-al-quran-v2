@@ -275,7 +275,7 @@ const resolveCreateQuranRange = async (input: {
   const allProvided = [fromSurah, fromAyah, toSurah, toAyah].every((value) => typeof value === "number");
   if (!allProvided) {
     throw new AppError(
-      "Quran range requires fromSurah/fromAyah/toSurah/toAyah together",
+      "نطاق القرآن يتطلب fromSurah/fromAyah/toSurah/toAyah معاً",
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -305,7 +305,7 @@ const resolveDateRange = (from?: string, to?: string) => {
   const resolvedTo = to ? safeDate(to, "to") : defaultTo;
 
   if (resolvedFrom > resolvedTo) {
-    throw new AppError("Date range is invalid: from must be before to", 400);
+    throw new AppError("نطاق التاريخ غير صالح: من يجب أن يكون قبل إلى", 400);
   }
 
   return {
@@ -321,15 +321,15 @@ const parseJoinUrl = (value: string) => {
   try {
     url = new URL(normalized);
   } catch {
-    throw new AppError("joinUrl must be a valid URL", 400);
+    throw new AppError("رابط الانضمام يجب أن يكون رابطاً صالحاً", 400);
   }
 
   if (url.protocol !== "https:") {
-    throw new AppError("joinUrl must use HTTPS", 400);
+    throw new AppError("رابط الانضمام يجب أن يستخدم HTTPS", 400);
   }
 
   if (!url.hostname) {
-    throw new AppError("joinUrl must include a hostname", 400);
+    throw new AppError("رابط الانضمام يجب أن يتضمن اسم مضيف", 400);
   }
 
   return {
@@ -377,7 +377,7 @@ const getCircleContextOrThrow = async (scope: ScopeContext, circleId: number) =>
   });
 
   if (!circleContext) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   return circleContext;
@@ -392,14 +392,14 @@ const ensureScopeCanAccessCircle = (scope: ScopeContext, circleId: number, cente
     return;
   }
 
-  throw new AppError("Access denied for requested circle", 403);
+  throw new AppError("ليس لديك صلاحية للحلقة المطلوبة", 403);
 };
 
 const ensureManageCircle = (scope: ScopeContext, circleContext: CircleContextItem) => {
   ensureScopeCanAccessCircle(scope, circleContext.id, circleContext.centerId);
 
   if (scope.role === Role.TEACHER && circleContext.teacherId !== scope.userId) {
-    throw new AppError("Teachers can only manage their own remote recitation circles", 403);
+    throw new AppError("المعلمون يمكنهم فقط إدارة حلقات التلاوة عن بعد الخاصة بهم", 403);
   }
 };
 
@@ -407,23 +407,23 @@ const ensureManageBooking = (scope: ScopeContext, booking: RemoteRecitationBooki
   ensureScopeCanAccessCircle(scope, booking.circleId, booking.centerId);
 
   if (scope.role === Role.TEACHER && booking.teacherId !== scope.userId) {
-    throw new AppError("Teachers can only manage their own remote recitation bookings", 403);
+    throw new AppError("المعلمون يمكنهم فقط إدارة حجوزات التلاوة عن بعد الخاصة بهم", 403);
   }
 };
 
 const ensureOperationalCircle = (circleContext: CircleContextItem) => {
   if (!circleContext.isActive || !circleContext.center.isActive) {
-    throw new AppError("Circle is not active for remote recitation", 409);
+    throw new AppError("الحلقة غير نشطة للتلاوة عن بعد", 409);
   }
 
   if (!circleContext.teacher?.isActive) {
-    throw new AppError("Circle teacher is not active", 409);
+    throw new AppError("معلم الحلقة غير نشط", 409);
   }
 };
 
 const assertFeatureEnabled = (setting: EffectiveRemoteRecitationSetting) => {
   if (!setting.isEnabled) {
-    throw new AppError("Remote recitation is disabled for this circle", 409);
+    throw new AppError("التلاوة عن بعد معطلة لهذه الحلقة", 409);
   }
 };
 
@@ -433,17 +433,17 @@ const assertSlotWindow = (
   setting: EffectiveRemoteRecitationSetting
 ) => {
   if (startsAt >= endsAt) {
-    throw new AppError("Slot end time must be after start time", 400);
+    throw new AppError("وقت نهاية الفترة يجب أن يكون بعد وقت البداية", 400);
   }
 
   if (startsAt.getTime() <= Date.now()) {
-    throw new AppError("Slot must be scheduled in the future", 400);
+    throw new AppError("يجب جدولة الفترة في المستقبل", 400);
   }
 
   const durationMinutes = Math.round((endsAt.getTime() - startsAt.getTime()) / 60000);
   if (durationMinutes !== setting.slotDurationMinutes) {
     throw new AppError(
-      `Slot duration must be exactly ${setting.slotDurationMinutes} minutes`,
+      `مدة الفترة يجب أن تكون بالضبط ${setting.slotDurationMinutes} دقيقة`,
       400
     );
   }
@@ -452,7 +452,7 @@ const assertSlotWindow = (
   advanceLimit.setDate(advanceLimit.getDate() + setting.maxAdvanceDays);
   if (startsAt.getTime() > advanceLimit.getTime()) {
     throw new AppError(
-      `Slot must be within ${setting.maxAdvanceDays} days from now`,
+      `يجب أن تكون الفترة ضمن ${setting.maxAdvanceDays} يوماً من الآن`,
       400
     );
   }
@@ -653,7 +653,7 @@ const notifySafely = async (input: {
 export const remoteRecitationService = {
   async getSettings(scope: ScopeContext, input: { circleId: number }) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Remote recitation settings are restricted for your role", 403);
+      throw new AppError("إعدادات التلاوة عن بعد مقيدة لدورك", 403);
     }
 
     const circleContext = await getCircleContextOrThrow(scope, input.circleId);
@@ -668,7 +668,7 @@ export const remoteRecitationService = {
 
   async upsertSettings(scope: ScopeContext, input: RemoteRecitationSettingsInput) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Remote recitation settings are restricted for your role", 403);
+      throw new AppError("إعدادات التلاوة عن بعد مقيدة لدورك", 403);
     }
 
     const circleContext = await getCircleContextOrThrow(scope, input.circleId);
@@ -787,7 +787,7 @@ export const remoteRecitationService = {
 
   async createSlot(scope: ScopeContext, input: CreateRemoteRecitationSlotInput) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can create remote recitation slots", 403);
+      throw new AppError("فقط المديرون يمكنهم إنشاء فترات التلاوة عن بعد", 403);
     }
 
     const circleContext = await getCircleContextOrThrow(scope, input.circleId);
@@ -808,7 +808,7 @@ export const remoteRecitationService = {
     });
 
     if (overlap) {
-      throw new AppError("Teacher already has another slot during this time", 409);
+      throw new AppError("المعلم لديه فترة أخرى خلال هذا الوقت", 409);
     }
 
     const join = parseJoinUrl(input.joinUrl);
@@ -872,17 +872,17 @@ export const remoteRecitationService = {
 
   async updateSlot(scope: ScopeContext, slotId: number, input: UpdateRemoteRecitationSlotInput) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can update remote recitation slots", 403);
+      throw new AppError("فقط المديرون يمكنهم تحديث فترات التلاوة عن بعد", 403);
     }
 
     const existing = await remoteRecitationRepository.findSlotById(slotId);
     if (!existing) {
-      throw new AppError("Slot not found", 404);
+      throw new AppError("الفترة غير موجودة", 404);
     }
 
     ensureScopeCanAccessCircle(scope, existing.circleId, existing.centerId);
     if (scope.role === Role.TEACHER && existing.teacherId !== scope.userId) {
-      throw new AppError("Teachers can only update their own remote recitation slots", 403);
+      throw new AppError("المعلمون يمكنهم فقط تحديث فترات التلاوة عن بعد الخاصة بهم", 403);
     }
 
     const circleContext = await getCircleContextOrThrow(scope, existing.circleId);
@@ -908,7 +908,7 @@ export const remoteRecitationService = {
 
     if (blockingBooking && (isSlotTimingTouched(input) || input.isActive === false)) {
       throw new AppError(
-        "Slot timing cannot be changed or disabled while it has active bookings",
+        "لا يمكن تغيير توقيت الفترة أو تعطيلها أثناء وجود حجوزات نشطة",
         409
       );
     }
@@ -922,7 +922,7 @@ export const remoteRecitationService = {
       });
 
       if (overlap) {
-        throw new AppError("Teacher already has another slot during this time", 409);
+        throw new AppError("المعلم لديه فترة أخرى خلال هذا الوقت", 409);
       }
     }
 
@@ -943,7 +943,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Slot version conflict", 409, { id: slotId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الفترة", 409, { id: slotId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -992,17 +992,17 @@ export const remoteRecitationService = {
 
   async deleteSlot(scope: ScopeContext, slotId: number, lockVersion?: number) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can remove remote recitation slots", 403);
+      throw new AppError("فقط المديرون يمكنهم إزالة فترات التلاوة عن بعد", 403);
     }
 
     const existing = await remoteRecitationRepository.findSlotById(slotId);
     if (!existing) {
-      throw new AppError("Slot not found", 404);
+      throw new AppError("الفترة غير موجودة", 404);
     }
 
     ensureScopeCanAccessCircle(scope, existing.circleId, existing.centerId);
     if (scope.role === Role.TEACHER && existing.teacherId !== scope.userId) {
-      throw new AppError("Teachers can only remove their own remote recitation slots", 403);
+      throw new AppError("المعلمون يمكنهم فقط إزالة فترات التلاوة عن بعد الخاصة بهم", 403);
     }
 
     editLockPolicy.assertVersionMatch({
@@ -1016,7 +1016,7 @@ export const remoteRecitationService = {
     });
 
     if (blockingBooking) {
-      throw new AppError("Slot cannot be removed while it has active bookings", 409);
+      throw new AppError("لا يمكن إزالة الفترة أثناء وجود حجوزات نشطة", 409);
     }
 
     const removed = await prisma.$transaction(async (tx) => {
@@ -1028,7 +1028,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Slot version conflict", 409, { id: slotId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الفترة", 409, { id: slotId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -1138,18 +1138,18 @@ export const remoteRecitationService = {
 
   async createBooking(scope: ScopeContext, input: CreateRemoteRecitationBookingInput) {
     if (scope.role !== Role.STUDENT) {
-      throw new AppError("Only students can book remote recitation slots", 403);
+      throw new AppError("فقط الطلاب يمكنهم حجز فترات التلاوة عن بعد", 403);
     }
 
     const slot = await remoteRecitationRepository.findSlotById(input.slotId);
     if (!slot) {
-      throw new AppError("Slot not found", 404);
+      throw new AppError("الفترة غير موجودة", 404);
     }
 
     ensureScopeCanAccessCircle(scope, slot.circleId, slot.centerId);
 
     if (!slot.isActive || !slot.circle.isActive || !slot.circle.center.isActive) {
-      throw new AppError("Slot is not available", 409);
+      throw new AppError("الفترة غير متاحة", 409);
     }
 
     const circleContext = await getCircleContextOrThrow(scope, slot.circleId);
@@ -1159,7 +1159,7 @@ export const remoteRecitationService = {
     const minimumStart = new Date(Date.now() + setting.bookingLeadHours * 60 * 60 * 1000);
     if (slot.startsAt.getTime() < minimumStart.getTime()) {
       throw new AppError(
-        `Booking must be made at least ${setting.bookingLeadHours} hours in advance`,
+        `يجب أن يتم الحجز قبل ${setting.bookingLeadHours} ساعة على الأقل`,
         409
       );
     }
@@ -1170,7 +1170,7 @@ export const remoteRecitationService = {
     });
 
     if (!enrollment) {
-      throw new AppError("Student is not actively enrolled in this circle", 400);
+      throw new AppError("الطالب غير مسجل بشكل نشط في هذه الحلقة", 400);
     }
 
     const blocking = await remoteRecitationRepository.findBlockingBookingForSlot({
@@ -1178,7 +1178,7 @@ export const remoteRecitationService = {
     });
 
     if (blocking) {
-      throw new AppError("This slot has already been booked", 409);
+      throw new AppError("هذه الفترة محجوزة بالفعل", 409);
     }
 
     let booking: RemoteRecitationBookingItem;
@@ -1219,7 +1219,7 @@ export const remoteRecitationService = {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new AppError("This slot has already been booked", 409);
+        throw new AppError("هذه الفترة محجوزة بالفعل", 409);
       }
 
       throw error;
@@ -1270,12 +1270,12 @@ export const remoteRecitationService = {
     input: RemoteRecitationBookingDecisionInput
   ) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can approve bookings", 403);
+      throw new AppError("فقط المديرون يمكنهم الموافقة على الحجوزات", 403);
     }
 
     const booking = await remoteRecitationRepository.findBookingById(bookingId);
     if (!booking) {
-      throw new AppError("Booking not found", 404);
+      throw new AppError("الحجز غير موجود", 404);
     }
 
     ensureManageBooking(scope, booking);
@@ -1286,11 +1286,11 @@ export const remoteRecitationService = {
     });
 
     if (booking.status !== RemoteRecitationBookingStatus.REQUESTED) {
-      throw new AppError("Only requested bookings can be approved", 409);
+      throw new AppError("فقط الحجوزات المطلوبة يمكن الموافقة عليها", 409);
     }
 
     if (booking.slot.startsAt.getTime() <= Date.now()) {
-      throw new AppError("Past bookings cannot be approved", 409);
+      throw new AppError("لا يمكن الموافقة على الحجوزات السابقة", 409);
     }
 
     const blocking = await remoteRecitationRepository.findBlockingBookingForSlot({
@@ -1299,7 +1299,7 @@ export const remoteRecitationService = {
     });
 
     if (blocking) {
-      throw new AppError("Another active booking already exists for this slot", 409);
+      throw new AppError("يوجد حجز نشط آخر لهذه الفترة بالفعل", 409);
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -1315,7 +1315,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Booking version conflict", 409, { id: bookingId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الحجز", 409, { id: bookingId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -1383,12 +1383,12 @@ export const remoteRecitationService = {
     input: RemoteRecitationBookingDecisionInput
   ) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can reject bookings", 403);
+      throw new AppError("فقط المديرون يمكنهم رفض الحجوزات", 403);
     }
 
     const booking = await remoteRecitationRepository.findBookingById(bookingId);
     if (!booking) {
-      throw new AppError("Booking not found", 404);
+      throw new AppError("الحجز غير موجود", 404);
     }
 
     ensureManageBooking(scope, booking);
@@ -1399,7 +1399,7 @@ export const remoteRecitationService = {
     });
 
     if (booking.status !== RemoteRecitationBookingStatus.REQUESTED) {
-      throw new AppError("Only requested bookings can be rejected", 409);
+      throw new AppError("فقط الحجوزات المطلوبة يمكن رفضها", 409);
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -1415,7 +1415,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Booking version conflict", 409, { id: bookingId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الحجز", 409, { id: bookingId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -1484,17 +1484,17 @@ export const remoteRecitationService = {
   ) {
     const booking = await remoteRecitationRepository.findBookingById(bookingId);
     if (!booking) {
-      throw new AppError("Booking not found", 404);
+      throw new AppError("الحجز غير موجود", 404);
     }
 
     if (scope.role === Role.STUDENT) {
       if (booking.studentId !== scope.userId) {
-        throw new AppError("Students can only cancel their own bookings", 403);
+        throw new AppError("الطلاب يمكنهم فقط إلغاء حجوزاتهم الخاصة", 403);
       }
     } else if (MANAGER_ROLES.includes(scope.role)) {
       ensureManageBooking(scope, booking);
     } else {
-      throw new AppError("Booking cancellation is restricted for your role", 403);
+      throw new AppError("إلغاء الحجز مقيد لدورك", 403);
     }
 
     editLockPolicy.assertVersionMatch({
@@ -1507,7 +1507,7 @@ export const remoteRecitationService = {
       booking.status !== RemoteRecitationBookingStatus.REQUESTED &&
       booking.status !== RemoteRecitationBookingStatus.APPROVED
     ) {
-      throw new AppError("Only requested or approved bookings can be cancelled", 409);
+      throw new AppError("فقط الحجوزات المطلوبة أو المعتمدة يمكن إلغاؤها", 409);
     }
 
     if (scope.role === Role.STUDENT) {
@@ -1519,7 +1519,7 @@ export const remoteRecitationService = {
 
       if (Date.now() > latestStudentCancellation.getTime()) {
         throw new AppError(
-          `Bookings can only be cancelled at least ${setting.cancellationWindowHours} hours before the session`,
+          `يمكن إلغاء الحجوزات قبل ${setting.cancellationWindowHours} ساعة من الجلسة على الأقل`,
           409
         );
       }
@@ -1538,7 +1538,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Booking version conflict", 409, { id: bookingId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الحجز", 409, { id: bookingId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({
@@ -1606,12 +1606,12 @@ export const remoteRecitationService = {
     input: CompleteRemoteRecitationBookingInput
   ) {
     if (!MANAGER_ROLES.includes(scope.role)) {
-      throw new AppError("Only managers can complete remote recitation bookings", 403);
+      throw new AppError("فقط المديرون يمكنهم إكمال حجوزات التلاوة عن بعد", 403);
     }
 
     const booking = await remoteRecitationRepository.findBookingById(bookingId);
     if (!booking) {
-      throw new AppError("Booking not found", 404);
+      throw new AppError("الحجز غير موجود", 404);
     }
 
     ensureManageBooking(scope, booking);
@@ -1622,11 +1622,11 @@ export const remoteRecitationService = {
     });
 
     if (booking.status !== RemoteRecitationBookingStatus.APPROVED) {
-      throw new AppError("Only approved bookings can be completed", 409);
+      throw new AppError("فقط الحجوزات المعتمدة يمكن إكمالها", 409);
     }
 
     if (booking.followUpRecordId) {
-      throw new AppError("Booking has already been completed", 409);
+      throw new AppError("الحجز مكتمل بالفعل", 409);
     }
 
     const normalizedSurah = normalizeText(input.surah);
@@ -1693,7 +1693,7 @@ export const remoteRecitationService = {
       );
 
       if (!item) {
-        throw new AppError("Booking version conflict", 409, { id: bookingId }, "VERSION_CONFLICT");
+        throw new AppError("تعارض في إصدار الحجز", 409, { id: bookingId }, "VERSION_CONFLICT");
       }
 
       await tx.activityLog.create({

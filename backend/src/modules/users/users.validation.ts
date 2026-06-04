@@ -51,7 +51,7 @@ const commonProfileCreateSchema = z
 
 const commonProfileUpdateSchema = commonProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one profile field is required" }
+  { message: "حقل ملف تعريف واحد على الأقل مطلوب" }
 );
 
 const teacherProfileCreateSchema = z
@@ -66,7 +66,7 @@ const teacherProfileCreateSchema = z
 
 const teacherProfileUpdateSchema = teacherProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one teacher profile field is required" }
+  { message: "حقل ملف تعريف معلم واحد على الأقل مطلوب" }
 );
 
 const supervisorProfileCreateSchema = z
@@ -82,7 +82,7 @@ const supervisorProfileCreateSchema = z
 
 const supervisorProfileUpdateSchema = supervisorProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one supervisor profile field is required" }
+  { message: "حقل ملف تعريف مشرف واحد على الأقل مطلوب" }
 );
 
 const centerAdminProfileCreateSchema = z
@@ -98,7 +98,7 @@ const centerAdminProfileCreateSchema = z
 
 const centerAdminProfileUpdateSchema = centerAdminProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one center admin profile field is required" }
+  { message: "حقل ملف تعريف مدير مركز واحد على الأقل مطلوب" }
 );
 
 const studentProfileCreateSchema = z
@@ -112,7 +112,7 @@ const studentProfileCreateSchema = z
 
 const studentProfileUpdateSchema = studentProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one student profile field is required" }
+  { message: "حقل ملف تعريف طالب واحد على الأقل مطلوب" }
 );
 
 const parentProfileCreateSchema = z
@@ -123,7 +123,7 @@ const parentProfileCreateSchema = z
 
 const parentProfileUpdateSchema = parentProfileCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one parent profile field is required" }
+  { message: "حقل ملف تعريف ولي أمر واحد على الأقل مطلوب" }
 );
 
 const userLinksCreateSchema = z
@@ -157,7 +157,7 @@ const userLinksCreateSchema = z
 
 const userLinksUpdateSchema = userLinksCreateSchema.partial().refine(
   (value) => Object.keys(value).length > 0,
-  { message: "At least one links field is required" }
+  { message: "حقل روابط واحد على الأقل مطلوب" }
 );
 
 export const userIdParamSchema = z
@@ -183,7 +183,7 @@ export const createUserBodySchema = z
   })
   .strict()
   .refine((value) => Boolean(value.profile?.fullName || value.fullName), {
-    message: "fullName (or profile.fullName) is required"
+    message: "الاسم الكامل (أو profile.fullName) مطلوب"
   });
 
 export const updateUserBodySchema = z
@@ -201,7 +201,7 @@ export const updateUserBodySchema = z
   })
   .strict()
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 export const updateUserStatusBodySchema = z

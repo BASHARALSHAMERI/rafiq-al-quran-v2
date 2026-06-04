@@ -17,7 +17,7 @@ export const supervisorService = {
     const targetUserId = params.supervisorId ?? scope.userId;
 
     if (scope.role === Role.SUPERVISOR && targetUserId !== scope.userId) {
-      throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
+      throw new AppError("غير مصرح بهذه العملية", 403, undefined, "FORBIDDEN");
     }
 
     const { from, to } = getMonthBounds(params.month, params.year);
@@ -195,7 +195,7 @@ export const supervisorService = {
     targets: { monthlyHoursTarget?: number; monthlyVisitsTarget?: number }
   ) {
     if (scope.role === Role.SUPERVISOR && userId !== scope.userId) {
-      throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
+      throw new AppError("غير مصرح بهذه العملية", 403, undefined, "FORBIDDEN");
     }
 
     const profile = await prisma.supervisorProfile.findUnique({
@@ -204,7 +204,7 @@ export const supervisorService = {
     });
 
     if (!profile) {
-      throw new AppError("Supervisor profile not found", 404, undefined, "NOT_FOUND");
+      throw new AppError("ملف المشرف غير موجود", 404, undefined, "NOT_FOUND");
     }
 
     return prisma.supervisorProfile.update({

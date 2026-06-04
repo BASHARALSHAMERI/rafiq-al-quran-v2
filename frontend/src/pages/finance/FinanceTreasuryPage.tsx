@@ -60,8 +60,9 @@ export default function FinanceTreasuryPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const canCreateTransfer = isCoreAdmin || user?.role === "ACCOUNTANT";
+  const canCreateTransfer =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canOperateTreasury = canCreateTransfer || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -179,9 +180,9 @@ export default function FinanceTreasuryPage() {
         <Suspense fallback={<LoadingState />}>
           <FinanceTreasuryTab
             centerId={centerId}
-            isAdmin={canCreateTransfer}
+            isAdmin={canOperateTreasury}
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
-            canEditLedgerAccount={isCoreAdmin}
+            canEditLedgerAccount={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
             ar={ar}
             externalShowTransfer={canCreateTransfer && showTransferModal}
             onExternalTransferClose={() => setShowTransferModal(false)}

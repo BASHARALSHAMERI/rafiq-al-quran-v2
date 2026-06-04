@@ -51,8 +51,11 @@ export default function FinanceAssetsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const canRegisterAsset = isCoreAdmin || user?.role === "ACCOUNTANT";
+  const canManageAssetSettings = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+  const canRegisterAsset =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canPostAsset =
+    canRegisterAsset || user?.role === "TREASURER";
   const [activeTab, setActiveTab] = useState<TabId>("assets");
 
   // Lifted Modal States
@@ -69,7 +72,7 @@ export default function FinanceAssetsPage() {
   // Header Actions based on active tab
   const headerActions = (
     <div className="flex items-center gap-3">
-      {activeTab === "categories" && isCoreAdmin && (
+      {activeTab === "categories" && canManageAssetSettings && (
         <Button onClick={() => setCatModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "إضافة تصنيف" : "Add category"}
         </Button>
@@ -79,7 +82,7 @@ export default function FinanceAssetsPage() {
           {ar ? "تسجيل أصل" : "Register asset"}
         </Button>
       )}
-      {activeTab === "custody" && isCoreAdmin && (
+      {activeTab === "custody" && canRegisterAsset && (
         <Button onClick={() => setCustodyModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "تسجيل تسليم عهدة" : "Assign Custody"}
         </Button>
@@ -131,7 +134,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={catModalOpen} 
                 setModalOpen={setCatModalOpen} 
-                canManage={isCoreAdmin}
+                canManage={canManageAssetSettings}
               />
             ) : null}
             {activeTab === "assets" ? (
@@ -140,7 +143,7 @@ export default function FinanceAssetsPage() {
                 modalOpen={assetModalOpen} 
                 setModalOpen={setAssetModalOpen} 
                 canRegister={canRegisterAsset}
-                canPost={isCoreAdmin}
+                canPost={canPostAsset}
               />
             ) : null}
             {activeTab === "custody" ? (
@@ -148,7 +151,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={custodyModalOpen} 
                 setModalOpen={setCustodyModalOpen} 
-                canManage={isCoreAdmin}
+                canManage={canRegisterAsset}
               />
             ) : null}
           </motion.div>

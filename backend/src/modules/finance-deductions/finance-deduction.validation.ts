@@ -55,7 +55,7 @@ export const reviewEventSchema = z
     note: z.string().max(500).optional()
   })
   .refine((value) => Boolean(value.action || value.status), {
-    message: "Either action or status is required",
+    message: "الإجراء أو الحالة مطلوب",
     path: ["action"]
   })
   .strict();

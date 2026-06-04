@@ -450,7 +450,7 @@ export const notificationsService = {
     });
 
     if (!existing) {
-      throw new AppError("Notification not found", 404);
+      throw new AppError("الإشعار غير موجود", 404);
     }
 
     notificationsDomain.ensureNotificationVisible(scope, existing);

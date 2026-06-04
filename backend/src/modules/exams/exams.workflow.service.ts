@@ -232,11 +232,11 @@ const ensureCircleExistsAndVisible = async (
   });
 
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   if (expectedCenterId && circle.centerId !== expectedCenterId) {
-    throw new AppError("Circle does not belong to selected center", 400);
+    throw new AppError("الحلقة لا تنتمي إلى المركز المحدد", 400);
   }
 
   return circle;
@@ -249,7 +249,7 @@ const getExamInScope = async (scope: ScopeContext, examId: number) => {
   });
 
   if (!exam) {
-    throw new AppError("Exam not found", 404);
+    throw new AppError("الاختبار غير موجود", 404);
   }
 
   examsDomain.ensureTemplateVisible(scope, {
@@ -267,7 +267,7 @@ const getNominationInScope = async (scope: ScopeContext, nominationId: number) =
   });
 
   if (!nomination) {
-    throw new AppError("Nomination request not found", 404);
+    throw new AppError("طلب الترشيح غير موجود", 404);
   }
 
   examsDomain.ensureNominationVisibility({
@@ -286,7 +286,7 @@ const getAttemptInScope = async (scope: ScopeContext, attemptId: number) => {
   });
 
   if (!attempt) {
-    throw new AppError("Attempt not found", 404);
+    throw new AppError("محاولة الاختبار غير موجودة", 404);
   }
 
   examsDomain.ensureAttemptVisibility({
@@ -313,7 +313,7 @@ const validateCommitteeMembers = async (
   });
 
   if (users.length !== uniqueMemberIds.length) {
-    throw new AppError("One or more selected committee members are invalid for this center", 400);
+    throw new AppError("واحد أو أكثر من أعضاء اللجنة المختارين غير صالحين لهذا المركز", 400);
   }
 
   examsDomain.assertCommitteeRoles(users.map((user) => user.role));
@@ -335,7 +335,7 @@ const assertCommitteeMember = (
 ) => {
   const membership = attempt.committeeMembers.find((member) => member.userId === scope.userId) ?? null;
   if (!membership) {
-    throw new AppError("Only committee members can evaluate this attempt", 403);
+    throw new AppError("فقط أعضاء اللجنة يمكنهم تقييم هذه المحاولة", 403);
   }
 
   return membership;
@@ -347,7 +347,7 @@ const assertCommitteeChair = (
 ) => {
   const membership = assertCommitteeMember(attempt, scope);
   if (membership.committeeRole !== CommitteeRole.CHAIR) {
-    throw new AppError("Only the committee chair can perform this action", 403);
+    throw new AppError("فقط رئيس اللجنة يمكنه تنفيذ هذا الإجراء", 403);
   }
 
   return membership;
@@ -385,12 +385,12 @@ export const examsWorkflowService = {
 
     const exam = await getExamInScope(scope, input.examId);
     if (exam.status !== "PUBLISHED") {
-      throw new AppError("Nomination requests can only use published exam templates", 400);
+      throw new AppError("طلبات الترشيح يمكن استخدامها فقط للاختبارات المنشورة", 400);
     }
 
     const circle = await ensureCircleExistsAndVisible(scope, input.circleId);
     if (circle.teacherId !== scope.userId) {
-      throw new AppError("Teachers can only nominate students from their own circles", 403);
+      throw new AppError("المعلمون يمكنهم ترشيح الطلاب من حلقاتهم فقط", 403);
     }
 
     const student = await examsRepository.findStudentById({
@@ -399,7 +399,7 @@ export const examsWorkflowService = {
     });
 
     if (!student || student.role !== Role.STUDENT || !student.isActive) {
-      throw new AppError("Student not found or inactive", 400);
+      throw new AppError("الطالب غير موجود أو غير نشط", 400);
     }
 
     const enrollment = await examsRepository.findActiveEnrollment({
@@ -409,7 +409,7 @@ export const examsWorkflowService = {
     });
 
     if (!enrollment) {
-      throw new AppError("Student is not actively enrolled in selected circle", 400);
+      throw new AppError("الطالب غير مسجل في الحلقة المحددة", 400);
     }
 
     const nomination = await examsWorkflowRepository.createNominationRequest({
@@ -457,7 +457,7 @@ export const examsWorkflowService = {
     examsDomain.ensureAttemptCenterScope(scope, nomination.centerId);
 
     if (nomination.status === NominationRequestStatus.CENTER_APPROVED) {
-      throw new AppError("Center-approved nominations cannot be reviewed again", 400);
+      throw new AppError("الترشيحات المعتمدة من المركز لا يمكن مراجعتها مرة أخرى", 400);
     }
 
     const statusMap: Record<SupervisorReviewNominationInput["decision"], NominationRequestStatus> = {
@@ -504,11 +504,11 @@ export const examsWorkflowService = {
     examsDomain.ensureAttemptCenterScope(scope, nomination.centerId);
 
     if (nomination.status === NominationRequestStatus.CENTER_APPROVED) {
-      throw new AppError("Center-approved nominations cannot be reviewed again", 400);
+      throw new AppError("الترشيحات المعتمدة من المركز لا يمكن مراجعتها مرة أخرى", 400);
     }
 
     if (nomination.status !== NominationRequestStatus.SUBMITTED) {
-      throw new AppError("Only submitted nominations can be reviewed by center administration", 400);
+      throw new AppError("فقط الترشيحات المقدمة يمكن مراجعتها من إدارة المركز", 400);
     }
 
     const statusMap: Record<CenterReviewNominationInput["decision"], NominationRequestStatus> = {
@@ -555,12 +555,12 @@ export const examsWorkflowService = {
       nomination.status !== NominationRequestStatus.SUBMITTED &&
       nomination.status !== NominationRequestStatus.SUPERVISOR_APPROVED
     ) {
-      throw new AppError("Nomination must be submitted before center approval", 400);
+      throw new AppError("الترشيح يجب أن يكون مقدماً قبل اعتماد المركز", 400);
     }
 
     const exam = await getExamInScope(scope, nomination.examId);
     if (exam.type !== "JUZ" && exam.type !== "FULL_QURAN") {
-      throw new AppError("Only JUZ and FULL_QURAN templates are supported for official attempts", 400);
+      throw new AppError("فقط نماذج الجزء والمصحف كاملاً مدعومة للمحاولات الرسمية", 400);
     }
     const examDate = examsDomain.resolveRequiredDate(input.examDate, "examDate");
     const fullQuranCompletedAt = examsDomain.resolveOptionalDate(
@@ -616,7 +616,7 @@ export const examsWorkflowService = {
       };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("An official attempt already exists for this student and exam date", 409);
+        throw new AppError("محاولة اختبار رسمية موجودة مسبقاً لهذا الطالب وتاريخ الاختبار", 409);
       }
 
       throw error;
@@ -695,7 +695,7 @@ export const examsWorkflowService = {
         : attempt.fullQuranCompletedAt;
 
     if (attempt.exam.type !== "JUZ" && attempt.exam.type !== "FULL_QURAN") {
-      throw new AppError("Only JUZ and FULL_QURAN templates are supported for official attempts", 400);
+      throw new AppError("فقط نماذج الجزء والمصحف كاملاً مدعومة للمحاولات الرسمية", 400);
     }
 
     examsDomain.assertAttemptSchedule({
@@ -718,7 +718,7 @@ export const examsWorkflowService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Exam attempt version conflict", 409, { attemptId }, "VERSION_CONFLICT");
+      throw new AppError("تعارض في إصدار محاولة الاختبار", 409, { attemptId }, "VERSION_CONFLICT");
     }
 
     await notifyAttemptSchedule(scope, updatedAttempt.id);
@@ -752,7 +752,7 @@ export const examsWorkflowService = {
     examsDomain.assertAttemptEditableStatus(attempt.status);
 
     if (!attempt.questions.length) {
-      throw new AppError("At least one exam question is required before evaluation", 400);
+      throw new AppError("سؤال اختبار واحد على الأقل مطلوب قبل التقييم", 400);
     }
 
     const questionPayloadMap = new Map(input.questions.map((question) => [question.id, question]));
@@ -811,7 +811,7 @@ export const examsWorkflowService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Failed to save evaluation", 500);
+      throw new AppError("فشل في حفظ التقييم", 500);
     }
 
     await auditLogger.log({
@@ -839,11 +839,11 @@ export const examsWorkflowService = {
     examsDomain.assertAttemptCanBeFinalized(attempt.status);
 
     if (!attempt.questions.length || attempt.questions.some((question) => !question.isEvaluated)) {
-      throw new AppError("All exam questions must be evaluated before finalizing", 400);
+      throw new AppError("جميع أسئلة الاختبار يجب تقييمها قبل الاعتماد النهائي", 400);
     }
 
     if (!attempt.breakdown || attempt.totalScore === null) {
-      throw new AppError("Evaluation must be saved before finalization", 400);
+      throw new AppError("التقييم يجب أن يُحفظ قبل الاعتماد النهائي", 400);
     }
 
     const finalizedAttempt = await examsWorkflowRepository.finalizeAttemptEvaluation({

@@ -693,7 +693,7 @@ export default function FinancePayrollTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {isAdmin && b.status === "DRAFT" && (
+                        {canCreateBatch && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 

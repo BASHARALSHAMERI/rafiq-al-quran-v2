@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { orgApi } from "./org.api";
+import { staffOpsKeys } from "../staff-attendance/staff-attendance.api";
 import type {
   CreateCenterPayload,
   CreateCirclePayload,
@@ -116,6 +117,7 @@ export const useUpdateCircleMutation = () => {
       orgApi.updateCircle(input.circleId, input.payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ORG_QUERY_KEYS.all });
+      await queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
     }
   });
 };

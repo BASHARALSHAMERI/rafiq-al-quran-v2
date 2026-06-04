@@ -13,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { Circle, CircleScheduleDay, CircleScheduleRow, PrayerName } from "../../types";
 import { circleGenderLabel, circleTypeLabel } from "./circles.types";
+import { useTimeFormat, fmtClockTime } from "../../../../shared/utils/time-format";
 
 interface CircleCardProps {
   circle: Circle;
@@ -80,12 +81,12 @@ const prayerLabel = (prayer: PrayerName, ar: boolean) => {
   return (ar ? arMap : enMap)[prayer];
 };
 
-const formatSlotRange = (row: CircleScheduleRow, ar: boolean) =>
+const formatSlotRange = (row: CircleScheduleRow, ar: boolean, hour12 = true) =>
   row.mode === "CLOCK"
-    ? `${row.fromTime} - ${row.toTime}`
+    ? `${fmtClockTime(row.fromTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)} - ${fmtClockTime(row.toTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}`
     : `${prayerLabel(row.fromPrayer, ar)} - ${prayerLabel(row.toPrayer, ar)}`;
 
-const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | null, ar: boolean): string | null => {
+const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | null, ar: boolean, hour12 = true): string | null => {
   if (!rows?.length) return null;
 
   const sorted = [...rows].sort(
@@ -102,12 +103,12 @@ const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | nul
   type Group = { from: CircleScheduleDay; to: CircleScheduleDay; key: string; label: string };
   const groups: Group[] = [];
   for (const row of compactRows) {
-    const key = `${row.mode}:${formatSlotRange(row, ar)}`;
+    const key = `${row.mode}:${formatSlotRange(row, ar, hour12)}`;
     const dayPos = DAY_INDEX.get(row.day) ?? -1;
     const current = groups[groups.length - 1];
 
     if (!current) {
-      groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar) });
+      groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
       continue;
     }
 
@@ -117,7 +118,7 @@ const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | nul
       continue;
     }
 
-    groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar) });
+    groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
   }
 
   const main = groups[0];
@@ -144,7 +145,9 @@ export default function CircleCard({
   const hasTeacher = Boolean(circle.teacher?.fullName?.trim());
   const centerName = circle.center?.name?.trim() || (ar ? "بدون مركز" : "No center");
   const locationName = circle.mosqueName?.trim() || (ar ? "بدون موقع" : "No location");
-  const scheduleSummary = formatCircleScheduleSummary(circle.weeklySchedule, ar);
+  const { hour12 } = useTimeFormat();
+  const scheduleSummary = formatCircleScheduleSummary(circle.weeklySchedule, ar, hour12);
+  const hasPrayerSchedule = (circle.weeklySchedule ?? []).some((row: any) => row.mode === "PRAYER");
 
   return (
     <motion.article
@@ -219,6 +222,11 @@ export default function CircleCard({
         <div className="ctr-center-card__manager-schedule" title={scheduleSummary ?? undefined}>
           <Clock3 size={14} />
           <span>{scheduleSummary ?? (ar ? "بدون مواعيد" : "No schedule")}</span>
+          {scheduleSummary && (
+            <span style={{ marginRight: ar ? "0" : "6px", marginLeft: ar ? "6px" : "0", fontSize: "11px", padding: "1px 5px", borderRadius: "4px", background: hasPrayerSchedule ? "#ede9fe" : "#ecfdf5", color: hasPrayerSchedule ? "#5b21b6" : "#065f46" }}>
+              {hasPrayerSchedule ? (ar ? "🕌 صلوات" : "🕌 Prayer") : (ar ? "🕒 ساعات" : "🕒 Clock")}
+            </span>
+          )}
         </div>
       </div>
 

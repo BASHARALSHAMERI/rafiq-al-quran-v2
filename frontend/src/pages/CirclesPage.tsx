@@ -64,8 +64,8 @@ export default function CirclesPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const isTeacher = user?.role === "TEACHER";
-  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "SUPERVISOR" || user?.role === "CENTER_ADMIN";
+  const isTeacher = false;
+  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCenterId = parseNumber(searchParams.get("centerId"));
@@ -138,7 +138,7 @@ export default function CirclesPage() {
   const rangeFrom = filtered.length === 0 ? 0 : (curPage - 1) * pageSize + 1;
   const rangeTo = Math.min(filtered.length, curPage * pageSize);
 
-  const centerOpts = centersData.map((center) => ({ id: center.id, label: center.name }));
+  const centerOpts = centersData.map((center) => ({ id: center.id, label: center.name, mosqueName: center.mosqueName, latitude: center.latitude, longitude: center.longitude }));
   const teacherOpts = teachers.map((teacher) => ({ id: teacher.id, label: teacher.fullName }));
   const selectedDraftCenter = typeof draft.centerId === "number" ? centersData.find((center) => center.id === draft.centerId) : undefined;
   const pending = createM.isPending || updateM.isPending || statusM.isPending;

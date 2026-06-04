@@ -67,7 +67,8 @@ export default function FinanceExpensesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canManageExpenses = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canManageExpenses =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
   const [activeTab, setActiveTab] = useState<ExpenseTab>("expenses");
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);

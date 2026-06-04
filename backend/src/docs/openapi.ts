@@ -1173,7 +1173,7 @@ export const openApiDocument = {
           organizationId: { type: "integer", nullable: true },
           name: { type: "string" },
           code: { type: "string", nullable: true },
-          timezone: { type: "string", example: "Asia/Riyadh" },
+          timezone: { type: "string", example: "Asia/Aden" },
           isActive: { type: "boolean" },
           createdAt: { type: "string", format: "date-time", nullable: true }
         }
@@ -1406,7 +1406,7 @@ export const openApiDocument = {
           gender: { type: "string", enum: ["MALE", "FEMALE"] },
           logoUrl: { type: "string", maxLength: 500, nullable: true },
           locationText: { type: "string", maxLength: 255 },
-          timezone: { type: "string", minLength: 1, maxLength: 64, example: "Asia/Riyadh" },
+          timezone: { type: "string", minLength: 1, maxLength: 64, example: "Asia/Aden" },
           centerAdminUserId: { type: "integer", minimum: 1 },
           supervisorUserIds: { type: "array", items: { type: "integer", minimum: 1 }, maxItems: 50 }
         }
@@ -1420,7 +1420,7 @@ export const openApiDocument = {
           gender: { type: "string", enum: ["MALE", "FEMALE"] },
           logoUrl: { type: "string", maxLength: 500, nullable: true },
           locationText: { type: "string", maxLength: 255 },
-          timezone: { type: "string", minLength: 1, maxLength: 64, example: "Asia/Riyadh" },
+          timezone: { type: "string", minLength: 1, maxLength: 64, example: "Asia/Aden" },
           centerAdminUserId: { type: "integer", minimum: 1 },
           supervisorUserIds: { type: "array", items: { type: "integer", minimum: 1 }, maxItems: 50 }
         }

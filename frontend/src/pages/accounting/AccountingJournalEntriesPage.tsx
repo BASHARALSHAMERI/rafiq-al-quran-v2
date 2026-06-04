@@ -165,7 +165,7 @@ export default function AccountingJournalEntriesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canPostJournalEntry = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canPostJournalEntry = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const entriesQ = useAccountingJournalEntriesQuery();
   const accountsQ = useAccountingAccountsQuery();
   const allEntries = entriesQ.data ?? [];

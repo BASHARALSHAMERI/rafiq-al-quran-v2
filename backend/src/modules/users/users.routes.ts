@@ -31,7 +31,7 @@ usersRouter.use(authGuard, attachScope);
 
 usersRouter.post(
   "/",
-  requireRoles([Role.SUPER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
   validateBody(createUserBodySchema),
   usersController.createUser
 );

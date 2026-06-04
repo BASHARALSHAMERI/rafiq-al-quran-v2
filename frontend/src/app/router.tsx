@@ -23,6 +23,7 @@ const ParentsPage = React.lazy(() => import("../pages/ParentsPage"));
 const SupervisorsPage = React.lazy(() => import("../pages/SupervisorsPage"));
 const AccountantsPage = React.lazy(() => import("../pages/AccountantsPage"));
 const StaffOperationsPage = React.lazy(() => import("../pages/StaffOperationsPage"));
+const SelfAttendancePage = React.lazy(() => import("../pages/SelfAttendancePage"));
 const ExamsPage = React.lazy(() => import("../pages/ExamsPage"));
 const GoldenRecordsPage = React.lazy(() => import("../pages/GoldenRecordsPage"));
 const LibraryPage = React.lazy(() => import("../pages/LibraryPage"));
@@ -46,7 +47,6 @@ const AccountingTrialBalancePage = React.lazy(() => import("../pages/accounting/
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
 const AuditPage = React.lazy(() => import("../pages/AuditPage"));
 const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
-const RoleLandingPage = React.lazy(() => import("../pages/RoleLandingPage"));
 const ForgotPasswordPage = React.lazy(() => import("../pages/ForgotPasswordPage"));
 const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
 const ActivateAccountPage = React.lazy(() => import("../pages/ActivateAccountPage"));
@@ -80,6 +80,7 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   supervisors: <SupervisorsPage />,
   accountants: <AccountantsPage />,
   staff_attendance: <StaffOperationsPage />,
+  self_attendance: <SelfAttendancePage />,
   exams: <ExamsPage />,
   graduation_candidates: <Navigate to="/golden-records?tab=candidates" replace />,
   golden_records: <GoldenRecordsPage />,
@@ -132,19 +133,11 @@ function AppRouter() {
           <Route path="/" element={<AuthLandingRedirect />} />
           <Route
             path="/parent/home"
-            element={withRouteFallback(
-              <RequireRole allowedRoles={["PARENT"]}>
-                <RoleLandingPage />
-              </RequireRole>
-            )}
+            element={<ForbiddenPage />}
           />
           <Route
             path="/student/home"
-            element={withRouteFallback(
-              <RequireRole allowedRoles={["STUDENT"]}>
-                <RoleLandingPage />
-              </RequireRole>
-            )}
+            element={<ForbiddenPage />}
           />
 
           <Route element={<AdminLayout />}>

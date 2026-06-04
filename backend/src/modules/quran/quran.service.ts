@@ -37,17 +37,17 @@ const parseInteger = (value: unknown): number | null => {
 
 const assertAyahWithinSurah = (surah: number, ayah: number, fieldLabel: string) => {
   if (!Number.isInteger(surah) || surah < 1 || surah > 114) {
-    throw new AppError(`${fieldLabel} surah must be between 1 and 114`, 422, undefined, "VALIDATION_FAILED");
+    throw new AppError(`${fieldLabel} يجب أن يكون رقم السورة بين 1 و 114`, 422, undefined, "VALIDATION_FAILED");
   }
 
   const maxAyahs = getSurahAyahCount(surah);
   if (!maxAyahs) {
-    throw new AppError(`${fieldLabel} surah is invalid`, 422, undefined, "VALIDATION_FAILED");
+    throw new AppError(`${fieldLabel} رقم السورة غير صحيح`, 422, undefined, "VALIDATION_FAILED");
   }
 
   if (!Number.isInteger(ayah) || ayah < 1 || ayah > maxAyahs) {
     throw new AppError(
-      `${fieldLabel} ayah must be between 1 and ${maxAyahs}`,
+      `${fieldLabel} يجب أن يكون رقم الآية بين 1 و ${maxAyahs}`,
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -61,7 +61,7 @@ const assertRangeInOrder = (input: QuranRangeInput) => {
     (input.fromSurah === input.toSurah && input.fromAyah <= input.toAyah);
 
   if (!inOrder) {
-    throw new AppError("Quran range order is invalid", 422, undefined, "VALIDATION_FAILED");
+    throw new AppError("ترتيب النطاق القرآني غير صحيح", 422, undefined, "VALIDATION_FAILED");
   }
 };
 
@@ -324,7 +324,7 @@ const resolveAyahMetadata = async (
   const cached = await quranRepository.findAyahIndex({ surahNumber, ayahNumber });
   if (!cached) {
     throw new AppError(
-      "Quran metadata provider is unavailable and no fallback cache entry was found",
+      "مزود بيانات القرآن غير متاح ولا يوجد مدخل مخبأ احتياطي",
       503,
       { surahNumber, ayahNumber },
       "QURAN_METADATA_UNAVAILABLE"
@@ -370,7 +370,7 @@ const resolveLastAyahOnPage = async (pageNumber: number): Promise<AyahMetadata> 
   const cached = await quranRepository.findLastAyahOnPage(pageNumber);
   if (!cached) {
     throw new AppError(
-      "Quran metadata provider is unavailable and no fallback page cache entry was found",
+      "مزود بيانات القرآن غير متاح ولا يوجد مدخل مخبأ للصفحة احتياطي",
       503,
       { pageNumber },
       "QURAN_METADATA_UNAVAILABLE"
@@ -468,7 +468,7 @@ export const quranService = {
         const surah = await readSurahTextFromProvider(surahNumber);
         if (!surah) {
           throw new AppError(
-            "Quran text provider is unavailable for this question preview",
+            "مزود نص القرآن غير متاح لهذه المعاينة",
             503,
             { surahNumber },
             "QURAN_TEXT_UNAVAILABLE"

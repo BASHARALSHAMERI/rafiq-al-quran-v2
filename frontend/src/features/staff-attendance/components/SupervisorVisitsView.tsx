@@ -11,8 +11,6 @@ import {
   ChevronLeft,
   CheckCircle,
   FileText,
-  Plus,
-  StopCircle,
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Badge } from "../../../components/ui/Badge";
@@ -22,15 +20,8 @@ import { ErrorState } from "../../../components/ui/ErrorState";
 import { fadeUp } from "../../../shared/pageAnimations";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import { entityFeedback, type LocalizedLabel } from "../../../shared/ui/feedback";
-import { useAuthStore } from "../../auth/auth.store";
-import { useCentersQuery } from "../../org/org.hooks";
-import { useCirclesQuery } from "../../org/org.hooks";
-
 import {
   useSupervisorVisitLogs,
-  useCreateVisitLog,
-  useEndVisitLog,
-  type SupervisorVisitLog,
 } from "../staff-attendance.api";
 import {
   useClientPagination
@@ -39,165 +30,6 @@ import {
 
 
 const SUPERVISOR_VISITS_ENTITY: LocalizedLabel = { ar: "الزيارات الإشرافية", en: "supervisor visits" };
-
-// ── Start Visit Modal ────────────────────────────────────────────────────────
-function StartVisitModal({ ar, onClose }: { ar: boolean; onClose: () => void }) {
-  const centersQ = useCentersQuery();
-  const centers = centersQ.data?.items ?? [];
-
-  const [centerId, setCenterId] = useState<number | "">("");
-  const [circleId, setCircleId] = useState<number | "">("");
-  const [observations, setObservations] = useState("");
-  const createM = useCreateVisitLog();
-
-  const circlesQ = useCirclesQuery(centerId !== "" ? Number(centerId) : undefined);
-  const circles = circlesQ.data?.items ?? [];
-
-  const handleSubmit = () => {
-    if (!centerId) return;
-    createM.mutate(
-      { centerId: Number(centerId), circleId: circleId !== "" ? Number(circleId) : null, observations: observations.trim() || null },
-      { onSuccess: onClose }
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
-        dir={ar ? "rtl" : "ltr"}
-      >
-        <h3 className="text-base font-bold text-slate-800 mb-4">
-          {ar ? "بدء زيارة إشرافية" : "Start Supervisor Visit"}
-        </h3>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "المركز *" : "Center *"}</label>
-            <select
-              value={centerId}
-              onChange={(e) => { setCenterId(Number(e.target.value) || ""); setCircleId(""); }}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            >
-              <option value="">{ar ? "اختر المركز" : "Select center"}</option>
-              {centers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          {centerId !== "" && circles.length > 0 && (
-            <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "الحلقة (اختياري)" : "Circle (optional)"}</label>
-              <select
-                value={circleId}
-                onChange={(e) => setCircleId(Number(e.target.value) || "")}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-              >
-                <option value="">{ar ? "بدون تحديد حلقة" : "No specific circle"}</option>
-                {circles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "ملاحظات مبدئية (اختياري)" : "Initial observations (optional)"}</label>
-            <textarea
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              rows={2}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder={ar ? "أضف ملاحظة..." : "Add a note..."}
-            />
-          </div>
-        </div>
-        {createM.isError && (
-          <p className="text-xs text-rose-600 mt-3">{ar ? "فشل بدء الزيارة. حاول مرة أخرى." : "Failed to start visit. Try again."}</p>
-        )}
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={handleSubmit}
-            disabled={!centerId || createM.isPending}
-            className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2 rounded-xl transition disabled:opacity-50"
-          >
-            {createM.isPending ? (ar ? "جارٍ البدء..." : "Starting...") : (ar ? "بدء الزيارة" : "Start Visit")}
-          </button>
-          <button onClick={onClose} className="flex-1 border border-slate-200 text-slate-600 text-sm font-semibold py-2 rounded-xl hover:bg-slate-50 transition">
-            {ar ? "إلغاء" : "Cancel"}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-// ── End Visit Modal ──────────────────────────────────────────────────────────
-function EndVisitModal({ visit, ar, onClose }: { visit: SupervisorVisitLog; ar: boolean; onClose: () => void }) {
-  const [rating, setRating] = useState<number>(0);
-  const [observations, setObservations] = useState(visit.observations ?? "");
-  const endM = useEndVisitLog();
-
-  const handleSubmit = () => {
-    endM.mutate(
-      { visitId: visit.id, payload: { rating: rating > 0 ? rating : null, observations: observations.trim() || null } },
-      { onSuccess: onClose }
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
-        dir={ar ? "rtl" : "ltr"}
-      >
-        <h3 className="text-base font-bold text-slate-800 mb-1">{ar ? "إنهاء الزيارة" : "End Visit"}</h3>
-        <p className="text-xs text-slate-400 mb-4">{visit.center?.name}</p>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-2">{ar ? "التقييم (1-5)" : "Rating (1-5)"}</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setRating(n)}
-                  className={`w-10 h-10 rounded-xl text-sm font-bold border transition ${
-                    rating === n ? "bg-amber-400 border-amber-400 text-white" : "border-slate-200 text-slate-400 hover:border-amber-300"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "الملاحظات الختامية" : "Final observations"}</label>
-            <textarea
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              rows={3}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder={ar ? "سجّل ملاحظاتك الختامية..." : "Record your final observations..."}
-            />
-          </div>
-        </div>
-        {endM.isError && (
-          <p className="text-xs text-rose-600 mt-3">{ar ? "فشل إنهاء الزيارة." : "Failed to end visit."}</p>
-        )}
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={handleSubmit}
-            disabled={endM.isPending}
-            className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold py-2 rounded-xl transition disabled:opacity-50"
-          >
-            {endM.isPending ? (ar ? "جارٍ الإنهاء..." : "Ending...") : (ar ? "إنهاء الزيارة" : "End Visit")}
-          </button>
-          <button onClick={onClose} className="flex-1 border border-slate-200 text-slate-600 text-sm font-semibold py-2 rounded-xl hover:bg-slate-50 transition">
-            {ar ? "إلغاء" : "Cancel"}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 export const getVisitStatusBadge = (status: string, ar: boolean) => {
   const normalized = status?.toUpperCase();
@@ -216,14 +48,9 @@ const DEFAULT_MONTH = (() => {
 export function SupervisorVisitsView() {
   const { language } = useI18n();
   const ar = language === "ar";
-  const user = useAuthStore((s) => s.user);
-  const canCreate = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN" || user?.role === "SUPERVISOR";
-
   const [search, setSearch] = useState("");
   const [monthStr, setMonthStr] = useState(DEFAULT_MONTH);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
-  const [showStartModal, setShowStartModal] = useState(false);
-  const [endingVisit, setEndingVisit] = useState<SupervisorVisitLog | null>(null);
 
   const queryFilters = useMemo(() => {
     if (!monthStr) return undefined;
@@ -340,7 +167,6 @@ export function SupervisorVisitsView() {
 
       <div className="ctr-controls mb-6">
         <div className="flex gap-4 items-center flex-1 flex-wrap">
-          {/* Text Search */}
           <div className="ctr-search-wrap max-w-[280px] w-full">
             <Search className="ctr-search-icon" size={16} />
             <input
@@ -355,7 +181,6 @@ export function SupervisorVisitsView() {
             />
           </div>
 
-          {/* Month Picker */}
           <div className="ctr-search-wrap max-w-[240px] w-full">
             <CalendarDays className="ctr-search-icon" size={16} />
             <input
@@ -387,17 +212,6 @@ export function SupervisorVisitsView() {
           >
             {ar ? "إعادة الضبط" : "Reset"}
           </Button>
-          {canCreate && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setShowStartModal(true)}
-              className="flex items-center gap-1.5"
-            >
-              <Plus size={14} />
-              {ar ? "بدء زيارة" : "Start Visit"}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -485,15 +299,6 @@ export function SupervisorVisitsView() {
                          {getVisitStatusBadge(visit.status, ar)}
                        </div>
                       <div className="flex items-center gap-2">
-                        {visit.status !== "COMPLETED" && canCreate && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEndingVisit(visit as unknown as SupervisorVisitLog); }}
-                            className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 border border-rose-200 bg-rose-50 hover:bg-rose-100 px-2 py-1.5 rounded-lg transition"
-                          >
-                            <StopCircle size={12} />
-                            {ar ? "إنهاء" : "End"}
-                          </button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -628,8 +433,6 @@ export function SupervisorVisitsView() {
           </motion.section>
         )}
       </AnimatePresence>
-      {showStartModal && <StartVisitModal ar={ar} onClose={() => setShowStartModal(false)} />}
-      {endingVisit && <EndVisitModal visit={endingVisit} ar={ar} onClose={() => setEndingVisit(null)} />}
     </section>
   );
 }

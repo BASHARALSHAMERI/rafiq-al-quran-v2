@@ -70,7 +70,7 @@ export default function FinanceCurrenciesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canManageCurrencies = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const canManageCurrencies = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const [activeTab, setActiveTab] = useState<TabType>("currencies");
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [rateModalOpen, setRateModalOpen] = useState(false);

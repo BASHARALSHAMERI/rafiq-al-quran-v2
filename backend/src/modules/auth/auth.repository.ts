@@ -23,7 +23,12 @@ const authUserSelect = {
     select: {
       id: true,
       name: true,
-      logoUrl: true
+      logoUrl: true,
+      attendancePolicy: {
+        select: {
+          timeFormat: true
+        }
+      }
     }
   }
 } satisfies Prisma.UserSelect;

@@ -49,7 +49,7 @@ export const upsertRemoteRecitationSettingsBodySchema = z
   })
   .strict()
   .refine((value) => Object.keys(value).length > 1, {
-    message: "At least one settings field is required"
+    message: "حقل إعدادات واحد على الأقل مطلوب"
   });
 
 export const createRemoteRecitationSlotBodySchema = z
@@ -73,7 +73,7 @@ export const updateRemoteRecitationSlotBodySchema = z
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one slot field is required"
+    message: "حقل موعد واحد على الأقل مطلوب"
   });
 
 export const listRemoteRecitationBookingsQuerySchema = z

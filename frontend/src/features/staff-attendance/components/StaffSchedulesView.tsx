@@ -8,23 +8,12 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { fadeUp } from "../../../shared/pageAnimations";
 import { useCentersQuery } from "../../org/org.hooks";
-import CircleScheduleEditor from "../../org/CircleScheduleEditor";
-import type { PrayerName } from "../../org/types";
-import {
-  createEmptyScheduleDraftRows,
-  serializeScheduleDraftRows,
-  validateScheduleDraftRows,
-  type CircleScheduleDraftRow,
-} from "../../org/circleSchedule";
 import {
   useStaffSchedules,
-  useStaffUsersByRole,
-  useCreateStaffSchedule,
-  useUpdateStaffSchedule,
   useDeactivateStaffSchedule,
   type StaffScheduleAssignment,
-  type CreateSchedulePayload,
 } from "../staff-attendance.api";
+import { StaffScheduleModal } from "./StaffScheduleModal";
 
 const SCHEDULABLE_ROLES = [
   { value: "CENTER_ADMIN",    labelAr: "مدير مركز",    labelEn: "Center Admin" },
@@ -32,199 +21,10 @@ const SCHEDULABLE_ROLES = [
   { value: "FINANCE_MANAGER", labelAr: "مدير مالي",   labelEn: "Finance Manager" },
   { value: "TREASURER",       labelAr: "أمين صندوق",  labelEn: "Treasurer" },
   { value: "AUDITOR",         labelAr: "مدقق حسابات", labelEn: "Auditor" },
-  { value: "SUPERVISOR",      labelAr: "مشرف",         labelEn: "Supervisor" },
 ];
 
 const roleLabel = (role: string, ar: boolean) =>
   SCHEDULABLE_ROLES.find((r) => r.value === role)?.[ar ? "labelAr" : "labelEn"] ?? role;
-
-// ── Create / Edit Modal ────────────────────────────────────────────────────────
-interface ScheduleModalProps {
-  ar: boolean;
-  existing?: StaffScheduleAssignment | null;
-  onClose: () => void;
-}
-
-function ScheduleModal({ ar, existing, onClose }: ScheduleModalProps) {
-  const centersQ = useCentersQuery();
-  const centers = centersQ.data?.items ?? [];
-
-  const [staffRole, setStaffRole] = useState(existing?.staffRole ?? "");
-  const [centerId, setCenterId] = useState<number | "">(existing?.centerId ?? "");
-  const [userId, setUserId] = useState<number | "">(existing?.userId ?? "");
-  const [effectiveFrom, setEffectiveFrom] = useState(existing?.effectiveFrom?.slice(0, 10) ?? "");
-  const [effectiveTo, setEffectiveTo] = useState(existing?.effectiveTo?.slice(0, 10) ?? "");
-  const [rows, setRows] = useState<CircleScheduleDraftRow[]>(() => {
-    if (existing?.slots?.length) {
-      return existing.slots.map((s) => ({
-        day: s.dayOfWeek as CircleScheduleDraftRow["day"],
-        enabled: true,
-        mode: s.mode as "CLOCK" | "PRAYER",
-        fromTime: s.fromTime ?? "",
-        toTime: s.toTime ?? "",
-        fromPrayer: (s.fromPrayer ?? "MAGHRIB") as PrayerName,
-        toPrayer: (s.toPrayer ?? "ISHA") as PrayerName,
-      }));
-    }
-    return createEmptyScheduleDraftRows();
-  });
-  const [slotError, setSlotError] = useState<string | null>(null);
-
-  const usersQ = useStaffUsersByRole(staffRole || undefined);
-  const users = usersQ.data ?? [];
-
-  const createM = useCreateStaffSchedule();
-  const updateM = useUpdateStaffSchedule();
-  const isPending = createM.isPending || updateM.isPending;
-  const isError = createM.isError || updateM.isError;
-
-  const handleSubmit = () => {
-    const slotsError = validateScheduleDraftRows(rows, ar);
-    if (slotsError) { setSlotError(slotsError); return; }
-    setSlotError(null);
-    const circleRows = serializeScheduleDraftRows(rows);
-    const slots = circleRows.map((row) => ({
-      dayOfWeek: row.day,
-      mode: row.mode,
-      fromTime: row.mode === "CLOCK" ? row.fromTime : null,
-      toTime: row.mode === "CLOCK" ? row.toTime : null,
-      fromPrayer: row.mode === "PRAYER" ? row.fromPrayer : null,
-      toPrayer: row.mode === "PRAYER" ? row.toPrayer : null,
-    }));
-
-    if (existing) {
-      updateM.mutate(
-        { id: existing.id, payload: { effectiveTo: effectiveTo || null, slots } },
-        { onSuccess: onClose }
-      );
-    } else {
-      if (!staffRole || !centerId || !userId || !effectiveFrom) return;
-      const payload: CreateSchedulePayload = {
-        userId: Number(userId),
-        staffRole,
-        centerId: Number(centerId),
-        effectiveFrom,
-        effectiveTo: effectiveTo || null,
-        slots,
-      };
-      createM.mutate(payload, { onSuccess: onClose });
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-6">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl mx-4"
-        dir={ar ? "rtl" : "ltr"}
-      >
-        <h3 className="text-base font-bold text-slate-800 mb-5">
-          {existing
-            ? (ar ? "تعديل الجدول" : "Edit Schedule")
-            : (ar ? "إضافة جدول جديد" : "New Schedule Assignment")}
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          {/* Staff Role */}
-          {!existing && (
-            <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "الدور الوظيفي *" : "Staff Role *"}</label>
-              <select
-                value={staffRole}
-                onChange={(e) => { setStaffRole(e.target.value); setUserId(""); }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-              >
-                <option value="">{ar ? "اختر الدور" : "Select role"}</option>
-                {SCHEDULABLE_ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{ar ? r.labelAr : r.labelEn}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Center */}
-          {!existing && (
-            <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "المركز *" : "Center *"}</label>
-              <select
-                value={centerId}
-                onChange={(e) => setCenterId(Number(e.target.value) || "")}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-              >
-                <option value="">{ar ? "اختر المركز" : "Select center"}</option>
-                {centers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* User */}
-          {!existing && (
-            <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "الموظف *" : "Staff member *"}</label>
-              <select
-                value={userId}
-                onChange={(e) => setUserId(Number(e.target.value) || "")}
-                disabled={!staffRole}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 disabled:opacity-50"
-              >
-                <option value="">{staffRole ? (ar ? "اختر الموظف" : "Select staff") : (ar ? "اختر الدور أولاً" : "Choose role first")}</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-              </select>
-            </div>
-          )}
-
-          {/* Effective From */}
-          {!existing && (
-            <div>
-              <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "تاريخ البدء *" : "Effective From *"}</label>
-              <input
-                type="date"
-                value={effectiveFrom}
-                onChange={(e) => setEffectiveFrom(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-              />
-            </div>
-          )}
-
-          {/* Effective To */}
-          <div className={existing ? "sm:col-span-2" : ""}>
-            <label className="text-xs font-medium text-slate-500 block mb-1">{ar ? "تاريخ الانتهاء (اختياري)" : "Effective To (optional)"}</label>
-            <input
-              type="date"
-              value={effectiveTo}
-              onChange={(e) => setEffectiveTo(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            />
-          </div>
-        </div>
-
-        {/* Schedule Editor */}
-        <div className="mb-4">
-          <label className="text-xs font-medium text-slate-500 block mb-2">{ar ? "أوقات الدوام *" : "Work Schedule *"}</label>
-          <CircleScheduleEditor rows={rows} onChange={setRows} ar={ar} error={slotError} />
-        </div>
-
-        {isError && (
-          <p className="text-xs text-rose-600 mb-3">{ar ? "فشل الحفظ. حاول مرة أخرى." : "Save failed. Please try again."}</p>
-        )}
-
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={handleSubmit}
-            disabled={isPending || (!existing && (!staffRole || !centerId || !userId || !effectiveFrom))}
-            className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2 rounded-xl transition disabled:opacity-50"
-          >
-            {isPending ? (ar ? "جاري الحفظ..." : "Saving...") : (ar ? "حفظ" : "Save")}
-          </button>
-          <button onClick={onClose} className="flex-1 border border-slate-200 text-slate-600 text-sm font-semibold py-2 rounded-xl hover:bg-slate-50 transition">
-            {ar ? "إلغاء" : "Cancel"}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 // ── Main View ──────────────────────────────────────────────────────────────────
 export function StaffSchedulesView() {
@@ -430,8 +230,15 @@ export function StaffSchedulesView() {
         )}
       </AnimatePresence>
 
-      {showCreate && <ScheduleModal ar={ar} onClose={() => setShowCreate(false)} />}
-      {editing && <ScheduleModal ar={ar} existing={editing} onClose={() => setEditing(null)} />}
+      <StaffScheduleModal
+        ar={ar}
+        isOpen={showCreate || !!editing}
+        existing={editing}
+        onClose={() => {
+          setShowCreate(false);
+          setEditing(null);
+        }}
+      />
     </section>
   );
 }

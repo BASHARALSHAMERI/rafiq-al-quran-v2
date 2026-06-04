@@ -31,6 +31,7 @@ type Props = {
   month: number;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canCreateBatch?: boolean;
   ar: boolean;
   centers: { id: number; name: string }[];
   externalShowBatchForm?: boolean;
@@ -86,6 +87,7 @@ export default function FinanceRewardsTab({
   year, 
   month,
   isAdmin,
+  canCreateBatch = isAdmin,
   ar, 
   externalShowBatchForm, 
   onExternalBatchFormClose 
@@ -200,7 +202,7 @@ export default function FinanceRewardsTab({
   return (
     <>
       <Modal
-        isOpen={Boolean(showBatchForm && isAdmin)}
+        isOpen={Boolean(showBatchForm && canCreateBatch)}
         onClose={closeBatchModal}
         title={ar ? "إنشاء دفعة مكافآت" : "Create Reward Batch"}
         titleIcon={
@@ -566,7 +568,7 @@ export default function FinanceRewardsTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {isAdmin && b.status === "DRAFT" && (
+                        {canCreateBatch && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 

@@ -199,24 +199,85 @@ const normalizeOptionalPhone = (value?: string | null) => {
 const uniquePositiveIds = (values?: number[]) =>
   [...new Set((values ?? []).filter((value) => Number.isInteger(value) && value > 0))];
 
+const mapPrismaValidationError = (error: Prisma.PrismaClientValidationError): AppError => {
+  const msg = error.message;
+
+  const fieldNameMap: Record<string, string> = {
+    email: "البريد الإلكتروني",
+    fullName: "الاسم الكامل",
+    username: "اسم المستخدم",
+    role: "الدور",
+    isActive: "حالة التفعيل",
+    passwordHash: "كلمة المرور",
+    organizationId: "المؤسسة",
+    profile: "الملف الشخصي",
+    "profile.fullName": "الاسم الكامل في الملف الشخصي",
+    "profile.gender": "الجنس",
+    "profile.birthDate": "تاريخ الميلاد",
+    "profile.phone": "رقم الهاتف",
+    "profile.address": "العنوان",
+    "profile.avatarUrl": "صورة الملف الشخصي",
+    teacherProfile: "ملف المعلم",
+    supervisorProfile: "ملف المشرف",
+    centerAdminProfile: "ملف مدير المركز",
+    studentProfile: "ملف الطالب",
+    parentProfile: "ملف ولي الأمر",
+    links: "الروابط والارتباطات",
+    "links.centerIds": "مراكز المستخدم",
+    "links.circleIds": "حلقات المستخدم",
+    "links.children": "أبناء ولي الأمر",
+    "links.enrollments": "تسجيلات الطالب"
+  };
+
+  const extractField = (text: string): string | null => {
+    const missingMatch = text.match(/Argument [`'](\w+(?:\.\w+)?)[`'] is missing/);
+    if (missingMatch) return missingMatch[1];
+
+    const invalidMatch = text.match(/Invalid value for argument [`'](\w+(?:\.\w+)?)[`']/);
+    if (invalidMatch) return invalidMatch[1];
+
+    const argMatch = text.match(/Argument [`'](\w+(?:\.\w+)?)[`']/);
+    if (argMatch) return argMatch[1];
+
+    return null;
+  };
+
+  const field = extractField(msg);
+  const fieldAr = field ? (fieldNameMap[field] ?? field) : null;
+
+  if (msg.includes("is missing") && fieldAr) {
+    return new AppError(`حقل "${fieldAr}" إجباري ولم يتم إدخاله.`, 400, { field }, "USER_VALIDATION_ERROR");
+  }
+
+  if (msg.includes("Invalid value") && fieldAr) {
+    return new AppError(`قيمة حقل "${fieldAr}" غير صالحة. يرجى التحقق منها.`, 400, { field }, "USER_VALIDATION_ERROR");
+  }
+
+  if (msg.includes("Required") && fieldAr) {
+    return new AppError(`حقل "${fieldAr}" مطلوب ولا يمكن تركه فارغاً.`, 400, { field }, "USER_VALIDATION_ERROR");
+  }
+
+  return new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");
+};
+
 const mapUserUniqueError = (error: Prisma.PrismaClientKnownRequestError) => {
   const target = error.meta?.target;
   const text = Array.isArray(target) ? target.join(",") : String(target ?? "");
 
   if (text.includes("email")) {
-    return new AppError("User email already exists", 409);
+    return new AppError("البريد الإلكتروني مستخدم مسبقاً.", 409);
   }
   if (text.includes("username")) {
-    return new AppError("Username already exists", 409);
+    return new AppError("اسم المستخدم مستخدم مسبقاً.", 409);
   }
   if (text.includes("phone")) {
-    return new AppError("Phone already exists", 409);
+    return new AppError("رقم الهاتف مستخدم مسبقاً.", 409);
   }
   if (text.includes("nationalId")) {
-    return new AppError("National ID already exists", 409);
+    return new AppError("رقم الهوية مستخدم مسبقاً.", 409);
   }
 
-  return new AppError("Unique constraint conflict", 409);
+  return new AppError("تعارض في البيانات الفريدة.", 409);
 };
 
 const ensureKnownScopedCenter = async (scope: ScopeContext, centerId: number) => {
@@ -226,7 +287,7 @@ const ensureKnownScopedCenter = async (scope: ScopeContext, centerId: number) =>
     centerId
   });
   if (!center) {
-    throw new AppError("Center not found", 404);
+    throw new AppError("المركز غير موجود.", 404);
   }
   return center;
 };
@@ -238,7 +299,7 @@ const ensureKnownScopedCircle = async (scope: ScopeContext, circleId: number) =>
     circleId
   });
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة.", 404);
   }
   return circle;
 };
@@ -256,19 +317,19 @@ const assertRoleSpecificPayloadMatchesRole = (
   >
 ) => {
   if (input.teacherProfile && role !== Role.TEACHER) {
-    throw new AppError("teacherProfile is only allowed for TEACHER role", 400);
+    throw new AppError("ملف المعلم متاح فقط لدور المعلم.", 400);
   }
   if (input.supervisorProfile && role !== Role.SUPERVISOR) {
-    throw new AppError("supervisorProfile is only allowed for SUPERVISOR role", 400);
+    throw new AppError("ملف المشرف متاح فقط لدور المشرف.", 400);
   }
   if (input.centerAdminProfile && role !== Role.CENTER_ADMIN) {
-    throw new AppError("centerAdminProfile is only allowed for CENTER_ADMIN role", 400);
+    throw new AppError("ملف مدير المركز متاح فقط لدور مدير المركز.", 400);
   }
   if (input.studentProfile && role !== Role.STUDENT) {
-    throw new AppError("studentProfile is only allowed for STUDENT role", 400);
+    throw new AppError("ملف الطالب متاح فقط لدور الطالب.", 400);
   }
   if (input.parentProfile && role !== Role.PARENT) {
-    throw new AppError("parentProfile is only allowed for PARENT role", 400);
+    throw new AppError("ملف ولي الأمر متاح فقط لدور ولي الأمر.", 400);
   }
 
   if (!input.links) return;
@@ -276,16 +337,16 @@ const assertRoleSpecificPayloadMatchesRole = (
     input.links.centerIds &&
     !([Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER] as Role[]).includes(role)
   ) {
-    throw new AppError("centerIds links are not allowed for this role", 400);
+    throw new AppError("ربط المراكز غير مسموح به لهذا الدور.", 400);
   }
   if (input.links.circleIds && !([Role.SUPERVISOR, Role.TEACHER] as Role[]).includes(role)) {
-    throw new AppError("circleIds links are not allowed for this role", 400);
+    throw new AppError("ربط الحلقات غير مسموح به لهذا الدور.", 400);
   }
   if (input.links.children && role !== Role.PARENT) {
-    throw new AppError("children links are only allowed for PARENT role", 400);
+    throw new AppError("ربط الأبناء متاح فقط لدور ولي الأمر.", 400);
   }
   if (input.links.enrollments && role !== Role.STUDENT) {
-    throw new AppError("enrollments links are only allowed for STUDENT role", 400);
+    throw new AppError("التسجيلات متاحة فقط لدور الطالب.", 400);
   }
 };
 
@@ -331,7 +392,7 @@ const validateLinksWithinScope = async (
       centerIds: links.centerIds
     });
     if (centers.length !== links.centerIds.length) {
-      throw new AppError("One or more centers not found", 404);
+      throw new AppError("مركز أو أكثر غير موجود.", 404);
     }
   }
 
@@ -345,7 +406,7 @@ const validateLinksWithinScope = async (
       circleIds: links.circleIds
     });
     if (circles.length !== links.circleIds.length) {
-      throw new AppError("One or more circles not found", 404);
+      throw new AppError("حلقة أو أكثر غير موجودة.", 404);
     }
   }
 
@@ -359,7 +420,7 @@ const validateLinksWithinScope = async (
     });
 
     if (students.length !== studentIds.length) {
-      throw new AppError("One or more students not found", 404);
+      throw new AppError("طالب أو أكثر غير موجود.", 404);
     }
 
     students.forEach((studentUser) => {
@@ -379,7 +440,7 @@ const validateLinksWithinScope = async (
       circleIds: enrollCircleIds
     });
     if (circles.length !== enrollCircleIds.length) {
-      throw new AppError("One or more enrollment circles not found", 404);
+      throw new AppError("حلقة تسجيل أو أكثر غير موجودة.", 404);
     }
   }
 };
@@ -505,7 +566,7 @@ const getManagedUserOr404 = async (
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("المستخدم غير موجود.", 404);
     }
 
     return user;
@@ -521,7 +582,7 @@ const getManagedUserOr404 = async (
   });
 
   if (!user) {
-    throw new AppError("User not found", 404);
+    throw new AppError("المستخدم غير موجود.", 404);
   }
 
   return user;
@@ -540,7 +601,7 @@ const getReadableUserOr404 = async (
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("المستخدم غير موجود.", 404);
     }
 
     return user;
@@ -550,7 +611,7 @@ const getReadableUserOr404 = async (
 
   if (selfScopedIds) {
     if (!selfScopedIds.includes(userId)) {
-      throw new AppError("User not found", 404);
+      throw new AppError("المستخدم غير موجود.", 404);
     }
 
     const user = await usersRepository.findUserById({
@@ -560,7 +621,7 @@ const getReadableUserOr404 = async (
     });
 
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("المستخدم غير موجود.", 404);
     }
 
     return user;
@@ -576,7 +637,7 @@ const getReadableUserOr404 = async (
   });
 
   if (!user) {
-    throw new AppError("User not found", 404);
+    throw new AppError("المستخدم غير موجود.", 404);
   }
 
   return user;
@@ -660,7 +721,7 @@ export const usersService = {
   async getStudentProfile(scope: ScopeContext, userId: number) {
     const user = await getReadableUserOr404(scope, userId);
     if (user.role !== Role.STUDENT) {
-      throw new AppError("User is not a student", 400);
+      throw new AppError("المستخدم ليس طالباً.", 400);
     }
     
     return usersRepository.getStudentProfileData(scope.organizationId, userId);
@@ -670,11 +731,6 @@ export const usersService = {
     usersDomain.assertCanManageUsers(scope);
     usersDomain.assertRoleCreatable(scope, input.role);
     assertRoleSpecificPayloadMatchesRole(input.role, input);
-
-    // Without createdBy tracking, keep create restricted to SUPER_ADMIN in this phase.
-    if (scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Forbidden", 403);
-    }
 
     const normalized = normalizeCreateUserPayload(input);
     await validateLinksWithinScope(scope, input.role, normalized.links);
@@ -708,7 +764,7 @@ export const usersService = {
       });
 
       if (!user) {
-        throw new AppError("User not found after creation", 500);
+        throw new AppError("لم يتم العثور على المستخدم بعد الإنشاء.", 500);
       }
 
       await auditLogger.log({
@@ -740,7 +796,7 @@ export const usersService = {
       }
 
       if (error instanceof Prisma.PrismaClientValidationError) {
-        throw new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");
+        throw mapPrismaValidationError(error);
       }
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -782,7 +838,7 @@ export const usersService = {
       });
 
       if (!user) {
-        throw new AppError("User not found", 404);
+        throw new AppError("المستخدم غير موجود.", 404);
       }
 
       await auditLogger.log({
@@ -817,7 +873,7 @@ export const usersService = {
       }
 
       if (error instanceof Prisma.PrismaClientValidationError) {
-        throw new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");
+        throw mapPrismaValidationError(error);
       }
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -884,14 +940,43 @@ export const usersService = {
     const existingUser = await getManagedUserOr404(scope, userId, { includeInactive: true });
     usersDomain.assertRoleManageable(scope, existingUser.role);
 
-    throw new AppError(
-      "Permanent user deletion is not supported. Deactivate the account instead.",
-      409,
-      {
-        userId: existingUser.id
-      },
-      "USER_DELETE_UNSUPPORTED"
-    );
+    if (!existingUser.isActive) {
+      throw new AppError("المستخدم معطل بالفعل.", 400, undefined, "USER_ALREADY_INACTIVE");
+    }
+
+    const activeSuperAdminsCount = await usersRepository.countActiveSuperAdmins(scope.organizationId);
+    usersDomain.assertCanToggleUserStatus({
+      actorUserId: scope.userId,
+      targetUserId: existingUser.id,
+      nextIsActive: false,
+      targetRole: existingUser.role,
+      activeSuperAdminsCount,
+      currentIsActive: existingUser.isActive
+    });
+
+    const user = await usersRepository.updateUser({
+      userId,
+      isActive: false
+    });
+
+    await auditLogger.log({
+      organizationId: scope.organizationId,
+      actorUserId: scope.userId,
+      actorRole: scope.role,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.USER,
+      entityId: user.id,
+      summary: `تعطيل مستخدم: ${user.fullName}`,
+      metadata: {
+        userId: user.id,
+        before: { isActive: true },
+        after: { isActive: false }
+      }
+    });
+
+    memoryCache.delete(`scope:${userId}:${scope.organizationId}`);
+
+    return user;
   },
 
   async addCenterAccess(scope: ScopeContext, userId: number, input: { centerId: number }) {
@@ -908,7 +993,7 @@ export const usersService = {
     });
 
     if (!center) {
-      throw new AppError("Center not found", 404);
+      throw new AppError("المركز غير موجود.", 404);
     }
 
     try {
@@ -935,7 +1020,7 @@ export const usersService = {
       return updatedUser;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("User is already linked to this center", 409);
+        throw new AppError("المستخدم مرتبط بهذا المركز مسبقاً.", 409);
       }
 
       throw error;
@@ -956,7 +1041,7 @@ export const usersService = {
     });
 
     if (result.deletedCount === 0) {
-      throw new AppError("Center link not found", 404);
+      throw new AppError("ارتباط المركز غير موجود.", 404);
     }
 
     await auditLogger.log({
@@ -991,7 +1076,7 @@ export const usersService = {
     });
 
     if (!circle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة.", 404);
     }
 
     try {
@@ -1019,7 +1104,7 @@ export const usersService = {
       return updatedUser;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("User is already linked to this circle", 409);
+        throw new AppError("المستخدم مرتبط بهذه الحلقة مسبقاً.", 409);
       }
 
       throw error;
@@ -1040,7 +1125,7 @@ export const usersService = {
     });
 
     if (!existingCircle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة.", 404);
     }
 
     const result = await usersRepository.removeCircleAccess({
@@ -1049,7 +1134,7 @@ export const usersService = {
     });
 
     if (result.deletedCount === 0) {
-      throw new AppError("Circle link not found", 404);
+      throw new AppError("ارتباط الحلقة غير موجود.", 404);
     }
 
     await auditLogger.log({
@@ -1111,7 +1196,7 @@ export const usersService = {
       return updatedUser;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Parent is already linked to this student", 409);
+        throw new AppError("ولي الأمر مرتبط بهذا الطالب مسبقاً.", 409);
       }
 
       throw error;
@@ -1134,7 +1219,7 @@ export const usersService = {
     });
 
     if (result.deletedCount === 0) {
-      throw new AppError("Parent-student link not found", 404);
+      throw new AppError("ارتباط ولي الأمر والطالب غير موجود.", 404);
     }
 
     await auditLogger.log({
@@ -1172,7 +1257,7 @@ export const usersService = {
     });
 
     if (!circle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة.", 404);
     }
 
     try {
@@ -1201,7 +1286,7 @@ export const usersService = {
       return updatedUser;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Student is already enrolled in this circle", 409);
+        throw new AppError("الطالب مسجل في هذه الحلقة مسبقاً.", 409);
       }
 
       throw error;
@@ -1222,7 +1307,7 @@ export const usersService = {
     });
 
     if (!circle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة.", 404);
     }
 
     const result = await usersRepository.removeStudentEnrollment({
@@ -1231,7 +1316,7 @@ export const usersService = {
     });
 
     if (result.deletedCount === 0) {
-      throw new AppError("Enrollment link not found", 404);
+      throw new AppError("ارتباط التسجيل غير موجود.", 404);
     }
 
     await auditLogger.log({
@@ -1258,11 +1343,11 @@ export const usersService = {
     const existingUser = await getManagedUserOr404(scope, userId, { includeInactive: true });
     
     if (existingUser.accountStatus === "ACTIVE") {
-      throw new AppError("Cannot resend activation for an active account", 400);
+      throw new AppError("لا يمكن إعادة إرسال التفعيل لحساب مفعل.", 400);
     }
 
     if (existingUser.accountStatus === "SUSPENDED") {
-      throw new AppError("Cannot resend activation for a suspended account", 400);
+      throw new AppError("لا يمكن إعادة إرسال التفعيل لحساب معلق.", 400);
     }
     
     const activationToken = randomBytes(32).toString("hex");

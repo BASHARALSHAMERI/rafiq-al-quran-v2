@@ -61,8 +61,10 @@ export default function FinancePayrollPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const isCoreAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const canCreatePayrollBatch = isCoreAdmin || user?.role === "ACCOUNTANT";
+  const canCreatePayrollBatch =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canPayPayroll =
+    canCreatePayrollBatch || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -131,7 +133,7 @@ export default function FinancePayrollPage() {
                     {ar ? "صرف جديد" : "New Disbursement"}
                   </Button>
                 )}
-                {activeTab === "profiles" && isCoreAdmin && (
+                {activeTab === "profiles" && (user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -142,7 +144,7 @@ export default function FinancePayrollPage() {
                     {ar ? "إنشاء ملف" : "Create Profile"}
                   </Button>
                 )}
-                {activeTab === "grades" && isCoreAdmin && (
+                {activeTab === "grades" && (user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -241,7 +243,7 @@ export default function FinancePayrollPage() {
               centerId={centerId}
               year={year}
               month={month}
-              isAdmin={isCoreAdmin}
+              isAdmin={canPayPayroll}
               isSuperAdmin={user?.role === "SUPER_ADMIN"}
               canCreateBatch={canCreatePayrollBatch}
               ar={ar}
@@ -256,8 +258,8 @@ export default function FinancePayrollPage() {
               centerId={centerId}
               ar={ar}
               centers={centers}
-              canManage={isCoreAdmin}
-              externalShowForm={isCoreAdmin && showProfileModal}
+              canManage={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
+              externalShowForm={(user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && showProfileModal}
               onExternalFormClose={() => setShowProfileModal(false)}
             />
           )}
@@ -265,8 +267,8 @@ export default function FinancePayrollPage() {
             <FinanceSalaryGradesTab
               centerId={centerId}
               ar={ar}
-              canManage={isCoreAdmin}
-              externalShowForm={isCoreAdmin && showGradeModal}
+              canManage={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
+              externalShowForm={(user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && showGradeModal}
               onExternalFormClose={() => setShowGradeModal(false)}
             />
           )}

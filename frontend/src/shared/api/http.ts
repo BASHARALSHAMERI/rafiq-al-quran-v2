@@ -92,8 +92,18 @@ export const ensureFreshAccessToken = async (): Promise<string | null> => {
   return refreshPromise;
 };
 
+const getAcceptLanguage = (): string => {
+  try {
+    const lang = window.localStorage.getItem("app-language");
+    return lang === "en" ? "en" : "ar";
+  } catch {
+    return "ar";
+  }
+};
+
 apiClient.interceptors.request.use((config) => {
   config.withCredentials = isAuthRoute(config.url);
+  config.headers.set("Accept-Language", getAcceptLanguage());
 
   const accessToken = useAuthStore.getState().accessToken;
 

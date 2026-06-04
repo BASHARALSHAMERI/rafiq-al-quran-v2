@@ -553,14 +553,14 @@ export const staffOperationsService = {
         // Teacher can only mark their own attendance
         const myRecord = records.find(r => r.userId === scope.userId);
         if (!myRecord) {
-            throw new AppError("Teachers can only mark their own attendance", 403);
+            throw new AppError("المعلم يمكنه تسجيل حضوره فقط", 403);
         }
         records = [myRecord];
     } else if (!scope.allAccess && scope.centerIds.length > 0) {
       // Admin/Supervisor can only mark within their center
       const invalid = records.find(r => !scope.centerIds.includes(r.centerId));
       if (invalid) {
-        throw new AppError("Access denied for one or more centers", 403);
+        throw new AppError("الوصول ممنوع لواحد أو أكثر من المراكز", 403);
       }
     }
 
@@ -619,7 +619,7 @@ export const staffOperationsService = {
     );
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const todayUtc = getAttendanceDateForTimeZone(now, timezone);
     const currentMonthYear = getMonthYearForTimeZone(now, timezone);
     
@@ -769,7 +769,8 @@ export const staffOperationsService = {
         weekendDays: policy.weekendDays,
         holidays: policy.holidays,
         geoEnforcement: policy.geoEnforcement,
-        timezone
+        timezone,
+        timeFormat: policy.timeFormat
       },
       eligibility,
       today: {
@@ -920,7 +921,7 @@ export const staffOperationsService = {
     });
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
 
     const [existing, effectiveShift, approvedLeave] = await Promise.all([
@@ -952,11 +953,11 @@ export const staffOperationsService = {
     ]);
 
     if (existing?.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("Cannot check in while ON_LEAVE", 409, undefined, "INVALID_STATE");
+      throw new AppError("لا يمكن تسجيل الحضور أثناء إجازة", 409, undefined, "INVALID_STATE");
     }
 
     if (existing?.checkOutTime) {
-      throw new AppError("Attendance already closed for today", 409, undefined, "INVALID_STATE");
+      throw new AppError("تم إغلاق الحضور لهذا اليوم", 409, undefined, "INVALID_STATE");
     }
 
     if (existing?.checkInTime && !existing.checkOutTime) {
@@ -1066,7 +1067,7 @@ export const staffOperationsService = {
     });
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
     const [existing, effectiveShift, approvedLeave] = await Promise.all([
       prisma.staffAttendanceRecord.findUnique({
@@ -1097,11 +1098,11 @@ export const staffOperationsService = {
     ]);
 
     if (!existing?.checkInTime) {
-      throw new AppError("Check-in is required before check-out", 400, undefined, "INVALID_STATE");
+      throw new AppError("يرجى تسجيل الحضور أولاً قبل تسجيل الانصراف", 400, undefined, "INVALID_STATE");
     }
 
     if (existing.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("Cannot check out while ON_LEAVE", 409, undefined, "INVALID_STATE");
+      throw new AppError("لا يمكن تسجيل الانصراف أثناء إجازة", 409, undefined, "INVALID_STATE");
     }
 
     if (existing.checkOutTime) {
@@ -1250,7 +1251,7 @@ export const staffOperationsService = {
 
   async requestExcuse(scope: ScopeContext, data: { centerId: number; date: string | Date; reason: string }) {
     if (!scope.allAccess && !scope.centerIds.includes(data.centerId) && scope.role !== Role.TEACHER) {
-       throw new AppError("Access denied for this center", 403);
+       throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
     const absenceDate = typeof data.date === "string" 
@@ -1269,7 +1270,7 @@ export const staffOperationsService = {
     });
 
     if (existing) {
-      throw new AppError("Excuse already submitted for this date", 409);
+      throw new AppError("تم تقديم عذر لهذا التاريخ مسبقاً", 409);
     }
 
     return prisma.staffExcuseRequest.create({
@@ -1286,28 +1287,28 @@ export const staffOperationsService = {
 
   async updateExcuseStatus(scope: ScopeContext, excuseId: number, status: ExcuseRequestStatus, note?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update excuse status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة العذر", 403);
     }
 
     const excuse = await prisma.staffExcuseRequest.findUnique({ where: { id: excuseId } });
     if (!excuse || excuse.organizationId !== scope.organizationId) {
-      throw new AppError("Excuse not found", 404);
+      throw new AppError("العذر غير موجود", 404);
     }
 
     if (excuse.status !== ExcuseRequestStatus.PENDING) {
-      throw new AppError("Only pending excuses can be updated", 400, undefined, "INVALID_STATE");
+      throw new AppError("فقط الأعذار المعلقة يمكن تعديلها", 400, undefined, "INVALID_STATE");
     }
 
     if (status === ExcuseRequestStatus.PENDING) {
-      throw new AppError("Excuse status can only be approved or rejected", 400, undefined, "INVALID_STATE");
+      throw new AppError("حالة العذر يمكن أن تكون معتمدة أو مرفوضة فقط", 400, undefined, "INVALID_STATE");
     }
 
     if (excuse.userId === scope.userId) {
-      throw new AppError("Cannot handle your own excuse", 403);
+      throw new AppError("لا يمكن معالجة عذر خاص بك", 403);
     }
 
     if (!scope.allAccess && !scope.centerIds.includes(excuse.centerId)) {
-      throw new AppError("Access denied to update excuse in this center", 403);
+      throw new AppError("ليس لديك صلاحية لتحديث العذر في هذا المركز", 403);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -1427,7 +1428,7 @@ export const staffOperationsService = {
     }
   ) {
     if (!scope.allAccess && !scope.centerIds.includes(data.centerId) && scope.role !== Role.TEACHER) {
-      throw new AppError("Access denied for this center", 403);
+      throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
     const startDate = typeof data.startDate === "string" ? toStartOfDay(data.startDate) : data.startDate;
@@ -1452,24 +1453,24 @@ export const staffOperationsService = {
 
   async updateLeaveStatus(scope: ScopeContext, leaveId: number, status: LeaveRequestStatus, note?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update leave status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة الإجازة", 403);
     }
 
     const leave = await prisma.staffLeaveRequest.findUnique({ where: { id: leaveId } });
     if (!leave || leave.organizationId !== scope.organizationId) {
-      throw new AppError("Leave request not found", 404);
+      throw new AppError("طلب الإجازة غير موجود", 404);
     }
 
     if (leave.status !== LeaveRequestStatus.LEAVE_PENDING) {
-      throw new AppError("Only pending leave requests can be updated", 400, undefined, "INVALID_STATE");
+      throw new AppError("فقط طلبات الإجازة المعلقة يمكن تعديلها", 400, undefined, "INVALID_STATE");
     }
 
     if (leave.userId === scope.userId) {
-      throw new AppError("Cannot handle your own leave request", 403);
+      throw new AppError("لا يمكن معالجة طلب إجازة خاص بك", 403);
     }
 
     if (!scope.allAccess && !scope.centerIds.includes(leave.centerId)) {
-      throw new AppError("Access denied to update leave request in this center", 403);
+      throw new AppError("ليس لديك صلاحية لتحديث طلب الإجازة في هذا المركز", 403);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -1542,7 +1543,7 @@ export const staffOperationsService = {
     }
   ) {
     if (scope.role === Role.TEACHER) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
 
     const skip = (query.page - 1) * query.limit;
@@ -1633,7 +1634,7 @@ export const staffOperationsService = {
     }
   ) {
     if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
 
     const supervisorId = scope.userId;
@@ -1643,7 +1644,7 @@ export const staffOperationsService = {
       select: { id: true, latitude: true, longitude: true, allowedRadiusMeters: true, locationText: true }
     });
 
-    if (!center) throw new AppError("Center not found", 404);
+    if (!center) throw new AppError("المركز غير موجود", 404);
 
     let startGeoState: GeoState = GeoState.NOT_SENT;
     let startDistanceMeters: number | null = null;
@@ -1694,7 +1695,7 @@ export const staffOperationsService = {
     }
   ) {
     if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
 
     const existing = await prisma.supervisorVisitLog.findFirst({
@@ -1702,11 +1703,11 @@ export const staffOperationsService = {
       include: { center: { select: { latitude: true, longitude: true, allowedRadiusMeters: true } } }
     });
 
-    if (!existing) throw new AppError("Visit log not found", 404);
+    if (!existing) throw new AppError("سجل الزيارة غير موجود", 404);
     if (existing.supervisorId !== scope.userId && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
-    if (existing.endedAt) throw new AppError("Visit already ended", 409);
+    if (existing.endedAt) throw new AppError("الزيارة منتهية بالفعل", 409);
 
     const endedAt = new Date();
     const durationMinutes = Math.round((endedAt.getTime() - existing.startedAt.getTime()) / 60_000);
@@ -1959,7 +1960,7 @@ async function resolveCenterByScope(
 
 async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?: number) {
   if (scope.role !== Role.CENTER_ADMIN) {
-    throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
+    throw new AppError("غير مصرح بهذه العملية", 403, undefined, "FORBIDDEN");
   }
 
   const center = await resolveCenterByScope(scope, centerId, [
@@ -1968,7 +1969,7 @@ async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?
   ]);
 
   if (!center) {
-    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
   }
 
   return {
@@ -1990,7 +1991,7 @@ async function resolveSupervisorAttendanceCenter(scope: ScopeContext, centerId?:
   ]);
 
   if (!center) {
-    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
   }
 
   return {
@@ -2011,7 +2012,7 @@ async function resolveFinanceStaffAttendanceCenter(scope: ScopeContext, centerId
   ]);
 
   if (!center) {
-    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
   }
 
   return {

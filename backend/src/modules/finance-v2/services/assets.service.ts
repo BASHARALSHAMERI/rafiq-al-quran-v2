@@ -81,11 +81,11 @@ const custodyInclude = {
 
 const cleanString = (value: unknown, field: string, maxLength: number) => {
   if (typeof value !== "string" || !value.trim()) {
-    throw new AppError(`${field} is required`, 400);
+    throw new AppError(`${field} مطلوب`, 400);
   }
   const trimmed = value.trim();
   if (trimmed.length > maxLength) {
-    throw new AppError(`${field} is too long`, 400);
+    throw new AppError(`${field} طويل جداً`, 400);
   }
   return trimmed;
 };
@@ -93,12 +93,12 @@ const cleanString = (value: unknown, field: string, maxLength: number) => {
 const optionalString = (value: unknown, maxLength: number) => {
   if (value === undefined || value === null || value === "") return undefined;
   if (typeof value !== "string") {
-    throw new AppError("Invalid text field", 400);
+    throw new AppError("حقل نصي غير صالح", 400);
   }
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   if (trimmed.length > maxLength) {
-    throw new AppError("Text field is too long", 400);
+    throw new AppError("حقل نصي طويل جداً", 400);
   }
   return trimmed;
 };
@@ -107,7 +107,7 @@ const optionalPositiveInt = (value: unknown, field: string) => {
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new AppError(`${field} must be a positive integer`, 400);
+    throw new AppError(`${field} يجب أن يكون رقماً صحيحاً موجباً`, 400);
   }
   return parsed;
 };
@@ -115,7 +115,7 @@ const optionalPositiveInt = (value: unknown, field: string) => {
 const requiredPositiveInt = (value: unknown, field: string) => {
   const parsed = optionalPositiveInt(value, field);
   if (!parsed) {
-    throw new AppError(`${field} is required`, 400);
+    throw new AppError(`${field} مطلوب`, 400);
   }
   return parsed;
 };
@@ -123,7 +123,7 @@ const requiredPositiveInt = (value: unknown, field: string) => {
 const positiveMoney = (value: unknown, field: string) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new AppError(`${field} must be greater than zero`, 400);
+    throw new AppError(`${field} يجب أن يكون أكبر من صفر`, 400);
   }
   return new Prisma.Decimal(parsed);
 };
@@ -132,18 +132,18 @@ const optionalMoney = (value: unknown, field: string) => {
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new AppError(`${field} must be zero or greater`, 400);
+    throw new AppError(`${field} يجب أن يكون صفراً أو أكبر`, 400);
   }
   return new Prisma.Decimal(parsed);
 };
 
 const parseDate = (value: unknown, field: string) => {
   if (typeof value !== "string" || !value) {
-    throw new AppError(`${field} is required`, 400);
+    throw new AppError(`${field} مطلوب`, 400);
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    throw new AppError(`${field} is invalid`, 400);
+    throw new AppError(`${field} غير صالح`, 400);
   }
   return date;
 };
@@ -165,7 +165,7 @@ const assertAccount = async (
     }
   });
   if (!account) {
-    throw new AppError(`${field} posting account not found`, 404);
+    throw new AppError(`حساب ترحيل ${field} غير موجود`, 404);
   }
 };
 
@@ -176,7 +176,7 @@ const assertCenter = async (scope: ScopeContext, centerId?: number) => {
     where: { id: centerId, organizationId: scope.organizationId }
   });
   if (!center) {
-    throw new AppError("Center not found", 404);
+    throw new AppError("المركز غير موجود", 404);
   }
 };
 
@@ -186,7 +186,7 @@ const assertUser = async (organizationId: number, userId?: number) => {
     where: { id: userId, organizationId, isActive: true }
   });
   if (!user) {
-    throw new AppError("Custodian user not found", 404);
+    throw new AppError("الموجوداتي غير موجود", 404);
   }
 };
 
@@ -273,21 +273,21 @@ export const assetsService = {
       where: { id: categoryId, organizationId: scope.organizationId, isActive: true }
     });
     if (!category) {
-      throw new AppError("Asset category not found", 404);
+      throw new AppError("تصنيف الأصل غير موجود", 404);
     }
 
     if (supplierId) {
       const supplier = await prisma.supplier.findFirst({
         where: { id: supplierId, organizationId: scope.organizationId, isActive: true }
       });
-      if (!supplier) throw new AppError("Supplier not found", 404);
+      if (!supplier) throw new AppError("المورد غير موجود", 404);
     }
 
     if (expenseInvoiceId) {
       const invoice = await prisma.expenseInvoice.findFirst({
         where: { id: expenseInvoiceId, organizationId: scope.organizationId }
       });
-      if (!invoice) throw new AppError("Expense invoice not found", 404);
+      if (!invoice) throw new AppError("فاتورة المصروف غير موجودة", 404);
       financeV2Domain.ensureScopedCenterRequired(scope, invoice.centerId);
     }
 
@@ -346,7 +346,7 @@ export const assetsService = {
       const asset = await prisma.fixedAsset.findFirst({
         where: { id: assetId, organizationId: scope.organizationId }
       });
-      if (!asset) throw new AppError("Asset not found", 404);
+      if (!asset) throw new AppError("الأصل غير موجود", 404);
       financeV2Domain.ensureCenterAllowed(scope, asset.centerId);
     }
 
@@ -371,7 +371,7 @@ export const assetsService = {
       const asset = await tx.fixedAsset.findFirst({
         where: { id: assetId, organizationId: scope.organizationId }
       });
-      if (!asset) throw new AppError("Asset not found", 404);
+      if (!asset) throw new AppError("الأصل غير موجود", 404);
       financeV2Domain.ensureCenterAllowed(scope, asset.centerId);
 
       const assignedAt = input.assignedAt ? parseDate(input.assignedAt, "assignedAt") : new Date();
@@ -417,7 +417,7 @@ export const assetsService = {
         where: { id: assetId, organizationId: scope.organizationId },
         include: { category: true }
       });
-      if (!asset) throw new AppError("Asset not found", 404);
+      if (!asset) throw new AppError("الأصل غير موجود", 404);
       financeV2Domain.ensureCenterAllowed(scope, asset.centerId);
 
       if (asset.expenseInvoiceId) {
@@ -426,17 +426,17 @@ export const assetsService = {
       }
 
       if (asset.acquisitionJournalEntryId) {
-        throw new AppError("Asset acquisition is already posted", 409);
+        throw new AppError("تم ترحيل اكتساب الأصل بالفعل", 409);
       }
 
       if (!asset.category.assetAccountId) {
-        throw new AppError("Asset category does not have an asset account configured", 400);
+        throw new AppError("تصنيف الأصل ليس لديه حساب أصول مُعد", 400);
       }
 
       const debitAccount = await tx.accountingAccount.findFirst({
         where: { id: asset.category.assetAccountId, organizationId: scope.organizationId, isActive: true, children: { none: { isActive: true } } }
       });
-      if (!debitAccount) throw new AppError("Asset account is missing or is a parent account", 400);
+      if (!debitAccount) throw new AppError("حساب الأصل مفقود أو هو حساب أب", 400);
 
       const financeAccount = await tx.financeAccount.findFirst({
         where: { id: financeAccountId, organizationId: scope.organizationId },
@@ -444,7 +444,7 @@ export const assetsService = {
       });
 
       if (!financeAccount || !financeAccount.accountingAccount || !financeAccount.accountingAccount.isActive || financeAccount.accountingAccount.children.length > 0) {
-         throw new AppError("Finance account has no valid posting ledger account", 400);
+         throw new AppError("الحساب المالي ليس لديه حساب أستاذ ترحيل صالح", 400);
       }
       financeV2Domain.ensureCenterAllowed(scope, financeAccount.centerId);
       
@@ -508,7 +508,7 @@ export const assetsService = {
     const periodYear = requiredPositiveInt(input.periodYear, "periodYear");
     const periodMonth = requiredPositiveInt(input.periodMonth, "periodMonth");
     if (periodMonth > 12) {
-      throw new AppError("Invalid depreciation month", 400);
+      throw new AppError("شهر الإهلاك غير صالح", 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -516,26 +516,26 @@ export const assetsService = {
         where: { id: assetId, organizationId: scope.organizationId },
         include: { category: true }
       });
-      if (!asset) throw new AppError("Asset not found", 404);
+      if (!asset) throw new AppError("الأصل غير موجود", 404);
       financeV2Domain.ensureCenterAllowed(scope, asset.centerId);
 
       if (asset.status !== FixedAssetStatus.ACTIVE) {
-        throw new AppError("Cannot depreciate an inactive or disposed asset", 400);
+        throw new AppError("لا يمكن إهلاك أصل غير نشط أو تم التخلص منه", 400);
       }
 
       if (!asset.usefulLifeMonths || asset.usefulLifeMonths <= 0) {
-        throw new AppError("Asset has no useful life defined", 400);
+        throw new AppError("الأصل ليس له عمر افتراضي محدد", 400);
       }
 
       if (!asset.category.depreciationExpenseAccountId || !asset.category.accumulatedDepreciationAccountId) {
-        throw new AppError("Asset category missing depreciation accounts", 400);
+        throw new AppError("تصنيف الأصل يفتقد حسابات الإهلاك", 400);
       }
 
       const existing = await tx.assetDepreciationEntry.findFirst({
         where: { assetId, periodYear, periodMonth }
       });
       if (existing) {
-        throw new AppError("Depreciation for this period is already posted", 409);
+        throw new AppError("إهلاك هذه الفترة مرحل بالفعل", 409);
       }
 
       const expenseAccount = await tx.accountingAccount.findFirst({
@@ -546,7 +546,7 @@ export const assetsService = {
       });
 
       if (!expenseAccount || !accumulatedAccount) {
-        throw new AppError("Depreciation accounts are invalid or parent accounts", 400);
+        throw new AppError("حسابات الإهلاك غير صالحة أو حسابات أب", 400);
       }
 
       const amountPerMonth = Number(asset.purchaseCost) / asset.usefulLifeMonths;
@@ -559,7 +559,7 @@ export const assetsService = {
       
       const totalSoFar = Number(previous._sum.amount || 0);
       if (totalSoFar + amountPerMonth > Number(asset.purchaseCost)) {
-        throw new AppError("Total depreciation would exceed purchase cost", 400);
+        throw new AppError("إجمالي الإهلاك سيتجاوز تكلفة الشراء", 400);
       }
 
       const entryDate = new Date(periodYear, periodMonth, 0);

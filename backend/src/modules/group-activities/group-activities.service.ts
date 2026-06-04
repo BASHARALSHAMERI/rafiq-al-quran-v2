@@ -41,7 +41,7 @@ const serializeActivity = (item: {
 export const groupActivitiesService = {
   async create(scope: ScopeContext, input: CreateGroupActivityDto) {
     if (scope.role !== "TEACHER" && scope.role !== "SUPERVISOR" && !scope.allAccess) {
-      throw new AppError("Only teachers can create group activities", 403);
+      throw new AppError("فقط المعلمون يمكنهم إنشاء أنشطة جماعية", 403);
     }
 
     const activityDate = toDateOnly(safeDate(input.activityDate, "activityDate"));
@@ -52,7 +52,7 @@ export const groupActivitiesService = {
     );
 
     if (!circle) {
-      throw new AppError("Circle not found", 404);
+      throw new AppError("الحلقة غير موجودة", 404);
     }
 
     // تحقق من وصول المعلم للحلقة
@@ -61,7 +61,7 @@ export const groupActivitiesService = {
         scope.circleIds.includes(input.circleId) ||
         scope.centerIds.includes(circle.centerId);
       if (!hasAccess) {
-        throw new AppError("Access denied for requested circle", 403);
+        throw new AppError("ليس لديك صلاحية الوصول للحلقة المطلوبة", 403);
       }
     }
 
@@ -105,7 +105,7 @@ export const groupActivitiesService = {
 
     if (query.circleId) {
       if (!scope.allAccess && !scope.circleIds.includes(query.circleId)) {
-        throw new AppError("Access denied", 403);
+        throw new AppError("ليس لديك صلاحية", 403);
       }
       circleIds = [query.circleId];
     } else if (scope.allAccess) {
@@ -141,7 +141,7 @@ export const groupActivitiesService = {
   async getById(scope: ScopeContext, id: number) {
     const activity = await groupActivitiesRepository.findById(id, scope.organizationId);
     if (!activity) {
-      throw new AppError("Activity not found", 404);
+      throw new AppError("النشاط غير موجود", 404);
     }
     return serializeActivity(activity);
   }
