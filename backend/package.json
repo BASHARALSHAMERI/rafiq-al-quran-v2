@@ -5,8 +5,9 @@
     "main": "dist/app/server.js",
     "scripts": {
         "dev": "ts-node-dev --respawn --transpile-only src/app/server.ts",
-        "build": "tsc",
-        "start": "node dist/app/server.js",
+        "build": "prisma generate && tsc",
+        "start": "prisma migrate deploy && node dist/app/server.js",
+        "postinstall": "prisma generate",
         "docs:export": "tsx scripts/export-openapi.ts",
         "test": "jest",
         "test:unit": "jest --testPathPattern='\\\\.test\\.ts$'",
