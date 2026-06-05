@@ -4,6 +4,7 @@ import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import {
   entityFeedback,
   notifyError,
+  notifyInfo,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
@@ -57,6 +58,14 @@ export default function FinanceTreasuryTab({
       setShowTransferForm(true);
     }
   }, [externalShowTransfer]);
+
+  useEffect(() => {
+    if (showTransferForm && FINANCE_YEMEN_MODE) {
+      notifyInfo(ar
+        ? "سيتم التحويل آلياً من صندوق المركز الحالي إلى الصندوق الرئيسي للمؤسسة."
+        : "Transfer will be automatically performed from the current center fund to the main organization fund.");
+    }
+  }, [showTransferForm, ar]);
 
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
@@ -158,13 +167,7 @@ export default function FinanceTreasuryTab({
               <Landmark size={15} className="circlemod-section-icon" />
               <span>{ar ? "الحسابات" : "Accounts"}</span>
             </div>
-            {FINANCE_YEMEN_MODE ? (
-              <div className="text-[12px] opacity-70 p-1 font-medium" role="note">
-                {ar
-                  ? "سيتم التحويل آلياً من صندوق المركز الحالي إلى الصندوق الرئيسي للمؤسسة."
-                  : "Transfer will be automatically performed from the current center fund to the main organization fund."}
-              </div>
-            ) : (
+            {FINANCE_YEMEN_MODE ? null : (
               <div className="circlemod-row">
                 <div className="circlemod-field circlemod-field--lg">
                   <label htmlFor="tr-from">{ar ? "من حساب *" : "From Account *"}</label>

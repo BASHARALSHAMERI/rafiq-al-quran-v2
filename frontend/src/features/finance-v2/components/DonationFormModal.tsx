@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
+import { notifyInfo } from "../../../shared/ui/feedback";
 import type { CurrencyV2, PaymentMethodV2 } from "../types";
 import { useLatestExchangeRateQuery } from "../finance-v2.hooks";
 
@@ -101,6 +102,25 @@ export default function DonationFormModal({
       setForm((prev) => ({ ...prev, exchangeRateToBase: String(latest) }));
     }
   }, [isYer, form.originalCurrencyCode, form.exchangeRateToBase, latestRateQ.data, setForm]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const t1 = setTimeout(() => {
+      notifyInfo(ar
+        ? "سيتم حفظ المبلغ الأصلي وسعر الصرف، بينما تُسجل القيود بالمبلغ المعادل بالريال اليمني."
+        : "The original amount and exchange rate will be saved; journal entries are posted using the YER equivalent only.");
+    }, 300);
+    const t2 = setTimeout(() => {
+      notifyInfo(form.mode === "RECEIVED"
+        ? ar
+          ? "سيتم إنشاء سند قبض كمسودة مرتبط بهذا التبرع. لن يظهر الأثر المحاسبي حتى يتم ترحيل السند من صفحة السندات."
+          : "A draft receipt voucher will be created and linked to this donation. The accounting impact will not appear until the voucher is posted from the Vouchers page."
+        : ar
+          ? "لن يتم إنشاء سند قبض أو قيد محاسبي حتى يتم استلام التعهد لاحقًا."
+          : "No receipt voucher or journal entry will be created until the pledge is received later.");
+    }, 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isOpen, ar, form.mode]);
 
   const baseAmount = useMemo(() => {
     const amt = Number(form.originalAmount);

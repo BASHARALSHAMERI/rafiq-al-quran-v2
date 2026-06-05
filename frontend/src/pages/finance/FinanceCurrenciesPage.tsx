@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { 
   AlertCircle, 
   CircleDollarSign, 
@@ -28,7 +28,7 @@ import {
 import DataTable from "../../components/ui/DataTable";
 import type { CurrencyV2, ExchangeRateV2 } from "../../features/finance-v2/types";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
-import { notifyError, notifySuccess } from "../../shared/ui/feedback";
+import { notifyError, notifyInfo, notifySuccess } from "../../shared/ui/feedback";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -71,6 +71,14 @@ export default function FinanceCurrenciesPage() {
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
   const canManageCurrencies = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+
+  useEffect(() => {
+    if (sessionStorage.getItem("currencies-guide-shown")) return;
+    sessionStorage.setItem("currencies-guide-shown", "1");
+    notifyInfo(ar
+      ? "أضف العملات التي تستخدمها الجمعية، وحدد العملة الأساسية للتقارير (عادة YER)، ثم سجل أسعار الصرف المعتمدة يدويًا، واستخدم العملات في التبرعات والسندات."
+      : "Add currencies used by your organization, set the base currency for reports (usually YER), record approved exchange rates manually, then use currencies in donations and vouchers.");
+  }, [ar]);
   const [activeTab, setActiveTab] = useState<TabType>("currencies");
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [rateModalOpen, setRateModalOpen] = useState(false);
