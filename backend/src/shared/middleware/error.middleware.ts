@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from "express";
+import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { env } from "../../config/env";
 import { AppError } from "../errors/app-error";
@@ -31,6 +32,22 @@ const toNormalizedError = (error: unknown, lang: Lang): NormalizedError => {
       message: t(messages.system.zodValidationError, lang),
       details: error.flatten()
     };
+  }
+
+  // Intercept Prisma errors before they leak schema/constraint details.
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return { statusCode: 409, code: "CONFLICT", message: t(messages.system.internalServerError, lang) };
+    }
+    if (error.code === "P2025") {
+      return { statusCode: 404, code: "ENTITY_NOT_FOUND", message: t(messages.system.internalServerError, lang) };
+    }
+    // All other known Prisma errors → generic 500, no detail
+    return { statusCode: 500, code: "INTERNAL_SERVER_ERROR", message: t(messages.system.internalServerError, lang) };
+  }
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return { statusCode: 400, code: "VALIDATION_ERROR", message: t(messages.system.internalServerError, lang) };
   }
 
   if (

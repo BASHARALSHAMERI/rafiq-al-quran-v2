@@ -221,6 +221,8 @@ const mapPrismaValidationError = (error: Prisma.PrismaClientValidationError): Ap
     supervisorProfile: "ملف المشرف",
     centerAdminProfile: "ملف مدير المركز",
     studentProfile: "ملف الطالب",
+    "studentProfile.nationalId": "رقم الهوية في ملف الطالب",
+    nationalId: "رقم الهوية",
     parentProfile: "ملف ولي الأمر",
     links: "الروابط والارتباطات",
     "links.centerIds": "مراكز المستخدم",
@@ -229,32 +231,43 @@ const mapPrismaValidationError = (error: Prisma.PrismaClientValidationError): Ap
     "links.enrollments": "تسجيلات الطالب"
   };
 
-  const extractField = (text: string): string | null => {
-    const missingMatch = text.match(/Argument [`'](\w+(?:\.\w+)?)[`'] is missing/);
-    if (missingMatch) return missingMatch[1];
+  const extractField = (text: string): { name: string; type: "missing" | "invalid" | "unknown" | "other" } | null => {
+    // 1. Unknown argument
+    const unknownMatch = text.match(/Unknown argument [`'](\w+(?:\.\w+)?)[`']/);
+    if (unknownMatch) return { name: unknownMatch[1], type: "unknown" };
 
+    // 2. Missing argument (supports both old and new formats)
+    const missingMatch = text.match(/Argument [`'](\w+(?:\.\w+)?)[`'].*is missing/);
+    if (missingMatch) return { name: missingMatch[1], type: "missing" };
+
+    // 3. Invalid value
     const invalidMatch = text.match(/Invalid value for argument [`'](\w+(?:\.\w+)?)[`']/);
-    if (invalidMatch) return invalidMatch[1];
+    if (invalidMatch) return { name: invalidMatch[1], type: "invalid" };
 
+    // 4. Required field
+    const requiredMatch = text.match(/Required field [`'](\w+(?:\.\w+)?)[`']/);
+    if (requiredMatch) return { name: requiredMatch[1], type: "missing" };
+
+    // General fallback
     const argMatch = text.match(/Argument [`'](\w+(?:\.\w+)?)[`']/);
-    if (argMatch) return argMatch[1];
+    if (argMatch) return { name: argMatch[1], type: "other" };
 
     return null;
   };
 
-  const field = extractField(msg);
-  const fieldAr = field ? (fieldNameMap[field] ?? field) : null;
-
-  if (msg.includes("is missing") && fieldAr) {
-    return new AppError(`حقل "${fieldAr}" إجباري ولم يتم إدخاله.`, 400, { field }, "USER_VALIDATION_ERROR");
-  }
-
-  if (msg.includes("Invalid value") && fieldAr) {
-    return new AppError(`قيمة حقل "${fieldAr}" غير صالحة. يرجى التحقق منها.`, 400, { field }, "USER_VALIDATION_ERROR");
-  }
-
-  if (msg.includes("Required") && fieldAr) {
-    return new AppError(`حقل "${fieldAr}" مطلوب ولا يمكن تركه فارغاً.`, 400, { field }, "USER_VALIDATION_ERROR");
+  const extracted = extractField(msg);
+  if (extracted) {
+    const fieldAr = fieldNameMap[extracted.name] ?? extracted.name;
+    if (extracted.type === "missing" || msg.includes("is missing") || msg.includes("Required")) {
+      return new AppError(`حقل "${fieldAr}" إجباري ولم يتم إدخاله.`, 400, { field: extracted.name }, "USER_VALIDATION_ERROR");
+    }
+    if (extracted.type === "invalid" || msg.includes("Invalid value")) {
+      return new AppError(`قيمة حقل "${fieldAr}" غير صالحة. يرجى التحقق منها.`, 400, { field: extracted.name }, "USER_VALIDATION_ERROR");
+    }
+    if (extracted.type === "unknown" || msg.includes("Unknown argument")) {
+      return new AppError(`حقل غير مدعوم في النظام: "${fieldAr}".`, 400, { field: extracted.name }, "USER_VALIDATION_ERROR");
+    }
+    return new AppError(`خطأ في حقل "${fieldAr}": البيانات المدخلة غير متوافقة مع متطلبات النظام.`, 400, { field: extracted.name }, "USER_VALIDATION_ERROR");
   }
 
   return new AppError("بيانات المستخدم غير صالحة. يرجى التحقق من الحقول المطلوبة.", 400, undefined, "USER_VALIDATION_ERROR");

@@ -15,8 +15,20 @@ const staffLeaveRouter = Router();
 
 staffLeaveRouter.use(authGuard, attachScope);
 
+const allowedStaffRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+
 staffLeaveRouter.post(
   "/",
+  requireRoles(allowedStaffRoles),
   validateBody(submitLeaveRequestSchema),
   staffLeaveController.submitLeaveRequest
 );
@@ -44,6 +56,7 @@ staffLeaveRouter.patch(
 
 staffLeaveRouter.patch(
   "/:id/cancel",
+  requireRoles(allowedStaffRoles),
   staffLeaveController.cancelLeave
 );
 

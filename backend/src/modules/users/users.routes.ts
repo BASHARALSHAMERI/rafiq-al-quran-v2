@@ -38,7 +38,7 @@ usersRouter.post(
 
 usersRouter.get(
   "/",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT]),
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
   validateQuery(usersQuerySchema),
   usersController.listUsers
 );

@@ -411,7 +411,16 @@ export const ensurePeriodOpenTx = async (
     }
   });
 
-  if (period && period.status === FiscalPeriodStatus.CLOSED) {
+  if (!period) {
+    throw new AppError(
+      "لا توجد فترة مالية مفتوحة تغطي تاريخ العملية",
+      409,
+      undefined,
+      "FISCAL_PERIOD_NOT_FOUND"
+    );
+  }
+
+  if (period.status === FiscalPeriodStatus.CLOSED) {
     throw new AppError(
       "لا يمكن تنفيذ العملية المالية في فترة مالية مغلقة",
       409,
@@ -422,7 +431,6 @@ export const ensurePeriodOpenTx = async (
 
   return period;
 };
-
 
 export const accountingService = {
   ensurePeriodOpenTx,

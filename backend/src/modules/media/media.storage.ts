@@ -57,7 +57,6 @@ export const mediaStorage = {
     organizationId: number;
     kind: MediaImageKind;
     mimeType: string;
-    originalFileName: string;
     buffer: Buffer;
   }) {
     if (!this.isAllowedImageMimeType(input.mimeType)) {
@@ -76,8 +75,10 @@ export const mediaStorage = {
     const now = new Date();
     const year = String(now.getFullYear());
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const extension =
-      path.extname(input.originalFileName).toLowerCase() || MIME_EXTENSION_MAP[input.mimeType];
+    // SECURITY: Extension is always derived from the server-trusted MIME type.
+    // The client-supplied filename is never used for extension resolution to
+    // prevent extension-bypass attacks (e.g. uploading "evil.php" with image/jpeg).
+    const extension = MIME_EXTENSION_MAP[input.mimeType];
     const generatedBase = `${Date.now()}-${randomBytes(6).toString("hex")}`;
     const generatedFileName = sanitizeFileName(`${generatedBase}${extension}`);
     const relativeDirectory = path.join(
