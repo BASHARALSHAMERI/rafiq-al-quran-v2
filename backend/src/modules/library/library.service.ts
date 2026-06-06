@@ -432,7 +432,6 @@ export const libraryService = {
       organizationId: scope.organizationId,
       centerId: visibilityScope.centerId,
       mimeType: file.mimeType,
-      originalFileName: file.originalName,
       buffer: file.buffer
     });
 
@@ -442,7 +441,6 @@ export const libraryService = {
         organizationId: scope.organizationId,
         centerId: visibilityScope.centerId,
         mimeType: cover.mimeType,
-        originalFileName: cover.originalName,
         buffer: cover.buffer
       });
       coverStorageKey = savedCover.storageKey;

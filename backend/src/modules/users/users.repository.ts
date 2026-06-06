@@ -80,7 +80,6 @@ type CenterAdminProfileWriteInput = {
 
 type StudentProfileWriteInput = {
   nickname?: string | null;
-  nationalId?: string | null;
   level?: StudentLevel;
   studentStatus?: StudentProfileStatus;
   joinDate?: Date | null;
@@ -242,6 +241,7 @@ const baseUserSelect = {
         select: {
           id: true,
           name: true,
+          centerId: true,
           center: {
             select: {
               id: true,
@@ -707,7 +707,6 @@ const createRoleProfileForUser = async (
           createdByUserId: input.createdByUserId ?? null,
           ...pickDefined({
             nickname: input.studentProfile?.nickname ?? null,
-            nationalId: input.studentProfile?.nationalId ?? null,
             level: input.studentProfile?.level ?? StudentLevel.BEGINNER,
             studentStatus: input.studentProfile?.studentStatus ?? StudentProfileStatus.REGULAR,
             joinDate: input.studentProfile?.joinDate ?? null
@@ -833,13 +832,11 @@ const updateRoleProfileForUser = async (
           studentStatus: input.studentProfile.studentStatus ?? StudentProfileStatus.REGULAR,
           ...pickDefined({
             nickname: input.studentProfile.nickname ?? null,
-            nationalId: input.studentProfile.nationalId ?? null,
             joinDate: input.studentProfile.joinDate ?? null
           })
         },
         update: pickDefined({
           nickname: input.studentProfile.nickname,
-          nationalId: input.studentProfile.nationalId,
           level: input.studentProfile.level,
           studentStatus: input.studentProfile.studentStatus,
           joinDate: input.studentProfile.joinDate

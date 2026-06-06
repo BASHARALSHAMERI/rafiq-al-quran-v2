@@ -17,7 +17,15 @@ const extractBearerToken = (authorization?: string): string | null => {
 };
 
 export const authGuard: RequestHandler = (req, _res, next) => {
-  const token = extractBearerToken(req.headers.authorization) || (req.query.token as string);
+  let token = extractBearerToken(req.headers.authorization);
+
+  // Hardening fallback: Allow token in query string only for download/cover paths where custom headers cannot be set easily.
+  if (!token && req.query.token && typeof req.query.token === "string") {
+    const path = req.path || "";
+    if (path.includes("/download") || path.includes("/cover")) {
+      token = req.query.token;
+    }
+  }
 
   if (!token) {
     next(new AppError("Missing access token", 401));

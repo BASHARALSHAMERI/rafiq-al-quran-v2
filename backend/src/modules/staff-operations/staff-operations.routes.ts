@@ -122,7 +122,7 @@ staffOpsRouter.get(
 
 staffOpsRouter.post(
   "/leaves",
-  requireRoles(selfAttendanceRoles),
+  requireRoles(staffRoles),
   validateBody(requestLeaveBodySchema),
   verifyScope("center", "body", "centerId"),
   staffOperationsController.requestLeave
