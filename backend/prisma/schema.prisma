@@ -1614,6 +1614,7 @@ model FinancePolicyProfile {
   id                          Int          @id @default(autoincrement())
   organizationId              Int
   centerId                    Int?
+  feesEnabled                 Boolean?
   requireTransferAttachment   Boolean      @default(true)
   requireApprovalDisbursement Boolean      @default(true)
   requireApprovalReceipt      Boolean      @default(false)

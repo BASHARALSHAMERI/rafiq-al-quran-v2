@@ -52,6 +52,7 @@ export const policyEffectiveQuerySchema = z
 
 export const patchPolicyBodySchema = z
   .object({
+    feesEnabled: z.boolean().optional(),
     requireTransferAttachment: z.boolean().optional(),
     requireApprovalDisbursement: z.boolean().optional(),
     requireApprovalReceipt: z.boolean().optional(),
