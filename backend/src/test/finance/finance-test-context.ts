@@ -142,6 +142,8 @@ export const createTaizFinanceContext = async () => {
       ["1120", "البنك", AccountingAccountType.ASSET, AccountingNormalBalance.DEBIT, "BANK"],
       ["1130", "صناديق المراكز", AccountingAccountType.ASSET, AccountingNormalBalance.DEBIT, "CENTER_FUNDS"],
       ["1140", "ذمم الطلاب", AccountingAccountType.ASSET, AccountingNormalBalance.DEBIT, "STUDENT_RECEIVABLES"],
+      ["1230", "أجهزة حاسوب ومعدات", AccountingAccountType.ASSET, AccountingNormalBalance.DEBIT, "COMPUTERS_EQUIPMENT"],
+      ["1293", "مجمع إهلاك الأجهزة", AccountingAccountType.ASSET, AccountingNormalBalance.CREDIT, "ACCUMULATED_DEPRECIATION_EQUIPMENT"],
       ["2130", "ذمم الموردين", AccountingAccountType.LIABILITY, AccountingNormalBalance.CREDIT, "ACCOUNTS_PAYABLE"],
       ["3100", "صافي أصول غير مقيدة", AccountingAccountType.NET_ASSET, AccountingNormalBalance.CREDIT, "UNRESTRICTED_NET_ASSETS"],
       ["4100", "مساهمات الطلاب", AccountingAccountType.REVENUE, AccountingNormalBalance.CREDIT, "STUDENT_CONTRIBUTIONS_REVENUE"],
@@ -221,17 +223,34 @@ export const createTaizFinanceContext = async () => {
         nameEn: "US Dollar",
         symbol: "$",
         decimalPlaces: 2
+      },
+      {
+        organizationId: organization.id,
+        code: "SAR",
+        nameAr: "الريال السعودي",
+        nameEn: "Saudi Riyal",
+        symbol: "ر.س",
+        decimalPlaces: 2
       }
     ]
   });
-  await financeTestPrisma.exchangeRate.create({
-    data: {
-      organizationId: organization.id,
-      currencyCode: "USD",
-      rateToBase: TAIZ_FINANCE_FIXTURE.currency.usdRateToYer,
-      effectiveDate: new Date("2031-01-01T00:00:00.000Z"),
-      source: "سعر اختبار ثابت"
-    }
+  await financeTestPrisma.exchangeRate.createMany({
+    data: [
+      {
+        organizationId: organization.id,
+        currencyCode: "USD",
+        rateToBase: TAIZ_FINANCE_FIXTURE.currency.usdRateToYer,
+        effectiveDate: new Date("2031-01-01T00:00:00.000Z"),
+        source: "سعر اختبار ثابت"
+      },
+      {
+        organizationId: organization.id,
+        currencyCode: "SAR",
+        rateToBase: 140,
+        effectiveDate: new Date("2031-01-01T00:00:00.000Z"),
+        source: "سعر اختبار ثابت"
+      }
+    ]
   });
 
   const orgFund = await financeTestPrisma.financeAccount.create({
@@ -252,6 +271,17 @@ export const createTaizFinanceContext = async () => {
       accountingAccountId: required("CENTER_FUNDS").id,
       openingBalance: 200000,
       currentBalance: 200000,
+      currencyCode: "YER"
+    }
+  });
+  const secondCenterFund = await financeTestPrisma.financeAccount.create({
+    data: {
+      organizationId: organization.id,
+      centerId: centers[1].id,
+      accountType: FinanceAccountType.CENTER_FUND,
+      accountingAccountId: required("CENTER_FUNDS").id,
+      openingBalance: 100000,
+      currentBalance: 100000,
       currencyCode: "YER"
     }
   });
@@ -282,7 +312,7 @@ export const createTaizFinanceContext = async () => {
     organization,
     centers,
     users: { financeManager, accountant, treasurer, auditor, supervisor, teacher, parent, student },
-    accounts: { bySystemKey, orgFund, centerFund },
+    accounts: { bySystemKey, orgFund, centerFund, secondCenterFund },
     periods: { fiscalYear, openPeriod, closedPeriod },
     scopes: {
       manager: scopeFor(financeManager, { allAccess: true }),

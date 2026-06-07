@@ -19,7 +19,7 @@
         "test:smoke:rbac:critical": "tsx scripts/rbac-critical-smoke.ts",
         "test:smoke:finance-v2": "tsx scripts/finance-v2-smoke.ts",
         "test:finance:unit": "jest --runInBand accounting.domain.finance.test.ts",
-        "test:finance:integration": "jest --config jest.finance.config.js --runInBand accounting.finance.integration.test.ts finance-v2.workflow.finance.integration.test.ts",
+        "test:finance:integration": "jest --config jest.finance.config.js --runInBand accounting.finance.integration.test.ts finance-v2.workflow.finance.integration.test.ts finance-v2.expenses.finance.integration.test.ts finance-v2.payroll.finance.integration.test.ts finance-v2.rewards.finance.integration.test.ts finance-v2.transfers.finance.integration.test.ts finance-v2.assets.finance.integration.test.ts",
         "test:finance:rbac": "jest --config jest.finance.config.js --runInBand finance-v2.rbac.finance.integration.test.ts",
         "test:finance:currency": "jest --config jest.finance.config.js --runInBand finance-v2.currency.finance.integration.test.ts",
         "test:finance:concurrency": "jest --config jest.finance.config.js --runInBand finance-v2.concurrency.finance.integration.test.ts",
