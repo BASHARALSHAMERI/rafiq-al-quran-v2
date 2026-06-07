@@ -358,6 +358,8 @@ export const billingService = {
 
     try {
       const invoice = await prisma.$transaction(async (tx) => {
+        await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, issuedAt);
+
         const [activeEnrollment, policy, feeProfile] = await Promise.all([
         tx.studentCircleEnrollment.findFirst({
           where: {

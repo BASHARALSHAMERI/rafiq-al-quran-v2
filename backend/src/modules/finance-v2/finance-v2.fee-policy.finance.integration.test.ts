@@ -172,6 +172,63 @@ describe("free default and optional student fees policy", () => {
     expect(journal.lines.reduce((sum, line) => sum + line.credit.toNumber(), 0)).toBe(5000);
   });
 
+  test("rejects fee creation in a closed fiscal period without financial side effects", async () => {
+    const context = await createTaizFinanceContext();
+    await prepareEnrollment(context);
+    await enableOrganizationFees(context);
+    await financeTestPrisma.studentFeeProfile.create({
+      data: {
+        organizationId: context.organization.id,
+        centerId: context.centers[0].id,
+        studentId: context.users.student.id,
+        feeMode: FeeMode.SYMBOLIC_ONE_TIME,
+        symbolicAmount: 5000,
+        startDate: new Date("2030-01-01")
+      }
+    });
+
+    await expect(
+      billingService.createInvoice(
+        context.scopes.manager,
+        invoiceInput(context, {
+          month: 1,
+          year: 2100,
+          issuedAt: TAIZ_FINANCE_FIXTURE.dates.closedPeriod
+        })
+      )
+    ).rejects.toMatchObject({ code: "FISCAL_PERIOD_CLOSED" });
+
+    expect(await financeTestPrisma.invoice.count()).toBe(0);
+    expect(await financeTestPrisma.financeVoucher.count()).toBe(0);
+    expect(await financeTestPrisma.journalEntry.count()).toBe(0);
+  });
+
+  test("prevents duplicate fees for the same student, period, and invoice type", async () => {
+    const context = await createTaizFinanceContext();
+    await prepareEnrollment(context);
+    await enableOrganizationFees(context);
+    await financeTestPrisma.studentFeeProfile.create({
+      data: {
+        organizationId: context.organization.id,
+        centerId: context.centers[0].id,
+        studentId: context.users.student.id,
+        feeMode: FeeMode.SYMBOLIC_ONE_TIME,
+        symbolicAmount: 5000,
+        startDate: new Date("2030-01-01")
+      }
+    });
+
+    await billingService.createInvoice(context.scopes.manager, invoiceInput(context));
+
+    await expect(
+      billingService.createInvoice(context.scopes.manager, invoiceInput(context))
+    ).rejects.toMatchObject({ statusCode: 409 });
+
+    expect(await financeTestPrisma.invoice.count()).toBe(1);
+    expect(await financeTestPrisma.financeVoucher.count()).toBe(0);
+    expect(await financeTestPrisma.journalEntry.count()).toBe(0);
+  });
+
   test("rejects a symbolic fee when symbolic fees are not explicitly allowed", async () => {
     const context = await createTaizFinanceContext();
     await prepareEnrollment(context);
