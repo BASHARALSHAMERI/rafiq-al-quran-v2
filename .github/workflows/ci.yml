@@ -9,9 +9,27 @@ jobs:
   backend:
     name: Backend Build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: finance_test
+          POSTGRES_PASSWORD: finance_test
+          POSTGRES_DB: rafiq_finance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance_test -d rafiq_finance_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
-      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
+      DATABASE_URL: "postgresql://finance_test:finance_test@localhost:5432/rafiq_finance_test"
+      DIRECT_URL: "postgresql://finance_test:finance_test@localhost:5432/rafiq_finance_test"
+      DATABASE_URL_TEST: "postgresql://finance_test:finance_test@localhost:5432/rafiq_finance_test"
+      JWT_ACCESS_SECRET: "ci-finance-access-secret-at-least-32-characters"
+      JWT_REFRESH_SECRET: "ci-finance-refresh-secret-at-least-32-characters"
+      BACKGROUND_JOBS_ENABLED: "false"
     defaults:
       run:
         working-directory: backend
@@ -25,6 +43,8 @@ jobs:
       - run: npm ci
       - run: npx prisma validate --schema=prisma/schema.prisma
       - run: npx prisma generate --schema=prisma/schema.prisma
+      - run: npx prisma migrate deploy --schema=prisma/schema.prisma
+      - run: npm run test:finance
       - run: npm run build
 
   frontend:
