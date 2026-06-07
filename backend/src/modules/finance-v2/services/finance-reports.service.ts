@@ -46,7 +46,7 @@ import {
   Tx
 } from "../finance-v2.internal";
 import { accountingService as globalAccountingService } from "../../accounting/accounting.service";
-import { AccountingAccountType } from "@prisma/client";
+import { AccountingAccountType, AccountingNormalBalance } from "@prisma/client";
 
 export const financeReportsService = {
   async reportDashboard(
@@ -662,16 +662,19 @@ export const financeReportsService = {
       };
 
       if (account.type === AccountingAccountType.ASSET) {
+        const assetBalance = account.normalBalance === AccountingNormalBalance.CREDIT ? -balance : balance;
+        const assetItem = { ...item, balance: assetBalance };
+
         // Simple heuristic: codes starting with '11' are current, '12' are fixed
         // This should be refined based on the actual COA structure
         if (account.code.startsWith('12')) {
-          assets.fixed.push(item);
-          assets.totalFixed += balance;
+          assets.fixed.push(assetItem);
+          assets.totalFixed += assetBalance;
         } else {
-          assets.current.push(item);
-          assets.totalCurrent += balance;
+          assets.current.push(assetItem);
+          assets.totalCurrent += assetBalance;
         }
-        assets.totalAssets += balance;
+        assets.totalAssets += assetBalance;
       } else if (account.type === AccountingAccountType.LIABILITY) {
         liabilities.rows.push(item);
         liabilities.totalLiabilities += balance;
@@ -807,7 +810,7 @@ export const financeReportsService = {
           expenses.educational.push(item);
         } else if (account.code.startsWith('54')) {
           expenses.centers.push(item);
-        } else if (account.code.startsWith('55')) { // Assuming 55 for depreciation
+        } else if (account.code.startsWith('56')) {
           expenses.depreciation.push(item);
         } else {
           expenses.other.push(item);

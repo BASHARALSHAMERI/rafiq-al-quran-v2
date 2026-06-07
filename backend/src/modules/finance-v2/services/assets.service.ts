@@ -62,7 +62,10 @@ const assetInclude = {
   supplier: { select: { id: true, name: true } },
   expenseInvoice: { select: { id: true, invoiceNo: true, description: true, amount: true, status: true } },
   acquisitionJournalEntry: { select: { id: true, entryNo: true } },
-  depreciationEntries: { orderBy: { periodYear: 'desc', periodMonth: 'desc' }, take: 1 }
+  depreciationEntries: {
+    orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }],
+    take: 1
+  }
 } satisfies Prisma.FixedAssetInclude;
 
 const categoryInclude = {
