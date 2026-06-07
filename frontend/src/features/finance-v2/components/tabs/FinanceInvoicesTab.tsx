@@ -58,7 +58,7 @@ export default function FinanceInvoicesTab({
     centerId: "",
     studentId: "",
     invoiceKind: "TUITION_MONTHLY",
-    amount: "5000",
+    amount: "",
     dueDate: todayIso(),
     description: "",
     notes: ""

@@ -30,6 +30,7 @@ import { financeV2Domain } from "./finance-v2.domain";
 export type Tx = Prisma.TransactionClient;
 
 export const DEFAULT_POLICY = {
+  feesEnabled: false,
   requireTransferAttachment: true,
   requireApprovalDisbursement: true,
   requireApprovalReceipt: false,
@@ -727,6 +728,8 @@ export const getEffectivePolicyTx = async (tx: Tx, input: { organizationId: numb
       })
     : null;
 
+  const organizationFeesEnabled = organizationPolicy?.feesEnabled === true;
+
   return {
     ...DEFAULT_POLICY,
     ...(organizationPolicy
@@ -748,7 +751,8 @@ export const getEffectivePolicyTx = async (tx: Tx, input: { organizationId: numb
           allowSymbolicOneTimeFee: centerPolicy.allowSymbolicOneTimeFee,
           allowOverdraft: centerPolicy.allowOverdraft
         }
-      : {})
+      : {}),
+    feesEnabled: organizationFeesEnabled && centerPolicy?.feesEnabled !== false
   };
 };
 
