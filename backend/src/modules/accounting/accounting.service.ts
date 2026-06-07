@@ -61,9 +61,16 @@ const assertAccountingRole = (scope: ScopeContext) => {
     scope.role !== Role.ACCOUNTANT &&
     scope.role !== Role.FINANCE_MANAGER &&
     scope.role !== Role.TREASURER &&
-    scope.role !== Role.AUDITOR
+    scope.role !== Role.AUDITOR &&
+    scope.role !== Role.SUPERVISOR
   ) {
     throw new AppError("ليس لديك صلاحية للنطاق المحاسبي", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
+  }
+};
+
+const assertAccountingAdminRole = (scope: ScopeContext) => {
+  if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.FINANCE_MANAGER) {
+    throw new AppError("ليس لديك صلاحية لإدارة الفترات المالية", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
   }
 };
 
@@ -103,6 +110,10 @@ const entryCenterScopeWhere = (
     return {};
   }
 
+  if (scope.role === Role.SUPERVISOR) {
+    return { centerId: { in: scope.centerIds } };
+  }
+
   return { OR: [{ centerId: { in: scope.centerIds } }, { centerId: null }] };
 };
 
@@ -117,6 +128,10 @@ const lineCenterScopeWhere = (
 
   if (scope.allAccess) {
     return {};
+  }
+
+  if (scope.role === Role.SUPERVISOR) {
+    return { centerId: { in: scope.centerIds } };
   }
 
   return { OR: [{ centerId: { in: scope.centerIds } }, { centerId: null }] };
@@ -434,6 +449,52 @@ export const ensurePeriodOpenTx = async (
 
 export const accountingService = {
   ensurePeriodOpenTx,
+
+  async closeFiscalPeriod(scope: ScopeContext, periodId: number) {
+    assertAccountingAdminRole(scope);
+
+    return prisma.$transaction(async (tx) => {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: {
+          id: periodId,
+          organizationId: scope.organizationId
+        }
+      });
+
+      if (!period) {
+        throw new AppError("الفترة المالية غير موجودة", 404, undefined, "FISCAL_PERIOD_NOT_FOUND");
+      }
+
+      if (period.status === FiscalPeriodStatus.CLOSED) {
+        throw new AppError("الفترة المالية مغلقة بالفعل", 409, undefined, "FISCAL_PERIOD_ALREADY_CLOSED");
+      }
+
+      const draftEntries = await tx.journalEntry.count({
+        where: {
+          fiscalPeriodId: period.id,
+          status: JournalEntryStatus.DRAFT
+        }
+      });
+
+      if (draftEntries > 0) {
+        throw new AppError(
+          "لا يمكن إغلاق فترة مالية تحتوي على قيود مسودة",
+          409,
+          { draftEntries },
+          "FISCAL_PERIOD_HAS_DRAFT_ENTRIES"
+        );
+      }
+
+      return tx.fiscalPeriod.update({
+        where: { id: period.id },
+        data: {
+          status: FiscalPeriodStatus.CLOSED,
+          closedAt: new Date(),
+          closedById: scope.userId
+        }
+      });
+    });
+  },
   
   async getChartOfAccounts(
     scope: ScopeContext,

@@ -1,4 +1,4 @@
-import { JournalSourceType, JournalEntryStatus } from "@prisma/client";
+import { FiscalPeriodStatus, JournalSourceType, JournalEntryStatus } from "@prisma/client";
 import { accountingService } from "./accounting.service";
 import {
   createTaizFinanceContext,
@@ -79,6 +79,52 @@ describe("accounting PostgreSQL integration", () => {
         ]
       })
     ).rejects.toMatchObject({ code: "FISCAL_PERIOD_CLOSED" });
+  });
+
+  test("closes an open fiscal period, blocks new postings, and keeps reports readable", async () => {
+    const context = await createTaizFinanceContext();
+    const cash = context.accounts.bySystemKey.get("MAIN_CASH")!;
+    const donations = context.accounts.bySystemKey.get("DONATIONS_REVENUE")!;
+
+    const entry = await accountingService.createJournalEntry(context.scopes.manager, {
+      entryNo: "TEST-JE-BEFORE-CLOSE",
+      centerId: context.centers[0].id,
+      entryDate: TAIZ_FINANCE_FIXTURE.dates.openPeriod,
+      sourceType: JournalSourceType.MANUAL,
+      lines: [
+        { accountId: cash.id, centerId: context.centers[0].id, debit: 750, credit: 0 },
+        { accountId: donations.id, centerId: context.centers[0].id, debit: 0, credit: 750 }
+      ]
+    });
+    await accountingService.postJournalEntry(context.scopes.manager, entry!.id);
+
+    const closed = await accountingService.closeFiscalPeriod(
+      context.scopes.manager,
+      context.periods.openPeriod.id
+    );
+    expect(closed.status).toBe(FiscalPeriodStatus.CLOSED);
+    expect(closed.closedById).toBe(context.users.financeManager.id);
+    expect(closed.closedAt).not.toBeNull();
+
+    await expect(
+      accountingService.createJournalEntry(context.scopes.manager, {
+        entryNo: "TEST-JE-AFTER-CLOSE",
+        centerId: context.centers[0].id,
+        entryDate: TAIZ_FINANCE_FIXTURE.dates.openPeriod,
+        sourceType: JournalSourceType.MANUAL,
+        lines: [
+          { accountId: cash.id, centerId: context.centers[0].id, debit: 100, credit: 0 },
+          { accountId: donations.id, centerId: context.centers[0].id, debit: 0, credit: 100 }
+        ]
+      })
+    ).rejects.toMatchObject({ code: "FISCAL_PERIOD_CLOSED" });
+
+    const trialBalance = await accountingService.getTrialBalance(context.scopes.auditor, {
+      centerId: context.centers[0].id,
+      from: TAIZ_FINANCE_FIXTURE.dates.openPeriod,
+      to: TAIZ_FINANCE_FIXTURE.dates.openPeriod
+    });
+    expect(trialBalance.totals).toEqual({ debit: 750, credit: 750, balanced: true });
   });
 });
 

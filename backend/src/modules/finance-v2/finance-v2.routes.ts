@@ -71,7 +71,8 @@ const financeReadRoles = [
   Role.ACCOUNTANT,
   Role.FINANCE_MANAGER,
   Role.TREASURER,
-  Role.AUDITOR
+  Role.AUDITOR,
+  Role.SUPERVISOR
 ];
 const financeBillingReadRoles = [
   Role.SUPER_ADMIN,
@@ -79,10 +80,17 @@ const financeBillingReadRoles = [
   Role.FINANCE_MANAGER,
   Role.TREASURER,
   Role.AUDITOR,
+  Role.SUPERVISOR,
   Role.PARENT,
   Role.STUDENT
 ];
-const financeAdminReadRoles = financeReadRoles;
+const financeAdminReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
 const financeDraftWriteRoles = [
   Role.SUPER_ADMIN,
   Role.ACCOUNTANT,
@@ -626,7 +634,7 @@ financeV2Router.post(
 // ERP-PAY-1: Salary Scales
 financeV2Router.get(
   "/finance/v2/salary-grades",
-  requireRoles(financeReadRoles),
+  requireRoles(financeAdminReadRoles),
   validateQuery(listSalaryGradesQuerySchema),
   financeV2Controller.listSalaryGrades
 );
