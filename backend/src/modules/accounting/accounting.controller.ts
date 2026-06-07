@@ -72,6 +72,16 @@ export const accountingController = {
     }
   }) as RequestHandler,
 
+  closeFiscalPeriod: (async (req, res, next) => {
+    try {
+      const params = res.locals.validatedParams as { id: number };
+      const data = await accountingService.closeFiscalPeriod(requireScope(req), params.id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   getLedger: (async (req, res, next) => {
     try {
       const data = await accountingService.getLedger(requireScope(req), res.locals.validatedQuery);

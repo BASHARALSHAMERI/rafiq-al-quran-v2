@@ -23,7 +23,8 @@ const accountingReadRoles = [
   Role.ACCOUNTANT,
   Role.FINANCE_MANAGER,
   Role.TREASURER,
-  Role.AUDITOR
+  Role.AUDITOR,
+  Role.SUPERVISOR
 ];
 const accountingDraftWriteRoles = [
   Role.SUPER_ADMIN,
@@ -74,6 +75,13 @@ accountingRouter.post(
   requireRoles(accountingAdminRoles),
   validateParams(accountingEntityIdParamSchema),
   accountingController.postJournalEntry
+);
+
+accountingRouter.post(
+  "/accounting/fiscal-periods/:id/close",
+  requireRoles(accountingAdminRoles),
+  validateParams(accountingEntityIdParamSchema),
+  accountingController.closeFiscalPeriod
 );
 
 accountingRouter.get(

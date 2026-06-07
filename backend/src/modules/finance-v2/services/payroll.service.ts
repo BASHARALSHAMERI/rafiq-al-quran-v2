@@ -469,7 +469,7 @@ export const payrollService = {
 
           if (pendingDeductions > 0) {
             throw financeV2Domain.financeError(
-              "���� ����� ��� ��� ��������. ���� �������� ����� ��� ����� ���� �������.",
+              "توجد استقطاعات معلقة لهذه الفترة. يجب اعتمادها قبل إنشاء دفعة الرواتب.",
               400,
               "PENDING_DEDUCTIONS_EXIST"
             );
