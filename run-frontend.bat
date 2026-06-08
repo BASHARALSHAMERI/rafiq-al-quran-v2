@@ -35,22 +35,21 @@ if not exist node_modules (
   exit /b 1
 )
 
-if not defined FRONTEND_RUN_MODE set "FRONTEND_RUN_MODE=dist"
+if not defined FRONTEND_RUN_MODE set "FRONTEND_RUN_MODE=dev"
 exit /b 0
 
 :run_frontend
-echo Frontend will be available on %APP_URL%
+echo Frontend mode: %FRONTEND_RUN_MODE%
+echo Frontend URL: %APP_URL%
+echo API URL: http://localhost:4000
+echo.
 if /I "%FRONTEND_RUN_MODE%"=="dev" (
-  echo Frontend run mode: dev
   call npm.cmd run dev
   exit /b %errorlevel%
 )
 
 if /I "%FRONTEND_RUN_MODE%"=="build" (
-  echo Frontend run mode: build
   call npm.cmd run build || exit /b %errorlevel%
-) else (
-  echo Frontend run mode: dist
 )
 
 if not exist dist\index.html (

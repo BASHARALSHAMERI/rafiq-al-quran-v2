@@ -5,6 +5,8 @@ set "ROOT=%~dp0"
 set "BACKEND_READY_URL=http://localhost:4000/system/ready"
 set "FRONTEND_URL=http://localhost:5173/"
 if not defined STARTUP_TIMEOUT_SECONDS set "STARTUP_TIMEOUT_SECONDS=90"
+if not defined RAFIQ_RESTART set "RAFIQ_RESTART=0"
+if /I "%~1"=="restart" set "RAFIQ_RESTART=1"
 
 call :print_header
 call :select_launch_plan || exit /b 1
@@ -24,6 +26,8 @@ echo   3. Mobile only
 echo   4. Backend then Frontend
 echo   5. Backend then Frontend then Mobile
 echo   0. Exit
+echo.
+echo Tip: Run 'start-all.bat restart' or set RAFIQ_RESTART=1 to stop existing project servers first.
 echo.
 exit /b 0
 
@@ -103,13 +107,18 @@ exit /b 0
 
 :start_backend
 echo [1/3] Backend
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { $response = Invoke-WebRequest -UseBasicParsing '%BACKEND_READY_URL%' -TimeoutSec 5; if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) { exit 0 } exit 1 } catch { exit 1 }" >nul 2>&1
-if not errorlevel 1 (
-  echo Backend is already ready.
-  echo.
-  exit /b 0
+if "%RAFIQ_RESTART%"=="1" (
+  echo Stopping existing Backend process on port 4000...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$root=(Resolve-Path '%ROOT%').Path.TrimEnd('\'); Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $processId=$_.OwningProcess; $process=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessId -eq $processId }; if ($process -and $process.CommandLine -like ('*' + $root + '*')) { Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
+  timeout /t 2 /nobreak >nul
+) else (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { $response = Invoke-WebRequest -UseBasicParsing '%BACKEND_READY_URL%' -TimeoutSec 5; if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) { exit 0 } exit 1 } catch { exit 1 }" >nul 2>&1
+  if not errorlevel 1 (
+    echo Backend is already ready. Use 'start-all.bat restart' or set RAFIQ_RESTART=1 to force a fresh start.
+    echo.
+    exit /b 0
+  )
 )
-
 start "Rafiq Backend" cmd /k call "%ROOT%run-backend.bat"
 call :wait_for_url "%BACKEND_READY_URL%" %STARTUP_TIMEOUT_SECONDS% "backend API"
 if errorlevel 1 exit /b 1
@@ -118,13 +127,18 @@ exit /b 0
 
 :start_frontend
 echo [2/3] Frontend
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { $response = Invoke-WebRequest -UseBasicParsing '%FRONTEND_URL%' -TimeoutSec 5; if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) { exit 0 } exit 1 } catch { exit 1 }" >nul 2>&1
-if not errorlevel 1 (
-  echo Frontend is already running.
-  echo.
-  exit /b 0
+if "%RAFIQ_RESTART%"=="1" (
+  echo Stopping existing Frontend process on port 5173...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$root=(Resolve-Path '%ROOT%').Path.TrimEnd('\'); Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $processId=$_.OwningProcess; $process=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessId -eq $processId }; if ($process -and $process.CommandLine -like ('*' + $root + '*')) { Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
+  timeout /t 2 /nobreak >nul
+) else (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { $response = Invoke-WebRequest -UseBasicParsing '%FRONTEND_URL%' -TimeoutSec 5; if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) { exit 0 } exit 1 } catch { exit 1 }" >nul 2>&1
+  if not errorlevel 1 (
+    echo Frontend is already running. Use 'start-all.bat restart' or set RAFIQ_RESTART=1 to force a fresh start.
+    echo.
+    exit /b 0
+  )
 )
-
 start "Rafiq Frontend" cmd /k call "%ROOT%run-frontend.bat"
 call :wait_for_url "%FRONTEND_URL%" 60 "frontend"
 if errorlevel 1 exit /b 1
