@@ -29,6 +29,14 @@ const usersRouter = Router();
 
 usersRouter.use(authGuard, attachScope);
 
+export const usersReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.FINANCE_MANAGER
+];
+
 usersRouter.post(
   "/",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
@@ -38,7 +46,7 @@ usersRouter.post(
 
 usersRouter.get(
   "/",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
+  requireRoles(usersReadRoles),
   validateQuery(usersQuerySchema),
   usersController.listUsers
 );

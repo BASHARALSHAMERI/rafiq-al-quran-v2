@@ -1,6 +1,14 @@
-import { AccountingAccountType, JournalSourceType } from "@prisma/client";
+import { AccountingAccountType, JournalSourceType, Role } from "@prisma/client";
 import { accountingService } from "../accounting/accounting.service";
+import { orgService } from "../org/org.service";
+import { centerReadRoles } from "../org/org.routes";
+import { usersService } from "../users/users.service";
+import { usersReadRoles } from "../users/users.routes";
+import { requireRoles } from "../../shared/middleware/rbac.middleware";
 import { financeV2Domain } from "./finance-v2.domain";
+import { disableConditionalCache } from "./finance-v2.cache";
+import { financeV2Controller } from "./finance-v2.controller";
+import { payrollService } from "./services/payroll.service";
 import {
   createTaizFinanceContext,
   financeTestPrisma,
@@ -84,6 +92,114 @@ describe("finance and accounting RBAC integration", () => {
     await expect(accountingService.getChartOfAccounts(context.scopes.student, {})).rejects.toMatchObject({
       code: "ACCOUNTING_SCOPE_DENIED"
     });
+  });
+
+  test("uses validated boolean filters when listing salary grades", async () => {
+    const context = await createTaizFinanceContext();
+    const listSpy = jest.spyOn(payrollService, "listSalaryGrades").mockResolvedValue([]);
+    const json = jest.fn();
+    const next = jest.fn();
+
+    await financeV2Controller.listSalaryGrades(
+      {
+        scope: context.scopes.manager,
+        query: { isActive: "true" }
+      } as never,
+      {
+        locals: { validatedQuery: { isActive: true } },
+        json
+      } as never,
+      next
+    );
+
+    expect(listSpy).toHaveBeenCalledWith(context.scopes.manager, { isActive: true });
+    expect(json).toHaveBeenCalledWith({ ok: true, data: [] });
+    expect(next).not.toHaveBeenCalled();
+    listSpy.mockRestore();
+  });
+
+  test("allows finance manager reference reads while preserving role and center scope", async () => {
+    const context = await createTaizFinanceContext();
+    const secondTeacher = await financeTestPrisma.user.create({
+      data: {
+        organizationId: context.organization.id,
+        role: Role.TEACHER,
+        email: "second-teacher@finance-test.invalid",
+        username: "finance_test_second_teacher",
+        fullName: "معلم المركز الثاني",
+        isActive: true
+      }
+    });
+    await financeTestPrisma.userCenterAccess.create({
+      data: { userId: secondTeacher.id, centerId: context.centers[1].id }
+    });
+
+    await expect(orgService.listCenters(context.scopes.manager, {})).resolves.toHaveLength(
+      context.centers.length
+    );
+    await expect(orgService.listCenters(context.scopes.supervisor, {})).resolves.toEqual([
+      expect.objectContaining({ id: context.centers[0].id })
+    ]);
+
+    await expect(
+      usersService.listUsers(context.scopes.manager, { role: Role.TEACHER })
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: context.users.teacher.id }),
+        expect.objectContaining({ id: secondTeacher.id })
+      ])
+    );
+    await expect(usersService.listUsers(context.scopes.manager, {})).rejects.toMatchObject({
+      code: "FINANCE_USER_READ_SCOPE_DENIED"
+    });
+    await expect(
+      usersService.listUsers(context.scopes.supervisor, { role: Role.TEACHER })
+    ).resolves.toEqual([expect.objectContaining({ id: context.users.teacher.id })]);
+  });
+
+  test("finance reference routes allow managers and deny parents and students", () => {
+    const invoke = (roles: Role[], role: Role) => {
+      const next = jest.fn();
+      requireRoles(roles)(
+        { auth: { role }, path: "/reference", method: "GET" } as never,
+        {} as never,
+        next
+      );
+      return next;
+    };
+
+    expect(invoke(centerReadRoles, Role.FINANCE_MANAGER)).toHaveBeenCalledWith();
+    expect(invoke(usersReadRoles, Role.FINANCE_MANAGER)).toHaveBeenCalledWith();
+
+    for (const role of [Role.PARENT, Role.STUDENT]) {
+      expect(invoke(centerReadRoles, role).mock.calls[0][0]).toMatchObject({ statusCode: 403 });
+      expect(invoke(usersReadRoles, role).mock.calls[0][0]).toMatchObject({ statusCode: 403 });
+    }
+  });
+
+  test("center funding responses disable conditional browser caching", () => {
+    const headers: Record<string, string> = {};
+    const req: {
+      headers: Record<string, string>;
+    } = {
+      headers: {
+        "if-none-match": "cached-etag",
+        "if-modified-since": "Mon, 01 Jan 2024 00:00:00 GMT"
+      }
+    };
+    const res = {
+      setHeader: (name: string, value: string) => {
+        headers[name] = value;
+      }
+    } as never;
+    const next = jest.fn();
+
+    disableConditionalCache(req as never, res, next);
+
+    expect(req.headers).not.toHaveProperty("if-none-match");
+    expect(req.headers).not.toHaveProperty("if-modified-since");
+    expect(headers["Cache-Control"]).toBe("no-store, no-cache, must-revalidate");
+    expect(next).toHaveBeenCalledWith();
   });
 });
 

@@ -27,6 +27,13 @@ const orgRouter = Router();
 
 orgRouter.use(authGuard, attachScope);
 
+export const centerReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.FINANCE_MANAGER
+];
+
 orgRouter.get(
   "/branding",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
@@ -49,7 +56,7 @@ orgRouter.post(
 
 orgRouter.get(
   "/centers",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR]),
+  requireRoles(centerReadRoles),
   validateQuery(centersQuerySchema),
   verifyScope("center", "query", "centerId"),
   orgController.listCenters

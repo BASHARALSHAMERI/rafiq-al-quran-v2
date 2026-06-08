@@ -10,8 +10,29 @@ const CENTER_ADMIN_MANAGED_ROLES = new Set<Role>([
   Role.PARENT,
   Role.STUDENT
 ]);
+const FINANCE_VISIBLE_USER_ROLES = new Set<Role>([
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.STUDENT
+]);
 
 export const usersDomain = {
+  assertFinanceUserReadFilter(scope: ScopeContext, role?: Role) {
+    if (scope.role !== Role.FINANCE_MANAGER) {
+      return;
+    }
+
+    if (!role || !FINANCE_VISIBLE_USER_ROLES.has(role)) {
+      throw new AppError(
+        "يجب تحديد دور مستخدم مطلوب للعمل المالي.",
+        403,
+        { allowedRoles: [...FINANCE_VISIBLE_USER_ROLES] },
+        "FINANCE_USER_READ_SCOPE_DENIED"
+      );
+    }
+  },
+
   assertScopeFilter(scope: ScopeContext, filters: { centerId?: number; circleId?: number }) {
     if (filters.centerId) {
       ensureCenterAllowed(scope, filters.centerId);

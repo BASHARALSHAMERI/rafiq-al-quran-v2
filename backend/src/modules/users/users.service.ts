@@ -658,6 +658,7 @@ const getReadableUserOr404 = async (
 
 export const usersService = {
   async listUsers(scope: ScopeContext, query: ListUsersQuery) {
+    usersDomain.assertFinanceUserReadFilter(scope, query.role);
     usersDomain.assertScopeFilter(scope, query);
 
     const selfScopedIds = usersDomain.resolveSelfScopedUserIds(scope);

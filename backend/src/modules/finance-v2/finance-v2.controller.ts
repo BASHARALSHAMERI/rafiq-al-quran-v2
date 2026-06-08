@@ -905,7 +905,7 @@ export const financeV2Controller = {
   listSalaryGrades: (async (req, res, next) => {
     try {
       if (!req.scope) throw new AppError("Scope not resolved", 500);
-      const data = await payrollService.listSalaryGrades(req.scope, req.query);
+      const data = await payrollService.listSalaryGrades(req.scope, res.locals.validatedQuery);
       res.json({ ok: true, data });
     } catch (error) {
       next(error);

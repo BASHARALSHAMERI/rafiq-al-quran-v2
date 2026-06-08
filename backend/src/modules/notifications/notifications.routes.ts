@@ -22,7 +22,8 @@ notificationsRouter.get(
     Role.SUPERVISOR,
     Role.TEACHER,
     Role.PARENT,
-    Role.STUDENT
+    Role.STUDENT,
+    Role.FINANCE_MANAGER
   ]),
   validateQuery(notificationsListQuerySchema),
   notificationsController.list
@@ -36,7 +37,8 @@ notificationsRouter.get(
     Role.SUPERVISOR,
     Role.TEACHER,
     Role.PARENT,
-    Role.STUDENT
+    Role.STUDENT,
+    Role.FINANCE_MANAGER
   ]),
   notificationsController.unreadCount
 );
@@ -49,7 +51,8 @@ notificationsRouter.patch(
     Role.SUPERVISOR,
     Role.TEACHER,
     Role.PARENT,
-    Role.STUDENT
+    Role.STUDENT,
+    Role.FINANCE_MANAGER
   ]),
   validateParams(notificationIdParamSchema),
   notificationsController.markRead
@@ -63,7 +66,8 @@ notificationsRouter.patch(
     Role.SUPERVISOR,
     Role.TEACHER,
     Role.PARENT,
-    Role.STUDENT
+    Role.STUDENT,
+    Role.FINANCE_MANAGER
   ]),
   notificationsController.markAllRead
 );
