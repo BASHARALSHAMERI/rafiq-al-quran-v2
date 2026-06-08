@@ -74,7 +74,7 @@ export default function FinancePaymentsTab({
   const invoicesQ = useFinanceV2InvoicesQuery({
     centerId,
     page: 1,
-    pageSize: 1000
+    pageSize: 100
   });
   const invoices = useMemo(() => invoicesQ.data?.rows ?? [], [invoicesQ.data?.rows]);
 

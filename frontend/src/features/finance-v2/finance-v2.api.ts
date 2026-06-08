@@ -343,24 +343,54 @@ const normalizeAgingReport = (report: FinanceReportInvoiceAgingV2): FinanceRepor
   }
 });
 
-const normalizeCenterFundingReport = (report: FinanceReportCenterFundingV2): FinanceReportCenterFundingV2 => ({
-  ...report,
+// FA-CENTER-FINANCIAL-TRACKING-1: shape actually returned by GET /finance/v2/reports/center-funding
+type CenterFundingApiRow = {
+  centerId: number | string;
+  centerName: string;
+  funding?: {
+    studentFees?: number | string;
+    donations?: number | string;
+    otherRevenue?: number | string;
+    totalFunding?: number | string;
+  };
+  cost?: {
+    payrollExpense?: number | string;
+    operatingExpense?: number | string;
+    educationalExpense?: number | string;
+    centerExpense?: number | string;
+    otherExpense?: number | string;
+    totalCost?: number | string;
+  };
+  fundingGap?: number | string;
+};
+
+type CenterFundingApiResponse = {
+  range?: { from?: string; to?: string } | null;
+  rows?: CenterFundingApiRow[];
+  totals?: {
+    totalFunding?: number | string;
+    totalCost?: number | string;
+    fundingGap?: number | string;
+  };
+};
+
+const normalizeCenterFundingReport = (report: CenterFundingApiResponse): FinanceReportCenterFundingV2 => ({
   rows: (report.rows ?? []).map((row) => ({
-    ...row,
     centerId: Number(row.centerId),
-    studentFees: toNumber(row.studentFees),
-    donations: toNumber(row.donations),
-    totalFunding: toNumber(row.totalFunding),
-    payrollCosts: toNumber(row.payrollCosts),
-    operatingCosts: toNumber(row.operatingCosts),
-    educationalCosts: toNumber(row.educationalCosts),
-    totalCosts: toNumber(row.totalCosts),
+    centerName: row.centerName,
+    studentFees: toNumber(row.funding?.studentFees),
+    donations: toNumber(row.funding?.donations),
+    totalFunding: toNumber(row.funding?.totalFunding),
+    payrollCosts: toNumber(row.cost?.payrollExpense),
+    operatingCosts: toNumber(row.cost?.operatingExpense),
+    educationalCosts: toNumber(row.cost?.educationalExpense),
+    totalCosts: toNumber(row.cost?.totalCost),
     fundingGap: toNumber(row.fundingGap)
   })),
   kpis: {
-    totalFunding: toNumber(report.kpis.totalFunding),
-    totalCosts: toNumber(report.kpis.totalCosts),
-    netFundingGap: toNumber(report.kpis.netFundingGap)
+    totalFunding: toNumber(report.totals?.totalFunding),
+    totalCosts: toNumber(report.totals?.totalCost),
+    netFundingGap: toNumber(report.totals?.fundingGap)
   }
 });
 
@@ -1121,7 +1151,7 @@ export const financeV2Api = {
   },
 
   async getReportCenterFunding(params: { centerId?: number; from?: string; to?: string } = {}): Promise<FinanceReportCenterFundingV2> {
-    const response = await apiClient.get<ApiResponse<FinanceReportCenterFundingV2>>(
+    const response = await apiClient.get<ApiResponse<CenterFundingApiResponse>>(
       "/finance/v2/reports/center-funding",
       { params }
     );
