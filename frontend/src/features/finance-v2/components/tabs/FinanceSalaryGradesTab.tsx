@@ -14,6 +14,13 @@ import {
   useUpdateFinanceV2SalaryGradeMutation
 } from "../../finance-v2.hooks";
 import type { SalaryGradeV2 } from "../../types";
+import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
+import {
+  focusFirstInvalidField,
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../../../shared/ui/feedback";
 
 // Default curated options (shown until data loads or as suggestions)
 const DEFAULT_JOB_TITLES = [
@@ -113,9 +120,13 @@ export default function FinanceSalaryGradesTab({
     setFormOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formState.jobTitle.trim() || !formState.gradeLevel.trim()) return;
+    if (!formState.jobTitle.trim() || !formState.gradeLevel.trim()) {
+      focusFirstInvalidField(e.currentTarget);
+      notifyRequiredFields(ar);
+      return;
+    }
     try {
       if (editingGrade) {
         await updateGradeM.mutateAsync({
@@ -128,9 +139,15 @@ export default function FinanceSalaryGradesTab({
           centerId,
         });
       }
+      notifySuccess(editingGrade
+        ? (ar ? "تم تحديث سلم الراتب بنجاح" : "Salary grade updated successfully")
+        : (ar ? "تمت إضافة سلم الراتب بنجاح" : "Salary grade added successfully"));
       setFormOpen(false);
     } catch (err) {
-      console.error(err);
+      notifyError(getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر حفظ سلم الراتب." : "Unable to save the salary grade."
+      }));
     }
   };
 
@@ -270,6 +287,7 @@ export default function FinanceSalaryGradesTab({
           className="circlemod-form"
           onSubmit={handleSubmit}
           dir={ar ? "rtl" : "ltr"}
+          noValidate
         >
           <div className="circlemod-section">
             <div className="circlemod-section-head">

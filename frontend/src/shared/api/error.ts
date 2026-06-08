@@ -45,42 +45,93 @@ const TECHNICAL_MESSAGE_PATTERNS = [
   /timeout/i,
   /request failed with status code/i,
   /unexpected token/i,
-  /internal server error/i
+  /internal server error/i,
+  /prisma/i,
+  /stack trace/i,
+  /\bat\s+\S+\s+\(/i
 ];
 
 const looksTechnical = (message: string) =>
   TECHNICAL_MESSAGE_PATTERNS.some((pattern) => pattern.test(message));
 
+const containsArabic = (message: string) => /[\u0600-\u06ff]/.test(message);
+
+const looksLikeEnglishBackendMessage = (message: string) =>
+  /[a-z]/i.test(message) && !containsArabic(message);
+
 const localizedTransportFallback = (ar: boolean) =>
   ar
-    ? "تعذر إتمام العملية. تحقق من الاتصال ثم أعد المحاولة."
-    : "Unable to complete the request. Check your connection and try again.";
+    ? "تعذر الاتصال بالخادم. تحقق من اتصال الإنترنت أو حاول مرة أخرى."
+    : "Unable to reach the server. Check your connection and try again.";
 
 const localizedStatusFallback = (status: number | undefined, ar: boolean, fallback: string) => {
   if (status === 401) {
-    return ar ? "انتهت الجلسة. سجّل الدخول مرة أخرى." : "Your session has expired. Sign in again.";
+    return ar ? "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى." : "Your session has expired. Please sign in again.";
   }
 
   if (status === 403) {
-    return ar ? "ليست لديك صلاحية لتنفيذ هذه العملية." : "You do not have permission to perform this action.";
+    return ar ? "لا تملك صلاحية تنفيذ هذه العملية." : "You do not have permission to perform this action.";
   }
 
   if (status === 404) {
-    if (fallback && !looksTechnical(fallback) && fallback !== "Request failed") {
-      return fallback;
-    }
-    return ar ? "لم يتم العثور على البيانات المطلوبة." : "The requested data could not be found.";
+    return ar ? "لم يتم العثور على السجل المطلوب." : "The requested record could not be found.";
+  }
+
+  if (status === 409) {
+    return ar
+      ? "لا يمكن تنفيذ العملية بسبب تعارض في البيانات."
+      : "The operation could not be completed because of a data conflict.";
   }
 
   if (status === 422) {
-    return fallback;
+    return ar ? "يرجى مراجعة البيانات المدخلة." : "Please review the entered data.";
   }
 
   if (status && status >= 500) {
-    return ar ? "تعذر إتمام العملية حاليًا. يرجى المحاولة مرة أخرى." : "Unable to complete the request right now. Please try again.";
+    return ar
+      ? "حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا."
+      : "An unexpected error occurred. Please try again later.";
   }
 
   return fallback;
+};
+
+const toFieldMessage = (value: unknown): string | null => {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    const firstMessage = value.find((item) => typeof item === "string" && item.trim());
+    return typeof firstMessage === "string" ? firstMessage.trim() : null;
+  }
+
+  return null;
+};
+
+export const getApiFieldErrors = (error: unknown): Record<string, string> => {
+  const details = normalizeApiError(error).details;
+  if (!details || typeof details !== "object") {
+    return {};
+  }
+
+  const source = details as Record<string, unknown>;
+  const fieldErrors =
+    source.fieldErrors && typeof source.fieldErrors === "object"
+      ? (source.fieldErrors as Record<string, unknown>)
+      : source;
+
+  return Object.entries(fieldErrors).reduce<Record<string, string>>((result, [field, value]) => {
+    if (field === "formErrors") {
+      return result;
+    }
+
+    const message = toFieldMessage(value);
+    if (message) {
+      result[field] = message;
+    }
+    return result;
+  }, {});
 };
 
 const AR_TO_EN_MAP: Record<string, string> = {
@@ -165,9 +216,14 @@ export const getLocalizedApiErrorMessage = (
 
   if (axios.isAxiosError<ApiErrorResponse>(error) && !error.response) {
     message = localizedTransportFallback(ar);
-  } else if (looksTechnical(message)) {
+  } else if (looksTechnical(message) || (ar && looksLikeEnglishBackendMessage(message))) {
     message = localizedStatusFallback(normalized.status, ar, fallback);
-  } else {
+  } else if (
+    !ar ||
+    !containsArabic(message) ||
+    normalized.status === 401 ||
+    (normalized.status !== undefined && normalized.status >= 500)
+  ) {
     message = localizedStatusFallback(normalized.status, ar, message);
   }
 

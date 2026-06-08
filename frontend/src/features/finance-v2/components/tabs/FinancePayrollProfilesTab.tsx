@@ -21,6 +21,13 @@ import type {
   PayrollProfileV2,
   EligibleEmployeeV2,
 } from "../../types";
+import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
+import {
+  focusFirstInvalidField,
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../../../shared/ui/feedback";
 
 const ROLE_LABEL_AR: Record<string, string> = {
   TEACHER: "معلم",
@@ -180,10 +187,17 @@ export default function FinancePayrollProfilesTab({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formState.userId) return;
-    if (isOverride && !formState.overrideReason?.trim()) return;
+    if (!formState.userId || (isOverride && !formState.overrideReason?.trim())) {
+      const employeeInput = e.currentTarget.querySelector<HTMLInputElement>("input[list='employeeList']");
+      if (!formState.userId) {
+        employeeInput?.setCustomValidity(ar ? "اختر موظفًا من القائمة." : "Select an employee from the list.");
+      }
+      focusFirstInvalidField(e.currentTarget);
+      notifyRequiredFields(ar);
+      return;
+    }
     try {
       const payload = {
         ...formState,
@@ -196,9 +210,15 @@ export default function FinancePayrollProfilesTab({
       } else {
         await createProfileM.mutateAsync({ ...payload, centerId });
       }
+      notifySuccess(formMode === "edit"
+        ? (ar ? "تم تحديث ملف الراتب بنجاح" : "Payroll profile updated successfully")
+        : (ar ? "تم إنشاء ملف الراتب بنجاح" : "Payroll profile created successfully"));
       setFormOpen(false);
     } catch (err) {
-      console.error(err);
+      notifyError(getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر حفظ ملف الراتب." : "Unable to save the payroll profile."
+      }));
     }
   };
 
@@ -345,7 +365,7 @@ export default function FinancePayrollProfilesTab({
           </div>
         }
       >
-        <form id="payroll-profile-form" className="circlemod-form" onSubmit={handleSubmit} dir={ar ? "rtl" : "ltr"}>
+        <form id="payroll-profile-form" className="circlemod-form" onSubmit={handleSubmit} dir={ar ? "rtl" : "ltr"} noValidate>
 
           <div className="circlemod-section">
             <div className="circlemod-section-head">
@@ -370,6 +390,7 @@ export default function FinancePayrollProfilesTab({
                       value={empSearch}
                       onChange={(e) => {
                         const val = e.target.value;
+                        e.currentTarget.setCustomValidity("");
                         setEmpSearch(val);
                         const matched = employees.find((emp) => emp.fullName === val);
                         if (matched) {

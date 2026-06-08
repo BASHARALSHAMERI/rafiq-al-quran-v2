@@ -14,6 +14,7 @@ import { useAuthStore } from "../../features/auth/auth.store";
 import { useCentersQuery } from "../../features/org/org.hooks";
 import { canReadCenters } from "../../features/org/org.permissions";
 import { useFinanceV2ReportCenterFundingQuery } from "../../features/finance-v2/finance-v2.hooks";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 const formatCurrency = (val: number, _curr: string) =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(val);
 
@@ -201,6 +202,10 @@ export default function FinanceCenterFundingPage() {
       ) : reportQ.isError ? (
         <ErrorState
           title={ar ? "فشل تحميل التقرير" : "Failed to load report"}
+          description={getLocalizedApiErrorMessage(reportQ.error, {
+            ar,
+            fallback: ar ? "تعذر تحميل تقرير تمويل المراكز. حاول مرة أخرى." : "Unable to load the center funding report."
+          })}
           onRetry={() => void reportQ.refetch()}
         />
       ) : rows.length === 0 ? (
