@@ -65,7 +65,6 @@ export default function CirclesPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const isTeacher = user?.role === "TEACHER";
   const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
 
   const [searchParams, setSearchParams] = useSearchParams();
