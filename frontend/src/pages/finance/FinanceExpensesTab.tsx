@@ -3,7 +3,15 @@ import { Check, CreditCard, FileText } from "lucide-react";
 import { useExpenseInvoicesQuery, useApproveExpenseInvoiceMutation, usePayExpenseInvoiceMutation, useFinanceV2AccountsQuery, useCreateExpenseInvoiceMutation, useSuppliersQuery, useExpenseCategoriesQuery } from "../../features/finance-v2/finance-v2.hooks";
 import { FinanceDataTable } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
+import { ConfirmModal } from "../../components/ui/ConfirmModal";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { Modal } from "../../components/ui/Modal";
+import { getApiFieldErrors, getLocalizedApiErrorMessage } from "../../shared/api/error";
+import {
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../shared/ui/feedback";
 
 export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onExternalFormClose }: { ar: boolean; canManage?: boolean; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
   const [centerId] = useState<number>();
@@ -20,6 +28,9 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
   const createM = useCreateExpenseInvoiceMutation();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [approveInvoiceId, setApproveInvoiceId] = useState<number | null>(null);
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+  const [payErrors, setPayErrors] = useState<Record<string, string>>({});
   const [createForm, setCreateForm] = useState({
     supplierId: "",
     categoryId: "",
@@ -42,18 +53,41 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
   const handleCreate = async () => {
     const categoryId = Number(createForm.categoryId);
     const amount = Number(createForm.amount);
-    if (!categoryId || !amount || !createForm.description.trim()) return;
-    await createM.mutateAsync({
-      supplierId: createForm.supplierId ? Number(createForm.supplierId) : undefined,
-      categoryId,
-      invoiceNo: createForm.invoiceNo.trim() || undefined,
-      invoiceDate: createForm.invoiceDate,
-      dueDate: createForm.dueDate || undefined,
-      description: createForm.description.trim(),
-      amount
-    });
-    handleCreateClose();
-    setCreateForm({ supplierId: "", categoryId: "", invoiceNo: "", invoiceDate: new Date().toISOString().slice(0, 10), dueDate: "", description: "", amount: "" });
+    const errors: Record<string, string> = {};
+    if (!categoryId) errors.categoryId = ar ? "التصنيف مطلوب" : "Category is required";
+    if (!Number.isFinite(amount) || amount <= 0) errors.amount = ar ? "أدخل مبلغًا صحيحًا" : "Enter a valid amount";
+    if (!createForm.invoiceDate) errors.invoiceDate = ar ? "تاريخ الفاتورة مطلوب" : "Invoice date is required";
+    if (!createForm.description.trim()) errors.description = ar ? "الوصف مطلوب" : "Description is required";
+
+    if (Object.keys(errors).length) {
+      setCreateErrors(errors);
+      notifyRequiredFields(ar);
+      requestAnimationFrame(() => document.getElementById(`expense-${Object.keys(errors)[0]}`)?.focus());
+      return;
+    }
+
+    try {
+      await createM.mutateAsync({
+        supplierId: createForm.supplierId ? Number(createForm.supplierId) : undefined,
+        categoryId,
+        invoiceNo: createForm.invoiceNo.trim() || undefined,
+        invoiceDate: createForm.invoiceDate,
+        dueDate: createForm.dueDate || undefined,
+        description: createForm.description.trim(),
+        amount
+      });
+      notifySuccess(ar ? "تم إنشاء فاتورة المصروف بنجاح" : "Expense invoice created successfully");
+      handleCreateClose();
+      setCreateErrors({});
+      setCreateForm({ supplierId: "", categoryId: "", invoiceNo: "", invoiceDate: new Date().toISOString().slice(0, 10), dueDate: "", description: "", amount: "" });
+    } catch (error) {
+      const message = getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر إنشاء فاتورة المصروف." : "Unable to create the expense invoice."
+      });
+      setCreateErrors(getApiFieldErrors(error));
+      notifyError(message);
+    }
   };
 
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
@@ -63,25 +97,61 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
   const [payNotes, setPayNotes] = useState("");
 
   const handleApprove = async (id: number) => {
-    if (confirm(ar ? "هل أنت متأكد من الاعتماد؟" : "Are you sure you want to approve?")) {
+    try {
       await approveM.mutateAsync(id);
+      notifySuccess(ar ? "تم اعتماد المصروف بنجاح" : "Expense approved successfully");
+      setApproveInvoiceId(null);
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر اعتماد المصروف." : "Unable to approve the expense."
+      }));
     }
   };
 
   const handlePay = async () => {
     if (!selectedInvoice) return;
-    await payM.mutateAsync({
-      id: selectedInvoice.id,
-      payload: { amount: payAmount, financeAccountId: payAccountId, notes: payNotes }
-    });
-    setIsPayModalOpen(false);
+    const errors: Record<string, string> = {};
+    if (!Number.isFinite(payAmount) || payAmount <= 0) errors.amount = ar ? "أدخل مبلغًا صحيحًا" : "Enter a valid amount";
+    if (!payAccountId) errors.financeAccountId = ar ? "حساب الصندوق أو البنك مطلوب" : "Finance account is required";
+    if (Object.keys(errors).length) {
+      setPayErrors(errors);
+      notifyRequiredFields(ar);
+      requestAnimationFrame(() => document.getElementById(`expense-pay-${Object.keys(errors)[0]}`)?.focus());
+      return;
+    }
+
+    try {
+      await payM.mutateAsync({
+        id: selectedInvoice.id,
+        payload: { amount: payAmount, financeAccountId: payAccountId, notes: payNotes }
+      });
+      notifySuccess(ar ? "تم تسجيل دفع المصروف بنجاح" : "Expense payment recorded successfully");
+      setPayErrors({});
+      setIsPayModalOpen(false);
+    } catch (error) {
+      setPayErrors(getApiFieldErrors(error));
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر تسجيل دفع المصروف." : "Unable to record the expense payment."
+      }));
+    }
   };
 
   return (
     <div className="fin-premium-panel animate-premium">
       <div className="fin-premium-panel__content p-0">
 
-      <FinanceDataTable
+      {invoicesQ.isError ? (
+        <ErrorState
+          title={ar ? "تعذر تحميل المصروفات" : "Unable to load expenses"}
+          description={getLocalizedApiErrorMessage(invoicesQ.error, {
+            ar,
+            fallback: ar ? "تعذر تحميل المصروفات. حاول مرة أخرى." : "Unable to load expenses. Please try again."
+          })}
+          onRetry={() => void invoicesQ.refetch()}
+        />
+      ) : <FinanceDataTable
         columns={[
           { id: "id", header: "#", render: (row: any) => row.id },
           { id: "date", header: ar ? "التاريخ" : "Date", render: (row: any) => new Date(row.invoiceDate).toLocaleDateString() },
@@ -95,7 +165,7 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             render: (row: any) => (
               <div className="flex gap-2">
                 {canManage && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
-                  <Button size="sm" variant="secondary" onClick={() => handleApprove(row.id)}>
+                  <Button size="sm" variant="secondary" onClick={() => setApproveInvoiceId(row.id)}>
                     <Check className="w-4 h-4 mr-1" /> {ar ? "اعتماد" : "Approve"}
                   </Button>
                 )}
@@ -116,7 +186,7 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
         rowKey="id"
         loading={invoicesQ.isLoading}
         density="dense"
-      />
+      />}
     </div>
 
       {/* Create Expense Invoice Modal */}
@@ -149,16 +219,24 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--lg">
                 <label>{ar ? "التصنيف" : "Category"} *</label>
-                <select className="circlemod-select" value={createForm.categoryId} onChange={(e) => setCreateForm((p) => ({ ...p, categoryId: e.target.value }))}>
+                <select id="expense-categoryId" className="circlemod-select" aria-invalid={Boolean(createErrors.categoryId)} value={createForm.categoryId} onChange={(e) => {
+                  setCreateErrors((current) => ({ ...current, categoryId: "" }));
+                  setCreateForm((p) => ({ ...p, categoryId: e.target.value }));
+                }}>
                   <option value="">{ar ? "اختر التصنيف..." : "Select category..."}</option>
                   {(categoriesQ.data ?? []).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+                {createErrors.categoryId ? <span className="input-error-text" role="alert">{createErrors.categoryId}</span> : null}
               </div>
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "المبلغ" : "Amount"} *</label>
-                <input type="number" className="circlemod-input" min={1} step="any" value={createForm.amount} onChange={(e) => setCreateForm((p) => ({ ...p, amount: e.target.value }))} />
+                <input id="expense-amount" type="number" className="circlemod-input" aria-invalid={Boolean(createErrors.amount)} min={1} step="any" value={createForm.amount} onChange={(e) => {
+                  setCreateErrors((current) => ({ ...current, amount: "" }));
+                  setCreateForm((p) => ({ ...p, amount: e.target.value }));
+                }} />
+                {createErrors.amount ? <span className="input-error-text" role="alert">{createErrors.amount}</span> : null}
               </div>
             </div>
             <div className="circlemod-row">
@@ -179,7 +257,11 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "تاريخ الفاتورة" : "Invoice Date"} *</label>
-                <input type="date" className="circlemod-input" value={createForm.invoiceDate} onChange={(e) => setCreateForm((p) => ({ ...p, invoiceDate: e.target.value }))} required />
+                <input id="expense-invoiceDate" type="date" className="circlemod-input" aria-invalid={Boolean(createErrors.invoiceDate)} value={createForm.invoiceDate} onChange={(e) => {
+                  setCreateErrors((current) => ({ ...current, invoiceDate: "" }));
+                  setCreateForm((p) => ({ ...p, invoiceDate: e.target.value }));
+                }} required />
+                {createErrors.invoiceDate ? <span className="input-error-text" role="alert">{createErrors.invoiceDate}</span> : null}
               </div>
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "تاريخ الاستحقاق" : "Due Date"}</label>
@@ -189,7 +271,11 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--lg">
                 <label>{ar ? "الوصف" : "Description"} *</label>
-                <textarea className="circlemod-input" value={createForm.description} onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))} placeholder={ar ? "وصف الفاتورة..." : "Invoice description..."} />
+                <textarea id="expense-description" className="circlemod-input" aria-invalid={Boolean(createErrors.description)} value={createForm.description} onChange={(e) => {
+                  setCreateErrors((current) => ({ ...current, description: "" }));
+                  setCreateForm((p) => ({ ...p, description: e.target.value }));
+                }} placeholder={ar ? "وصف الفاتورة..." : "Invoice description..."} />
+                {createErrors.description ? <span className="input-error-text" role="alert">{createErrors.description}</span> : null}
               </div>
             </div>
           </div>
@@ -225,11 +311,18 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "المبلغ" : "Amount"}</label>
-                <input type="number" className="circlemod-input" value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} />
+                <input id="expense-pay-amount" type="number" className="circlemod-input" aria-invalid={Boolean(payErrors.amount)} value={payAmount} onChange={(e) => {
+                  setPayErrors((current) => ({ ...current, amount: "" }));
+                  setPayAmount(Number(e.target.value));
+                }} />
+                {payErrors.amount ? <span className="input-error-text" role="alert">{payErrors.amount}</span> : null}
               </div>
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "حساب الصندوق/البنك" : "Finance Account"}</label>
-                <select className="circlemod-input" value={payAccountId} onChange={(e) => setPayAccountId(Number(e.target.value))}>
+                <select id="expense-pay-financeAccountId" className="circlemod-input" aria-invalid={Boolean(payErrors.financeAccountId)} value={payAccountId} onChange={(e) => {
+                  setPayErrors((current) => ({ ...current, financeAccountId: "" }));
+                  setPayAccountId(Number(e.target.value));
+                }}>
                   <option value={0}>{ar ? "اختر الحساب..." : "Select Account..."}</option>
                   {accountsQ.data?.map((acc: any) => (
                     <option key={acc.id} value={acc.id}>
@@ -237,6 +330,7 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
                     </option>
                   ))}
                 </select>
+                {payErrors.financeAccountId ? <span className="input-error-text" role="alert">{payErrors.financeAccountId}</span> : null}
               </div>
             </div>
             <div className="circlemod-row">
@@ -248,6 +342,16 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
           </div>
         </div>
       </Modal>
+      <ConfirmModal
+        isOpen={approveInvoiceId !== null}
+        onClose={() => setApproveInvoiceId(null)}
+        onConfirm={() => approveInvoiceId !== null ? handleApprove(approveInvoiceId) : undefined}
+        title={ar ? "اعتماد المصروف" : "Approve expense"}
+        message={ar ? "سيتم اعتماد المصروف وإتاحته للدفع. هل تريد المتابعة؟" : "The expense will be approved and made available for payment. Continue?"}
+        confirmLabel={ar ? "اعتماد" : "Approve"}
+        confirmVariant="primary"
+        isConfirming={approveM.isPending}
+      />
     </div>
   );
 }

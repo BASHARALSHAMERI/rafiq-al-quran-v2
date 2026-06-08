@@ -3,7 +3,7 @@ import { Receipt, ArrowRight, Printer, FileText, AlertCircle, User, Calendar, Do
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { ErrorState } from "../../../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
-import { entityFeedback, notifyError, notifySuccess, type LocalizedLabel } from "../../../../shared/ui/feedback";
+import { entityFeedback, notifyError, notifyRequiredFields, notifySuccess, type LocalizedLabel } from "../../../../shared/ui/feedback";
 import { useUsersQuery } from "../../../users/users.hooks";
 import {
   useCreateFinanceV2InvoiceMutation,
@@ -112,14 +112,28 @@ export default function FinanceInvoicesTab({
           ? (invoiceForm.invoiceKind as any)
           : "OTHER";
 
-      if (!studentId) throw new Error(ar ? "اختر الطالب" : "Select student");
-      if (!selectedCenterId) throw new Error(ar ? "اختر المركز" : "Select center");
-      if (!invoiceForm.dueDate || Number.isNaN(dueDate.getTime())) throw new Error(ar ? "تاريخ الاستحقاق غير صحيح" : "Invalid due date");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error(ar ? "مبلغ غير صحيح" : "Invalid amount");
+      const invalidFieldId = !selectedCenterId
+        ? "inv-center"
+        : !studentId
+          ? "inv-student"
+          : !Number.isFinite(amount) || amount <= 0
+            ? "inv-amount"
+            : !invoiceForm.dueDate || Number.isNaN(dueDate.getTime())
+              ? "inv-duedate"
+              : null;
+      if (invalidFieldId) {
+        const message = ar ? "يرجى إكمال الحقول المطلوبة." : "Please complete the required fields.";
+        setInvoiceError(message);
+        notifyRequiredFields(ar);
+        requestAnimationFrame(() => document.getElementById(invalidFieldId)?.focus());
+        return;
+      }
+      const validStudentId = studentId as number;
+      const validCenterId = selectedCenterId as number;
 
       await createInvoiceM.mutateAsync({
-        studentId,
-        centerId: selectedCenterId,
+        studentId: validStudentId,
+        centerId: validCenterId,
         month: dueDate.getMonth() + 1,
         year: dueDate.getFullYear(),
         amount,

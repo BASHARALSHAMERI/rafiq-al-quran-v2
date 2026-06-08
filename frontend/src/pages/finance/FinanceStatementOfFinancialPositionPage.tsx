@@ -14,6 +14,7 @@ import { canReadCenters } from "../../features/org/org.permissions";
 import { useFinanceV2ReportFinancialPositionQuery } from "../../features/finance-v2/finance-v2.hooks";
 import { Badge } from "../../components/ui/Badge";
 import type { FinancialPositionItemV2 } from "../../features/finance-v2/types";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
@@ -137,6 +138,10 @@ export default function FinanceStatementOfFinancialPositionPage() {
       ) : reportQ.isError ? (
         <ErrorState
           title={ar ? "فشل تحميل التقرير" : "Failed to load report"}
+          description={getLocalizedApiErrorMessage(reportQ.error, {
+            ar,
+            fallback: ar ? "تعذر تحميل قائمة المركز المالي. حاول مرة أخرى." : "Unable to load the statement of financial position."
+          })}
           onRetry={() => void reportQ.refetch()}
         />
       ) : !data ? (

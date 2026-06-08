@@ -16,6 +16,7 @@ import { Button } from "../../../../components/ui/Button";
 import ImageUploadField from "../../../../components/ui/ImageUploadField";
 import Modal from "../../../../components/ui/Modal";
 import type { FormMode, CenterDraft, QuickRole } from "./centers.types";
+import { notifyError } from "../../../../shared/ui/feedback";
 
 interface CenterFormModalProps {
   isOpen: boolean;
@@ -653,11 +654,11 @@ export function CenterFormModal({
                         handleChange("longitude", position.coords.longitude.toFixed(6));
                       },
                       (_) => {
-                        alert(ar ? "تعذر تحديد الموقع الجغرافي. تأكد من تفعيل الـ GPS وإعطاء الصلاحية في المتصفح." : "Unable to retrieve location. Make sure GPS is enabled and browser permissions are granted.");
+                        notifyError(ar ? "تعذر تحديد الموقع الجغرافي. تأكد من تفعيل GPS ومنح الصلاحية للمتصفح." : "Unable to retrieve location. Make sure GPS is enabled and browser permissions are granted.");
                       }
                     );
                   } else {
-                    alert(ar ? "المتصفح لا يدعم تحديد الموقع الجغرافي." : "Geolocation is not supported by this browser.");
+                    notifyError(ar ? "المتصفح لا يدعم تحديد الموقع الجغرافي." : "Geolocation is not supported by this browser.");
                   }
                 }}
               >

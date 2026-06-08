@@ -24,10 +24,10 @@ function AppProviders({ children }: AppProvidersProps) {
         }}
         toastOptions={{
           className: "app-toast",
-          duration: 3200,
+          duration: 4000,
           success: {
             className: "app-toast app-toast--success",
-            duration: 2800,
+            duration: 3500,
             iconTheme: {
               primary: "var(--success-600, #10b981)",
               secondary: "var(--bg-surface-elevated, #fff)"
@@ -35,7 +35,7 @@ function AppProviders({ children }: AppProvidersProps) {
           },
           error: {
             className: "app-toast app-toast--error",
-            duration: 4200,
+            duration: 5000,
             iconTheme: {
               primary: "var(--error-600, #ef4444)",
               secondary: "var(--bg-surface-elevated, #fff)"

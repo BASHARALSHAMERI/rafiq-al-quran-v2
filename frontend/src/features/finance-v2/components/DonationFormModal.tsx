@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
-import { notifyInfo } from "../../../shared/ui/feedback";
+import {
+  focusFirstInvalidField,
+  notifyInfo,
+  notifyRequiredFields
+} from "../../../shared/ui/feedback";
 import type { CurrencyV2, PaymentMethodV2 } from "../types";
 import { useLatestExchangeRateQuery } from "../finance-v2.hooks";
 
@@ -148,13 +152,24 @@ export default function DonationFormModal({
           <Button variant="secondary" onClick={onClose} disabled={pending}>
             {ar ? "إلغاء" : "Cancel"}
           </Button>
-          <Button variant="primary" isLoading={pending} onClick={onSave}>
+          <Button variant="primary" type="submit" form="donation-form" isLoading={pending}>
             {ar ? "حفظ العملية" : "Save Transaction"}
           </Button>
         </div>
       }
     >
-      <div className="circlemod-form">
+      <form
+        id="donation-form"
+        className="circlemod-form"
+        noValidate
+        onSubmit={(event) => {
+          if (focusFirstInvalidField(event.currentTarget, event)) {
+            notifyRequiredFields(ar);
+            return;
+          }
+          onSave(event);
+        }}
+      >
 
         {/* Section 1: Donor & Center */}
         <div className="circlemod-section">
@@ -380,7 +395,7 @@ export default function DonationFormModal({
             <span>{error}</span>
           </div>
         ) : null}
-      </div>
+      </form>
     </Modal>
   );
 }

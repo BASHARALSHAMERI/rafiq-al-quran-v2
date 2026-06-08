@@ -5,6 +5,7 @@ import {
   entityFeedback,
   notifyError,
   notifyInfo,
+  notifyRequiredFields,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
@@ -113,13 +114,20 @@ export default function FinanceTreasuryTab({
       }
 
       const amount = Number(transferForm.amount);
-      if (!fromId) throw new Error(ar ? "الحساب المحول منه غير موجود" : "From account not found");
-      if (!toId) throw new Error(ar ? "الحساب المحول إليه غير موجود" : "To account not found");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error(ar ? "مبلغ غير صحيح" : "Invalid amount");
+      const invalidFieldId = !fromId ? "tr-from" : !toId ? "tr-to" : !Number.isFinite(amount) || amount <= 0 ? "tr-amount" : null;
+      if (invalidFieldId) {
+        const message = ar ? "يرجى إكمال الحقول المطلوبة." : "Please complete the required fields.";
+        setTreasuryError(message);
+        notifyRequiredFields(ar);
+        requestAnimationFrame(() => document.getElementById(invalidFieldId)?.focus());
+        return;
+      }
+      const validFromId = fromId as number;
+      const validToId = toId as number;
 
       await createTransferM.mutateAsync({
-        fromAccountId: fromId,
-        toAccountId: toId,
+        fromAccountId: validFromId,
+        toAccountId: validToId,
         amount,
         notes: transferForm.notes.trim() || undefined
       });

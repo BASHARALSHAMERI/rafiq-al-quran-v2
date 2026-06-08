@@ -1,3 +1,5 @@
+import { notifyError } from "../../shared/ui/feedback";
+
 type PrintColumn<T> = {
   label: string;
   render: (row: T, index: number) => string | number | null | undefined;
@@ -62,7 +64,7 @@ export function printAccountingDocument<T>({
   const printWindow = window.open("", "_blank", "width=1100,height=800");
 
   if (!printWindow) {
-    alert("تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة.");
+    notifyError("تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة.");
     return;
   }
 

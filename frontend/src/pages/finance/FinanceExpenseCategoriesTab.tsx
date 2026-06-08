@@ -5,6 +5,9 @@ import { FinanceDataTable } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useAccountingAccountsQuery } from "../accounting/accounting.hooks";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
+import { notifyError, notifyRequiredFields, notifySuccess } from "../../shared/ui/feedback";
 
 export function FinanceExpenseCategoriesTab({ 
   ar,
@@ -41,17 +44,36 @@ export function FinanceExpenseCategoriesTab({
   };
 
   const handleCreate = async () => {
-    if (!name) return;
-    await createM.mutateAsync({ name, type, accountingAccountId: accountId ? Number(accountId) : undefined });
-    handleClose();
-    setName(""); setType(""); setAccountId("");
+    if (!name.trim()) {
+      notifyRequiredFields(ar);
+      requestAnimationFrame(() => document.getElementById("expense-category-name")?.focus());
+      return;
+    }
+    try {
+      await createM.mutateAsync({ name: name.trim(), type, accountingAccountId: accountId ? Number(accountId) : undefined });
+      notifySuccess(ar ? "تمت إضافة تصنيف المصروف بنجاح" : "Expense category added successfully");
+      handleClose();
+      setName(""); setType(""); setAccountId("");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر إضافة تصنيف المصروف." : "Unable to add the expense category."
+      }));
+    }
   };
 
   return (
     <div className="fin-premium-panel animate-premium">
       <div className="fin-premium-panel__content p-0">
 
-      <FinanceDataTable
+      {categoriesQ.isError ? <ErrorState
+        title={ar ? "تعذر تحميل تصنيفات المصروفات" : "Unable to load expense categories"}
+        description={getLocalizedApiErrorMessage(categoriesQ.error, {
+          ar,
+          fallback: ar ? "تعذر تحميل تصنيفات المصروفات. حاول مرة أخرى." : "Unable to load expense categories."
+        })}
+        onRetry={() => void categoriesQ.refetch()}
+      /> : <FinanceDataTable
         columns={[
           { id: "id", header: "#", render: (row: any) => row.id },
           { id: "name", header: ar ? "الاسم" : "Name", render: (row: any) => row.name },
@@ -62,7 +84,7 @@ export function FinanceExpenseCategoriesTab({
         rowKey="id"
         loading={categoriesQ.isLoading}
         density="dense"
-      />
+      />}
     </div>
 
       <Modal 
@@ -94,7 +116,7 @@ export function FinanceExpenseCategoriesTab({
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--lg">
                 <label>{ar ? "اسم التصنيف" : "Category Name"} *</label>
-                <input type="text" className="circlemod-input" value={name} onChange={(e) => setName(e.target.value)} />
+                <input id="expense-category-name" type="text" className="circlemod-input" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
             </div>
             <div className="circlemod-row">
