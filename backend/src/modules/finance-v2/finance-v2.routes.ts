@@ -9,6 +9,7 @@ import {
   validateQuery
 } from "../../shared/middleware/validate.middleware";
 import { financeV2Controller } from "./finance-v2.controller";
+import { disableConditionalCache } from "./finance-v2.cache";
 import { expensesController } from "./controllers/expenses.controller";
 import { assetsController } from "./controllers/assets.controller";
 import {
@@ -571,6 +572,7 @@ financeV2Router.get(
 financeV2Router.get(
   "/finance/v2/reports/center-funding",
   requireRoles(financeReadRoles),
+  disableConditionalCache,
   validateQuery(reportsDashboardQuerySchema),
   financeV2Controller.reportCenterFundingSummary
 );

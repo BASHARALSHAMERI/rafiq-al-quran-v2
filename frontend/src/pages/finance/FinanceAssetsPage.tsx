@@ -391,7 +391,7 @@ function AssetRegisterTab({
   const centersQ = useCentersQuery();
   const suppliersQ = useSuppliersQuery();
   const expensesQ = useExpenseInvoicesQuery({});
-  const usersQ = useUsersQuery({ page: 1, pageSize: 200 }, true);
+  const usersQ = useUsersQuery({ role: "TEACHER", page: 1, pageSize: 200 }, true);
   const createM = useCreateFixedAssetMutation();
   const [userSearch, setUserSearch] = useState("");
   const centers = centersQ.data?.items ?? [];
@@ -927,7 +927,7 @@ function AssetCustodyTab({
   const assetsQ = useFixedAssetsQuery();
   const custodyQ = useAssetCustodyLogsQuery();
   const centersQ = useCentersQuery();
-  const usersQ = useUsersQuery({ page: 1, pageSize: 200 }, true);
+  const usersQ = useUsersQuery({ role: "TEACHER", page: 1, pageSize: 200 }, true);
   const assignM = useAssignAssetCustodyMutation();
   const [userSearch, setUserSearch] = useState("");
   const centers = centersQ.data?.items ?? [];

@@ -1,15 +1,24 @@
 import {
   AccountingAccountType,
+  FinanceMovementType,
   FixedAssetStatus,
   JournalSourceType,
   JournalEntryStatus,
-  Prisma
+  Prisma,
+  VoucherSourceType,
+  VoucherStatus,
+  VoucherType
 } from "@prisma/client";
 import { ensurePeriodOpenTx } from "../../accounting/accounting.service";
 import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { financeV2Domain } from "../finance-v2.domain";
+import {
+  getEffectivePolicyTx,
+  nextVoucherNoTx,
+  postVoucherTx
+} from "../finance-v2.internal";
 
 type CreateAssetCategoryInput = {
   name: string;
@@ -456,6 +465,36 @@ export const assetsService = {
       const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, asset.purchaseDate);
 
       const amount = asset.purchaseCost;
+      const policy = await getEffectivePolicyTx(tx, {
+        organizationId: scope.organizationId,
+        centerId: asset.centerId
+      });
+      const voucherNo = await nextVoucherNoTx(tx, "DV", scope.organizationId);
+      const voucher = await tx.financeVoucher.create({
+        data: {
+          organizationId: scope.organizationId,
+          centerId: asset.centerId,
+          accountId: financeAccount.id,
+          voucherType: VoucherType.DISBURSEMENT,
+          voucherNo,
+          sourceType: VoucherSourceType.EXPENSE,
+          sourceId: asset.id,
+          amount,
+          status: VoucherStatus.APPROVED,
+          voucherDate: asset.purchaseDate,
+          notes: `سداد اقتناء الأصل ${asset.assetCode}`,
+          createdById: scope.userId,
+          approvedById: scope.userId,
+          approvedAt: new Date()
+        }
+      });
+
+      await postVoucherTx(tx, {
+        voucherId: voucher.id,
+        postedById: scope.userId,
+        movementType: FinanceMovementType.VOUCHER_DISBURSEMENT,
+        allowOverdraft: policy.allowOverdraft
+      });
 
       const entry = await tx.journalEntry.create({
         data: {
@@ -467,7 +506,7 @@ export const assetsService = {
           sourceId: asset.id,
           status: JournalEntryStatus.POSTED,
           fiscalPeriodId: fiscalPeriod?.id ?? null,
-          description: `Acquisition of asset ${asset.assetCode} - ${asset.name}`,
+          description: `اقتناء الأصل ${asset.assetCode} - ${asset.name}`,
           postedById: scope.userId,
           postedAt: new Date(),
           lines: {
@@ -478,7 +517,7 @@ export const assetsService = {
                 centerId: asset.centerId,
                 debit: amount,
                 credit: 0,
-                memo: `Asset acquisition: ${asset.name}`
+                memo: `إثبات اقتناء الأصل: ${asset.name}`
               },
               {
                 organizationId: scope.organizationId,
@@ -486,7 +525,7 @@ export const assetsService = {
                 centerId: asset.centerId,
                 debit: 0,
                 credit: amount,
-                memo: `Asset payment: ${creditAccount.name}`
+                memo: `سداد قيمة الأصل من: ${creditAccount.name}`
               }
             ]
           }

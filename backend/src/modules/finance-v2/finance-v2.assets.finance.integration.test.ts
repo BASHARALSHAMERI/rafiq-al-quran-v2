@@ -1,4 +1,9 @@
-import { JournalSourceType } from "@prisma/client";
+import {
+  FinanceMovementDirection,
+  FinanceMovementType,
+  JournalSourceType,
+  VoucherSourceType
+} from "@prisma/client";
 import { assetsService } from "./services/assets.service";
 import { financeReportsService } from "./services/finance-reports.service";
 import {
@@ -57,6 +62,11 @@ describe("fixed asset workflow integration", () => {
       }
     });
 
+    const balanceBefore = (
+      await financeTestPrisma.financeAccount.findUniqueOrThrow({
+        where: { id: context.accounts.centerFund.id }
+      })
+    ).currentBalance.toNumber();
     await assetsService.postAssetAcquisition(context.scopes.manager, asset.id, {
       financeAccountId: context.accounts.centerFund.id
     });
@@ -71,6 +81,30 @@ describe("fixed asset workflow integration", () => {
     });
     expect(acquisition.lines.reduce((sum, line) => sum + line.debit.toNumber(), 0)).toBe(120000);
     expect(acquisition.lines.reduce((sum, line) => sum + line.credit.toNumber(), 0)).toBe(120000);
+    const acquisitionVouchers = await financeTestPrisma.financeVoucher.findMany({
+      where: {
+        organizationId: context.organization.id,
+        sourceType: VoucherSourceType.EXPENSE,
+        sourceId: asset.id
+      },
+      include: { movement: true }
+    });
+    expect(acquisitionVouchers).toHaveLength(1);
+    expect(acquisitionVouchers[0].movement).toMatchObject({
+      accountId: context.accounts.centerFund.id,
+      movementType: FinanceMovementType.VOUCHER_DISBURSEMENT,
+      direction: FinanceMovementDirection.OUT
+    });
+    expect(acquisitionVouchers[0].movement?.amount.toNumber()).toBe(120000);
+    expect(acquisitionVouchers[0].movement?.balanceBefore.toNumber()).toBe(balanceBefore);
+    expect(acquisitionVouchers[0].movement?.balanceAfter.toNumber()).toBe(balanceBefore - 120000);
+    expect(
+      (
+        await financeTestPrisma.financeAccount.findUniqueOrThrow({
+          where: { id: context.accounts.centerFund.id }
+        })
+      ).currentBalance.toNumber()
+    ).toBe(balanceBefore - 120000);
 
     await assetsService.assignCustody(context.scopes.manager, asset.id, {
       toUserId: context.users.supervisor.id,

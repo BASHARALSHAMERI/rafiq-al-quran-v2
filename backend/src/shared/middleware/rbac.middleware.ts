@@ -19,7 +19,8 @@ const notificationsFallbackRoles = [
   Role.SUPERVISOR,
   Role.TEACHER,
   Role.PARENT,
-  Role.STUDENT
+  Role.STUDENT,
+  Role.FINANCE_MANAGER
 ].map(normalizeRole);
 const libraryReadFallbackRoles = [
   Role.SUPER_ADMIN,

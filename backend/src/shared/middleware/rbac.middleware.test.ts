@@ -88,4 +88,27 @@ describe("requireRoles", () => {
     const error = mockNext.mock.calls[0][0];
     expect(error.statusCode).toBe(403);
   });
+
+  it("allows FINANCE_MANAGER only on the personal notifications fallback", () => {
+    const notificationsMiddleware = requireRoles([Role.SUPER_ADMIN]);
+    const notificationsNext = jest.fn();
+    notificationsMiddleware(
+      {
+        auth: { role: Role.FINANCE_MANAGER },
+        path: "/notifications/unread-count",
+        method: "GET"
+      } as any,
+      {} as any,
+      notificationsNext
+    );
+    expect(notificationsNext).toHaveBeenCalledWith();
+
+    const adminNext = jest.fn();
+    notificationsMiddleware(
+      { auth: { role: Role.FINANCE_MANAGER }, path: "/users", method: "PATCH" } as any,
+      {} as any,
+      adminNext
+    );
+    expect(adminNext.mock.calls[0][0]).toMatchObject({ statusCode: 403 });
+  });
 });
