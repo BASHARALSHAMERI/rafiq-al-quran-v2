@@ -11,6 +11,7 @@ import {
   FinanceMoney
 } from "../../features/finance-v2/design";
 import { Badge } from "../../components/ui/Badge";
+import { ErrorState } from "../../components/ui/ErrorState";
 import {
   useAssetCategoriesQuery,
   useAssetCustodyLogsQuery,
@@ -259,6 +260,17 @@ function AssetCategoriesTab({
           </div>
         </div>
 
+        {categoriesQ.isError ? (
+          <ErrorState
+            className="m-4"
+            title={ar ? "فشل تحميل التصنيفات" : "Failed to load categories"}
+            description={getLocalizedApiErrorMessage(categoriesQ.error, {
+              ar,
+              fallback: ar ? "تعذر تحميل تصنيفات الأصول. حاول مرة أخرى." : "Unable to load asset categories."
+            })}
+            onRetry={() => void categoriesQ.refetch()}
+          />
+        ) : (
         <FinanceDataTable
           columns={[
             { id: "name", header: ar ? "التصنيف" : "Category", cell: (row: any) => <strong className="text-slate-800 dark:text-slate-200">{row.name}</strong> },
@@ -297,6 +309,7 @@ function AssetCategoriesTab({
           rowKey="id"
           density="dense"
         />
+        )}
       </div>
 
       <Modal
@@ -516,6 +529,17 @@ function AssetRegisterTab({
             </div>
           </div>
 
+          {assetsQ.isError ? (
+            <ErrorState
+              className="m-4"
+              title={ar ? "فشل تحميل الأصول" : "Failed to load assets"}
+              description={getLocalizedApiErrorMessage(assetsQ.error, {
+                ar,
+                fallback: ar ? "تعذر تحميل سجل الأصول. حاول مرة أخرى." : "Unable to load the asset register."
+              })}
+              onRetry={() => void assetsQ.refetch()}
+            />
+          ) : (
           <FinanceDataTable
             columns={[
               { id: "code", header: ar ? "الكود" : "Code", cell: (row: FixedAssetV2) => <strong className="text-slate-800 dark:text-slate-200">{row.assetCode}</strong> },
@@ -612,6 +636,7 @@ function AssetRegisterTab({
             rowKey="id"
             density="dense"
           />
+          )}
         </div>
       </div>
 
@@ -1046,6 +1071,17 @@ function AssetCustodyTab({
             </div>
           </div>
 
+          {custodyQ.isError ? (
+            <ErrorState
+              className="m-4"
+              title={ar ? "فشل تحميل العهد" : "Failed to load custody logs"}
+              description={getLocalizedApiErrorMessage(custodyQ.error, {
+                ar,
+                fallback: ar ? "تعذر تحميل سجل العهد. حاول مرة أخرى." : "Unable to load custody logs."
+              })}
+              onRetry={() => void custodyQ.refetch()}
+            />
+          ) : (
           <FinanceDataTable
             columns={[
               { id: "asset", header: ar ? "الأصل" : "Asset", cell: (row: any) => row.asset ? (
@@ -1073,6 +1109,7 @@ function AssetCustodyTab({
             rowKey="id"
             density="dense"
           />
+          )}
         </div>
       </div>
 
