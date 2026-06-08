@@ -40,7 +40,9 @@ if not defined BACKGROUND_JOBS_ENABLED set "BACKGROUND_JOBS_ENABLED=false"
 exit /b 0
 
 :run_backend
-echo Backend will be available on %APP_URL%
+echo Backend URL: %APP_URL%
+echo Database: localhost/rafiq_v2
+echo.
 if /I "%BACKEND_RUN_MODE%"=="watch" (
   echo Backend run mode: watch
   call npm.cmd run dev
