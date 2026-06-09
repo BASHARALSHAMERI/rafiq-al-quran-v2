@@ -388,6 +388,7 @@ export default function ReportsPage() {
     else if (card.reportType) { setActiveSummary(null); setActiveReportType(card.reportType); }
     setExportError(null);
     setExportSuccess(null);
+    setExportLoading(false);
     setViewLevel("UNIFIED");
     setPage(1);
     setSortKey(null);

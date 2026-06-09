@@ -1268,6 +1268,13 @@ export const reportsService = {
               ? await examsReport(scope, input.filters)
               : await financeReport(scope, input.filters);
 
+      const search = input.filters.search?.trim().toLowerCase();
+      const rows = search
+        ? result.rows.filter((row) =>
+            Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(search))
+          )
+        : result.rows;
+
       const now = new Date();
       const title = reportTitleMap[input.reportType];
       const baseName = `${input.reportType.toLowerCase()}-${now.toISOString().slice(0, 10)}`;
@@ -1278,13 +1285,13 @@ export const reportsService = {
               title,
               generatedAt: now,
               kpis: result.kpis,
-              rows: result.rows
+              rows
             })
           : await reportsExport.toExcelBuffer({
               title,
               generatedAt: now,
               kpis: result.kpis,
-              rows: result.rows
+              rows
             });
 
       const saved = await reportsStorage.saveFile({
@@ -1315,7 +1322,7 @@ export const reportsService = {
         runId: run.id,
         outputFileId: reportFile.id,
         summary: {
-          rowsCount: result.rows.length,
+          rowsCount: rows.length,
           kpis: result.kpis
         } as unknown as import("@prisma/client").Prisma.InputJsonValue
       });
