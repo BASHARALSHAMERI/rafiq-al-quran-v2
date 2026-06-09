@@ -28,19 +28,19 @@ const isValidCalendarDate = (value: string) => {
 const dateStr = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-  .refine((value) => isValidCalendarDate(value), "Date must be valid")
-  .refine((value) => value <= todayDateStr(), "Date must be valid and not in the future");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ غير صحيحة (YYYY-MM-DD)")
+  .refine((value) => isValidCalendarDate(value), "التاريخ يجب أن يكون صحيحاً")
+  .refine((value) => value <= todayDateStr(), "التاريخ يجب أن يكون صحيحاً وليس في المستقبل");
 
 const flexibleDateStr = z
   .string()
   .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-  .refine((value) => isValidCalendarDate(value), "Date must be valid");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ غير صحيحة (YYYY-MM-DD)")
+  .refine((value) => isValidCalendarDate(value), "التاريخ يجب أن يكون صحيحاً");
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50)
+  limit: z.coerce.number().int().min(1).max(500).default(50)
 });
 
 // ==========================================
@@ -95,7 +95,7 @@ export const selfAttendanceActionBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [hasLatitude ? "longitude" : "latitude"],
-        message: "latitude and longitude must be provided together"
+        message: "خط العرض وخط الطول يجب إدخالهما معاً"
       });
     }
   });
@@ -116,7 +116,7 @@ export const listExcusesQuerySchema = z
     (value) =>
       !value.startDate || !value.endDate || value.startDate <= value.endDate,
     {
-      message: "endDate must be on or after startDate",
+      message: "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية",
       path: ["endDate"]
     }
   );
@@ -167,7 +167,7 @@ export const requestLeaveBodySchema = z
   .refine(
     (value) => value.startDate <= value.endDate,
     {
-      message: "endDate must be on or after startDate",
+      message: "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية",
       path: ["endDate"]
     }
   );
@@ -200,7 +200,7 @@ export const listVisitsQuerySchema = z
     (value) =>
       !value.startDate || !value.endDate || value.startDate <= value.endDate,
     {
-      message: "endDate must be on or after startDate",
+      message: "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية",
       path: ["endDate"]
     }
   );
@@ -212,6 +212,21 @@ export const monthlyReportQuerySchema = z
   .object({
     month: z.coerce.number().int().min(1).max(12),
     year: z.coerce.number().int().min(2000).max(2100)
+  })
+  .strict();
+
+// ==========================================
+// Prayer Times Schemas
+// ==========================================
+export const prayerTimesQuerySchema = z
+  .object({
+    date: flexibleDateStr.optional()
+  })
+  .strict();
+
+export const centerIdParamSchema = z
+  .object({
+    centerId: positiveId
   })
   .strict();
 
@@ -231,3 +246,5 @@ export type MonthlyReportQueryDto = z.infer<typeof monthlyReportQuerySchema>;
 export type ListLeavesQueryDto = z.infer<typeof listLeavesQuerySchema>;
 export type RequestLeaveDto = z.infer<typeof requestLeaveBodySchema>;
 export type UpdateLeaveStatusDto = z.infer<typeof updateLeaveStatusBodySchema>;
+export type PrayerTimesQueryDto = z.infer<typeof prayerTimesQuerySchema>;
+export type CenterIdParamDto = z.infer<typeof centerIdParamSchema>;

@@ -185,7 +185,8 @@ export function TopbarPremium() {
     if (!notificationsOpen) return;
     void notificationsQuery.refetch();
     void unreadCountQuery.refetch();
-  }, [notificationsOpen, notificationsQuery, unreadCountQuery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notificationsOpen]);
 
   // Reset selected index when results change
   useEffect(() => {

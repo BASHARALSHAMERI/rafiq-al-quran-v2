@@ -34,6 +34,7 @@ abstract class RouteNames {
   static const supervisorTeacherEval = '/supervisor/teacher-eval';
   static const supervisorNotes = '/supervisor/notes';
   static const supervisorReports = '/supervisor/reports';
+  static const supervisorOpsDashboard = '/supervisor/ops-dashboard';
   static const supervisorHalqaReportBase = '/supervisor/halqa-report';
   static const supervisorHalqaReportPath = '$supervisorHalqaReportBase/:id';
   static String supervisorHalqaReport(int id) => '/supervisor/halqa-report/$id';
@@ -76,7 +77,6 @@ abstract class RouteNames {
   static String halqaVisit(int id) => supervisorHalqaVisit(id);
   static const halqaVisitBase = supervisorHalqaVisitBase;
   static const attendance = teacherAttendance;
-  static const approvals = '/supervisor/approvals';
   static const childrenList = parentChildren;
   static String childDetail(String id) => parentChildDetail(id);
   static const homeNotifications = notifications;
@@ -94,6 +94,10 @@ abstract class RouteNames {
         return supervisorHome;
       case 'SUPER_ADMIN':
       case 'CENTER_ADMIN':
+      case 'ACCOUNTANT':
+      case 'FINANCE_MANAGER':
+      case 'TREASURER':
+      case 'AUDITOR':
         return forbidden;
       case 'STUDENT':
         return studentHome;

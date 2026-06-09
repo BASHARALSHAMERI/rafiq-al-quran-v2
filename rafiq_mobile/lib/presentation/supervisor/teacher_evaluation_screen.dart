@@ -6,6 +6,7 @@ import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
 import '../../application/supervisor/supervisor_notes_controller.dart';
 import '../../core/constants/app_radius.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_gradients.dart';
@@ -13,6 +14,7 @@ import '../../core/theme/app_shadows.dart';
 import '../../data/models/org_dtos.dart';
 import '../shared/states/app_empty_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
 
 const _criteria = [
@@ -46,17 +48,13 @@ class _TeacherEvaluationScreenState
 
   Future<void> _handleSubmit() async {
     if (_selectedCircle == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار حلقة للتقييم')),
-      );
+      AppSnackBar.warning(context, 'يرجى اختيار حلقة للتقييم');
       return;
     }
 
     if (_ratings.length < _criteria.length ||
         _ratings.values.any((v) => v == 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى تقييم جميع المعايير قبل الحفظ.')),
-      );
+      AppSnackBar.warning(context, 'يرجى تقييم جميع المعايير قبل الحفظ.');
       return;
     }
 
@@ -88,31 +86,17 @@ class _TeacherEvaluationScreenState
           );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('تم حفظ التقييم بنجاح'),
-          backgroundColor: AppColors.successLight,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md)),
-        ),
-      );
+      AppSnackBar.success(context, 'تم حفظ التقييم بنجاح');
       setState(() {
         _selectedCircle = null;
         _ratings.clear();
         _notesController.clear();
         _isSaving = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تعذر الحفظ: $e'),
-          backgroundColor: AppColors.errorLight,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSnackBar.error(context, 'تعذر حفظ التقييم. يرجى المحاولة مرة أخرى.');
     }
   }
 
@@ -125,20 +109,21 @@ class _TeacherEvaluationScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('تقييم المعلمين'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: StandardAppBar(
+        title: 'تقييم المعلمين',
         leading: _selectedCircle != null
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
+                icon: const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 28,
+                ),
                 onPressed: () => setState(() {
                   _selectedCircle = null;
                   _ratings.clear();
                   _notesController.clear();
                 }),
               )
-            : const BackButton(),
+            : null,
       ),
       body: circlesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

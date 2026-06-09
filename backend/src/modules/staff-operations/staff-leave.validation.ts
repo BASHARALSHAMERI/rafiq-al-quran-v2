@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LeaveType, LeaveRequestStatus } from "@prisma/client";
 
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, expected YYYY-MM-DD");
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ غير صحيحة، الصيغة المطلوبة: YYYY-MM-DD");
 const positiveId = z.coerce.number().int().positive();
 
 export const submitLeaveRequestSchema = z

@@ -23,9 +23,16 @@ type DateRange = {
   to: Date;
 };
 
-const READ_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR];
-const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.CENTER_ADMIN];
-const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN];
+const READ_ROLES: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR,
+  Role.SUPERVISOR
+];
+const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ACCOUNTANT, Role.FINANCE_MANAGER];
+const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
 
 const VOUCHER_TRANSITIONS: Record<VoucherStatus, VoucherStatus[]> = {
   DRAFT: [VoucherStatus.SUBMITTED, VoucherStatus.CANCELLED],
@@ -151,6 +158,18 @@ export const financeV2Domain = {
     if (!scope.centerIds.includes(centerId)) {
       throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
     }
+  },
+
+  ensureScopedCenterRequired(scope: ScopeContext, centerId?: number | null) {
+    if (scope.allAccess) {
+      return;
+    }
+
+    if (!centerId) {
+      throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
+    }
+
+    this.ensureCenterAllowed(scope, centerId);
   },
 
   ensureStudentAllowed(scope: ScopeContext, studentId: number) {
@@ -311,4 +330,3 @@ export const financeV2Domain = {
   toDecimal,
   toMoney
 };
-

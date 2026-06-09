@@ -16,7 +16,7 @@ export const staffLeaveService = {
     input: { centerId: number; leaveType: LeaveType; startDate: string; endDate: string; reason: string; attachmentUrl?: string | null }
   ) {
     if (!scope.allAccess && !scope.centerIds.includes(input.centerId) && scope.role !== Role.TEACHER) {
-      throw new AppError("Access denied for this center", 403);
+      throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
     const start = toStartOfDay(input.startDate);
@@ -104,7 +104,7 @@ export const staffLeaveService = {
 
   async approveLeave(scope: ScopeContext, leaveId: number, responseNote?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update leave status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة الإجازة", 403);
     }
 
     const leave = await prisma.staffLeaveRequest.findUnique({
@@ -204,7 +204,7 @@ export const staffLeaveService = {
 
   async rejectLeave(scope: ScopeContext, leaveId: number, responseNote?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update leave status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة الإجازة", 403);
     }
 
     const leave = await prisma.staffLeaveRequest.findUnique({ where: { id: leaveId, organizationId: scope.organizationId } });

@@ -37,15 +37,18 @@ export const buildScopeFromAssignments = (snapshot: AssignmentSnapshot): ScopeCo
     };
   }
 
-  const centerIds = unique([
-    ...snapshot.centerAccesses.map((item) => item.centerId),
-    ...snapshot.managedCenters.map((item) => item.id),
-    ...snapshot.centerSupervisorLinks
-      .filter((item) => item.isActive)
-      .map((item) => item.centerId),
-    ...snapshot.taughtCircles.map((item) => item.centerId),
-    ...snapshot.studentEnrollments.map((item) => item.circle.centerId)
-  ]);
+  const centerIds =
+    snapshot.role === Role.CENTER_ADMIN
+      ? unique(snapshot.managedCenters.map((item) => item.id))
+      : unique([
+          ...snapshot.centerAccesses.map((item) => item.centerId),
+          ...snapshot.managedCenters.map((item) => item.id),
+          ...snapshot.centerSupervisorLinks
+            .filter((item) => item.isActive)
+            .map((item) => item.centerId),
+          ...snapshot.taughtCircles.map((item) => item.centerId),
+          ...snapshot.studentEnrollments.map((item) => item.circle.centerId)
+        ]);
 
   const circleIds = unique([
     ...snapshot.circleAccesses.map((item) => item.circleId),

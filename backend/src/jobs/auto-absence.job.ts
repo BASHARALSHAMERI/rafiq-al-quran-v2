@@ -2,6 +2,8 @@ import { prisma } from "../shared/db/prisma";
 import { AttendanceStatus, AttendanceSource, ExcuseRequestStatus, LeaveRequestStatus, Role } from "@prisma/client";
 import { attendancePolicyService } from "../modules/staff-operations/attendance-policy.service";
 import { effectiveShiftService } from "../modules/staff-operations/effective-shift.service";
+import { logger } from "../shared/logger/logger";
+import { notificationsService } from "../modules/notifications/notifications.service";
 
 const toStartOfDay = (date: Date) => {
   const d = new Date(date);
@@ -10,7 +12,7 @@ const toStartOfDay = (date: Date) => {
 };
 
 export async function runAutoAbsenceJob() {
-  console.log("[AutoAbsenceJob] Starting auto-absence job...");
+  logger.info({ job: "auto-absence" }, "Starting auto-absence job");
   const now = new Date();
   const today = toStartOfDay(now);
 
@@ -21,7 +23,7 @@ export async function runAutoAbsenceJob() {
     const policy = await attendancePolicyService.getPolicy(org.id);
     const isWorkday = await attendancePolicyService.isWorkday(org.id, today);
     if (!isWorkday) {
-      console.log(`[AutoAbsenceJob] Skipping org ${org.id} - not a workday.`);
+      logger.info({ job: "auto-absence", orgId: org.id }, "Skipping org - not a workday");
       continue;
     }
 
@@ -36,11 +38,12 @@ export async function runAutoAbsenceJob() {
       },
       include: {
         user: { select: { id: true, role: true } },
-        center: { select: { id: true } }
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
       }
     });
 
-    console.log(`[AutoAbsenceJob] Org ${org.id}: Found ${activeSchedules.length} schedules with slots for today.`);
+    logger.info({ job: "auto-absence", orgId: org.id, scheduleCount: activeSchedules.length }, "Found schedules with slots for today");
 
     const userMap = new Map<number, typeof activeSchedules[0]>();
     for (const sched of activeSchedules) {
@@ -50,6 +53,29 @@ export async function runAutoAbsenceJob() {
       }
     }
 
+    const targetUserIds = Array.from(userMap.values())
+      .filter((s) => s.user.role !== Role.SUPERVISOR)
+      .map((s) => s.userId);
+
+    const [allAttendances, allExcuses, allLeaves] = await Promise.all([
+      targetUserIds.length > 0 ? prisma.staffAttendanceRecord.findMany({
+        where: { attendanceDate: today, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffExcuseRequest.findMany({
+        where: { absenceDate: today, status: ExcuseRequestStatus.APPROVED, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([]),
+      targetUserIds.length > 0 ? prisma.staffLeaveRequest.findMany({
+        where: { status: LeaveRequestStatus.LEAVE_APPROVED, startDate: { lte: today }, endDate: { gte: today }, userId: { in: targetUserIds } },
+        select: { userId: true }
+      }) : Promise.resolve([])
+    ]);
+
+    const attendanceSet = new Set(allAttendances.map(a => a.userId));
+    const excuseSet = new Set(allExcuses.map(e => e.userId));
+    const leaveSet = new Set(allLeaves.map(l => l.userId));
+
     let markedAbsences = 0;
     
     for (const [userId, sched] of userMap.entries()) {
@@ -57,11 +83,7 @@ export async function runAutoAbsenceJob() {
         continue; // Handled by supervisor visit derivation job
       }
 
-      const existingRecord = await prisma.staffAttendanceRecord.findUnique({
-        where: { userId_attendanceDate: { userId, attendanceDate: today } }
-      });
-
-      if (existingRecord) {
+      if (attendanceSet.has(userId)) {
         continue; // They checked in, or were already marked EXCUSED/ON_LEAVE
       }
 
@@ -85,46 +107,51 @@ export async function runAutoAbsenceJob() {
       }
 
       // Check for approved excuse
-      const excuse = await prisma.staffExcuseRequest.findFirst({
-        where: { userId, absenceDate: today, status: ExcuseRequestStatus.APPROVED }
-      });
-
-      if (excuse) {
+      if (excuseSet.has(userId)) {
         await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.EXCUSED, sched.user.role as any);
         continue;
       }
 
       // Check for approved leave
-      const leave = await prisma.staffLeaveRequest.findFirst({
-        where: {
-          userId,
-          status: LeaveRequestStatus.LEAVE_APPROVED,
-          startDate: { lte: today },
-          endDate: { gte: today }
-        }
-      });
-
-      if (leave) {
+      if (leaveSet.has(userId)) {
         await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ON_LEAVE, sched.user.role as any);
         continue;
       }
 
       // Mark ABSENT
-      await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ABSENT, sched.user.role as any);
-      markedAbsences++;
+      const wasNew = await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ABSENT, sched.user.role as any);
+      if (wasNew) {
+        markedAbsences++;
+        const absenceDate = today.toISOString().slice(0, 10);
+        const absenceMarker = `${absenceDate}:${userId}:absence`;
+        notificationsService.notifyStaffAbsence({
+          organizationId: org.id,
+          centerId: sched.centerId,
+          circleId: sched.circleId ?? null,
+          recipientUserId: userId,
+          absenceDate,
+          absenceMarker,
+          centerName: (sched as any).center?.name ?? "",
+          circleName: (sched as any).circle?.name ?? null
+        }).catch((err) => logger.error({ job: "auto-absence", userId, err }, "Failed to send absence notification"));
+      }
     }
 
-    console.log(`[AutoAbsenceJob] Org ${org.id}: Marked ${markedAbsences} automatic absences.`);
+    logger.info({ job: "auto-absence", orgId: org.id, markedAbsences }, "Marked automatic absences");
   }
 
-  console.log("[AutoAbsenceJob] Completed.");
+  logger.info({ job: "auto-absence" }, "Auto-absence job completed");
 }
 
-async function upsertAttendance(orgId: number, userId: number, centerId: number, date: Date, status: AttendanceStatus, role: any) {
-  await prisma.staffAttendanceRecord.upsert({
+async function upsertAttendance(orgId: number, userId: number, centerId: number, date: Date, status: AttendanceStatus, role: any): Promise<boolean> {
+  const existing = await prisma.staffAttendanceRecord.findUnique({
     where: { userId_attendanceDate: { userId, attendanceDate: date } },
-    update: {},
-    create: {
+    select: { id: true }
+  });
+  if (existing) return false;
+
+  await prisma.staffAttendanceRecord.create({
+    data: {
       organizationId: orgId,
       userId,
       centerId,
@@ -135,4 +162,5 @@ async function upsertAttendance(orgId: number, userId: number, centerId: number,
       note: "Auto-generated by System"
     }
   });
+  return true;
 }

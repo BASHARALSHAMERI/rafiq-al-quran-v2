@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { VisitPlanStatus, VisitPriority } from "@prisma/client";
 
-const positiveId = z.coerce.number().int().positive();
-const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format, expected YYYY-MM-DD");
+const positiveId = z.coerce.number().int("يجب أن يكون رقماً صحيحاً").positive("يجب اختيار عنصر صحيح (أكبر من 0)");
+
+const nullablePositiveId = z.preprocess(
+  (val) => (val === null || val === "" || val === undefined) ? null : Number(val),
+  z.number().int("يجب أن يكون رقماً صحيحاً").positive("يجب اختيار عنصر صحيح (أكبر من 0)").nullable().optional()
+);
+
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ غير صحيحة، الصيغة المطلوبة: YYYY-MM-DD");
 
 const visitPlanStatusInputSchema = z.enum([
   VisitPlanStatus.VISIT_PLAN_DRAFT,
@@ -40,7 +46,7 @@ export const listPlansQuerySchema = z
 export const addPlanItemSchema = z
   .object({
     centerId: positiveId,
-    circleId: positiveId.optional(),
+    circleId: nullablePositiveId,
     plannedDate: dateStr,
     plannedTimeWindow: z.string().max(20).optional(),
     priority: z.nativeEnum(VisitPriority).optional(),
@@ -51,7 +57,7 @@ export const addPlanItemSchema = z
 export const updatePlanItemSchema = z
   .object({
     centerId: positiveId.optional(),
-    circleId: positiveId.optional().nullable(),
+    circleId: nullablePositiveId,
     plannedDate: dateStr.optional(),
     plannedTimeWindow: z.string().max(20).optional(),
     priority: z.nativeEnum(VisitPriority).optional(),
@@ -62,7 +68,7 @@ export const updatePlanItemSchema = z
 export const startVisitSchema = z
   .object({
     centerId: positiveId,
-    circleId: positiveId.optional(),
+    circleId: nullablePositiveId,
     planItemId: positiveId.optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional()

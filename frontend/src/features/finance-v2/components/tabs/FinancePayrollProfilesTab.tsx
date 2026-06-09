@@ -21,6 +21,13 @@ import type {
   PayrollProfileV2,
   EligibleEmployeeV2,
 } from "../../types";
+import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
+import {
+  focusFirstInvalidField,
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../../../shared/ui/feedback";
 
 const ROLE_LABEL_AR: Record<string, string> = {
   TEACHER: "معلم",
@@ -33,6 +40,7 @@ type Props = {
   centerId: number | undefined;
   ar: boolean;
   centers: { id: number; name: string }[];
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 };
@@ -55,7 +63,8 @@ export default function FinancePayrollProfilesTab({
   centerId, 
   ar, 
   externalShowForm, 
-  onExternalFormClose 
+  onExternalFormClose,
+  canManage = true
 }: Props) {
   const profilesQ = useFinanceV2PayrollProfilesQuery(centerId);
   const profiles = useMemo(() => profilesQ.data?.rows ?? [], [profilesQ.data?.rows]);
@@ -76,10 +85,10 @@ export default function FinancePayrollProfilesTab({
 
   // Sync with parent's trigger
   useEffect(() => {
-    if (externalShowForm) {
+    if (externalShowForm && canManage) {
       openNew();
     }
-  }, [externalShowForm]);
+  }, [externalShowForm, canManage]);
 
   const handleClose = () => {
     setFormOpen(false);
@@ -107,6 +116,7 @@ export default function FinancePayrollProfilesTab({
   }, [selectedGrade, isOverride]);
 
   const openNew = () => {
+    if (!canManage) return;
     setFormState(emptyForm());
     setIsOverride(false);
     setSelectedEmployee(null);
@@ -117,6 +127,7 @@ export default function FinancePayrollProfilesTab({
   };
 
   const openEdit = (p: PayrollProfileV2) => {
+    if (!canManage) return;
     const override = p.salarySource === "OVERRIDE";
     setIsOverride(override);
     setEditingId(p.id);
@@ -176,10 +187,17 @@ export default function FinancePayrollProfilesTab({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formState.userId) return;
-    if (isOverride && !formState.overrideReason?.trim()) return;
+    if (!formState.userId || (isOverride && !formState.overrideReason?.trim())) {
+      const employeeInput = e.currentTarget.querySelector<HTMLInputElement>("input[list='employeeList']");
+      if (!formState.userId) {
+        employeeInput?.setCustomValidity(ar ? "اختر موظفًا من القائمة." : "Select an employee from the list.");
+      }
+      focusFirstInvalidField(e.currentTarget);
+      notifyRequiredFields(ar);
+      return;
+    }
     try {
       const payload = {
         ...formState,
@@ -192,9 +210,15 @@ export default function FinancePayrollProfilesTab({
       } else {
         await createProfileM.mutateAsync({ ...payload, centerId });
       }
+      notifySuccess(formMode === "edit"
+        ? (ar ? "تم تحديث ملف الراتب بنجاح" : "Payroll profile updated successfully")
+        : (ar ? "تم إنشاء ملف الراتب بنجاح" : "Payroll profile created successfully"));
       setFormOpen(false);
     } catch (err) {
-      console.error(err);
+      notifyError(getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر حفظ ملف الراتب." : "Unable to save the payroll profile."
+      }));
     }
   };
 
@@ -300,9 +324,11 @@ export default function FinancePayrollProfilesTab({
               {
                 header: ar ? "الإجراءات" : "Actions",
                 render: (p) => (
-                  <button className="fin-action-btn view" onClick={() => openEdit(p)} title={ar ? "تعديل" : "Edit"}>
-                    <Calculator size={16} />
-                  </button>
+                  canManage ? (
+                    <button className="fin-action-btn view" onClick={() => openEdit(p)} title={ar ? "تعديل" : "Edit"}>
+                      <Calculator size={16} />
+                    </button>
+                  ) : null
                 ),
               },
             ]}
@@ -314,7 +340,7 @@ export default function FinancePayrollProfilesTab({
 
       {/* Modal */}
       <Modal
-        isOpen={formOpen}
+        isOpen={Boolean(formOpen && canManage)}
         onClose={handleClose}
         title={
           ar
@@ -339,7 +365,7 @@ export default function FinancePayrollProfilesTab({
           </div>
         }
       >
-        <form id="payroll-profile-form" className="circlemod-form" onSubmit={handleSubmit} dir={ar ? "rtl" : "ltr"}>
+        <form id="payroll-profile-form" className="circlemod-form" onSubmit={handleSubmit} dir={ar ? "rtl" : "ltr"} noValidate>
 
           <div className="circlemod-section">
             <div className="circlemod-section-head">
@@ -364,6 +390,7 @@ export default function FinancePayrollProfilesTab({
                       value={empSearch}
                       onChange={(e) => {
                         const val = e.target.value;
+                        e.currentTarget.setCustomValidity("");
                         setEmpSearch(val);
                         const matched = employees.find((emp) => emp.fullName === val);
                         if (matched) {

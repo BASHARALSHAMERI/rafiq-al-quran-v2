@@ -45,6 +45,7 @@ type PolicyFormState = {
   defaultShiftHours: string;
   earlyDepartureThresholdMinutes: number;
   prayerApiSource: string;
+  timeFormat: "HOUR_12" | "HOUR_24";
 };
 
 const DAY_LABELS: Record<WeekdayValue, { ar: string; en: string }> = {
@@ -63,10 +64,11 @@ const DEFAULT_FORM: PolicyFormState = {
   weekendDays: ["FRIDAY", "SATURDAY"],
   holidays: [],
   geoEnforcement: "OPTIONAL",
-  timezone: "Asia/Riyadh",
+  timezone: "Asia/Aden",
   defaultShiftHours: "2",
   earlyDepartureThresholdMinutes: 15,
-  prayerApiSource: "ALADHAN"
+  prayerApiSource: "ALADHAN",
+  timeFormat: "HOUR_12"
 };
 
 const PRAYER_SOURCE_OPTIONS = [
@@ -78,6 +80,7 @@ const PRAYER_SOURCE_OPTIONS = [
 ] as const;
 
 const TIMEZONE_OPTIONS = [
+  { value: "Asia/Aden", ar: "آسيا/عدن (اليمن)", en: "Asia/Aden (Yemen)" },
   { value: "Asia/Riyadh", ar: "آسيا/الرياض (السعودية)", en: "Asia/Riyadh (Saudi Arabia)" },
   { value: "Asia/Dubai", ar: "آسيا/دبي (الإمارات)", en: "Asia/Dubai (United Arab Emirates)" },
   { value: "Asia/Baghdad", ar: "آسيا/بغداد (العراق)", en: "Asia/Baghdad (Iraq)" },
@@ -87,8 +90,7 @@ const TIMEZONE_OPTIONS = [
   { value: "Africa/Cairo", ar: "أفريقيا/القاهرة (مصر)", en: "Africa/Cairo (Egypt)" },
   { value: "Asia/Qatar", ar: "آسيا/الدوحة (قطر)", en: "Asia/Qatar (Qatar)" },
   { value: "Asia/Kuwait", ar: "آسيا/الكويت (الكويت)", en: "Asia/Kuwait (Kuwait)" },
-  { value: "Asia/Muscat", ar: "آسيا/مسقط (عمان)", en: "Asia/Muscat (Oman)" },
-  { value: "Asia/Aden", ar: "آسيا/عدن (اليمن)", en: "Asia/Aden (Yemen)" }
+  { value: "Asia/Muscat", ar: "آسيا/مسقط (عمان)", en: "Asia/Muscat (Oman)" }
 ] as const;
 
 const localizedOptions = (
@@ -181,7 +183,8 @@ export function AttendancePolicySettings() {
       timezone: policy.timezone,
       defaultShiftHours: String(policy.defaultShiftDurationMinutes / 60),
       earlyDepartureThresholdMinutes: policy.earlyDepartureThresholdMinutes,
-      prayerApiSource: policy.prayerApiSource
+      prayerApiSource: policy.prayerApiSource,
+      timeFormat: policy.timeFormat ?? "HOUR_12"
     });
   }, [policy]);
 
@@ -288,7 +291,8 @@ export function AttendancePolicySettings() {
         timezone: form.timezone.trim(),
         defaultShiftDurationMinutes: shiftMinutes,
         earlyDepartureThresholdMinutes: form.earlyDepartureThresholdMinutes,
-        prayerApiSource: form.prayerApiSource.trim().toUpperCase()
+        prayerApiSource: form.prayerApiSource.trim().toUpperCase(),
+        timeFormat: form.timeFormat
       },
       {
         onSuccess: () =>
@@ -491,6 +495,25 @@ export function AttendancePolicySettings() {
                   value={form.prayerApiSource}
                   onChange={(event) => setField("prayerApiSource", event.target.value)}
                   options={prayerSourceOptions}
+                />
+              </div>
+
+              <div className="staff-ops-policy-field">
+                <PolicyFieldLabel
+                  label={ar ? "تنسيق الوقت" : "Time Format"}
+                  hint={
+                    ar
+                      ? "نظام عرض الوقت في جميع شاشات الحضور والدوام."
+                      : "Time display format across all attendance screens."
+                  }
+                />
+                <Select
+                  value={form.timeFormat}
+                  onChange={(event) => setField("timeFormat", event.target.value as PolicyFormState["timeFormat"])}
+                  options={[
+                    { value: "HOUR_12", label: ar ? "12 ساعة (ص/م)" : "12-hour (AM/PM)" },
+                    { value: "HOUR_24", label: ar ? "24 ساعة" : "24-hour" }
+                  ]}
                 />
               </div>
 

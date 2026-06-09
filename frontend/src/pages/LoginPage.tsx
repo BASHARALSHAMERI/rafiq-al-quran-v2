@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { AlertCircle, ArrowLeft, ArrowRight, Eye, EyeOff, Lock, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, UserRound } from "lucide-react";
 import { useI18n } from "../app/i18n";
 import { getRoleLandingPath } from "../app/role-landing";
 import { labels } from "../constants/labels";
@@ -10,6 +10,7 @@ import { useAuthBootstrap } from "../features/auth/use-auth-bootstrap";
 
 import { normalizeApiError } from "../shared/api/error";
 import AuthLayout from "../components/auth/AuthLayout";
+import { InlineAlert } from "../components/ui/InlineAlert";
 
 const REMEMBER_IDENTIFIER_KEY = "rafiq_v2_login_identifier";
 
@@ -143,9 +144,8 @@ function LoginPage() {
         </label>
 
         {errorMessage && (
-          <div className="auth-error" role="alert">
-            <AlertCircle className="h-5 w-5" />
-            <span>{errorMessage}</span>
+          <div style={{ marginBottom: "1.5rem" }}>
+            <InlineAlert variant="error" message={errorMessage} />
           </div>
         )}
 

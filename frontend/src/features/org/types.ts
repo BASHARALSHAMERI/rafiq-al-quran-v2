@@ -1,4 +1,4 @@
-export type CenterGender = "MALE" | "FEMALE";
+﻿export type CenterGender = "MALE" | "FEMALE";
 export type CircleType = "HIFZ" | "REVIEW" | "HIFZ_REVIEW";
 export type CircleScheduleDay =
   | "FRIDAY"
@@ -52,6 +52,8 @@ export type Center = {
   gender?: CenterGender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   timezone?: string;
   centerAdminUserId?: number | null;
   organizationId: number | null;
@@ -130,6 +132,10 @@ export type CreateCenterPayload = {
   gender: CenterGender;
   logoUrl?: string | null;
   mosqueName?: string;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string;
   centerAdminUserId: number;
   supervisorUserIds?: number[];

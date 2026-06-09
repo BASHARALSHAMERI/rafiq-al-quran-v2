@@ -107,8 +107,8 @@ export default function FinanceInvoicesPage() {
       header={
         <div className="fin-premium-header">
           <FinancePageHeader
-            title={ar ? "إدارة الفواتير والرسوم" : "Invoice & Fee Management"}
-            subtitle={ar ? "إصدار ومتابعة تحصيل الرسوم الدراسية والاشتراكات" : "Issue and track tuition fees and subscriptions"}
+            title={ar ? "مساهمات الطلاب الاختيارية" : "Optional Student Contributions"}
+            subtitle={ar ? "إصدار المساهمات الرمزية المصرح بها ومتابعة تحصيلها" : "Issue and track explicitly authorized optional contributions"}
             icon={<FileText className="w-6 h-6 text-brand-600" />}
             actions={
               <div className="flex items-center gap-3">

@@ -17,27 +17,40 @@ import {
 } from "./accounting.validation";
 
 const accountingRouter = Router();
-const accountingRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN];
+const accountingAdminRoles = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
+const accountingReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR,
+  Role.SUPERVISOR
+];
+const accountingDraftWriteRoles = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER
+];
 
 accountingRouter.use(authGuard, attachScope);
 
 accountingRouter.get(
   "/accounting/accounts",
-  requireRoles(accountingRoles),
+  requireRoles(accountingReadRoles),
   validateQuery(listAccountsQuerySchema),
   accountingController.getAccounts
 );
 
 accountingRouter.post(
   "/accounting/accounts",
-  requireRoles(accountingRoles),
+  requireRoles(accountingAdminRoles),
   validateBody(createAccountingAccountBodySchema),
   accountingController.createAccount
 );
 
 accountingRouter.patch(
   "/accounting/accounts/:id",
-  requireRoles(accountingRoles),
+  requireRoles(accountingAdminRoles),
   validateParams(accountingEntityIdParamSchema),
   validateBody(updateAccountingAccountBodySchema),
   accountingController.updateAccount
@@ -45,35 +58,42 @@ accountingRouter.patch(
 
 accountingRouter.get(
   "/accounting/journal-entries",
-  requireRoles(accountingRoles),
+  requireRoles(accountingReadRoles),
   validateQuery(listJournalEntriesQuerySchema),
   accountingController.listJournalEntries
 );
 
 accountingRouter.post(
   "/accounting/journal-entries",
-  requireRoles(accountingRoles),
+  requireRoles(accountingDraftWriteRoles),
   validateBody(createJournalEntryBodySchema),
   accountingController.createJournalEntry
 );
 
 accountingRouter.post(
   "/accounting/journal-entries/:id/post",
-  requireRoles(accountingRoles),
+  requireRoles(accountingAdminRoles),
   validateParams(accountingEntityIdParamSchema),
   accountingController.postJournalEntry
 );
 
+accountingRouter.post(
+  "/accounting/fiscal-periods/:id/close",
+  requireRoles(accountingAdminRoles),
+  validateParams(accountingEntityIdParamSchema),
+  accountingController.closeFiscalPeriod
+);
+
 accountingRouter.get(
   "/accounting/ledger",
-  requireRoles(accountingRoles),
+  requireRoles(accountingReadRoles),
   validateQuery(ledgerQuerySchema),
   accountingController.getLedger
 );
 
 accountingRouter.get(
   "/accounting/trial-balance",
-  requireRoles(accountingRoles),
+  requireRoles(accountingReadRoles),
   validateQuery(trialBalanceQuerySchema),
   accountingController.getTrialBalance
 );

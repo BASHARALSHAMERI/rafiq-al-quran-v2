@@ -74,7 +74,7 @@ const journalLineSchema = z
   })
   .strict()
   .refine((line) => (line.debit > 0) !== (line.credit > 0), {
-    message: "Each journal line must contain either debit or credit, not both"
+    message: "كل سطر في القيد يجب أن يحتوي على مدين أو دائن فقط، وليس كليهما"
   });
 
 export const createJournalEntryBodySchema = z

@@ -14,7 +14,8 @@ const NOTIFICATIONS_ALLOWED_ROLES: Role[] = [
   Role.SUPERVISOR,
   Role.TEACHER,
   Role.PARENT,
-  Role.STUDENT
+  Role.STUDENT,
+  Role.FINANCE_MANAGER
 ];
 
 const uniqueIds = (values: number[]): number[] => [...new Set(values)];

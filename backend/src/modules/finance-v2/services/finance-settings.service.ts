@@ -93,7 +93,9 @@ export const financeSettingsService = {
               allowSymbolicOneTimeFee: centerPolicy.allowSymbolicOneTimeFee,
               allowOverdraft: centerPolicy.allowOverdraft
             }
-          : {})
+          : {}),
+        feesEnabled:
+          organizationPolicy?.feesEnabled === true && centerPolicy?.feesEnabled !== false
       },
       organizationPolicy: organizationPolicy ? normalize(organizationPolicy) : null,
       centerPolicy: centerPolicy ? normalize(centerPolicy) : null
@@ -103,6 +105,7 @@ export const financeSettingsService = {
   async patchOrganizationPolicy(
     scope: ScopeContext,
     input: {
+      feesEnabled?: boolean;
       requireTransferAttachment?: boolean;
       requireApprovalDisbursement?: boolean;
       requireApprovalReceipt?: boolean;
@@ -114,22 +117,30 @@ export const financeSettingsService = {
     financeV2Domain.assertWriteEnabled();
     financeV2Domain.assertCanApprove(scope);
 
-    const updated = await prisma.financePolicyProfile.upsert({
-      where: {
-        organizationId_centerId: {
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.financePolicyProfile.findFirst({
+        where: {
           organizationId: scope.organizationId,
-          centerId: null as unknown as number
-        }
-      },
-      update: {
-        ...input
-      },
-      create: {
-        organizationId: scope.organizationId,
-        centerId: null as unknown as number,
-        ...DEFAULT_POLICY,
-        ...input
+          centerId: null
+        },
+        select: { id: true }
+      });
+
+      if (existing) {
+        return tx.financePolicyProfile.update({
+          where: { id: existing.id },
+          data: input
+        });
       }
+
+      return tx.financePolicyProfile.create({
+        data: {
+          organizationId: scope.organizationId,
+          centerId: null,
+          ...DEFAULT_POLICY,
+          ...input
+        }
+      });
     });
 
     await addAudit({
@@ -150,6 +161,7 @@ export const financeSettingsService = {
     scope: ScopeContext,
     centerId: number,
     input: {
+      feesEnabled?: boolean;
       requireTransferAttachment?: boolean;
       requireApprovalDisbursement?: boolean;
       requireApprovalReceipt?: boolean;
@@ -184,7 +196,8 @@ export const financeSettingsService = {
         organizationId: scope.organizationId,
         centerId,
         ...DEFAULT_POLICY,
-        ...input
+        ...input,
+        feesEnabled: input.feesEnabled ?? null
       }
     });
 

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AddParentStudentLinkPayload,
   AddStudentEnrollmentPayload,
@@ -40,7 +40,8 @@ export const useUsersQuery = (
     queryKey: USERS_QUERY_KEYS.list(params),
     queryFn: () => usersApi.getUsers({ ...params }),
     enabled,
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -49,7 +50,8 @@ export const useUserByIdQuery = (userId: number | null, enabled = true) => {
     queryKey: USERS_QUERY_KEYS.details(userId ?? 0),
     queryFn: () => usersApi.getUserById(userId ?? 0),
     enabled: enabled && Boolean(userId),
-    staleTime: 30_000
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
   });
 };
 

@@ -352,48 +352,137 @@ export const billingService = {
     await ensureFinanceCenter(scope, input.centerId);
     await ensureFinanceStudent(scope, input.studentId);
 
-    const activeEnrollment = await prisma.studentCircleEnrollment.findFirst({
-      where: {
-        studentId: input.studentId,
-        status: "ACTIVE",
-        circle: {
-          centerId: input.centerId,
-          center: {
-            organizationId: scope.organizationId
-          }
-        }
-      },
-      select: {
-        id: true
-      }
-    });
-
-    if (!activeEnrollment) {
-      throw financeV2Domain.financeError(
-        "Student is not actively enrolled in selected center",
-        400,
-        "VALIDATION_ERROR"
-      );
-    }
-
     const issuedAt = ensureDate(input.issuedAt) ?? new Date(input.year, input.month - 1, 1);
     const dueDate = ensureDate(input.dueDate);
+    const invoiceType = input.invoiceType ?? InvoiceType.TUITION_MONTHLY;
 
     try {
-      const invoice = await prisma.invoice.create({
-        data: {
-          studentId: input.studentId,
-          centerId: input.centerId,
-          month: input.month,
-          year: input.year,
-          invoiceType: input.invoiceType ?? InvoiceType.TUITION_MONTHLY,
-          amount: financeV2Domain.toDecimal(input.amount),
-          status: InvoiceStatus.PENDING,
-          issuedAt,
-          dueDate: dueDate ?? null,
-          notes: input.notes?.trim() || null
-        },
-        select: invoiceSelect
+      const invoice = await prisma.$transaction(async (tx) => {
+        await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, issuedAt);
+
+        const [activeEnrollment, policy, feeProfile] = await Promise.all([
+        tx.studentCircleEnrollment.findFirst({
+          where: {
+            studentId: input.studentId,
+            status: "ACTIVE",
+            circle: {
+              centerId: input.centerId,
+              center: {
+                organizationId: scope.organizationId
+              }
+            }
+          },
+          select: {
+            id: true
+          }
+        }),
+        getEffectivePolicyTx(tx, {
+          organizationId: scope.organizationId,
+          centerId: input.centerId
+        }),
+        tx.studentFeeProfile.findFirst({
+          where: {
+            organizationId: scope.organizationId,
+            centerId: input.centerId,
+            studentId: input.studentId,
+            isActive: true,
+            startDate: { lte: issuedAt },
+            OR: [{ endDate: null }, { endDate: { gte: issuedAt } }]
+          },
+          include: {
+            tuitionPlan: {
+              select: {
+                id: true,
+                monthlyAmount: true,
+                isActive: true,
+                planKind: true
+              }
+            }
+          }
+        })
+        ]);
+
+        if (!activeEnrollment) {
+          throw financeV2Domain.financeError(
+            "Student is not actively enrolled in selected center",
+            400,
+            "VALIDATION_ERROR"
+          );
+        }
+
+        if (!policy.feesEnabled) {
+          throw financeV2Domain.financeError(
+            "Student fees are disabled for this organization or center",
+            409,
+            "FEES_DISABLED"
+          );
+        }
+
+        if (!feeProfile || feeProfile.feeMode === FeeMode.FREE) {
+          throw financeV2Domain.financeError(
+            "Cannot create an invoice for a free student or a student without an active fee policy",
+            409,
+            "STUDENT_FEE_EXEMPT"
+          );
+        }
+
+        let authorizedAmount: Prisma.Decimal;
+        if (feeProfile.feeMode === FeeMode.SYMBOLIC_ONE_TIME) {
+          if (!policy.allowSymbolicOneTimeFee) {
+            throw financeV2Domain.financeError(
+              "Symbolic student fees are disabled",
+              409,
+              "SYMBOLIC_FEES_DISABLED"
+            );
+          }
+          if (invoiceType !== InvoiceType.REGISTRATION_ONE_TIME || !feeProfile.symbolicAmount) {
+            throw financeV2Domain.financeError(
+              "Invoice type does not match the student's symbolic fee policy",
+              409,
+              "FEE_MODE_INVOICE_TYPE_MISMATCH"
+            );
+          }
+          authorizedAmount = feeProfile.symbolicAmount;
+        } else {
+          if (
+            invoiceType !== InvoiceType.TUITION_MONTHLY ||
+            !feeProfile.tuitionPlan ||
+            !feeProfile.tuitionPlan.isActive ||
+            feeProfile.tuitionPlan.planKind !== "MONTHLY"
+          ) {
+            throw financeV2Domain.financeError(
+              "Invoice type does not match the student's monthly fee policy",
+              409,
+              "FEE_MODE_INVOICE_TYPE_MISMATCH"
+            );
+          }
+          authorizedAmount = feeProfile.tuitionPlan.monthlyAmount;
+        }
+
+        const requestedAmount = financeV2Domain.toDecimal(input.amount);
+        if (!requestedAmount.equals(authorizedAmount)) {
+          throw financeV2Domain.financeError(
+            "Invoice amount does not match the authorized student fee policy",
+            409,
+            "FEE_AMOUNT_MISMATCH"
+          );
+        }
+
+        return tx.invoice.create({
+          data: {
+            studentId: input.studentId,
+            centerId: input.centerId,
+            month: input.month,
+            year: input.year,
+            invoiceType,
+            amount: authorizedAmount,
+            status: InvoiceStatus.PENDING,
+            issuedAt,
+            dueDate: dueDate ?? null,
+            notes: input.notes?.trim() || null
+          },
+          select: invoiceSelect
+        });
       });
 
       await addAudit({
@@ -413,7 +502,7 @@ export const billingService = {
       mapUniqueConflict(
         error,
         "INVALID_STATE_TRANSITION",
-        "Invoice already exists for this student and month"
+        "Invoice of this type already exists for this student and month"
       );
       throw error;
     }
@@ -441,11 +530,11 @@ export const billingService = {
       );
     }
 
-    if (scope.role === Role.CENTER_ADMIN && existing.payments.length > 0) {
+    if (existing.payments.length > 0) {
       throw financeV2Domain.financeError(
-        "Center admin cannot cancel invoice with payments",
-        403,
-        "FINANCE_SCOPE_DENIED"
+        "لا يمكن إلغاء فاتورة مرتبطة بمدفوعات. يجب معالجة المدفوعات أو إصدار تسوية محاسبية.",
+        409,
+        "INVOICE_HAS_PAYMENTS"
       );
     }
 

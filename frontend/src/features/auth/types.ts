@@ -4,7 +4,11 @@ export type Role =
   | "SUPERVISOR"
   | "TEACHER"
   | "PARENT"
-  | "STUDENT";
+  | "STUDENT"
+  | "ACCOUNTANT"
+  | "FINANCE_MANAGER"
+  | "TREASURER"
+  | "AUDITOR";
 
 export type AuthUser = {
   id: number;
@@ -14,6 +18,10 @@ export type AuthUser = {
   avatarUrl?: string | null;
   organizationName?: string;
   organizationLogoUrl?: string | null;
+  // TRANSIENT: timeFormat lives here temporarily until a proper
+  // OrganizationSettings layer is introduced. Do NOT add timezone,
+  // currency, language, dateFormat, or hijriEnabled to this type.
+  timeFormat?: "HOUR_12" | "HOUR_24";
 };
 
 export type LoginPayload = {

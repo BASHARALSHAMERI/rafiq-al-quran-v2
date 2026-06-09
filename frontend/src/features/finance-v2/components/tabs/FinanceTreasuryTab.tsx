@@ -4,6 +4,8 @@ import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import {
   entityFeedback,
   notifyError,
+  notifyInfo,
+  notifyRequiredFields,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
@@ -26,6 +28,7 @@ type Props = {
   centerId: number | undefined;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canEditLedgerAccount?: boolean;
   ar: boolean;
   externalShowTransfer?: boolean;
   onExternalTransferClose?: () => void;
@@ -36,6 +39,7 @@ const TRANSFER_ENTITY: LocalizedLabel = { ar: "التحويل", en: "transfer" }
 export default function FinanceTreasuryTab({ 
   centerId, 
   isAdmin, 
+  canEditLedgerAccount = isAdmin,
   ar,
   externalShowTransfer,
   onExternalTransferClose 
@@ -56,10 +60,18 @@ export default function FinanceTreasuryTab({
     }
   }, [externalShowTransfer]);
 
+  useEffect(() => {
+    if (showTransferForm && FINANCE_YEMEN_MODE) {
+      notifyInfo(ar
+        ? "سيتم التحويل آلياً من صندوق المركز الحالي إلى الصندوق الرئيسي للمؤسسة."
+        : "Transfer will be automatically performed from the current center fund to the main organization fund.");
+    }
+  }, [showTransferForm, ar]);
+
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
   const accountsPagination = useClientPagination(accounts, { initialPageSize: 10 });
-  const accountingAccountsQ = useAccountingAccountsQuery(isAdmin);
+  const accountingAccountsQ = useAccountingAccountsQuery(canEditLedgerAccount);
   const assetAccounts = useMemo(() => {
     const accounts = accountingAccountsQ.data ?? [];
     const parentIds = new Set(accounts.map((account) => account.parentId).filter((id): id is number => Boolean(id)));
@@ -102,13 +114,20 @@ export default function FinanceTreasuryTab({
       }
 
       const amount = Number(transferForm.amount);
-      if (!fromId) throw new Error(ar ? "الحساب المحول منه غير موجود" : "From account not found");
-      if (!toId) throw new Error(ar ? "الحساب المحول إليه غير موجود" : "To account not found");
-      if (!Number.isFinite(amount) || amount <= 0) throw new Error(ar ? "مبلغ غير صحيح" : "Invalid amount");
+      const invalidFieldId = !fromId ? "tr-from" : !toId ? "tr-to" : !Number.isFinite(amount) || amount <= 0 ? "tr-amount" : null;
+      if (invalidFieldId) {
+        const message = ar ? "يرجى إكمال الحقول المطلوبة." : "Please complete the required fields.";
+        setTreasuryError(message);
+        notifyRequiredFields(ar);
+        requestAnimationFrame(() => document.getElementById(invalidFieldId)?.focus());
+        return;
+      }
+      const validFromId = fromId as number;
+      const validToId = toId as number;
 
       await createTransferM.mutateAsync({
-        fromAccountId: fromId,
-        toAccountId: toId,
+        fromAccountId: validFromId,
+        toAccountId: validToId,
         amount,
         notes: transferForm.notes.trim() || undefined
       });
@@ -156,13 +175,7 @@ export default function FinanceTreasuryTab({
               <Landmark size={15} className="circlemod-section-icon" />
               <span>{ar ? "الحسابات" : "Accounts"}</span>
             </div>
-            {FINANCE_YEMEN_MODE ? (
-              <div className="text-[12px] opacity-70 p-1 font-medium" role="note">
-                {ar
-                  ? "سيتم التحويل آلياً من صندوق المركز الحالي إلى الصندوق الرئيسي للمؤسسة."
-                  : "Transfer will be automatically performed from the current center fund to the main organization fund."}
-              </div>
-            ) : (
+            {FINANCE_YEMEN_MODE ? null : (
               <div className="circlemod-row">
                 <div className="circlemod-field circlemod-field--lg">
                   <label htmlFor="tr-from">{ar ? "من حساب *" : "From Account *"}</label>
@@ -276,7 +289,7 @@ export default function FinanceTreasuryTab({
                   },
                   {
                     header: ar ? "حساب الأستاذ" : "Ledger Account",
-                    render: (acc) => isAdmin ? (
+                    render: (acc) => canEditLedgerAccount ? (
                       <select
                         className="circlemod-select min-w-[220px]"
                         value={acc.accountingAccountId ?? ""}

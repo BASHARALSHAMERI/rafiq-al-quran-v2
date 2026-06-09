@@ -7,8 +7,10 @@ import '../../application/remote_recitation/remote_recitation_providers.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/remote_recitation_models.dart';
 import '../shared/widgets/enterprise_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 
 class TeacherRemoteRecitationScreen extends ConsumerWidget {
@@ -50,11 +52,8 @@ class TeacherRemoteRecitationScreen extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          title: const Text('التسميع عن بعد'),
-          centerTitle: true,
-          backgroundColor: const Color(0xFFF7F8F5),
-          surfaceTintColor: Colors.transparent,
+        appBar: StandardAppBar(
+          title: 'التسميع عن بعد',
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(76),
             child: Padding(
@@ -152,7 +151,7 @@ class _TeacherSlotsTab extends ConsumerWidget {
     if (hasBlockingError) {
       return PageStateView.error(
         title: 'تعذر تحميل المواعيد',
-        message: '${settingsAsync.error ?? slotsAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -378,7 +377,7 @@ class _TeacherRequestsTab extends ConsumerWidget {
     if (hasBlockingError) {
       return PageStateView.error(
         title: 'تعذر تحميل الطلبات',
-        message: '${pendingAsync.error ?? approvedAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -456,7 +455,7 @@ class _TeacherHistoryTab extends ConsumerWidget {
     if (historyAsync.hasError && historyPage == null) {
       return PageStateView.error(
         title: 'تعذر تحميل السجل',
-        message: '${historyAsync.error}',
+        message: 'تحقق من الاتصال ثم أعد المحاولة.',
         actionLabel: 'إعادة المحاولة',
         onAction: () =>
             ref.read(remoteRecitationRefreshProvider.notifier).state++,
@@ -1000,19 +999,19 @@ String _firstLetter(String value) {
 
 Future<void> _launchExternalLink(BuildContext context, String? url) async {
   if (url == null || url.trim().isEmpty) {
-    _showSnackBar(context, 'لا يوجد رابط متاح لهذه الجلسة.');
+    AppSnackBar.warning(context, 'لا يوجد رابط متاح لهذه الجلسة.');
     return;
   }
 
   final uri = Uri.tryParse(url);
   if (uri == null) {
-    _showSnackBar(context, 'الرابط غير صالح.');
+    AppSnackBar.warning(context, 'الرابط غير صالح.');
     return;
   }
 
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
-    _showSnackBar(context, 'تعذر فتح الرابط الخارجي.');
+    AppSnackBar.error(context, 'تعذّر فتح الرابط الخارجي. تحقّق من وجود تطبيق مناسب.');
   }
 }
 
@@ -1053,11 +1052,11 @@ Future<void> _deleteSlot(
         );
     ref.read(remoteRecitationRefreshProvider.notifier).state++;
     if (context.mounted) {
-      _showSnackBar(context, 'تم حذف الموعد بنجاح.');
+      AppSnackBar.success(context, 'تم حذف الموعد بنجاح.');
     }
   } catch (error) {
     if (context.mounted) {
-      _showSnackBar(context, 'تعذر حذف الموعد: $error');
+      AppSnackBar.error(context, 'تعذّر حذف الموعد. يرجى التحقق من الاتصال ثم أعد المحاولة.');
     }
   }
 }
@@ -1083,11 +1082,14 @@ Future<void> _handleBookingDecision(
 
     ref.read(remoteRecitationRefreshProvider.notifier).state++;
     if (context.mounted) {
-      _showSnackBar(context, approve ? 'تم قبول الطلب.' : 'تم رفض الطلب.');
+      AppSnackBar.success(
+        context,
+        approve ? 'تم قبول الطلب بنجاح.' : 'تم رفض الطلب.',
+      );
     }
   } catch (error) {
     if (context.mounted) {
-      _showSnackBar(context, 'تعذر تحديث الطلب: $error');
+      AppSnackBar.error(context, 'تعذّر تحديث الطلب. يرجى التحقق من الاتصال ثم أعد المحاولة.');
     }
   }
 }
@@ -1220,15 +1222,15 @@ Future<void> _showCreateSlotSheet(
                               final startDateTime = _combineDateAndTime(
                                   selectedDate, selectedTime);
                               if (startDateTime == null) {
-                                _showSnackBar(
+                                AppSnackBar.warning(
                                   sheetContext,
-                                  'حدد التاريخ والوقت أولاً.',
+                                  'حدّد التاريخ والوقت أولاً.',
                                 );
                                 return;
                               }
 
                               if (joinUrlController.text.trim().isEmpty) {
-                                _showSnackBar(
+                                AppSnackBar.warning(
                                   sheetContext,
                                   'أدخل رابط الجلسة الخارجي.',
                                 );
@@ -1261,7 +1263,7 @@ Future<void> _showCreateSlotSheet(
                                   Navigator.of(sheetContext).pop();
                                 }
                                 if (context.mounted) {
-                                  _showSnackBar(
+                                  AppSnackBar.success(
                                     context,
                                     'تمت إضافة الموعد بنجاح.',
                                   );
@@ -1269,9 +1271,9 @@ Future<void> _showCreateSlotSheet(
                               } catch (error) {
                                 if (sheetContext.mounted) {
                                   setState(() => submitting = false);
-                                  _showSnackBar(
+                                  AppSnackBar.error(
                                     sheetContext,
-                                    'تعذر إضافة الموعد: $error',
+                                    'تعذّر إضافة الموعد. يرجى التحقق من الاتصال ثم أعد المحاولة.',
                                   );
                                 }
                               }
@@ -1475,7 +1477,7 @@ Future<void> _showCompleteBookingSheet(
                               );
                               if (rating != null &&
                                   (rating < 1 || rating > 100)) {
-                                _showSnackBar(
+                                AppSnackBar.warning(
                                   sheetContext,
                                   'التقييم يجب أن يكون بين 1 و100.',
                                 );
@@ -1517,7 +1519,7 @@ Future<void> _showCompleteBookingSheet(
                               if (isMatn) {
                                 final matnName = matnNameController.text.trim();
                                 if (matnName.isEmpty) {
-                                  _showSnackBar(
+                                  AppSnackBar.warning(
                                     sheetContext,
                                     'أدخل اسم المتن أولاً.',
                                   );
@@ -1533,14 +1535,14 @@ Future<void> _showCompleteBookingSheet(
                               } else {
                                 final surah = surahController.text.trim();
                                 if (hasAnyRange && !hasFullRange) {
-                                  _showSnackBar(
+                                  AppSnackBar.warning(
                                     sheetContext,
                                     'أدخل نطاق الآيات كاملاً أو اتركه فارغاً.',
                                   );
                                   return;
                                 }
                                 if (surah.isEmpty && !hasFullRange) {
-                                  _showSnackBar(
+                                  AppSnackBar.warning(
                                     sheetContext,
                                     'أدخل اسم السورة أو نطاق الحفظ.',
                                   );
@@ -1550,11 +1552,11 @@ Future<void> _showCompleteBookingSheet(
                                   payload['surah'] = surah;
                                 }
                                 if (hasFullRange) {
-                                  payload['fromSurah'] = fromSurah;
-                                  payload['fromAyah'] = fromAyah;
-                                  payload['toSurah'] = toSurah;
-                                  payload['toAyah'] = toAyah;
-                                }
+                                   payload['fromSurah'] = fromSurah;
+                                   payload['fromAyah'] = fromAyah;
+                                   payload['toSurah'] = toSurah;
+                                   payload['toAyah'] = toAyah;
+                                 }
                               }
 
                               setState(() => submitting = true);
@@ -1576,7 +1578,7 @@ Future<void> _showCompleteBookingSheet(
                                   Navigator.of(sheetContext).pop();
                                 }
                                 if (context.mounted) {
-                                  _showSnackBar(
+                                  AppSnackBar.success(
                                     context,
                                     'تم حفظ تقييم الجلسة بنجاح.',
                                   );
@@ -1584,13 +1586,13 @@ Future<void> _showCompleteBookingSheet(
                               } catch (error) {
                                 if (sheetContext.mounted) {
                                   setState(() => submitting = false);
-                                  _showSnackBar(
+                                  AppSnackBar.error(
                                     sheetContext,
-                                    'تعذر حفظ التقييم: $error',
+                                    'تعذّر حفظ تقييم الجلسة. يرجى التحقق من الاتصال ثم أعد المحاولة.',
                                   );
                                 }
                               }
-                            },
+                          },
                       icon: submitting
                           ? const SizedBox(
                               width: 18,
@@ -1647,10 +1649,4 @@ int? _parseInt(String value) {
   }
 
   return int.tryParse(normalized);
-}
-
-void _showSnackBar(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
 }

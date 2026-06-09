@@ -116,7 +116,7 @@ const assertAttemptCertificateVisibility = async (
     }
   }
 
-  throw new AppError("You are not allowed to print this certificate", 403);
+  throw new AppError("ليس لديك صلاحية طباعة هذه الشهادة", 403);
 };
 
 const assertGoldenRecordVisibility = (scope: ScopeContext, centerId: number) => {
@@ -128,7 +128,7 @@ const assertGoldenRecordVisibility = (scope: ScopeContext, centerId: number) => 
     return;
   }
 
-  throw new AppError("You are not allowed to print this certificate", 403);
+  throw new AppError("ليس لديك صلاحية طباعة هذه الشهادة", 403);
 };
 
 const buildExamRangeLabel = (exam: { type: string; examBranch: string | null; title: string }) => {
@@ -233,12 +233,12 @@ export const certificatesService = {
     });
 
     if (!attempt) {
-      throw new AppError(`Exam attempt with ID ${attemptId} not found or inaccessible.`, 404);
+      throw new AppError(`محاولة الاختبار بالرقم ${attemptId} غير موجودة أو لا يمكن الوصول إليها`, 404);
     }
 
     // Security check: ensure user belongs to the same organization as the attempt
     if (!scope.allAccess && attempt.circle.center.organizationId !== scope.organizationId) {
-      throw new AppError("You do not have access to this certificate (organization mismatch)", 403);
+      throw new AppError("ليس لديك صلاحية الوصول لهذه الشهادة (تعارض في المنظمة)", 403);
     }
 
     await assertAttemptCertificateVisibility(scope, {
@@ -251,11 +251,11 @@ export const certificatesService = {
     });
 
     if (attempt.status !== AttemptStatus.APPROVED && attempt.status !== AttemptStatus.PUBLISHED) {
-      throw new AppError("Certificate is available only for approved or published attempts", 409);
+      throw new AppError("الشهادة متاحة فقط للمحاولات المعتمدة أو المنشورة", 409);
     }
 
     if (attempt.totalScore === null || attempt.totalScore < attempt.exam.passScore) {
-      throw new AppError("Certificate is available only for successful exam attempts", 409);
+      throw new AppError("الشهادة متاحة فقط لمحاولات الاختبار الناجحة", 409);
     }
 
     const associationName = attempt.circle.center.organization.name;
@@ -377,28 +377,28 @@ export const certificatesService = {
     });
 
     if (!record) {
-      throw new AppError("Final golden record not found", 404);
+      throw new AppError("السجل الذهبي النهائي غير موجود", 404);
     }
 
     assertGoldenRecordVisibility(scope, record.centerId);
 
     if (record.status !== GoldenRecordStatus.APPROVED) {
-      throw new AppError("Completion certificate is available only for approved final golden records", 409);
+      throw new AppError("شهادة الإتمام متاحة فقط للسجلات الذهبية النهائية المعتمدة", 409);
     }
 
     if (record.type !== GoldenRecordType.KHATEM) {
-      throw new AppError("Completion certificate is available for full Quran completion records", 409);
+      throw new AppError("شهادة الإتمام متاحة لسجلات إتمام القرآن كاملاً", 409);
     }
 
     const riwaya = riwayaLabel(record.riwaya);
     const completionDate = dateOnly(record.examDate);
 
     if (!riwaya || !record.grade?.trim() || !record.appreciation?.trim() || !completionDate) {
-      throw new AppError("Completion certificate requires riwaya, grade, appreciation, and approval date", 422);
+      throw new AppError("شهادة الإتمام تتطلب الرواية والدرجة والتقدير وتاريخ الاعتماد", 422);
     }
 
     if (!record.achievementSnapshot) {
-      throw new AppError("Completion certificate requires an approved final golden record snapshot", 409);
+      throw new AppError("شهادة الإتمام تتطلب لقطة سجل ذهبي نهائي معتمدة", 409);
     }
 
     const chair = record.examAttempt?.committeeMembers.find(

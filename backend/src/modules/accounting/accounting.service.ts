@@ -56,15 +56,28 @@ type AccountInput = {
 };
 
 const assertAccountingRole = (scope: ScopeContext) => {
-  if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
-    throw new AppError("Accounting scope denied", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
+  if (
+    scope.role !== Role.SUPER_ADMIN &&
+    scope.role !== Role.ACCOUNTANT &&
+    scope.role !== Role.FINANCE_MANAGER &&
+    scope.role !== Role.TREASURER &&
+    scope.role !== Role.AUDITOR &&
+    scope.role !== Role.SUPERVISOR
+  ) {
+    throw new AppError("ليس لديك صلاحية للنطاق المحاسبي", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
+  }
+};
+
+const assertAccountingAdminRole = (scope: ScopeContext) => {
+  if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.FINANCE_MANAGER) {
+    throw new AppError("ليس لديك صلاحية لإدارة الفترات المالية", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
   }
 };
 
 const ensureCenterAllowed = (scope: ScopeContext, centerId?: number | null) => {
   if (!centerId || scope.allAccess) return;
   if (!scope.centerIds.includes(centerId)) {
-    throw new AppError("Accounting center scope denied", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
+    throw new AppError("ليس لديك صلاحية للنطاق المحاسبي للمركز", 403, undefined, "ACCOUNTING_SCOPE_DENIED");
   }
 };
 
@@ -97,6 +110,10 @@ const entryCenterScopeWhere = (
     return {};
   }
 
+  if (scope.role === Role.SUPERVISOR) {
+    return { centerId: { in: scope.centerIds } };
+  }
+
   return { OR: [{ centerId: { in: scope.centerIds } }, { centerId: null }] };
 };
 
@@ -113,13 +130,17 @@ const lineCenterScopeWhere = (
     return {};
   }
 
+  if (scope.role === Role.SUPERVISOR) {
+    return { centerId: { in: scope.centerIds } };
+  }
+
   return { OR: [{ centerId: { in: scope.centerIds } }, { centerId: null }] };
 };
 
 const parseDate = (value: string, fieldName: string): Date => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    throw new AppError(`Invalid ${fieldName}`, 400, undefined, "VALIDATION_ERROR");
+    throw new AppError(`${fieldName} غير صالح`, 400, undefined, "VALIDATION_ERROR");
   }
   return parsed;
 };
@@ -137,7 +158,7 @@ const parseDateRange = (from?: string, to?: string): DateRange => {
     range.to = parsedTo;
   }
   if (range.from && range.to && range.from > range.to) {
-    throw new AppError("Invalid date range", 400, undefined, "VALIDATION_ERROR");
+    throw new AppError("نطاق التواريخ غير صالح", 400, undefined, "VALIDATION_ERROR");
   }
   return range;
 };
@@ -181,7 +202,7 @@ const normalBalanceForType = (type: AccountingAccountType): AccountingNormalBala
 const validateLineAmounts = (line: JournalLineInput) => {
   if ((line.debit > 0) === (line.credit > 0)) {
     throw new AppError(
-      "Each journal line must contain either debit or credit",
+      "كل سطر في القيد يجب أن يحتوي على مدين أو دائن",
       400,
       undefined,
       "INVALID_JOURNAL_LINE"
@@ -205,6 +226,12 @@ type PostPaymentJournalEntryTxInput = {
 };
 
 type PostVoucherJournalEntryTxInput = {
+  voucherId: number;
+  postedById: number;
+};
+
+type PostExpensePaymentSettlementJournalEntryTxInput = {
+  expensePaymentId: number;
   voucherId: number;
   postedById: number;
 };
@@ -245,7 +272,7 @@ const findRequiredAccountTx = async (
 
   if (!account || account.type !== input.expectedType) {
     throw new AppError(
-      input.missingMessage ?? "Accounting account mapping is missing for payment posting",
+      input.missingMessage ?? "تصنيف الحساب المحاسبي مفقود لترحيل الدفعة",
       409,
       {
         systemKey: input.systemKey,
@@ -261,7 +288,7 @@ const findRequiredAccountTx = async (
   });
   if (childCount > 0) {
     throw new AppError(
-      "Accounting mapping points to a parent account that is not posting allowed",
+      "التصنيف المحاسبي يشير إلى حساب أب غير مسموح بالترحيل",
       409,
       { accountId: account.id, systemKey: input.systemKey, fallbackCode: input.fallbackCode },
       "ACCOUNT_NOT_POSTING_ALLOWED"
@@ -269,6 +296,66 @@ const findRequiredAccountTx = async (
   }
 
   return account;
+};
+
+const findAccountsPayablePostingAccountTx = async (
+  tx: Prisma.TransactionClient,
+  organizationId: number
+) => {
+  const account = await tx.accountingAccount.findFirst({
+    where: {
+      organizationId,
+      type: AccountingAccountType.LIABILITY,
+      isActive: true,
+      children: { none: { isActive: true } },
+      OR: [{ systemKey: "ACCOUNTS_PAYABLE" }, { code: "2130" }, { code: "2100" }]
+    },
+    orderBy: [{ systemKey: "desc" }, { code: "desc" }, { id: "asc" }]
+  });
+
+  if (!account) {
+    throw new AppError(
+      "حساب الدائنون مفقود لتسوية دفعة المصروف",
+      409,
+      { systemKey: "ACCOUNTS_PAYABLE", fallbackCodes: ["2130", "2100"] },
+      "ACCOUNTING_MAPPING_MISSING"
+    );
+  }
+
+  return account;
+};
+
+const resolveExpenseInvoiceAccountsPayableTx = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    organizationId: number;
+    invoiceId: number;
+  }
+) => {
+  const accrualEntry = await tx.journalEntry.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      sourceType: JournalSourceType.EXPENSE_INVOICE,
+      sourceId: input.invoiceId,
+      status: JournalEntryStatus.POSTED
+    },
+    include: {
+      lines: {
+        where: {
+          credit: { gt: new Prisma.Decimal(0) },
+          account: {
+            type: AccountingAccountType.LIABILITY,
+            isActive: true,
+            children: { none: { isActive: true } }
+          }
+        },
+        include: { account: true },
+        orderBy: { id: "asc" }
+      }
+    }
+  });
+
+  return accrualEntry?.lines[0]?.account ?? findAccountsPayablePostingAccountTx(tx, input.organizationId);
 };
 
 const findFinanceAccountLedgerAccountTx = async (
@@ -290,7 +377,7 @@ const findFinanceAccountLedgerAccountTx = async (
   });
 
   if (!financeAccount) {
-    throw new AppError("Finance account not found", 404, undefined, "ENTITY_NOT_FOUND");
+    throw new AppError("الحساب المالي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
   }
 
   if (
@@ -339,19 +426,75 @@ export const ensurePeriodOpenTx = async (
     }
   });
 
-  if (period && period.status === FiscalPeriodStatus.CLOSED) {
+  if (!period) {
     throw new AppError(
-      "Financial operation is not allowed in a closed fiscal period",
+      "لا توجد فترة مالية مفتوحة تغطي تاريخ العملية",
+      409,
+      undefined,
+      "FISCAL_PERIOD_NOT_FOUND"
+    );
+  }
+
+  if (period.status === FiscalPeriodStatus.CLOSED) {
+    throw new AppError(
+      "لا يمكن تنفيذ العملية المالية في فترة مالية مغلقة",
       409,
       undefined,
       "FISCAL_PERIOD_CLOSED"
     );
   }
-};
 
+  return period;
+};
 
 export const accountingService = {
   ensurePeriodOpenTx,
+
+  async closeFiscalPeriod(scope: ScopeContext, periodId: number) {
+    assertAccountingAdminRole(scope);
+
+    return prisma.$transaction(async (tx) => {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: {
+          id: periodId,
+          organizationId: scope.organizationId
+        }
+      });
+
+      if (!period) {
+        throw new AppError("الفترة المالية غير موجودة", 404, undefined, "FISCAL_PERIOD_NOT_FOUND");
+      }
+
+      if (period.status === FiscalPeriodStatus.CLOSED) {
+        throw new AppError("الفترة المالية مغلقة بالفعل", 409, undefined, "FISCAL_PERIOD_ALREADY_CLOSED");
+      }
+
+      const draftEntries = await tx.journalEntry.count({
+        where: {
+          fiscalPeriodId: period.id,
+          status: JournalEntryStatus.DRAFT
+        }
+      });
+
+      if (draftEntries > 0) {
+        throw new AppError(
+          "لا يمكن إغلاق فترة مالية تحتوي على قيود مسودة",
+          409,
+          { draftEntries },
+          "FISCAL_PERIOD_HAS_DRAFT_ENTRIES"
+        );
+      }
+
+      return tx.fiscalPeriod.update({
+        where: { id: period.id },
+        data: {
+          status: FiscalPeriodStatus.CLOSED,
+          closedAt: new Date(),
+          closedById: scope.userId
+        }
+      });
+    });
+  },
   
   async getChartOfAccounts(
     scope: ScopeContext,
@@ -378,7 +521,7 @@ export const accountingService = {
     ensureCenterAllowed(scope, input.centerId);
 
     if (!input.code || !input.name || !input.type) {
-      throw new AppError("Accounting account code, name and type are required", 400, undefined, "VALIDATION_ERROR");
+      throw new AppError("رمز الحساب المحاسبي واسمه ونوعه مطلوب", 400, undefined, "VALIDATION_ERROR");
     }
     const code = input.code;
     const name = input.name;
@@ -397,16 +540,16 @@ export const accountingService = {
           : null;
 
         if (input.parentId && !parent) {
-          throw new AppError("Parent accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+          throw new AppError("الحساب الأب غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
         }
         if (parent && parent.type !== type) {
-          throw new AppError("Parent account type must match child account type", 400, undefined, "ACCOUNT_TYPE_MISMATCH");
+          throw new AppError("نوع الحساب الأب يجب أن يطابق نوع الحساب الفرعي", 400, undefined, "ACCOUNT_TYPE_MISMATCH");
         }
 
         const centerId = input.centerId ?? parent?.centerId ?? null;
         ensureCenterAllowed(scope, centerId);
         if (parent?.centerId && centerId && parent.centerId !== centerId) {
-          throw new AppError("Parent account center must match child account center", 400, undefined, "VALIDATION_ERROR");
+          throw new AppError("مركز الحساب الأب يجب أن يطابق مركز الحساب الفرعي", 400, undefined, "VALIDATION_ERROR");
         }
 
         return tx.accountingAccount.create({
@@ -426,7 +569,7 @@ export const accountingService = {
       return normalizeDecimals(created);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Accounting account code already exists", 409, undefined, "ACCOUNT_CODE_CONFLICT");
+        throw new AppError("رمز الحساب المحاسبي موجود مسبقاً", 409, undefined, "ACCOUNT_CODE_CONFLICT");
       }
       throw error;
     }
@@ -443,7 +586,7 @@ export const accountingService = {
         });
 
         if (!existing) {
-          throw new AppError("Accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+          throw new AppError("الحساب المحاسبي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
         }
         ensureCenterAllowed(scope, existing.centerId);
 
@@ -452,7 +595,7 @@ export const accountingService = {
         const nextCenterId = input.centerId === undefined ? existing.centerId : input.centerId ?? null;
 
         if (nextParentId === existing.id) {
-          throw new AppError("Account cannot be its own parent", 400, undefined, "VALIDATION_ERROR");
+          throw new AppError("الحساب لا يمكن أن يكون أباً لنفسه", 400, undefined, "VALIDATION_ERROR");
         }
 
         const parent = nextParentId
@@ -466,20 +609,20 @@ export const accountingService = {
           : null;
 
         if (nextParentId && !parent) {
-          throw new AppError("Parent accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+          throw new AppError("الحساب الأب غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
         }
         if (parent && parent.type !== nextType) {
-          throw new AppError("Parent account type must match child account type", 400, undefined, "ACCOUNT_TYPE_MISMATCH");
+          throw new AppError("نوع الحساب الأب يجب أن يطابق نوع الحساب الفرعي", 400, undefined, "ACCOUNT_TYPE_MISMATCH");
         }
         ensureCenterAllowed(scope, nextCenterId);
         if (parent?.centerId && nextCenterId && parent.centerId !== nextCenterId) {
-          throw new AppError("Parent account center must match child account center", 400, undefined, "VALIDATION_ERROR");
+          throw new AppError("مركز الحساب الأب يجب أن يطابق مركز الحساب الفرعي", 400, undefined, "VALIDATION_ERROR");
         }
 
         if (input.type && input.type !== existing.type) {
           const lineCount = await tx.journalEntryLine.count({ where: { accountId: existing.id } });
           if (lineCount > 0) {
-            throw new AppError("Cannot change type for an account with journal lines", 409, undefined, "ACCOUNT_HAS_JOURNAL_LINES");
+            throw new AppError("لا يمكن تغيير نوع حساب عليه قيود", 409, undefined, "ACCOUNT_HAS_JOURNAL_LINES");
           }
         }
 
@@ -500,7 +643,7 @@ export const accountingService = {
       return normalizeDecimals(updated);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Accounting account code already exists", 409, undefined, "ACCOUNT_CODE_CONFLICT");
+        throw new AppError("رمز الحساب المحاسبي موجود مسبقاً", 409, undefined, "ACCOUNT_CODE_CONFLICT");
       }
       throw error;
     }
@@ -555,7 +698,7 @@ export const accountingService = {
       });
 
       if (accounts.length !== accountIds.length) {
-        throw new AppError("Accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+        throw new AppError("الحساب المحاسبي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
       }
 
       const accountById = new Map(accounts.map((account) => [account.id, account]));
@@ -570,7 +713,7 @@ export const accountingService = {
       const nonPostingAccountIds = new Set(parentAccounts.map((account) => account.parentId).filter(Boolean));
       const entryDate = parseDate(input.entryDate, "entryDate");
 
-      await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
 
       const entry = await tx.journalEntry.create({
         data: {
@@ -581,6 +724,7 @@ export const accountingService = {
           sourceType: input.sourceType,
           sourceId: input.sourceId ?? null,
           status: JournalEntryStatus.DRAFT,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
           description: input.description?.trim() || null
         }
       });
@@ -589,13 +733,13 @@ export const accountingService = {
         data: input.lines.map((line) => {
           const account = accountById.get(line.accountId);
           if (!account) {
-            throw new AppError("Accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+            throw new AppError("الحساب المحاسبي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
           }
           if (nonPostingAccountIds.has(line.accountId)) {
-            throw new AppError("Parent accounts cannot be used in journal lines", 400, undefined, "ACCOUNT_NOT_POSTING_ALLOWED");
+            throw new AppError("الحسابات الأب لا يمكن استخدامها في القيود", 400, undefined, "ACCOUNT_NOT_POSTING_ALLOWED");
           }
           if (account.centerId && line.centerId && account.centerId !== line.centerId) {
-            throw new AppError("Journal line center does not match account center", 400, undefined, "VALIDATION_ERROR");
+            throw new AppError("مركز بند القيد لا يطابق مركز الحساب", 400, undefined, "VALIDATION_ERROR");
           }
           const centerId = line.centerId ?? input.centerId ?? account.centerId ?? null;
           ensureCenterAllowed(scope, centerId);
@@ -676,12 +820,12 @@ export const accountingService = {
     });
 
     if (!payment || !payment.organizationId) {
-      throw new AppError("Payment not found", 404, undefined, "ENTITY_NOT_FOUND");
+      throw new AppError("الدفعة غير موجودة", 404, undefined, "ENTITY_NOT_FOUND");
     }
 
     if (!payment.voucher || payment.voucher.status !== VoucherStatus.POSTED) {
       throw new AppError(
-        "Payment voucher must be posted before accounting posting",
+        "الدفعة يجب أن تكون مرحّلة قبل الترحيل المحاسبي",
         409,
         undefined,
         "PAYMENT_VOUCHER_NOT_POSTED"
@@ -706,7 +850,7 @@ export const accountingService = {
     const amount = payment.amount;
     const postedAt = new Date();
 
-    await ensurePeriodOpenTx(tx, payment.organizationId, payment.receivedAt);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, payment.organizationId, payment.receivedAt);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -717,6 +861,7 @@ export const accountingService = {
         sourceType: JournalSourceType.PAYMENT,
         sourceId: payment.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: `Student payment collected for invoice ${payment.invoiceId}`,
         postedById: input.postedById,
         postedAt
@@ -804,7 +949,7 @@ export const accountingService = {
     });
 
     if (!voucher) {
-      throw new AppError("Voucher not found", 404, undefined, "ENTITY_NOT_FOUND");
+      throw new AppError("السند غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
     }
 
     // 3. Skip Payment-generated vouchers (already posted via postPaymentJournalEntryTx)
@@ -820,7 +965,7 @@ export const accountingService = {
 
     if (voucher.status !== VoucherStatus.POSTED) {
       throw new AppError(
-        "Voucher must be posted before accounting posting",
+        "السند يجب أن يكون مرحّلاً قبل الترحيل المحاسبي",
         409,
         undefined,
         "VOUCHER_NOT_POSTED"
@@ -833,7 +978,7 @@ export const accountingService = {
     // 5. Mapping
     if (!voucher.accountingCategory) {
       throw new AppError(
-        "Accounting category is missing for receipt voucher posting",
+        "التصنيف المحاسبي مفقود لترحيل سند القبض",
         400,
         undefined,
         "ACCOUNTING_CATEGORY_MISSING"
@@ -877,7 +1022,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = voucher.postedAt || voucher.createdAt;
 
-    await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
 
     // 6. Create Entry
     const entry = await tx.journalEntry.create({
@@ -889,6 +1034,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: voucher.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: voucher.notes?.trim() || `Receipt voucher collection: ${voucher.voucherNo}`,
         postedById: input.postedById,
         postedAt
@@ -920,6 +1066,223 @@ export const accountingService = {
           sourceLineId: voucher.id
         }
       ]
+    });
+
+    const created = await tx.journalEntry.findUnique({
+      where: { id: entry.id },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    return normalizeDecimals(created);
+  },
+
+  async postExpensePaymentSettlementJournalEntryTx(
+    tx: Prisma.TransactionClient,
+    scope: ScopeContext,
+    input: PostExpensePaymentSettlementJournalEntryTxInput
+  ) {
+    assertAccountingRole(scope);
+
+    const existingPaymentEntry = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.EXPENSE_PAYMENT,
+        sourceId: input.expensePaymentId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (existingPaymentEntry) {
+      await tx.expensePayment.updateMany({
+        where: {
+          id: input.expensePaymentId,
+          organizationId: scope.organizationId,
+          journalEntryId: null
+        },
+        data: { journalEntryId: existingPaymentEntry.id }
+      });
+      return normalizeDecimals(existingPaymentEntry);
+    }
+
+    const payment = await tx.expensePayment.findFirst({
+      where: {
+        id: input.expensePaymentId,
+        organizationId: scope.organizationId
+      },
+      include: {
+        invoice: {
+          include: {
+            category: {
+              include: {
+                accountingAccount: true
+              }
+            }
+          }
+        },
+        voucher: true
+      }
+    });
+
+    if (!payment) {
+      throw new AppError("دفعة المصروف غير موجودة", 404, undefined, "ENTITY_NOT_FOUND");
+    }
+
+    if (payment.voucherId !== input.voucherId) {
+      throw new AppError(
+        "سند دفع المصروف لا يطابق مدخلات التسوية",
+        409,
+        { expensePaymentId: payment.id, paymentVoucherId: payment.voucherId, voucherId: input.voucherId },
+        "EXPENSE_PAYMENT_VOUCHER_MISMATCH"
+      );
+    }
+
+    if (payment.journalEntryId) {
+      const linkedEntry = await tx.journalEntry.findFirst({
+        where: {
+          id: payment.journalEntryId,
+          organizationId: scope.organizationId
+        },
+        include: {
+          lines: {
+            orderBy: { id: "asc" },
+            include: {
+              account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+            }
+          },
+          postedBy: { select: { id: true, fullName: true } }
+        }
+      });
+
+      if (linkedEntry) {
+        return normalizeDecimals(linkedEntry);
+      }
+    }
+
+    const existingVoucherEntry = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.VOUCHER,
+        sourceId: input.voucherId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (existingVoucherEntry) {
+      return normalizeDecimals(existingVoucherEntry);
+    }
+
+    const voucher = payment.voucher;
+    if (!voucher) {
+      throw new AppError("سند دفع المصروف غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
+    }
+
+    if (voucher.status !== VoucherStatus.POSTED) {
+      throw new AppError(
+        "سند دفع المصروف يجب أن يكون مرحّلاً قبل التسوية المحاسبية",
+        409,
+        undefined,
+        "VOUCHER_NOT_POSTED"
+      );
+    }
+
+    if (voucher.voucherType !== VoucherType.DISBURSEMENT || voucher.sourceType !== VoucherSourceType.EXPENSE) {
+      throw new AppError(
+        "السند ليس سند صرف مصروف",
+        409,
+        { voucherId: voucher.id, voucherType: voucher.voucherType, sourceType: voucher.sourceType },
+        "INVALID_EXPENSE_PAYMENT_VOUCHER"
+      );
+    }
+
+    const centerId = payment.invoice.centerId ?? voucher.centerId;
+    ensureCenterAllowed(scope, centerId);
+
+    const debitAccount = await resolveExpenseInvoiceAccountsPayableTx(tx, {
+      organizationId: payment.organizationId,
+      invoiceId: payment.invoiceId
+    });
+
+    const creditAccount = await findFinanceAccountLedgerAccountTx(tx, {
+      organizationId: payment.organizationId,
+      financeAccountId: voucher.accountId,
+      missingMessage: "Expense payment finance account is not linked to an active asset ledger account"
+    });
+
+    const entryDate = payment.paidAt;
+    const postedAt = new Date();
+
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, payment.organizationId, entryDate);
+
+    const entry = await tx.journalEntry.create({
+      data: {
+        organizationId: payment.organizationId,
+        centerId,
+        entryNo: `EXP-PAY-${payment.organizationId}-${payment.id}`,
+        entryDate,
+        sourceType: JournalSourceType.EXPENSE_PAYMENT,
+        sourceId: payment.id,
+        status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
+        description: `Payment settlement for expense invoice ${payment.invoiceId}`,
+        postedById: input.postedById,
+        postedAt
+      }
+    });
+
+    await tx.journalEntryLine.createMany({
+      data: [
+        {
+          organizationId: payment.organizationId,
+          journalEntryId: entry.id,
+          accountId: debitAccount.id,
+          centerId,
+          debit: payment.amount,
+          credit: new Prisma.Decimal(0),
+          memo: `AP settlement for invoice ${payment.invoiceId}`,
+          sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
+          sourceLineId: payment.id
+        },
+        {
+          organizationId: payment.organizationId,
+          journalEntryId: entry.id,
+          accountId: creditAccount.id,
+          centerId,
+          debit: new Prisma.Decimal(0),
+          credit: payment.amount,
+          memo: `Cash/bank payment for invoice ${payment.invoiceId}`,
+          sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
+          sourceLineId: payment.id
+        }
+      ]
+    });
+
+    await tx.expensePayment.update({
+      where: { id: payment.id },
+      data: { journalEntryId: entry.id }
     });
 
     const created = await tx.journalEntry.findUnique({
@@ -974,7 +1337,7 @@ export const accountingService = {
     });
 
     if (!voucher) {
-      throw new AppError("Voucher not found", 404, undefined, "ENTITY_NOT_FOUND");
+      throw new AppError("السند غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
     }
 
     if (voucher.sourceType === VoucherSourceType.PAYMENT) {
@@ -987,7 +1350,7 @@ export const accountingService = {
 
     if (voucher.status !== VoucherStatus.POSTED) {
       throw new AppError(
-        "Voucher must be posted before accounting posting",
+        "السند يجب أن يكون مرحّلاً قبل الترحيل المحاسبي",
         409,
         undefined,
         "VOUCHER_NOT_POSTED"
@@ -1023,7 +1386,7 @@ export const accountingService = {
         break;
       default:
         throw new AppError(
-          `Invalid accounting category ${voucher.accountingCategory} for disbursement voucher`,
+          `تصنيف محاسبي غير صالح ${voucher.accountingCategory} لسند الصرف`,
           400,
           undefined,
           "INVALID_ACCOUNTING_CATEGORY"
@@ -1047,7 +1410,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = voucher.postedAt || voucher.createdAt;
 
-    await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, voucher.organizationId, entryDate);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -1058,6 +1421,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: voucher.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: voucher.notes?.trim() || `Disbursement voucher posting: ${voucher.voucherNo}`,
         postedById: input.postedById,
         postedAt
@@ -1178,7 +1542,7 @@ export const accountingService = {
 
     if (!reversalVoucher) {
       throw new AppError(
-        "Reversal voucher not found",
+        "سند الإلغاء غير موجود",
         404,
         undefined,
         "ENTITY_NOT_FOUND"
@@ -1191,7 +1555,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = reversalVoucher.approvedAt || reversalVoucher.createdAt || postedAt;
 
-    await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
 
     // 4. Create the reversal JournalEntry (POSTED) with debit/credit swapped lines.
     //    The unique(org, sourceType, sourceId) constraint prevents any double-reversal.
@@ -1204,6 +1568,7 @@ export const accountingService = {
         sourceType: JournalSourceType.VOUCHER,
         sourceId: input.reversalVoucherId,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description:
           input.reason?.trim() ||
           `Reversal of journal entry ${original.entryNo} for voided voucher`,
@@ -1268,11 +1633,11 @@ export const accountingService = {
     });
 
     if (!transfer) {
-      throw new AppError("Fund transfer not found", 404, undefined, "ENTITY_NOT_FOUND");
+      throw new AppError("تحويل الأموال غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
     }
 
     if (transfer.status !== FundTransferStatus.POSTED) {
-      throw new AppError("Fund transfer must be posted before accounting posting", 409, undefined, "TRANSFER_NOT_POSTED");
+      throw new AppError("تحويل الأموال يجب أن يكون مرحّلاً قبل الترحيل المحاسبي", 409, undefined, "TRANSFER_NOT_POSTED");
     }
 
     const fromCenterId = transfer.fromCenterId;
@@ -1297,7 +1662,7 @@ export const accountingService = {
     const postedAt = new Date();
     const entryDate = transfer.postedAt || transfer.createdAt;
 
-    await ensurePeriodOpenTx(tx, transfer.organizationId, entryDate);
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, transfer.organizationId, entryDate);
 
     const entry = await tx.journalEntry.create({
       data: {
@@ -1308,6 +1673,7 @@ export const accountingService = {
         sourceType: JournalSourceType.FUND_TRANSFER,
         sourceId: transfer.id,
         status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
         description: transfer.notes?.trim() || `Fund transfer from ${fromCenterId || 'ORG'} to ${toCenterId || 'ORG'}`,
         postedById: input.postedById,
         postedAt
@@ -1377,29 +1743,32 @@ export const accountingService = {
         include: { lines: true }
       });
       if (!entry) {
-        throw new AppError("Journal entry not found", 404, undefined, "ENTITY_NOT_FOUND");
+        throw new AppError("القيد اليومي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
       }
       ensureCenterAllowed(scope, entry.centerId);
 
       if (entry.status !== JournalEntryStatus.DRAFT) {
-        throw new AppError("Only draft journal entries can be posted", 409, undefined, "INVALID_STATE_TRANSITION");
+        throw new AppError("فقط القيود المسودة يمكن ترحيلها", 409, undefined, "INVALID_STATE_TRANSITION");
       }
       if (entry.lines.length < 2) {
-        throw new AppError("Journal entry must contain at least two lines", 400, undefined, "UNBALANCED_JOURNAL_ENTRY");
+        throw new AppError("القيد اليومي يجب أن يحتوي على سطرين على الأقل", 400, undefined, "UNBALANCED_JOURNAL_ENTRY");
       }
 
       const totals = sumLines(entry.lines);
       if (!totals.debit.equals(totals.credit)) {
-        throw new AppError("Journal entry is not balanced", 409, {
+        throw new AppError("القيد اليومي غير متوازن", 409, {
           debit: decimalNumber(totals.debit),
           credit: decimalNumber(totals.credit)
         }, "UNBALANCED_JOURNAL_ENTRY");
       }
 
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entry.entryDate);
+
       return tx.journalEntry.update({
         where: { id: entry.id },
         data: {
           status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: entry.fiscalPeriodId ?? fiscalPeriod?.id ?? null,
           postedAt: new Date(),
           postedById: scope.userId
         },
@@ -1430,7 +1799,7 @@ export const accountingService = {
       where: { id: query.accountId, organizationId: scope.organizationId }
     });
     if (!account) {
-      throw new AppError("Accounting account not found", 404, undefined, "ENTITY_NOT_FOUND");
+      throw new AppError("الحساب المحاسبي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
     }
     ensureCenterAllowed(scope, account.centerId);
 

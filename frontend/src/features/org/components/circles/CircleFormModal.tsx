@@ -22,9 +22,9 @@ interface CircleFormModalProps {
   pending: boolean;
   formErr: string | null;
   setFormErr: (v: string | null) => void;
-  centerOpts: { id: number; label: string }[];
+  centerOpts: { id: number; label: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null }[];
   teacherOpts: { id: number; label: string }[];
-  selectedDraftCenter: { gender?: string } | undefined;
+  selectedDraftCenter: { gender?: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null } | undefined;
   submitCircle: () => void;
 }
 
@@ -171,7 +171,13 @@ export function CircleFormModal({
                 disabled={mode === "edit"}
                 onChange={(e) => {
                   const val = e.target.value ? Number(e.target.value) : "";
-                  setDraft((p) => ({ ...p, centerId: val, primaryTeacherUserId: "" }));
+                  const center = centerOpts.find((c) => c.id === val);
+                  setDraft((p) => ({
+                    ...p,
+                    centerId: val,
+                    primaryTeacherUserId: "",
+                    mosqueName: center?.mosqueName ?? ""
+                  }));
                 }}
               >
                 <option value="">{t.centerPh}</option>
@@ -268,6 +274,19 @@ export function CircleFormModal({
                 placeholder={t.locationPh}
                 disabled={pending}
               />
+              {selectedDraftCenter && (
+                <div style={{ marginTop: "6px", padding: "6px 10px", borderRadius: "6px", background: (selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? "#ecfdf5" : "#fef2f2", border: `1px solid ${(selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? "#a7f3d0" : "#fecaca"}`, fontSize: "12px" }}>
+                  {(selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? (
+                    <span style={{ color: "#065f46" }}>
+                      {ar ? "الإحداثيات" : "Coordinates"}: {Number(selectedDraftCenter.latitude).toFixed(5)}, {Number(selectedDraftCenter.longitude).toFixed(5)}
+                    </span>
+                  ) : (
+                    <span style={{ color: "#991b1b" }}>
+                      {ar ? "⚠️ لا يوجد إحداثيات GPS لهذا المركز" : "⚠️ No GPS coordinates for this center"}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

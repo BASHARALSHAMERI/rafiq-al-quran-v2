@@ -74,14 +74,14 @@ export async function createCurrency(scope: ScopeContext, input: CreateCurrencyI
   const predefined = getPredefinedCurrency(code);
 
   if (!predefined) {
-    throw new AppError("Currency code is not supported", 400, undefined, "INVALID_CURRENCY_CODE");
+    throw new AppError("رمز العملة غير مدعوم", 400, undefined, "INVALID_CURRENCY_CODE");
   }
 
   const existing = await prisma.currency.findUnique({
     where: { organizationId_code: { organizationId, code } }
   });
   if (existing) {
-    throw new AppError("Currency already exists", 409, undefined, "DUPLICATE_CURRENCY_CODE");
+    throw new AppError("العملة موجودة بالفعل", 409, undefined, "DUPLICATE_CURRENCY_CODE");
   }
 
   if (input.isBase) {
@@ -89,7 +89,7 @@ export async function createCurrency(scope: ScopeContext, input: CreateCurrencyI
       where: { organizationId, isBase: true }
     });
     if (existingBase) {
-      throw new AppError("A base currency already exists", 409, undefined, "BASE_CURRENCY_EXISTS");
+      throw new AppError("توجد عملة أساسية بالفعل", 409, undefined, "BASE_CURRENCY_EXISTS");
     }
   }
 
@@ -118,7 +118,7 @@ export async function updateCurrency(
     where: { id, organizationId }
   });
   if (!currency) {
-    throw new AppError("Currency not found", 404, undefined, "CURRENCY_NOT_FOUND");
+    throw new AppError("العملة غير موجودة", 404, undefined, "CURRENCY_NOT_FOUND");
   }
 
   if (input.isBase && !currency.isBase) {
@@ -126,7 +126,7 @@ export async function updateCurrency(
       where: { organizationId, isBase: true }
     });
     if (existingBase && existingBase.id !== id) {
-      throw new AppError("A base currency already exists", 409, undefined, "BASE_CURRENCY_EXISTS");
+      throw new AppError("توجد عملة أساسية بالفعل", 409, undefined, "BASE_CURRENCY_EXISTS");
     }
   }
 
@@ -175,12 +175,12 @@ export async function createExchangeRate(scope: ScopeContext, input: CreateExcha
     where: { organizationId, code: currencyCode, isActive: true }
   });
   if (!currency) {
-    throw new AppError("Currency not found or inactive", 404, undefined, "CURRENCY_NOT_FOUND");
+    throw new AppError("العملة غير موجودة أو غير نشطة", 404, undefined, "CURRENCY_NOT_FOUND");
   }
 
   if (currency.isBase && input.rateToBase !== 1) {
     throw new AppError(
-      "Base currency rate must be 1",
+      "يجب أن يكون سعر العملة الأساسية 1",
       400,
       undefined,
       "BASE_CURRENCY_RATE_MUST_BE_ONE"
@@ -188,7 +188,7 @@ export async function createExchangeRate(scope: ScopeContext, input: CreateExcha
   }
 
   if (input.rateToBase <= 0) {
-    throw new AppError("Exchange rate must be greater than zero", 400, undefined, "INVALID_RATE");
+    throw new AppError("يجب أن يكون سعر الصرف أكبر من الصفر", 400, undefined, "INVALID_RATE");
   }
 
   return prisma.exchangeRate.create({

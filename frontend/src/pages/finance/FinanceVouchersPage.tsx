@@ -25,6 +25,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifySuccess } from "../../shared/ui/feedback";
@@ -139,6 +140,12 @@ function VouchersKpi({
 export default function FinanceVouchersPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canCreateVoucher =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canApproveVoucher = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+  const canPostVoucher =
+    canCreateVoucher || user?.role === "TREASURER";
 
   // Search and filter state
   const [search, setSearch] = useState("");
@@ -171,7 +178,7 @@ export default function FinanceVouchersPage() {
     title: string;
     message: string;
     tone: "danger" | "warning" | "info";
-    action: () => Promise<void>;
+    action: (reason?: string) => Promise<void>;
     reasonRequired?: boolean;
     reasonPlaceholder?: string;
   } | null>(null);
@@ -404,8 +411,8 @@ export default function FinanceVouchersPage() {
       tone: "danger",
       reasonRequired: true,
       reasonPlaceholder: ar ? "سبب الرفض..." : "Rejection reason...",
-      action: async () => {
-        await rejectVoucherM.mutateAsync({ voucherId: v.id, reason: reasonValue });
+      action: async (reason?: string) => {
+        await rejectVoucherM.mutateAsync({ voucherId: v.id, reason: reason ?? "" });
         closeConfirmModal();
       }
     });
@@ -434,8 +441,8 @@ export default function FinanceVouchersPage() {
       tone: "danger",
       reasonRequired: true,
       reasonPlaceholder: ar ? "سبب طلب الإلغاء..." : "Void request reason...",
-      action: async () => {
-        await requestVoucherVoidM.mutateAsync({ voucherId: v.id, reason: reasonValue });
+      action: async (reason?: string) => {
+        await requestVoucherVoidM.mutateAsync({ voucherId: v.id, reason: reason ?? "" });
         closeConfirmModal();
       }
     });
@@ -542,7 +549,7 @@ export default function FinanceVouchersPage() {
             </button>
 
             {/* Status-specific actions */}
-            {v.status === "DRAFT" && (
+            {canCreateVoucher && v.status === "DRAFT" && (
               <button
                 type="button"
                 onClick={() => handleSubmit(v)}
@@ -553,7 +560,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {v.status === "SUBMITTED" && (
+            {canApproveVoucher && v.status === "SUBMITTED" && (
               <>
                 <button
                   type="button"
@@ -574,7 +581,7 @@ export default function FinanceVouchersPage() {
               </>
             )}
 
-            {v.status === "APPROVED" && (
+            {canPostVoucher && v.status === "APPROVED" && (
               <button
                 type="button"
                 onClick={() => handlePost(v)}
@@ -585,7 +592,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {v.status === "POSTED" && (
+            {canCreateVoucher && v.status === "POSTED" && (
               <button
                 type="button"
                 onClick={() => handleRequestVoid(v)}
@@ -596,7 +603,7 @@ export default function FinanceVouchersPage() {
               </button>
             )}
 
-            {v.status === "VOID_REQUESTED" && (
+            {canApproveVoucher && v.status === "VOID_REQUESTED" && (
               <button
                 type="button"
                 onClick={() => handleApproveVoid(v)}
@@ -610,7 +617,7 @@ export default function FinanceVouchersPage() {
         );
       })
     ],
-    [ar]
+    [ar, canApproveVoucher, canCreateVoucher, canPostVoucher]
   );
 
   return (
@@ -635,26 +642,30 @@ export default function FinanceVouchersPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                <Button 
-                  variant="success" 
-                  size="sm" 
-                  className="shadow-lg shadow-emerald-500/20" 
-                  leftIcon={<Plus className="w-4 h-4" />} 
-                  onClick={() => handleOpenNewVoucher("RECEIPT")}
-                  title={ar ? "سند قبض" : "Receipt Voucher"}
-                >
-                  {ar ? "سند قبض" : "Receipt"}
-                </Button>
-                <Button 
-                  variant="danger" 
-                  size="sm" 
-                  className="shadow-lg shadow-rose-500/20" 
-                  leftIcon={<Plus className="w-4 h-4" />} 
-                  onClick={() => handleOpenNewVoucher("DISBURSEMENT")}
-                  title={ar ? "سند صرف" : "Disbursement Voucher"}
-                >
-                  {ar ? "سند صرف" : "Disbursement"}
-                </Button>
+                {canCreateVoucher ? (
+                  <>
+                    <Button
+                      variant="success"
+                      size="sm"
+                      className="shadow-lg shadow-emerald-500/20"
+                      leftIcon={<Plus className="w-4 h-4" />}
+                      onClick={() => handleOpenNewVoucher("RECEIPT")}
+                      title={ar ? "سند قبض" : "Receipt Voucher"}
+                    >
+                      {ar ? "سند قبض" : "Receipt"}
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="shadow-lg shadow-rose-500/20"
+                      leftIcon={<Plus className="w-4 h-4" />}
+                      onClick={() => handleOpenNewVoucher("DISBURSEMENT")}
+                      title={ar ? "سند صرف" : "Disbursement Voucher"}
+                    >
+                      {ar ? "سند صرف" : "Disbursement"}
+                    </Button>
+                  </>
+                ) : null}
               </div>
             }
           />
@@ -742,7 +753,7 @@ export default function FinanceVouchersPage() {
                 <Button variant="secondary" onClick={() => { setSearch(""); setStatusFilter("ALL"); }}>
                   {ar ? "مسح الفلاتر" : "Clear Filters"}
                 </Button>
-              ) : (
+              ) : canCreateVoucher ? (
                 <div className="flex items-center gap-3 justify-center">
                   <Button variant="success" leftIcon={<Plus className="w-4 h-4" />} onClick={() => handleOpenNewVoucher("RECEIPT")}>
                     {ar ? "سند قبض" : "Receipt"}
@@ -751,7 +762,7 @@ export default function FinanceVouchersPage() {
                     {ar ? "سند صرف" : "Disbursement"}
                   </Button>
                 </div>
-              )}
+              ) : null}
             />
           ) : (
             <FinanceDataTable<FinanceVoucherV2>
@@ -1104,7 +1115,7 @@ export default function FinanceVouchersPage() {
           onClose={closeConfirmModal}
           onConfirm={async () => {
             if (confirmModal.reasonRequired && !reasonValue.trim()) return;
-            await confirmModal.action();
+            await confirmModal.action(reasonValue);
           }}
           title={confirmModal.title}
           message={confirmModal.message}

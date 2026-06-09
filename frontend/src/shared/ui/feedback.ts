@@ -1,4 +1,5 @@
-import { toast, type ToastOptions } from "react-hot-toast";
+import { createElement, type FormEvent } from "react";
+import { toast, type Toast, type ToastOptions } from "react-hot-toast";
 
 export type LocalizedLabel = {
   ar: string;
@@ -34,8 +35,43 @@ type EmptyStateOptions = {
 
 const DEFAULT_TOAST_OPTIONS: ToastOptions = {
   className: "app-toast",
-  duration: 3200
+  duration: 3500
 };
+
+const getToastDirection = () => {
+  if (typeof document === "undefined") {
+    return "rtl";
+  }
+
+  return document.documentElement.dir === "ltr" ? "ltr" : "rtl";
+};
+
+const dismissibleMessage = (message: string) => (toastInstance: Toast) =>
+  createElement(
+    "div",
+    { className: "app-toast__content" },
+    createElement("span", { className: "app-toast__message" }, message),
+    createElement(
+      "button",
+      {
+        type: "button",
+        className: "app-toast__close",
+        onClick: () => toast.dismiss(toastInstance.id),
+        "aria-label": getToastDirection() === "rtl" ? "إغلاق التنبيه" : "Close notification"
+      },
+      "\u00d7"
+    )
+  );
+
+const toastClassName = (variant: string, customClassName?: string) =>
+  [
+    "app-toast",
+    `app-toast--${variant}`,
+    `app-toast--${getToastDirection()}`,
+    customClassName
+  ]
+    .filter(Boolean)
+    .join(" ");
 
 const capitalize = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value);
 
@@ -213,6 +249,9 @@ export const entityFeedback = {
 };
 
 export const validationFeedback = {
+  completeRequired(ar: boolean): string {
+    return ar ? "يرجى إكمال الحقول المطلوبة." : "Please complete the required fields.";
+  },
   required(ar: boolean, field?: LocalizedLabel): string {
     if (!field) {
       return ar ? "هذا الحقل مطلوب" : "This field is required";
@@ -235,6 +274,75 @@ export const validationFeedback = {
       ? `${field.ar} يجب أن يحتوي على ${value} أحرف على الأقل`
       : `${capitalize(field.en)} must be at least ${value} characters`;
   }
+};
+
+export const focusFirstInvalidField = (
+  form: HTMLFormElement,
+  event?: FormEvent<HTMLFormElement>
+): boolean => {
+  event?.preventDefault();
+  const fields = Array.from(
+    form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+    )
+  );
+
+  let firstInvalid: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | undefined;
+  fields.forEach((field) => {
+    const invalid = !field.checkValidity();
+    field.setAttribute("aria-invalid", invalid ? "true" : "false");
+    const container = field.closest<HTMLElement>(".circlemod-field, .input-wrapper, .select-wrapper");
+    const existingError = container?.querySelector<HTMLElement>("[data-form-validation-error='true']");
+
+    if (invalid && container) {
+      const errorElement = existingError ?? document.createElement("span");
+      errorElement.className = "input-error-text";
+      errorElement.dataset.formValidationError = "true";
+      errorElement.setAttribute("role", "alert");
+      errorElement.textContent = field.validity.valueMissing
+        ? getToastDirection() === "rtl"
+          ? "هذا الحقل مطلوب."
+          : "This field is required."
+        : getToastDirection() === "rtl"
+          ? "يرجى إدخال قيمة صحيحة."
+          : "Please enter a valid value.";
+      if (!existingError) {
+        container.appendChild(errorElement);
+      }
+    } else {
+      existingError?.remove();
+    }
+
+    if (!field.dataset.validationFeedbackBound) {
+      const clearFieldError = () => {
+        if (field.checkValidity()) {
+          field.setAttribute("aria-invalid", "false");
+          field
+            .closest<HTMLElement>(".circlemod-field, .input-wrapper, .select-wrapper")
+            ?.querySelector<HTMLElement>("[data-form-validation-error='true']")
+            ?.remove();
+        }
+      };
+      field.addEventListener("input", clearFieldError);
+      field.addEventListener("change", clearFieldError);
+      field.dataset.validationFeedbackBound = "true";
+    }
+
+    if (invalid && !firstInvalid) {
+      firstInvalid = field;
+    }
+  });
+
+  if (!firstInvalid) {
+    return false;
+  }
+
+  requestAnimationFrame(() => firstInvalid?.focus());
+  return true;
+};
+
+export const notifyRequiredFields = (ar: boolean) => {
+  notifyError(validationFeedback.completeRequired(ar), { id: "required-fields" });
 };
 
 export const emptyStateFeedback = {
@@ -281,18 +389,39 @@ export const confirmFeedback = {
 };
 
 export const notifySuccess = (message: string, options?: ToastOptions) => {
-  toast.success(message, {
+  toast.success(dismissibleMessage(message), {
     ...DEFAULT_TOAST_OPTIONS,
+    duration: 3500,
     ...options,
-    className: ["app-toast", "app-toast--success", options?.className].filter(Boolean).join(" ")
+    className: toastClassName("success", options?.className)
   });
 };
 
 export const notifyError = (message: string, options?: ToastOptions) => {
-  toast.error(message, {
+  toast.error(dismissibleMessage(message), {
     ...DEFAULT_TOAST_OPTIONS,
-    duration: 4200,
+    duration: 5000,
     ...options,
-    className: ["app-toast", "app-toast--error", options?.className].filter(Boolean).join(" ")
+    className: toastClassName("error", options?.className)
+  });
+};
+
+export const notifyWarning = (message: string, options?: ToastOptions) => {
+  toast(dismissibleMessage(message), {
+    ...DEFAULT_TOAST_OPTIONS,
+    duration: 4500,
+    icon: "\u26a0",
+    ...options,
+    className: toastClassName("warning", options?.className)
+  });
+};
+
+export const notifyInfo = (message: string, options?: ToastOptions) => {
+  toast(dismissibleMessage(message), {
+    ...DEFAULT_TOAST_OPTIONS,
+    duration: 4000,
+    icon: "\u2139",
+    ...options,
+    className: toastClassName("info", options?.className)
   });
 };

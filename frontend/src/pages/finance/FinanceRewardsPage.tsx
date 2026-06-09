@@ -8,6 +8,7 @@ import {
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { FinancePageFilters } from "../../features/finance-v2/components/page/FinancePageFilters";
@@ -57,6 +58,11 @@ function RewardKpi({
 export default function FinanceRewardsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canCreateRewardBatch =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canPayReward =
+    canCreateRewardBatch || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultYear = now.getFullYear();
@@ -104,15 +110,17 @@ export default function FinanceRewardsPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="shadow-lg shadow-brand-500/20"
-                  leftIcon={<Plus className="w-4 h-4" />}
-                  onClick={() => setShowBatchModal(true)}
-                >
-                  {ar ? "مكافأة جديدة" : "New Reward"}
-                </Button>
+                {canCreateRewardBatch ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="shadow-lg shadow-brand-500/20"
+                    leftIcon={<Plus className="w-4 h-4" />}
+                    onClick={() => setShowBatchModal(true)}
+                  >
+                    {ar ? "مكافأة جديدة" : "New Reward"}
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -168,11 +176,12 @@ export default function FinanceRewardsPage() {
             centerId={centerId}
             year={year}
             month={month}
-            isAdmin={true}
-            isSuperAdmin={true}
+            isAdmin={canPayReward}
+            isSuperAdmin={user?.role === "SUPER_ADMIN"}
+            canCreateBatch={canCreateRewardBatch}
             ar={ar}
             centers={centers}
-            externalShowBatchForm={showBatchModal}
+            externalShowBatchForm={canCreateRewardBatch && showBatchModal}
             onExternalBatchFormClose={() => setShowBatchModal(false)}
           />
         </Suspense>

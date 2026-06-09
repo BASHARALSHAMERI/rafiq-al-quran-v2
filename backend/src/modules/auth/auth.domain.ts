@@ -5,10 +5,12 @@ import { durationToMs } from "../../shared/utils/time";
 export const REFRESH_COOKIE_NAME = "rafiq_rt";
 
 export const buildRefreshCookieOptions = (): CookieOptions => {
+  const crossSiteCookie = env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: crossSiteCookie,
+    sameSite: crossSiteCookie ? "none" : "lax",
     path: "/auth",
     maxAge: durationToMs(env.JWT_REFRESH_EXPIRES_IN)
   };

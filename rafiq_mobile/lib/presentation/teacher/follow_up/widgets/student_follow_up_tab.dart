@@ -9,10 +9,16 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../../../data/models/follow_up_dtos.dart';
 import '../providers/follow_up_providers.dart';
 import 'student_follow_up_forms.dart';
 import 'student_follow_up_widgets.dart';
+import '../../../../data/models/teacher_panel_dtos.dart';
+import '../../../../domain/entities/student_profile.dart';
+import '../../../../application/teacher/teacher_panel_providers.dart';
+import '../../../../application/attendance/attendance_providers.dart';
+import '../../../../domain/entities/attendance.dart';
 
 enum _SubmissionMode { draft, finalRecord }
 
@@ -84,6 +90,64 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     final profileAsync = ref.watch(studentProfileProvider(widget.studentId));
     final records = profileAsync.valueOrNull?.recentFollowUps ?? const [];
 
+    final now = DateTime.now();
+    final period = (month: now.month, year: now.year);
+    final plansList =
+        ref.watch(teacherMonthlyPlansProvider(period)).valueOrNull;
+
+    TeacherMonthlyPlanDto? plan;
+    if (plansList != null) {
+      for (final p in plansList.plans) {
+        if (p.studentId == widget.studentId) {
+          plan = p;
+          break;
+        }
+      }
+    }
+
+    final circleId = int.tryParse(contextState.selectedCircleId ?? '');
+
+    final attendanceAsync = circleId != null
+        ? ref.watch(todayAttendanceProvider(circleId.toString()))
+        : null;
+
+    final isAttendanceLoading = attendanceAsync != null &&
+        attendanceAsync.isLoading &&
+        attendanceAsync.valueOrNull == null;
+
+    final hasAttendanceError =
+        attendanceAsync != null && attendanceAsync.hasError;
+
+    final attendanceRecords = attendanceAsync?.valueOrNull;
+    AttendanceRecord? studentRecord;
+    if (attendanceRecords != null) {
+      for (final r in attendanceRecords) {
+        if (r.studentId == widget.studentId.toString()) {
+          studentRecord = r;
+          break;
+        }
+      }
+    }
+
+    final bool hasConfirmedAttendance = studentRecord != null;
+    final bool isPrepared = hasConfirmedAttendance;
+    final bool isAbsent = studentRecord?.status == AttendanceStatus.absent;
+    final bool isExcused = studentRecord?.status == AttendanceStatus.excused;
+
+    final bool blocksInteraction = !widget.readOnly && (isAbsent || isExcused);
+    final bool blocksFinalRecord = !widget.readOnly &&
+        (circleId == null || !hasConfirmedAttendance || isAbsent || isExcused);
+    final bool blocksDraft = !widget.readOnly && (isAbsent || isExcused);
+
+    if (circleId != null && isAttendanceLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     if (widget.readOnly) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -93,14 +157,12 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           120,
         ),
         children: [
-          StudentFollowUpLastRecords(records: records),
+          _buildCompactHeaderRow(
+              FollowUpSessionSection.memorization, plan, records),
           const SizedBox(height: 14),
-          const FollowUpNoticeBanner(
-            color: AppColors.infoLight,
-            title: 'المتابعة متاحة للمعلم فقط',
-            message:
-                'يمكنك مراجعة آخر السجلات من هنا، لكن تسجيل جلسة جديدة أو اعتماد متابعة يتطلب صلاحية المعلم.',
-          ),
+          _buildCompactHeaderRow(FollowUpSessionSection.review, plan, records),
+          const SizedBox(height: 14),
+          _buildCompactHeaderRow(FollowUpSessionSection.matn, plan, records),
         ],
       );
     }
@@ -113,25 +175,61 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         120,
       ),
       children: [
-        StudentFollowUpLastRecords(records: records),
-        const SizedBox(height: 14),
         if (!contextState.hasSelectedCircle) ...[
           FollowUpNoticeBanner(
             color: AppColors.errorLight,
-            title: 'لا يمكن اعتماد المتابعة قبل اختيار الحلقة',
-            message: 'اختيار الحلقة أولاً يمنع تسجيل البيانات على سياق خاطئ.',
+            title: 'يجب اختيار الحلقة أولاً للاعتماد',
+            message: '',
             action: OutlinedButton.icon(
               onPressed: () => context.push(RouteNames.selectCircle),
-              icon: const Icon(Icons.arrow_forward_rounded),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
               label: const Text('اختيار الحلقة'),
             ),
+          ),
+          const SizedBox(height: 14),
+        ] else if (hasAttendanceError) ...[
+          FollowUpNoticeBanner(
+            color: AppColors.errorLight,
+            title: 'تعذر التحقق من حالة الحضور والتحضير اليوم',
+            message:
+                'يمكنك إدخال البيانات وحفظها كمسودة، لكن اعتماد المتابعة النهائي يحتاج تحقق الحضور أولاً.',
+            action: OutlinedButton.icon(
+              onPressed: () =>
+                  ref.invalidate(todayAttendanceProvider(circleId.toString())),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('إعادة المحاولة'),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ] else if (!isPrepared) ...[
+          const FollowUpNoticeBanner(
+            color: AppColors.warningLight,
+            title: 'تنبيه: لم يتم تحضير الطالب اليوم',
+            message:
+                'يمكنك حفظ العمل كمسودة الآن، ويجب تسجيل حضور الطالب قبل اعتماد المتابعة النهائي.',
+          ),
+          const SizedBox(height: 14),
+        ] else if (isAbsent) ...[
+          const FollowUpNoticeBanner(
+            color: AppColors.errorLight,
+            title: 'تنبيه: الطالب مسجل غائب اليوم',
+            message:
+                'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب.',
+          ),
+          const SizedBox(height: 14),
+        ] else if (isExcused) ...[
+          const FollowUpNoticeBanner(
+            color: AppColors.errorLight,
+            title: 'تنبيه: الطالب مسجل غائب بعذر اليوم',
+            message:
+                'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب بعذر.',
           ),
           const SizedBox(height: 14),
         ],
         if (issues.isNotEmpty) ...[
           FollowUpNoticeBanner(
             color: AppColors.errorLight,
-            title: 'راجع هذا القسم قبل الحفظ',
+            title: 'يرجى مراجعة وتصحيح التنبيهات قبل الحفظ',
             message: issues.join('\n'),
           ),
           const SizedBox(height: 14),
@@ -143,31 +241,171 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           onSelect: (section) => setState(() => _activeSection = section),
         ),
         const SizedBox(height: 16),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.04, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+        AbsorbPointer(
+          absorbing: blocksInteraction,
+          child: Opacity(
+            opacity: blocksInteraction ? 0.6 : 1.0,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.04, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _buildActiveSection(
+                contextState,
+                plan,
+                records,
+                blocksFinalRecord,
+                blocksDraft,
+              ),
             ),
           ),
-          child: _buildActiveSection(contextState),
         ),
       ],
     );
   }
 
-  Widget _buildActiveSection(ContextState contextState) {
+  Widget _buildCompactHeaderRow(
+    FollowUpSessionSection section,
+    TeacherMonthlyPlanDto? plan,
+    List<FollowUpRecord> records,
+  ) {
+    FollowUpRecord? latestOf(String type) {
+      for (final record in records) {
+        if (record.type == type) {
+          return record;
+        }
+      }
+      return null;
+    }
+
+    String formatPlanRange(
+        int? fromSurah, int? fromAyah, int? toSurah, int? toAyah) {
+      if (fromSurah == null) return 'غير محددة';
+      final fromSurahName =
+          QuranData.findByNumber(fromSurah)?.name ?? '$fromSurah';
+      if (toSurah == null || toSurah == fromSurah) {
+        if (fromAyah != null && toAyah != null) {
+          return '$fromSurahName ($fromAyah-$toAyah)';
+        }
+        return fromSurahName;
+      }
+      final toSurahName = QuranData.findByNumber(toSurah)?.name ?? '$toSurah';
+      return '$fromSurahName - $toSurahName';
+    }
+
+    switch (section) {
+      case FollowUpSessionSection.memorization:
+        final lastMemo = latestOf('NEW_MEMORIZATION');
+        if (plan == null) {
+          return AchievementMiniCard(
+            title: 'آخر حفظ مسجل',
+            record: lastMemo,
+            icon: Icons.menu_book_rounded,
+          );
+        }
+        final targetRange = formatPlanRange(
+          plan.hifz.fromSurah,
+          plan.hifz.fromAyah,
+          plan.hifz.toSurah,
+          plan.hifz.toAyah,
+        );
+        return Row(
+          children: [
+            Expanded(
+              child: AchievementMiniCard(
+                title: 'آخر حفظ مسجل',
+                record: lastMemo,
+                icon: Icons.menu_book_rounded,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: PlanProgressMiniCard(
+                title: 'خطة الحفظ لشهر ${plan.month}',
+                rangeText: targetRange,
+                executed: plan.progress.hifzExecutedPages,
+                target: plan.hifz.targetPages ?? 0.0,
+                rate: plan.progress.hifzCompletionRate,
+                icon: Icons.trending_up_rounded,
+              ),
+            ),
+          ],
+        );
+      case FollowUpSessionSection.review:
+        final lastReview = latestOf('REVIEW');
+        if (plan == null) {
+          return AchievementMiniCard(
+            title: 'آخر مراجعة مسجلة',
+            record: lastReview,
+            icon: Icons.autorenew_rounded,
+          );
+        }
+        final targetRange = formatPlanRange(
+          plan.review.fromSurah,
+          plan.review.fromAyah,
+          plan.review.toSurah,
+          plan.review.toAyah,
+        );
+        return Row(
+          children: [
+            Expanded(
+              child: AchievementMiniCard(
+                title: 'آخر مراجعة مسجلة',
+                record: lastReview,
+                icon: Icons.autorenew_rounded,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: PlanProgressMiniCard(
+                title: 'خطة المراجعة لشهر ${plan.month}',
+                rangeText: targetRange,
+                executed: plan.progress.reviewExecutedPages,
+                target: plan.review.targetPages ?? 0.0,
+                rate: plan.progress.reviewCompletionRate,
+                icon: Icons.loop_rounded,
+              ),
+            ),
+          ],
+        );
+      case FollowUpSessionSection.matn:
+        final lastMatn = latestOf('MATN');
+        return Row(
+          children: [
+            Expanded(
+              child: AchievementMiniCard(
+                title: 'آخر متن مسجل',
+                record: lastMatn,
+                icon: Icons.bookmark_added_rounded,
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  Widget _buildActiveSection(
+    ContextState contextState,
+    TeacherMonthlyPlanDto? plan,
+    List<FollowUpRecord> records,
+    bool blocksFinalRecord,
+    bool blocksDraft,
+  ) {
     switch (_activeSection) {
       case FollowUpSessionSection.memorization:
         return MemorizationSectionForm(
           key: const ValueKey('memorization'),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.memorization, plan, records),
           fromSurah: _newFromSurah,
           toSurah: _newToSurah,
           fromAyahController: _newFromAyahCtrl,
@@ -210,11 +448,15 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             FollowUpSessionSection.memorization,
             'اعتماد الحفظ',
             'حفظ كمسودة',
+            blocksFinalRecord,
+            blocksDraft,
           ),
         );
       case FollowUpSessionSection.review:
         return ReviewSectionForm(
           key: const ValueKey('review'),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.review, plan, records),
           fromSurah: _reviewFromSurah,
           toSurah: _reviewToSurah,
           fromAyahController: _reviewFromAyahCtrl,
@@ -257,11 +499,15 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             FollowUpSessionSection.review,
             'اعتماد المراجعة',
             'حفظ كمسودة',
+            blocksFinalRecord,
+            blocksDraft,
           ),
         );
       case FollowUpSessionSection.matn:
         return MatnSectionForm(
           key: const ValueKey('matn'),
+          header: _buildCompactHeaderRow(
+              FollowUpSessionSection.matn, plan, records),
           selectedMatn: _selectedMatn,
           lessonController: _matnLessonCtrl,
           notesController: _matnNotesCtrl,
@@ -285,6 +531,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             FollowUpSessionSection.matn,
             'اعتماد المتن',
             'حفظ كمسودة',
+            blocksFinalRecord,
+            blocksDraft,
           ),
         );
     }
@@ -295,10 +543,14 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     FollowUpSessionSection section,
     String primaryLabel,
     String draftLabel,
+    bool blocksFinalRecord,
+    bool blocksDraft,
   ) {
-    final locked = !contextState.hasSelectedCircle ||
+    final baseLocked = !contextState.hasSelectedCircle ||
         _isSubmitting ||
         (_saved[section] ?? false);
+    final finalLocked = baseLocked || blocksFinalRecord;
+    final draftLocked = baseLocked || blocksDraft;
     final accent = _sectionAccent(section);
 
     return Column(
@@ -314,7 +566,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             ),
           ),
         FilledButton.icon(
-          onPressed: locked
+          onPressed: finalLocked
               ? null
               : () => _submit(section, _SubmissionMode.finalRecord),
           style: FilledButton.styleFrom(
@@ -343,8 +595,9 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed:
-              locked ? null : () => _submit(section, _SubmissionMode.draft),
+          onPressed: draftLocked
+              ? null
+              : () => _submit(section, _SubmissionMode.draft),
           style: OutlinedButton.styleFrom(
             foregroundColor: accent,
             side: BorderSide(color: accent.withValues(alpha: 0.4)),
@@ -426,26 +679,15 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         _isSubmitting = false;
         _saved[section] = true;
         _issues[section] = const [];
-        if (mode == _SubmissionMode.finalRecord &&
-            section == FollowUpSessionSection.memorization) {
-          _activeSection = FollowUpSessionSection.review;
-        } else if (mode == _SubmissionMode.finalRecord &&
-            section == FollowUpSessionSection.review) {
-          _activeSection = FollowUpSessionSection.matn;
-        }
       });
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            mode == _SubmissionMode.draft
-                ? 'تم حفظ المسودة.'
-                : 'تم حفظ المتابعة بنجاح.',
-          ),
-          backgroundColor: AppColors.successLight,
-        ),
+      AppSnackBar.success(
+        context,
+        mode == _SubmissionMode.draft
+            ? 'تم حفظ المسودة.'
+            : 'تم حفظ المتابعة بنجاح.',
       );
     } catch (error) {
       if (!mounted) {
@@ -458,12 +700,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           _friendlyError(error),
         ];
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_friendlyError(error)),
-          backgroundColor: AppColors.errorLight,
-        ),
-      );
+      AppSnackBar.error(context, _friendlyError(error));
     }
   }
 
@@ -639,8 +876,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
   }
 
   String _friendlyError(Object error) {
-    final text = error.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty ? 'تعذر حفظ المتابعة الآن.' : text;
+    return 'تعذر حفظ المتابعة الآن. يرجى المحاولة مرة أخرى.';
   }
 }
 

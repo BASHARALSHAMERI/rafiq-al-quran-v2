@@ -91,6 +91,7 @@ class TeacherHomePage extends ConsumerWidget {
                       TeacherAttentionSeverity.pending =>
                         AppColors.primaryLight,
                     },
+                    onTap: () => context.go(RouteNames.teacherStudentProfile(item.studentId)),
                   ),
                 );
               }
@@ -106,6 +107,19 @@ class TeacherHomePage extends ConsumerWidget {
                     color: task.done
                         ? AppColors.successLight
                         : AppColors.warningLight,
+                    onTap: task.done
+                        ? null
+                        : () {
+                            switch (task.action) {
+                              case TeacherTaskAction.attendance:
+                                context.go(attendanceRoute);
+                                break;
+                              case TeacherTaskAction.absences:
+                              case TeacherTaskAction.lateness:
+                                context.go(RouteNames.teacherHalqa);
+                                break;
+                            }
+                          },
                   ),
                 );
               }

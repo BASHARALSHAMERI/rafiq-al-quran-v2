@@ -2,8 +2,6 @@
    Aurora V6 (The Sanctuary - المحراب) 
    ========================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap');
-
 :root {
   --auth-emerald: #064e3b;
   --auth-gold: #c5a059;
@@ -18,7 +16,7 @@
   display: flex;
   min-height: 100vh;
   width: 100vw;
-  font-family: 'Outfit', 'Tajawal', system-ui, sans-serif;
+  font-family: var(--font-sans-ar, 'Cairo', 'Tajawal', system-ui, sans-serif);
   background-color: #f1f5f9;
   color: var(--auth-text);
   position: relative;

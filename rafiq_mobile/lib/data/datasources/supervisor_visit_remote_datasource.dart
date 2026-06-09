@@ -1,9 +1,15 @@
 import 'package:dio/dio.dart';
 
+import '../models/supervisor_ops_dtos.dart';
 import '../models/supervisor_visit_dtos.dart';
 
 abstract class SupervisorVisitRemoteDataSource {
   Future<SupervisorTodayVisitsDto> getTodayVisits();
+
+  Future<SupervisorOpsDashboardDto> getDashboard({
+    required int month,
+    required int year,
+  });
 
   Future<SupervisorVisitLogDto> startVisit({
     required int centerId,
@@ -33,6 +39,18 @@ class SupervisorVisitRemoteDataSourceImpl
   Future<SupervisorTodayVisitsDto> getTodayVisits() async {
     final response = await dio.get('/supervisor-visits/today');
     return SupervisorTodayVisitsDto.fromJson(_extractData(response.data));
+  }
+
+  @override
+  Future<SupervisorOpsDashboardDto> getDashboard({
+    required int month,
+    required int year,
+  }) async {
+    final response = await dio.get(
+      '/staff-operations/supervisor/dashboard',
+      queryParameters: {'month': month, 'year': year},
+    );
+    return SupervisorOpsDashboardDto.fromJson(_extractData(response.data));
   }
 
   @override

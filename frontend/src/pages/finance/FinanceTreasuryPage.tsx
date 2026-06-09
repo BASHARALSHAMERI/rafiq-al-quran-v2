@@ -9,6 +9,7 @@ import {
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { FinancePageFilters } from "../../features/finance-v2/components/page/FinancePageFilters";
@@ -58,6 +59,10 @@ function TreasuryKpi({
 export default function FinanceTreasuryPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canCreateTransfer =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canOperateTreasury = canCreateTransfer || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -111,15 +116,17 @@ export default function FinanceTreasuryPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="shadow-lg shadow-brand-500/20"
-                  leftIcon={<Plus className="w-4 h-4" />}
-                  onClick={() => setShowTransferModal(true)}
-                >
-                  {ar ? "تحويل صندوق" : "Fund Transfer"}
-                </Button>
+                {canCreateTransfer ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="shadow-lg shadow-brand-500/20"
+                    leftIcon={<Plus className="w-4 h-4" />}
+                    onClick={() => setShowTransferModal(true)}
+                  >
+                    {ar ? "تحويل صندوق" : "Fund Transfer"}
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -173,10 +180,11 @@ export default function FinanceTreasuryPage() {
         <Suspense fallback={<LoadingState />}>
           <FinanceTreasuryTab
             centerId={centerId}
-            isAdmin={true}
-            isSuperAdmin={true}
+            isAdmin={canOperateTreasury}
+            isSuperAdmin={user?.role === "SUPER_ADMIN"}
+            canEditLedgerAccount={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
             ar={ar}
-            externalShowTransfer={showTransferModal}
+            externalShowTransfer={canCreateTransfer && showTransferModal}
             onExternalTransferClose={() => setShowTransferModal(false)}
           />
         </Suspense>

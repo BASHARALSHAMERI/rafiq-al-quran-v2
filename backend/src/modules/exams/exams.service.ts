@@ -257,7 +257,7 @@ const ensureCriteriaHasPositiveScore = (criteria: ExamCriteriaInput) => {
     criteria.performanceScore;
 
   if (totalCriteriaScore <= 0) {
-    throw new AppError("criteria must include at least one positive score", 400);
+    throw new AppError("معيار التقييم يجب أن يحتوي على درجة إيجابية واحدة على الأقل", 400);
   }
 
   const questionCountPolicyValues = [
@@ -271,19 +271,19 @@ const ensureCriteriaHasPositiveScore = (criteria: ExamCriteriaInput) => {
       (value) => !Number.isInteger(value) || value < 1 || value > 20
     )
   ) {
-    throw new AppError("Question count policy must stay between 1 and 20", 400);
+    throw new AppError("عدد الأسئلة يجب أن يكون بين 1 و 20", 400);
   }
 
   if (criteria.minQuestionCount > criteria.defaultQuestionCount) {
     throw new AppError(
-      "defaultQuestionCount must be greater than or equal to minQuestionCount",
+      "عدد الأسئلة الافتراضي يجب أن يكون أكبر من أو يساوي الحد الأدنى",
       400
     );
   }
 
   if (criteria.defaultQuestionCount > criteria.maxQuestionCount) {
     throw new AppError(
-      "defaultQuestionCount must be less than or equal to maxQuestionCount",
+      "عدد الأسئلة الافتراضي يجب أن يكون أقل من أو يساوي الحد الأقصى",
       400
     );
   }
@@ -292,11 +292,11 @@ const ensureCriteriaHasPositiveScore = (criteria: ExamCriteriaInput) => {
 const ensureAyahInSurah = (surah: number, ayah: number, fieldName: string) => {
   const maxAyah = getSurahAyahCount(surah);
   if (!maxAyah) {
-    throw new AppError(`Invalid surah for ${fieldName}`, 400);
+    throw new AppError(`رقم سورة غير صحيح للحقل ${fieldName}`, 400);
   }
 
   if (!Number.isInteger(ayah) || ayah < 1 || ayah > maxAyah) {
-    throw new AppError(`${fieldName} must be between 1 and ${maxAyah}`, 400);
+    throw new AppError(`${fieldName} يجب أن يكون بين 1 و ${maxAyah}`, 400);
   }
 };
 
@@ -309,7 +309,7 @@ const ensureQuestionRangeValid = (input: QuestionRange) => {
     (input.fromSurah === input.toSurah && input.fromAyah <= input.toAyah);
 
   if (!isValidOrder) {
-    throw new AppError("Question range order is invalid", 400);
+    throw new AppError("ترتيب نطاق الأسئلة غير صحيح", 400);
   }
 };
 
@@ -319,11 +319,11 @@ const ensureQuestionMetadataValid = (input: {
   difficultyLevel: number;
 }) => {
   if (!Number.isInteger(input.pageNumber) || input.pageNumber < 1 || input.pageNumber > 604) {
-    throw new AppError("pageNumber must be between 1 and 604", 400);
+    throw new AppError("رقم الصفحة يجب أن يكون بين 1 و 604", 400);
   }
 
   if (!Number.isInteger(input.lineCount) || input.lineCount < 1 || input.lineCount > 15) {
-    throw new AppError("lineCount must be between 1 and 15", 400);
+    throw new AppError("عدد الأسطر يجب أن يكون بين 1 و 15", 400);
   }
 
   if (
@@ -331,7 +331,7 @@ const ensureQuestionMetadataValid = (input: {
     input.difficultyLevel < 1 ||
     input.difficultyLevel > 5
   ) {
-    throw new AppError("difficultyLevel must be between 1 and 5", 400);
+    throw new AppError("مستوى الصعوبة يجب أن يكون بين 1 و 5", 400);
   }
 };
 
@@ -470,7 +470,7 @@ const parseBranchIndex = (branch: string | null | undefined): number | null => {
 
 const normalizeTemplateType = (type: ExamType): "JUZ" | "FULL_QURAN" => {
   if (type !== "JUZ" && type !== "FULL_QURAN") {
-    throw new AppError("Only JUZ and FULL_QURAN templates are supported", 400);
+    throw new AppError("فقط نماذج اختبارات الجزء والمصحف كاملاً مدعومة", 400);
   }
 
   return type;
@@ -488,7 +488,7 @@ const resolveAttemptBoundary = (exam: { type: ExamType; examBranch?: string | nu
 
   const branchIndex = parseBranchIndex(normalizedBranch);
   if (!branchIndex) {
-    throw new AppError("JUZ template is missing a valid examBranch", 400);
+    throw new AppError("نموذج اختبار الجزء يتطلب فرع اختبار صحيح", 400);
   }
 
   return JUZ_BOUNDARIES[branchIndex - 1];
@@ -562,10 +562,10 @@ const resolveRequestedQuestionCount = (
   const count = requestedCount ?? policy.defaultQuestionCount;
 
   if (count < policy.minQuestionCount || count > policy.maxQuestionCount) {
-    throw new AppError(
-      `Question count must stay between ${policy.minQuestionCount} and ${policy.maxQuestionCount}`,
-      400
-    );
+      throw new AppError(
+        `عدد الأسئلة يجب أن يكون بين ${policy.minQuestionCount} و ${policy.maxQuestionCount}`,
+        400
+      );
   }
 
   return count;
@@ -681,7 +681,7 @@ const ensureCenterExistsAndVisible = async (scope: ScopeContext, centerId: numbe
   });
 
   if (!center) {
-    throw new AppError("Center not found", 404);
+    throw new AppError("المركز غير موجود", 404);
   }
 
   return center;
@@ -700,11 +700,11 @@ const ensureCircleExistsAndVisible = async (
   });
 
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   if (expectedCenterId && circle.centerId !== expectedCenterId) {
-    throw new AppError("Circle does not belong to selected center", 400);
+    throw new AppError("الحلقة لا تنتمي إلى المركز المحدد", 400);
   }
 
   return circle;
@@ -717,7 +717,7 @@ const getExamInScope = async (scope: ScopeContext, examId: number) => {
   });
 
   if (!exam) {
-    throw new AppError("Exam not found", 404);
+    throw new AppError("الاختبار غير موجود", 404);
   }
 
   examsDomain.ensureTemplateVisible(scope, {
@@ -735,7 +735,7 @@ const getAttemptInScope = async (scope: ScopeContext, attemptId: number) => {
   });
 
   if (!attempt) {
-    throw new AppError("Attempt not found", 404);
+    throw new AppError("محاولة الاختبار غير موجودة", 404);
   }
 
   examsDomain.ensureAttemptVisibility({
@@ -762,7 +762,7 @@ const validateCommitteeMembers = async (
   });
 
   if (users.length !== uniqueMemberIds.length) {
-    throw new AppError("One or more selected committee members are invalid for this center", 400);
+    throw new AppError("واحد أو أكثر من أعضاء اللجنة المختارين غير صالحين لهذا المركز", 400);
   }
 
   examsDomain.assertCommitteeRoles(users.map((user) => user.role));
@@ -776,7 +776,7 @@ const validateCommitteeMembers = async (
 
 const assertAttemptCanBeConducted = (attempt: Awaited<ReturnType<typeof examsRepository.findAttemptById>>) => {
   if (!attempt) {
-    throw new AppError("Attempt not found", 404);
+    throw new AppError("محاولة الاختبار غير موجودة", 404);
   }
 
   if (attempt.reviewedAt) {
@@ -787,14 +787,14 @@ const assertAttemptCanBeConducted = (attempt: Awaited<ReturnType<typeof examsRep
   }
 
   if (attempt.exam.status !== "PUBLISHED") {
-    throw new AppError("Only attempts in published exam templates can be worked on", 400);
+    throw new AppError("فعاليات الاختبارات المنشورة فقط يمكن العمل عليها", 400);
   }
 
   if (
     attempt.status !== AttemptStatus.SCHEDULED &&
     attempt.status !== AttemptStatus.IN_PROGRESS
   ) {
-    throw new AppError("Attempt cannot be worked on from its current status", 400);
+    throw new AppError("محاولة الاختبار لا يمكن العمل عليها من حالتها الحالية", 400);
   }
 };
 
@@ -986,15 +986,15 @@ export const examsService = {
     const type = normalizeTemplateType(input.type);
 
     if (input.passScore > input.maxScore) {
-      throw new AppError("passScore cannot be greater than maxScore", 400);
+      throw new AppError("درجة النجاح لا يمكن أن تتجاوز الدرجة القصوى", 400);
     }
 
     if (type === "JUZ" && !input.examBranch?.trim()) {
-      throw new AppError("examBranch is required for JUZ templates", 400);
+      throw new AppError("فرع الاختبار مطلوب لاختبارات الجزء", 400);
     }
 
     if (type === "FULL_QURAN" && input.examBranch?.trim()) {
-      throw new AppError("examBranch must be empty for FULL_QURAN templates", 400);
+      throw new AppError("فرع الاختبار يجب أن يكون فارغاً لاختبارات المصحف كاملاً", 400);
     }
 
     const criteria = input.criteria ?? buildDefaultCriteria(input.maxScore);
@@ -1044,7 +1044,7 @@ export const examsService = {
     const existingExam = await getExamInScope(scope, examId);
 
     if (existingExam.status !== "DRAFT") {
-      throw new AppError("Only DRAFT exams can be updated", 400);
+      throw new AppError("فقط الاختبارات المسودة يمكن تحديثها", 400);
     }
 
     const nextType = normalizeTemplateType(input.type ?? existingExam.type);
@@ -1054,15 +1054,15 @@ export const examsService = {
     const nextPassScore = input.passScore ?? existingExam.passScore;
 
     if (nextPassScore > nextMaxScore) {
-      throw new AppError("passScore cannot be greater than maxScore", 400);
+      throw new AppError("درجة النجاح لا يمكن أن تتجاوز الدرجة القصوى", 400);
     }
 
     if (nextType === "JUZ" && !nextExamBranch?.trim()) {
-      throw new AppError("examBranch is required for JUZ templates", 400);
+      throw new AppError("فرع الاختبار مطلوب لاختبارات الجزء", 400);
     }
 
     if (nextType === "FULL_QURAN" && nextExamBranch?.trim()) {
-      throw new AppError("examBranch must be empty for FULL_QURAN templates", 400);
+      throw new AppError("فرع الاختبار يجب أن يكون فارغاً لاختبارات المصحف كاملاً", 400);
     }
 
     const existingCriteria: ExamCriteriaInput | undefined = existingExam.criteria
@@ -1130,7 +1130,7 @@ export const examsService = {
     const existingExam = await getExamInScope(scope, examId);
 
     if (existingExam.status !== "DRAFT") {
-      throw new AppError("Only DRAFT exams can be deleted", 400);
+      throw new AppError("فقط الاختبارات المسودة يمكن حذفها", 400);
     }
 
     const deletedExam = await examsRepository.deleteExam(examId);
@@ -1160,7 +1160,7 @@ export const examsService = {
     const existingExam = await getExamInScope(scope, examId);
 
     if (existingExam.status !== "DRAFT") {
-      throw new AppError("Only DRAFT exams can be published", 400);
+      throw new AppError("فقط الاختبارات المسودة يمكن نشرها", 400);
     }
 
     const exam = await examsRepository.publishExam(examId);
@@ -1274,7 +1274,7 @@ export const examsService = {
     });
 
     if (!existing) {
-      throw new AppError("Question bank item not found", 404);
+      throw new AppError("عنصر بنك الأسئلة غير موجود", 404);
     }
 
     const item = await examsRepository.updateQuestionBankItem({
@@ -1432,7 +1432,7 @@ export const examsService = {
     });
 
     if (!existing) {
-      throw new AppError("Question bank item not found", 404);
+      throw new AppError("عنصر بنك الأسئلة غير موجود", 404);
     }
 
     const deleted = await examsRepository.deleteQuestionBankItem(itemId);
@@ -1542,7 +1542,7 @@ export const examsService = {
     const normalizedType = normalizeTemplateType(exam.type);
 
     if (exam.status !== "PUBLISHED") {
-      throw new AppError("Attempts can only be created for published exam templates", 400);
+      throw new AppError("محاولات الاختبار يمكن إنشاؤها فقط للاختبارات المنشورة", 400);
     }
 
     const circle = await ensureCircleExistsAndVisible(scope, input.circleId);
@@ -1554,7 +1554,7 @@ export const examsService = {
     });
 
     if (!student || student.role !== Role.STUDENT || !student.isActive) {
-      throw new AppError("Student not found or inactive", 400);
+      throw new AppError("الطالب غير موجود أو غير نشط", 400);
     }
 
     const enrollment = await examsRepository.findActiveEnrollment({
@@ -1564,7 +1564,7 @@ export const examsService = {
     });
 
     if (!enrollment) {
-      throw new AppError("Student is not actively enrolled in selected circle", 400);
+      throw new AppError("الطالب غير مسجل في الحلقة المحددة", 400);
     }
 
     const examDate = examsDomain.resolveRequiredDate(input.examDate, "examDate");
@@ -1619,7 +1619,7 @@ export const examsService = {
       return serializeAttempt(attempt);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("A nomination already exists for this student, template, and exam date", 409);
+        throw new AppError("ترشيح موجود مسبقاً لهذا الطالب والنموذج وتاريخ الاختبار", 409);
       }
 
       throw error;
@@ -1678,7 +1678,7 @@ export const examsService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Exam attempt version conflict", 409, { attemptId }, "VERSION_CONFLICT");
+      throw new AppError("تعارض في إصدار محاولة الاختبار", 409, { attemptId }, "VERSION_CONFLICT");
     }
 
     await auditLogger.log({
@@ -1748,7 +1748,7 @@ export const examsService = {
 
     if (questions.length < requestedCount) {
       throw new AppError(
-        `Question bank contains only ${available} unique items within the approved exam range; cannot generate ${requestedCount} questions`,
+        `بنك الأسئلة يحتوي فقط على ${available} سؤال فريد ضمن نطاق الاختبار؛ لا يمكن توليد ${requestedCount} أسئلة`,
         400
       );
     }
@@ -1766,7 +1766,7 @@ export const examsService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Failed to generate attempt questions", 500);
+      throw new AppError("فشل في توليد أسئلة الاختبار", 500);
     }
 
     await auditLogger.log({
@@ -1808,7 +1808,7 @@ export const examsService = {
     });
 
     if (!isRangeWithinBoundary(boundary, input)) {
-      throw new AppError("Manual question must stay within the exam range", 400);
+      throw new AppError("السؤال اليدوي يجب أن يكون ضمن نطاق الاختبار", 400);
     }
 
     await quranService.calculateRange(input);
@@ -1823,7 +1823,7 @@ export const examsService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Failed to create manual attempt question", 500);
+      throw new AppError("فشل في إنشاء السؤال اليدوي", 500);
     }
 
     await auditLogger.log({
@@ -1861,7 +1861,7 @@ export const examsService = {
     });
 
     if (!updatedAttempt) {
-      throw new AppError("Question not found in this attempt", 404);
+      throw new AppError("السؤال غير موجود في هذه المحاولة", 404);
     }
 
     await auditLogger.log({
@@ -1908,11 +1908,11 @@ export const examsService = {
     });
 
     if (mergedQuestions.length === 0) {
-      throw new AppError("At least one exam question is required before scoring", 400);
+      throw new AppError("سؤال اختبار واحد على الأقل مطلوب قبل التقييم", 400);
     }
 
     if (mergedQuestions.some((question) => !question.isEvaluated)) {
-      throw new AppError("All generated questions must be evaluated before submitting the result", 400);
+      throw new AppError("جميع الأسئلة المولدة يجب تقييمها قبل اعتماد النتيجة", 400);
     }
 
     const promptingDeductions = mergedQuestions.reduce(
@@ -1967,7 +1967,7 @@ export const examsService = {
     });
 
     if (!scoredAttempt) {
-      throw new AppError("Failed to score attempt", 500);
+      throw new AppError("فشل في تقييم محاولة الاختبار", 500);
     }
 
     await auditLogger.log({
@@ -1997,7 +1997,7 @@ export const examsService = {
     const attempt = await getAttemptInScope(scope, attemptId);
 
     if (!attempt.reviewedAt) {
-      throw new AppError("Result can only be shared after the exam has been reviewed", 400);
+      throw new AppError("النتيجة يمكن مشاركتها فقط بعد مراجعة الاختبار", 400);
     }
 
     const result = await notifyAttemptResultShared(scope, attemptId);

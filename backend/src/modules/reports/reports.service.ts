@@ -12,6 +12,7 @@ import { auditLogger } from "../../shared/audit/audit-log";
 import { prisma } from "../../shared/db/prisma";
 import type { ScopeContext } from "../../shared/types/auth.types";
 import { AppError } from "../../shared/errors/app-error";
+import { ensureCenterAllowed, ensureCircleAllowed } from "../../shared/scoping/scope.domain";
 import { reportsDomain, type ReportFilterInput } from "./reports.domain";
 import { reportsExport } from "./reports.export";
 import { reportsRepository } from "./reports.repository";
@@ -584,7 +585,7 @@ const buildTeacherMonthlyHalqaData = async (
   const resolvedCircleId = query.circleId ?? scope.circleIds[0];
 
   if (!resolvedCircleId) {
-    throw new AppError("Teacher monthly halqa report requires a circle", 400);
+    throw new AppError("تقرير المعلم الشهري للحلقة يتطلب تحديد حلقة", 400);
   }
 
   if (!scope.allAccess) {
@@ -632,11 +633,11 @@ const buildTeacherMonthlyHalqaData = async (
   });
 
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   if (scope.role === Role.TEACHER && circle.centerId && !scope.circleIds.includes(circle.id)) {
-    throw new AppError("Circle report is outside your scope", 403);
+    throw new AppError("تقرير الحلقة خارج نطاق صلاحياتك", 403);
   }
 
   const previousWindow = resolveMonthWindow(
@@ -955,11 +956,11 @@ export const reportsService = {
     });
 
     if (!student) {
-      throw new AppError("Student not found", 404);
+      throw new AppError("الطالب غير موجود", 404);
     }
 
     if (scope.role === Role.STUDENT && scope.userId !== studentId) {
-      throw new AppError("Student report is outside your scope", 403);
+      throw new AppError("تقرير الطالب خارج نطاق صلاحياتك", 403);
     }
 
     if (scope.role === Role.PARENT) {
@@ -969,13 +970,13 @@ export const reportsService = {
       });
 
       if (!linked) {
-        throw new AppError("Student report is outside your scope", 403);
+        throw new AppError("تقرير الطالب خارج نطاق صلاحياتك", 403);
       }
     }
 
     if (!scope.allAccess && scope.role !== Role.PARENT && scope.role !== Role.STUDENT) {
       if (scope.centerIds.length === 0 && scope.circleIds.length === 0) {
-        throw new AppError("Student report is outside your scope", 403);
+        throw new AppError("تقرير الطالب خارج نطاق صلاحياتك", 403);
       }
       
       const hasValidEnrollment = await prisma.studentCircleEnrollment.findFirst({
@@ -994,7 +995,7 @@ export const reportsService = {
       });
       
       if (!hasValidEnrollment) {
-        throw new AppError("Student report is outside your scope", 403);
+        throw new AppError("تقرير الطالب خارج نطاق صلاحياتك", 403);
       }
     }
 
@@ -1461,6 +1462,9 @@ export const reportsService = {
 
   /** REPORTS-1: Circles summary report */
   async circlesSummary(scope: ScopeContext, filters: { centerId?: number }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const circleScope = scope.allAccess ? undefined : scope.circleIds;
     const rows = await reportsRepository.circlesSummary({
@@ -1487,6 +1491,12 @@ export const reportsService = {
 
   /** REPORTS-1: Students summary report */
   async studentsSummary(scope: ScopeContext, filters: { centerId?: number; circleId?: number; activeOnly?: boolean }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
+    if (filters.circleId) {
+      ensureCircleAllowed(scope, filters.circleId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const circleScope = filters.circleId ? [filters.circleId] : (scope.allAccess ? undefined : scope.circleIds);
     const rows = await reportsRepository.studentsSummary({
@@ -1514,6 +1524,9 @@ export const reportsService = {
 
   /** REPORTS-1: Golden Records summary report */
   async goldenRecordsSummary(scope: ScopeContext, filters: { centerId?: number }) {
+    if (filters.centerId) {
+      ensureCenterAllowed(scope, filters.centerId);
+    }
     const centerScope = filters.centerId ? [filters.centerId] : (scope.allAccess ? undefined : scope.centerIds);
     const rows = await reportsRepository.goldenRecordsSummary({
       organizationId: scope.organizationId,
@@ -1545,36 +1558,36 @@ export const reportsService = {
     });
 
     if (!file) {
-      throw new AppError("Report export file not found", 404);
+      throw new AppError("ملف التصدير غير موجود", 404);
     }
 
     if (file.expiresAt && file.expiresAt.getTime() < Date.now()) {
-      throw new AppError("Report export file has expired", 404);
+      throw new AppError("ملف التصدير منتهي الصلاحية", 404);
     }
 
     if (
       file.mimeType !== "application/pdf" &&
       file.mimeType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     ) {
-      throw new AppError("Report export file has unsupported mime type", 400);
+      throw new AppError("نوع ملف التصدير غير مدعوم", 400);
     }
 
     if (file.sizeBytes > REPORTS_MAX_FILE_SIZE_BYTES) {
-      throw new AppError("Report export file exceeds max allowed size", 413);
+      throw new AppError("ملف التصدير يتجاوز الحد الأقصى المسموح به", 413);
     }
 
     if (!scope.allAccess) {
       if (scope.role === Role.PARENT) {
         if (file.createdById !== scope.userId) {
-          throw new AppError("Report export file is outside your scope", 403);
+          throw new AppError("ملف التصدير خارج نطاق صلاحياتك", 403);
         }
       } else {
         if (file.centerId && !scope.centerIds.includes(file.centerId)) {
-          throw new AppError("Report export file is outside your center scope", 403);
+          throw new AppError("ملف التصدير خارج نطاق صلاحية المركز", 403);
         }
 
         if (file.circleId && !scope.circleIds.includes(file.circleId)) {
-          throw new AppError("Report export file is outside your circle scope", 403);
+          throw new AppError("ملف التصدير خارج نطاق صلاحية الحلقة", 403);
         }
       }
     }
@@ -1583,7 +1596,7 @@ export const reportsService = {
     try {
       await access(absolutePath);
     } catch {
-      throw new AppError("Report export file is missing from storage", 404);
+      throw new AppError("ملف التصدير غير موجود في التخزين", 404);
     }
 
     await auditLogger.log({

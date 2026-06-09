@@ -147,7 +147,7 @@ const normalizeOptionalString = (value?: string | null): string | null | undefin
 const normalizeRequiredString = (value?: string | null, fieldName = "value"): string => {
   const normalized = normalizeOptionalString(value);
   if (!normalized) {
-    throw new AppError(`${fieldName} is required`, 422, undefined, "VALIDATION_FAILED");
+    throw new AppError(`${fieldName} مطلوب`, 422, undefined, "VALIDATION_FAILED");
   }
   return normalized;
 };
@@ -233,23 +233,23 @@ const mapUniqueError = (error: Prisma.PrismaClientKnownRequestError) => {
   const text = Array.isArray(target) ? target.join(",") : String(target ?? "");
 
   if (text.includes("graduation_candidates_organization_id_student_id_year_key")) {
-    return new AppError("Candidate already exists for this student and year", 409);
+    return new AppError("المرشح موجود مسبقاً لهذا الطالب والعام", 409);
   }
 
   if (text.includes("golden_records_candidate_id_key")) {
-    return new AppError("Approved candidate already has a final golden record", 409);
+    return new AppError("المرشح المعتمد لديه سجل ذهبي نهائي بالفعل", 409);
   }
 
   if (text.includes("graduation_candidates_exam_attempt_id_key")) {
-    return new AppError("Exam attempt is already linked to another candidate", 409);
+    return new AppError("محاولة الاختبار مرتبطة بمرشح آخر بالفعل", 409);
   }
 
   if (text.includes("golden_records_organization_id_student_id_year_type_key")) {
-    return new AppError("Duplicate final golden record for this student, year, and type", 409);
+    return new AppError("سجل ذهبي نهائي مكرر لهذا الطالب والعام والنوع", 409);
   }
 
   if (text.includes("golden_records_registry_serial_key")) {
-    return new AppError("Generated registry serial conflicted, retry the approval", 409);
+    return new AppError("تعارض في رقم السجل، يرجى إعادة محاولة الاعتماد", 409);
   }
 
   throw error;
@@ -447,7 +447,7 @@ const resolveCandidateEnrollment = (student: StudentContext): CandidateEnrollmen
 
   if (activeEnrollments.length === 0) {
     throw new AppError(
-      "Student must have one active halaqa before nomination",
+      "الطالب يجب أن يكون لديه حلقة نشطة واحدة على الأقل قبل الترشيح",
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -456,7 +456,7 @@ const resolveCandidateEnrollment = (student: StudentContext): CandidateEnrollmen
 
   if (activeEnrollments.length > 1) {
     throw new AppError(
-      "Student has multiple active halaqas; nomination requires exactly one active halaqa",
+      "الطالب لديه عدة حلقات نشطة؛ الترشيح يتطلب حلقة نشطة واحدة بالضبط",
       422,
       undefined,
       "AMBIGUOUS_ACTIVE_HALAKA"
@@ -472,7 +472,7 @@ const calculateMemorizationDurationMonths = (startDate: Date, completionDate: Da
 
   if (normalizedCompletionDate.getTime() < normalizedStartDate.getTime()) {
     throw new AppError(
-      "Memorization completion date cannot be earlier than memorization start date",
+      "تاريخ إتمام الحفظ لا يمكن أن يكون قبل تاريخ بدء الحفظ",
       422,
       undefined,
       "INVALID_MEMORIZATION_TIMELINE"
@@ -497,7 +497,7 @@ const ensureStudentContext = async (organizationId: number, studentId: number) =
   });
 
   if (!student) {
-    throw new AppError("Student not found", 404);
+    throw new AppError("الطالب غير موجود", 404);
   }
 
   return student;
@@ -558,12 +558,12 @@ const resolveCandidateExamAttemptLinkContext = async (input: {
   });
 
   if (!examAttempt) {
-    throw new AppError("Exam attempt not found", 404);
+    throw new AppError("محاولة الاختبار غير موجودة", 404);
   }
 
   if (examAttempt.exam.purpose !== ExamPurpose.GOLDEN_RECORD_MUSHAF) {
     throw new AppError(
-      "Exam attempt must belong to a GOLDEN_RECORD_MUSHAF exam",
+      "محاولة الاختبار يجب أن تنتمي لاختبار مصحف السجل الذهبي",
       422,
       {
         examAttemptId: examAttempt.id,
@@ -575,11 +575,11 @@ const resolveCandidateExamAttemptLinkContext = async (input: {
   }
 
   if (examAttempt.studentId !== input.candidate.studentId) {
-    throw new AppError("Exam attempt belongs to a different student", 422);
+    throw new AppError("محاولة الاختبار تنتمي لطالب آخر", 422);
   }
 
   if (examAttempt.exam.centerId !== input.candidate.centerId) {
-    throw new AppError("Exam attempt belongs to a different center", 422);
+    throw new AppError("محاولة الاختبار تنتمي لمركز آخر", 422);
   }
 
   return examAttempt;
@@ -611,20 +611,20 @@ const resolveExamContext = async (input: {
   const resolvedExam = examAttempt?.exam ?? exam;
 
   if (input.examId && !exam) {
-    throw new AppError("Exam not found", 404);
+    throw new AppError("الاختبار غير موجود", 404);
   }
 
   if (input.examAttemptId && !examAttempt) {
-    throw new AppError("Exam attempt not found", 404);
+    throw new AppError("محاولة الاختبار غير موجودة", 404);
   }
 
   if (examAttempt) {
     if (examAttempt.studentId !== input.studentId) {
-      throw new AppError("Exam attempt belongs to a different student", 422);
+      throw new AppError("محاولة الاختبار تنتمي لطالب آخر", 422);
     }
 
     if (examAttempt.exam.centerId !== input.centerId) {
-      throw new AppError("Exam attempt belongs to a different center", 422);
+      throw new AppError("محاولة الاختبار تنتمي لمركز آخر", 422);
     }
 
     if (
@@ -632,17 +632,17 @@ const resolveExamContext = async (input: {
       input.circleId !== null &&
       examAttempt.circleId !== input.circleId
     ) {
-      throw new AppError("Exam attempt belongs to a different halaqa", 422);
+      throw new AppError("محاولة الاختبار تنتمي لحلقة أخرى", 422);
     }
 
     if (input.examId && examAttempt.examId !== input.examId) {
-      throw new AppError("Exam attempt does not belong to the supplied exam", 422);
+      throw new AppError("محاولة الاختبار لا تنتمي للاختبار المقدم", 422);
     }
   }
 
   if (resolvedExam) {
     if (resolvedExam.centerId !== input.centerId) {
-      throw new AppError("Exam belongs to a different center", 422);
+      throw new AppError("الاختبار ينتمي لمركز آخر", 422);
     }
 
     if (
@@ -651,7 +651,7 @@ const resolveExamContext = async (input: {
       resolvedExam.circleId !== null &&
       resolvedExam.circleId !== input.circleId
     ) {
-      throw new AppError("Exam belongs to a different halaqa", 422);
+      throw new AppError("الاختبار ينتمي لحلقة أخرى", 422);
     }
   }
 
@@ -668,7 +668,7 @@ const loadCandidateInScope = async (scope: ScopeContext, candidateId: number) =>
   });
 
   if (!candidate) {
-    throw new AppError("Graduation candidate not found", 404);
+    throw new AppError("المرشح للتخرج غير موجود", 404);
   }
 
   goldenRecordsDomain.assertScopeFilters(scope, {
@@ -686,7 +686,7 @@ const loadGoldenRecordInScope = async (scope: ScopeContext, recordId: number) =>
   });
 
   if (!record) {
-    throw new AppError("Final golden record not found", 404);
+    throw new AppError("السجل الذهبي النهائي غير موجود", 404);
   }
 
   goldenRecordsDomain.assertScopeFilters(scope, {
@@ -700,7 +700,7 @@ const loadGoldenRecordInScope = async (scope: ScopeContext, recordId: number) =>
 const assertEligibleGoldenRecordAttemptOutcome = (attempt: ExamAttemptOutcome) => {
   if (attempt.exam.purpose !== ExamPurpose.GOLDEN_RECORD_MUSHAF) {
     throw new AppError(
-      "Final golden record requires an exam attempt from a GOLDEN_RECORD_MUSHAF exam",
+      "السجل الذهبي النهائي يتطلب محاولة اختبار من اختبار مصحف السجل الذهبي",
       422,
       { examAttemptId: attempt.id, examId: attempt.examId, purpose: attempt.exam.purpose },
       "INVALID_EXAM_PURPOSE"
@@ -708,16 +708,16 @@ const assertEligibleGoldenRecordAttemptOutcome = (attempt: ExamAttemptOutcome) =
   }
 
   if (attempt.status !== AttemptStatus.APPROVED || !attempt.reviewedAt) {
-    throw new AppError("Final golden record requires an approved exam attempt", 422);
+    throw new AppError("السجل الذهبي النهائي يتطلب محاولة اختبار معتمدة", 422);
   }
 
   if (typeof attempt.totalScore !== "number") {
-    throw new AppError("Approved exam attempt must include a final score", 422);
+    throw new AppError("محاولة الاختبار المعتمدة يجب أن تتضمن درجة نهائية", 422);
   }
 
   if (attempt.totalScore < attempt.exam.passScore) {
     throw new AppError(
-      "Final golden record requires an eligible approved exam result",
+      "السجل الذهبي النهائي يتطلب نتيجة اختبار مؤهلة ومعتمدة",
       422,
       {
         examAttemptId: attempt.id,
@@ -735,7 +735,7 @@ const resolveEligibleCandidateFinalRecordAttempt = async (input: {
 }) => {
   if (!input.candidate.examAttemptId) {
     throw new AppError(
-      "Approved candidate must be linked to an exam attempt before a final golden record can proceed",
+      "المرشح المعتمد يجب ربطه بمحاولة اختبار قبل إنشاء السجل الذهبي النهائي",
       422,
       { candidateId: input.candidate.id },
       "EXAM_ATTEMPT_REQUIRED"
@@ -748,14 +748,14 @@ const resolveEligibleCandidateFinalRecordAttempt = async (input: {
   });
 
   if (!attempt) {
-    throw new AppError("Linked exam attempt not found", 404);
+    throw new AppError("محاولة الاختبار المرتبطة غير موجودة", 404);
   }
 
   if (
     attempt.studentId !== input.candidate.studentId ||
     attempt.exam.centerId !== input.candidate.centerId
   ) {
-    throw new AppError("Linked exam attempt no longer matches the approved candidate", 422);
+    throw new AppError("محاولة الاختبار المرتبطة لم تعد تطابق المرشح المعتمد", 422);
   }
 
   assertEligibleGoldenRecordAttemptOutcome(attempt);
@@ -766,7 +766,7 @@ const resolveEligibleCandidateFinalRecordAttempt = async (input: {
 const assertGoldenRecordDocumentationReady = (record: GoldenRecordItem) => {
   if (!record.grade || !record.appreciation || record.average === null || !record.examDate) {
     throw new AppError(
-      "Final golden record requires grade, average, appreciation, and examDate before submission or approval",
+      "السجل الذهبي النهائي يتطلب الدرجة والمعدل والتقدير وتاريخ الاختبار قبل الإرسال أو الاعتماد",
       422,
       undefined,
       "VALIDATION_FAILED"
@@ -782,14 +782,14 @@ const assertGoldenRecordCandidateGate = async (
     let attempt: ExamAttemptOutcome | null = null;
     if (record.source === GoldenRecordSource.EXAM_BASED) {
       if (!record.examAttemptId) {
-        throw new AppError("Exam-based golden record requires an exam attempt", 422);
+        throw new AppError("السجل الذهبي المبني على الاختبار يتطلب محاولة اختبار", 422);
       }
       attempt = await goldenRecordsRepository.findExamAttemptOutcome({
         examAttemptId: record.examAttemptId,
         organizationId: scope.organizationId
       });
       if (!attempt) {
-        throw new AppError("Linked exam attempt not found", 404);
+        throw new AppError("محاولة الاختبار المرتبطة غير موجودة", 404);
       }
       assertEligibleGoldenRecordAttemptOutcome(attempt);
     }
@@ -801,7 +801,7 @@ const assertGoldenRecordCandidateGate = async (
 
   if (!record.candidateId) {
     throw new AppError(
-      "Final golden record must be linked to an approved graduation candidate",
+      "السجل الذهبي النهائي يجب ربطه بمرشح تخرج معتمد",
       422,
       { recordId: record.id },
       "CANDIDATE_REQUIRED"
@@ -811,7 +811,7 @@ const assertGoldenRecordCandidateGate = async (
   const candidate = await loadCandidateInScope(scope, record.candidateId);
   if (candidate.status !== GraduationCandidateStatus.APPROVED) {
     throw new AppError(
-      "Linked candidate must stay approved before the final golden record can proceed",
+      "المرشح المرتبط يجب أن يبقى معتمداً قبل متابعة السجل الذهبي النهائي",
       409,
       { candidateId: candidate.id, status: candidate.status },
       "CANDIDATE_NOT_APPROVED"
@@ -825,7 +825,7 @@ const assertGoldenRecordCandidateGate = async (
 
   if (!record.examAttemptId || record.examAttemptId !== attempt.id) {
     throw new AppError(
-      "Final golden record must stay linked to the candidate's approved exam attempt",
+      "السجل الذهبي النهائي يجب أن يبقى مرتبطاً بمحاولة الاختبار المعتمدة للمرشح",
       422,
       { recordId: record.id, candidateId: candidate.id, examAttemptId: record.examAttemptId },
       "EXAM_ATTEMPT_MISMATCH"
@@ -833,11 +833,11 @@ const assertGoldenRecordCandidateGate = async (
   }
 
   if (record.studentId !== candidate.studentId || record.centerId !== candidate.centerId) {
-    throw new AppError("Final golden record no longer matches the linked candidate context", 422);
+    throw new AppError("السجل الذهبي النهائي لم يعد يطابق سياق المرشح المرتبط", 422);
   }
 
   if (record.examId !== null && record.examId !== attempt.examId) {
-    throw new AppError("Final golden record exam no longer matches the linked exam attempt", 422);
+    throw new AppError("اختبار السجل الذهبي النهائي لم يعد يطابق محاولة الاختبار المرتبطة", 422);
   }
 
   return {
@@ -977,7 +977,7 @@ export const goldenRecordsService = {
     });
 
     if (existing) {
-      throw new AppError("Candidate already exists for this student and year", 409);
+      throw new AppError("المرشح موجود مسبقاً لهذا الطالب والعام", 409);
     }
 
     try {
@@ -1020,7 +1020,7 @@ export const goldenRecordsService = {
     goldenRecordsDomain.assertCandidateEditable(existing.status);
 
     if (existing.goldenRecord) {
-      throw new AppError("Candidate already has a linked final golden record and is locked", 409);
+      throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط وهو مقفل", 409);
     }
 
     const memorizationCompletionDate =
@@ -1081,7 +1081,7 @@ export const goldenRecordsService = {
 
       if (!updated) {
         throw new AppError(
-          "Candidate was modified by another request",
+          "تم تعديل المرشح من قبل مستخدم آخر",
           409,
           { candidateId: existing.id },
           "VERSION_CONFLICT"
@@ -1106,7 +1106,7 @@ export const goldenRecordsService = {
 
     const existing = await loadCandidateInScope(scope, candidateId);
     if (existing.goldenRecord) {
-      throw new AppError("Candidate already has a linked final golden record", 409);
+      throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
     }
 
     if (existing.status === GraduationCandidateStatus.APPROVED) {
@@ -1143,7 +1143,7 @@ export const goldenRecordsService = {
 
       if (!approved) {
         throw new AppError(
-          "Candidate was modified by another request",
+          "تم تعديل المرشح من قبل مستخدم آخر",
           409,
           { candidateId: existing.id },
           "VERSION_CONFLICT"
@@ -1183,7 +1183,7 @@ export const goldenRecordsService = {
 
     const existing = await loadCandidateInScope(scope, candidateId);
     if (existing.goldenRecord) {
-      throw new AppError("Candidate already has a linked final golden record", 409);
+      throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
     }
 
     goldenRecordsDomain.assertValidCandidateTransition(
@@ -1209,7 +1209,7 @@ export const goldenRecordsService = {
 
     if (!updated) {
       throw new AppError(
-        "Candidate was modified by another request",
+        "تم تعديل المرشح من قبل مستخدم آخر",
         409,
         { candidateId: existing.id },
         "VERSION_CONFLICT"
@@ -1229,7 +1229,7 @@ export const goldenRecordsService = {
 
     const existing = await loadCandidateInScope(scope, candidateId);
     if (existing.goldenRecord) {
-      throw new AppError("Candidate already has a linked final golden record", 409);
+      throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
     }
 
     goldenRecordsDomain.assertValidCandidateTransition(
@@ -1255,7 +1255,7 @@ export const goldenRecordsService = {
 
     if (!updated) {
       throw new AppError(
-        "Candidate was modified by another request",
+        "تم تعديل المرشح من قبل مستخدم آخر",
         409,
         { candidateId: existing.id },
         "VERSION_CONFLICT"
@@ -1277,7 +1277,7 @@ export const goldenRecordsService = {
 
     if (candidate.status !== GraduationCandidateStatus.APPROVED) {
       throw new AppError(
-        "Only approved candidates can be linked to exam attempts",
+        "فقط المرشحون المعتمدون يمكن ربطهم بمحاولات الاختبار",
         409,
         { candidateId: candidate.id, status: candidate.status },
         "CANDIDATE_NOT_APPROVED"
@@ -1285,7 +1285,7 @@ export const goldenRecordsService = {
     }
 
     if (candidate.goldenRecord) {
-      throw new AppError("Candidate already has a linked final golden record", 409);
+      throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
     }
 
     const examAttempt = await resolveCandidateExamAttemptLinkContext({
@@ -1309,7 +1309,7 @@ export const goldenRecordsService = {
 
       if (!updated) {
         throw new AppError(
-          "Candidate was modified by another request",
+          "تم تعديل المرشح من قبل مستخدم آخر",
           409,
           { candidateId: candidate.id },
           "VERSION_CONFLICT"
@@ -1384,11 +1384,11 @@ export const goldenRecordsService = {
     if (input.candidateId) {
       candidate = await loadCandidateInScope(scope, input.candidateId);
       if (candidate.status !== GraduationCandidateStatus.APPROVED) {
-        throw new AppError("Candidate must be approved before creating a linked final golden record", 409);
+        throw new AppError("المرشح يجب أن يكون معتمداً قبل إنشاء سجل ذهبي نهائي مرتبط", 409);
       }
 
       if (candidate.goldenRecord) {
-        throw new AppError("Candidate already has a linked final golden record", 409);
+        throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
       }
 
       resolvedExamAttempt = await resolveEligibleCandidateFinalRecordAttempt({
@@ -1414,7 +1414,7 @@ export const goldenRecordsService = {
         organizationId: scope.organizationId
       });
       
-      if (!center) throw new AppError("Center not found", 404);
+      if (!center) throw new AppError("المركز غير موجود", 404);
       goldenRecordsDomain.assertScopeFilters(scope, { centerId: center.id });
 
       centerNameSnapshot = center.name;
@@ -1440,12 +1440,12 @@ export const goldenRecordsService = {
             : null;
 
     if (!grade || average === null || average === undefined || !appreciation || !examDate) {
-      throw new AppError(
-        "Final golden record requires grade, average, appreciation, and examDate before creation",
-        422,
-        undefined,
-        "VALIDATION_FAILED"
-      );
+    throw new AppError(
+      "السجل الذهبي النهائي يتطلب الدرجة والمعدل والتقدير وتاريخ الاختبار قبل الإنشاء",
+      422,
+      undefined,
+      "VALIDATION_FAILED"
+    );
     }
 
     try {
@@ -1489,16 +1489,16 @@ export const goldenRecordsService = {
     goldenRecordsDomain.assertGoldenRecordEditable(existing.status);
 
     if (input.examId !== undefined || input.examAttemptId !== undefined) {
-      throw new AppError(
-        "Final golden records do not manage exam bindings. Link the approved exam attempt on the graduation candidate before creating the final record.",
-        409,
-        { recordId: existing.id },
-        "EXAM_BINDING_LOCKED"
-      );
+    throw new AppError(
+      "السجلات الذهبية النهائية لا تدير ربط الاختبارات. اربط محاولة الاختبار المعتمدة على المرشح قبل إنشاء السجل النهائي.",
+      409,
+      { recordId: existing.id },
+      "EXAM_BINDING_LOCKED"
+    );
     }
 
     if (existing.candidateId && input.circleId !== undefined) {
-      throw new AppError("Candidate-linked final records keep their candidate exam and halaqa bindings", 409);
+      throw new AppError("السجلات النهائية المرتبطة بالمرشح تحتفظ بربط الاختبار والحلقة", 409);
     }
 
     const nextType = input.type ?? existing.type;
@@ -1530,11 +1530,11 @@ export const goldenRecordsService = {
             });
 
     if (nextCircleId !== null && nextCircleId !== undefined && !circle) {
-      throw new AppError("Halaqa not found", 404);
+      throw new AppError("الحلقة غير موجودة", 404);
     }
 
     if (circle && circle.centerId !== existing.centerId) {
-      throw new AppError("Selected halaqa does not belong to the golden record center", 422);
+      throw new AppError("الحلقة المحددة لا تنتمي إلى مركز السجل الذهبي", 422);
     }
 
     const nextGrade =
@@ -1572,7 +1572,7 @@ export const goldenRecordsService = {
 
     if (!updated) {
       throw new AppError(
-        "Final golden record was modified by another request",
+        "تعارض في تحديث السجل الذهبي النهائي",
         409,
         { recordId: existing.id },
         "VERSION_CONFLICT"
@@ -1617,7 +1617,7 @@ export const goldenRecordsService = {
 
     if (!updated) {
       throw new AppError(
-        "Final golden record was modified by another request",
+        "تعارض في تحديث السجل الذهبي النهائي",
         409,
         { recordId: existing.id },
         "VERSION_CONFLICT"
@@ -1674,7 +1674,7 @@ export const goldenRecordsService = {
 
       if (!approved) {
         throw new AppError(
-          "Final golden record was modified by another request",
+          "تعارض في تحديث السجل الذهبي النهائي",
           409,
           { recordId: existing.id },
           "VERSION_CONFLICT"
@@ -1733,7 +1733,7 @@ export const goldenRecordsService = {
 
     if (!updated) {
       throw new AppError(
-        "Final golden record was modified by another request",
+        "تعارض في تحديث السجل الذهبي النهائي",
         409,
         { recordId: existing.id },
         "VERSION_CONFLICT"

@@ -3,6 +3,7 @@ import { FileText, Plus, Trash2, Printer, Search, Filter, RefreshCw, CheckCircle
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifySuccess } from "../../shared/ui/feedback";
 import {
@@ -163,6 +164,8 @@ function VouchersKpi({
 export default function AccountingJournalEntriesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canPostJournalEntry = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const entriesQ = useAccountingJournalEntriesQuery();
   const accountsQ = useAccountingAccountsQuery();
   const allEntries = entriesQ.data ?? [];
@@ -528,9 +531,11 @@ export default function AccountingJournalEntriesPage() {
             <Button variant="secondary" onClick={() => void saveJournalEntry(false)} isLoading={createEntryM.isPending}>
               حفظ كمسودة
             </Button>
-            <Button onClick={() => void saveJournalEntry(true)} isLoading={postEntryM.isPending} disabled={!journalTotals.balanced}>
-              حفظ وترحيل
-            </Button>
+            {canPostJournalEntry ? (
+              <Button onClick={() => void saveJournalEntry(true)} isLoading={postEntryM.isPending} disabled={!journalTotals.balanced}>
+                حفظ وترحيل
+              </Button>
+            ) : null}
           </div>
         }
       >

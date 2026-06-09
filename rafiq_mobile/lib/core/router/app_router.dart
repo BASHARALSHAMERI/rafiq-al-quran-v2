@@ -36,9 +36,9 @@ import '../../presentation/student/memorization_log_screen.dart';
 import '../../presentation/student/progress_screen.dart';
 import '../../presentation/student/student_journey_screen.dart';
 import '../../presentation/teacher/students/students_list_screen.dart';
-import '../../presentation/supervisor/supervisor_approvals_screen.dart';
 import '../../presentation/supervisor/supervisor_circles_screen.dart';
 import '../../presentation/supervisor/supervisor_notes_screen.dart';
+import '../../presentation/supervisor/supervisor_ops_dashboard_screen.dart';
 import '../../presentation/supervisor/supervisor_reports_screen.dart';
 import '../../presentation/supervisor/supervisor_today_visits_screen.dart';
 import '../../presentation/supervisor/supervisor_visit_lifecycle_screen.dart';
@@ -107,8 +107,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final role = parseUserRole(authState.user?.role);
-      if (!authState.isAuthenticated || role == null) {
+      if (!authState.isAuthenticated) {
         return _isPublicRoute(location) ? null : RouteNames.login;
+      }
+
+      if (role == null || role.isWebOnly) {
+        return location == RouteNames.forbidden ? null : RouteNames.forbidden;
       }
 
       if (_isPublicRoute(location)) {
@@ -169,7 +173,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RouteNames.forbidden,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const _RouteGuardScreen.forbidden(),
+        builder: (context, state) {
+          final role =
+              parseUserRole(ref.read(authControllerProvider).user?.role);
+          if (role == null || role.isWebOnly) {
+            return const _RouteGuardScreen.mobileUnsupported();
+          }
+          return const _RouteGuardScreen.forbidden();
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -289,10 +300,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: RouteNames.supervisorNotes,
                 builder: (context, state) => const SupervisorNotesScreen(),
               ),
-              GoRoute(
-                path: RouteNames.approvals,
-                builder: (context, state) => const SupervisorApprovalsScreen(),
-              ),
               // GoRoute(
               //   path: RouteNames.studentAssignments,
               //   builder: (context, state) => const AssignmentsScreen(),
@@ -370,6 +377,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RouteNames.supervisorReports,
                 builder: (context, state) => const SupervisorReportsScreen(),
+              ),
+              GoRoute(
+                path: RouteNames.supervisorOpsDashboard,
+                builder: (context, state) => const SupervisorOpsDashboardScreen(),
               ),
               GoRoute(
                 path: RouteNames.supervisorHalqaReportPath,
@@ -537,8 +548,8 @@ Widget _buildRequiredTextRoute(
 class _RouteGuardScreen extends StatelessWidget {
   final String title;
   final String message;
-  final String actionLabel;
-  final String actionRoute;
+  final String? actionLabel;
+  final String? actionRoute;
   final IconData icon;
 
   const _RouteGuardScreen({
@@ -558,6 +569,16 @@ class _RouteGuardScreen extends StatelessWidget {
           icon: Icons.lock_outline_rounded,
         );
 
+  const _RouteGuardScreen.mobileUnsupported()
+      : this(
+          title: 'Unsupported mobile account',
+          message:
+              'هذا الحساب مخصص للوحة الويب ولا يمكن استخدامه من تطبيق الجوال.',
+          actionLabel: null,
+          actionRoute: null,
+          icon: Icons.phone_android_rounded,
+        );
+
   const _RouteGuardScreen.notFound({
     this.message =
         'The page does not exist or the route parameters are invalid.',
@@ -575,7 +596,7 @@ class _RouteGuardScreen extends StatelessWidget {
         title: title,
         message: message,
         actionLabel: actionLabel,
-        onAction: () => context.go(actionRoute),
+        onAction: actionRoute == null ? null : () => context.go(actionRoute!),
       ),
     );
   }

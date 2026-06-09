@@ -9,9 +9,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
+import '../../application/supervisor/supervisor_active_visit_provider.dart';
 import '../../application/supervisor/supervisor_visit_providers.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
 import '../../data/models/supervisor_visit_dtos.dart';
 import '../shared/states/app_empty_state.dart';
@@ -73,10 +76,37 @@ class _SupervisorVisitLifecycleScreenState
   @override
   void initState() {
     super.initState();
-    _visitLog = widget.initialLog;
+    final persisted = ref.read(activeVisitProvider);
+    if (widget.initialLog != null) {
+      _visitLog = widget.initialLog;
+    } else if (persisted.log?.isOpen == true &&
+        persisted.log?.circleId == widget.circleId) {
+      _visitLog = persisted.log;
+      _checklist.clear();
+      _checklist.addAll(
+        persisted.checklist.isNotEmpty
+            ? persisted.checklist.map((e) => Map<String, dynamic>.from(e)).toList()
+            : _defaultChecklist.map((item) => {
+                  'key': item['key'],
+                  'label': item['label'],
+                  'checked': false,
+                }).toList(),
+      );
+      if (persisted.checklist.isNotEmpty) {
+        _notesController.text = _extractNotesFromChecklist(persisted.checklist);
+      }
+    }
     if (_visitLog?.isOpen == true) {
       _startTimer(_visitLog!.startedAt);
     }
+  }
+
+  String _extractNotesFromChecklist(List<Map<String, dynamic>> list) {
+    final noteItem = list.cast<Map<String, dynamic>?>().firstWhere(
+      (e) => e?['key'] == 'observations_notes',
+      orElse: () => null,
+    );
+    return noteItem?['value']?.toString() ?? '';
   }
 
   @override
@@ -99,6 +129,7 @@ class _SupervisorVisitLifecycleScreenState
     setState(() {
       _checklist[index]['checked'] = !(_checklist[index]['checked'] as bool);
     });
+    ref.read(activeVisitProvider.notifier).updateChecklist(_checklist);
   }
 
   Future<Position?> _resolveCurrentLocation() async {
@@ -139,18 +170,18 @@ class _SupervisorVisitLifecycleScreenState
                 longitude: position?.longitude,
               );
       ref.invalidate(supervisorTodayVisitsProvider);
+      ref.read(activeVisitProvider.notifier).startVisit(log);
       if (!mounted) return;
       setState(() {
         _visitLog = log;
         _isStarting = false;
       });
       _startTimer(log.startedAt);
-      _showSnack('تم بدء الزيارة الإشرافية.', AppColors.successLight);
+      AppSnackBar.success(context, 'تم بدء الزيارة الإشرافية.');
     } catch (error) {
       if (!mounted) return;
       setState(() => _isStarting = false);
-      _showSnack(
-          'تعذر بدء الزيارة: ${_readError(error)}', AppColors.errorLight);
+      AppSnackBar.error(context, 'تعذر بدء الزيارة: ${_readError(error)}');
     }
   }
 
@@ -162,9 +193,9 @@ class _SupervisorVisitLifecycleScreenState
       (item) => item['key'] == _attendanceTaskKey && item['checked'] == true,
     );
     if (!attendanceTaskCompleted) {
-      _showSnack(
+      AppSnackBar.warning(
+        context,
         'اعتمد مهمة الحضور من القائمة قبل إنهاء الزيارة.',
-        AppColors.warningLight,
       );
       return;
     }
@@ -182,29 +213,19 @@ class _SupervisorVisitLifecycleScreenState
                 observations: _notesController.text,
               );
       ref.invalidate(supervisorTodayVisitsProvider);
+      ref.read(activeVisitProvider.notifier).endVisit();
       if (!mounted) return;
       _timer?.cancel();
       setState(() {
         _visitLog = updated;
         _isEnding = false;
       });
-      _showSnack('تم إنهاء الزيارة وحفظ التقرير.', AppColors.successLight);
+      AppSnackBar.success(context, 'تم إنهاء الزيارة وحفظ التقرير.');
     } catch (error) {
       if (!mounted) return;
       setState(() => _isEnding = false);
-      _showSnack(
-          'تعذر إنهاء الزيارة: ${_readError(error)}', AppColors.errorLight);
+      AppSnackBar.error(context, 'تعذر إنهاء الزيارة: ${_readError(error)}');
     }
-  }
-
-  void _showSnack(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   String _readError(Object error) {
@@ -215,7 +236,7 @@ class _SupervisorVisitLifecycleScreenState
         if (message is String && message.trim().isNotEmpty) return message;
       }
     }
-    return error.toString();
+    return 'تحقق من الاتصال ثم أعد المحاولة.';
   }
 
   @override
@@ -240,7 +261,7 @@ class _SupervisorVisitLifecycleScreenState
         ),
         error: (error, _) => AppEmptyState(
           title: 'تعذر تحميل الحلقة',
-          subtitle: error.toString(),
+          subtitle: 'تحقق من الاتصال ثم أعد المحاولة.',
           icon: Icons.error_outline_rounded,
           actionLabel: 'إعادة المحاولة',
           onAction: () => ref.invalidate(orgCirclesProvider(centerId)),
@@ -253,7 +274,13 @@ class _SupervisorVisitLifecycleScreenState
               subtitle: 'لم يتم العثور على الحلقة ضمن نطاقك الحالي.',
               icon: Icons.group_off_rounded,
               actionLabel: 'العودة',
-              onAction: () => context.pop(),
+              onAction: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
             );
           }
 
@@ -261,6 +288,9 @@ class _SupervisorVisitLifecycleScreenState
               _checklist.where((item) => item['checked'] == true).length;
           final isOpen = _visitLog?.isOpen == true;
           final isDone = _visitLog != null && !isOpen;
+          final attendanceTaskCompleted = _checklist.any(
+            (item) => item['key'] == _attendanceTaskKey && item['checked'] == true,
+          );
 
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -279,11 +309,50 @@ class _SupervisorVisitLifecycleScreenState
                   isLoading: _isStarting,
                 )
               else if (isOpen)
-                PrimaryButton(
-                  label: 'إنهاء الزيارة وحفظ التقرير',
-                  onPressed: _isEnding ? null : _endVisit,
-                  icon: Icons.stop_circle_rounded,
-                  isLoading: _isEnding,
+                Column(
+                  children: [
+                    PrimaryButton(
+                      label: 'إنهاء الزيارة وحفظ التقرير',
+                      onPressed: (_isEnding || !attendanceTaskCompleted)
+                          ? null
+                          : _endVisit,
+                      icon: Icons.stop_circle_rounded,
+                      isLoading: _isEnding,
+                    ),
+                    if (!attendanceTaskCompleted) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.sm),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningLight.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(
+                            color: AppColors.warningLight.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: AppColors.warningLight,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'يجب اعتماد "سجل الحضور مكتمل" من قائمة التحقق أولاً.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.warningLight,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 )
               else
                 const _CompletedVisitBanner(),
@@ -294,15 +363,21 @@ class _SupervisorVisitLifecycleScreenState
               const SizedBox(height: AppSpacing.sm),
               ...List.generate(
                 _checklist.length,
-                (index) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _ChecklistItemCard(
-                    label: _checklist[index]['label'] as String,
-                    checked: _checklist[index]['checked'] as bool,
-                    enabled: isOpen,
-                    onTap: () => _toggleItem(index),
-                  ).animate().fadeIn(delay: (35 * index).ms),
-                ),
+                (index) {
+                  final item = _checklist[index];
+                  final isAttendanceTask = item['key'] == _attendanceTaskKey;
+                  final isUncheckedAttendance = isAttendanceTask && item['checked'] != true;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _ChecklistItemCard(
+                      label: item['label'] as String,
+                      checked: item['checked'] as bool,
+                      enabled: isOpen,
+                      isRequired: isUncheckedAttendance,
+                      onTap: () => _toggleItem(index),
+                    ).animate().fadeIn(delay: (35 * index).ms),
+                  );
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
               const SectionHeader(title: 'التقييم العام'),
@@ -426,12 +501,14 @@ class _ChecklistItemCard extends StatelessWidget {
   final String label;
   final bool checked;
   final bool enabled;
+  final bool isRequired;
   final VoidCallback onTap;
 
   const _ChecklistItemCard({
     required this.label,
     required this.checked,
     required this.enabled,
+    this.isRequired = false,
     required this.onTap,
   });
 
@@ -451,15 +528,36 @@ class _ChecklistItemCard extends StatelessWidget {
               checked ? Icons.check_circle_rounded : Icons.circle_outlined,
               color: checked
                   ? AppColors.successLight
-                  : AppColors.textSecondaryLight,
+                  : isRequired
+                      ? AppColors.warningLight
+                      : AppColors.textSecondaryLight,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isRequired ? AppColors.warningLight : null,
+                ),
               ),
             ),
+            if (isRequired)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.warningLight.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'مطلوب',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.warningLight,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

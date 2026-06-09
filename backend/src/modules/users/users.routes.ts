@@ -29,16 +29,34 @@ const usersRouter = Router();
 
 usersRouter.use(authGuard, attachScope);
 
+export const usersReadRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.FINANCE_MANAGER
+];
+
 usersRouter.post(
   "/",
-  requireRoles([Role.SUPER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
   validateBody(createUserBodySchema),
   usersController.createUser
 );
 
-usersRouter.get("/", validateQuery(usersQuerySchema), usersController.listUsers);
+usersRouter.get(
+  "/",
+  requireRoles(usersReadRoles),
+  validateQuery(usersQuerySchema),
+  usersController.listUsers
+);
 
-usersRouter.get("/:id", validateParams(userIdParamSchema), usersController.getUserById);
+usersRouter.get(
+  "/:id",
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT]),
+  validateParams(userIdParamSchema),
+  usersController.getUserById
+);
 
 usersRouter.get(
   "/:id/student-profile",

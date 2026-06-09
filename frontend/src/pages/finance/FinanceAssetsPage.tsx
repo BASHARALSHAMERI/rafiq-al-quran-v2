@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Archive, ClipboardList, PackageCheck, Plus, Tags } from "lucide-react";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { 
@@ -28,6 +29,13 @@ import { useCentersQuery } from "../../features/org/org.hooks";
 import { useUsersQuery } from "../../features/users/users.hooks";
 import { useAccountingAccountsQuery } from "../accounting/accounting.hooks";
 import { AnimatePresence, motion } from "framer-motion";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
+import {
+  focusFirstInvalidField,
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../shared/ui/feedback";
 
 type TabId = "categories" | "assets" | "custody";
 
@@ -46,9 +54,23 @@ const formatMoney = (value?: number | null) =>
 
 const displayDate = (value?: string | null) => (value ? value.slice(0, 10) : "-");
 
+const rejectInvalidForm = (form: HTMLFormElement, ar: boolean) => {
+  if (!focusFirstInvalidField(form)) {
+    return false;
+  }
+  notifyRequiredFields(ar);
+  return true;
+};
+
 export default function FinanceAssetsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canManageAssetSettings = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+  const canRegisterAsset =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canPostAsset =
+    canRegisterAsset || user?.role === "TREASURER";
   const [activeTab, setActiveTab] = useState<TabId>("assets");
 
   // Lifted Modal States
@@ -65,17 +87,17 @@ export default function FinanceAssetsPage() {
   // Header Actions based on active tab
   const headerActions = (
     <div className="flex items-center gap-3">
-      {activeTab === "categories" && (
+      {activeTab === "categories" && canManageAssetSettings && (
         <Button onClick={() => setCatModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "إضافة تصنيف" : "Add category"}
         </Button>
       )}
-      {activeTab === "assets" && (
+      {activeTab === "assets" && canRegisterAsset && (
         <Button onClick={() => setAssetModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "تسجيل أصل" : "Register asset"}
         </Button>
       )}
-      {activeTab === "custody" && (
+      {activeTab === "custody" && canRegisterAsset && (
         <Button onClick={() => setCustodyModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
           {ar ? "تسجيل تسليم عهدة" : "Assign Custody"}
         </Button>
@@ -127,6 +149,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={catModalOpen} 
                 setModalOpen={setCatModalOpen} 
+                canManage={canManageAssetSettings}
               />
             ) : null}
             {activeTab === "assets" ? (
@@ -134,6 +157,8 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={assetModalOpen} 
                 setModalOpen={setAssetModalOpen} 
+                canRegister={canRegisterAsset}
+                canPost={canPostAsset}
               />
             ) : null}
             {activeTab === "custody" ? (
@@ -141,6 +166,7 @@ export default function FinanceAssetsPage() {
                 ar={ar} 
                 modalOpen={custodyModalOpen} 
                 setModalOpen={setCustodyModalOpen} 
+                canManage={canRegisterAsset}
               />
             ) : null}
           </motion.div>
@@ -153,11 +179,13 @@ export default function FinanceAssetsPage() {
 function AssetCategoriesTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canManage = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canManage?: boolean;
 }) {
   const categoriesQ = useAssetCategoriesQuery();
   const accountsQ = useAccountingAccountsQuery();
@@ -177,27 +205,36 @@ function AssetCategoriesTab({
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await createM.mutateAsync({
-      name: form.name,
-      assetAccountId: form.assetAccountId ? Number(form.assetAccountId) : undefined,
-      depreciationExpenseAccountId: form.depreciationExpenseAccountId
-        ? Number(form.depreciationExpenseAccountId)
-        : undefined,
-      accumulatedDepreciationAccountId: form.accumulatedDepreciationAccountId
-        ? Number(form.accumulatedDepreciationAccountId)
-        : undefined,
-      usefulLifeMonths: form.usefulLifeMonths ? Number(form.usefulLifeMonths) : undefined
-    });
-    setForm({
-      name: "",
-      assetAccountId: "",
-      depreciationExpenseAccountId: "",
-      accumulatedDepreciationAccountId: "",
-      usefulLifeMonths: ""
-    });
-    setModalOpen(false);
+    if (rejectInvalidForm(event.currentTarget, ar)) return;
+    try {
+      await createM.mutateAsync({
+        name: form.name,
+        assetAccountId: form.assetAccountId ? Number(form.assetAccountId) : undefined,
+        depreciationExpenseAccountId: form.depreciationExpenseAccountId
+          ? Number(form.depreciationExpenseAccountId)
+          : undefined,
+        accumulatedDepreciationAccountId: form.accumulatedDepreciationAccountId
+          ? Number(form.accumulatedDepreciationAccountId)
+          : undefined,
+        usefulLifeMonths: form.usefulLifeMonths ? Number(form.usefulLifeMonths) : undefined
+      });
+      notifySuccess(ar ? "تمت إضافة تصنيف الأصل بنجاح" : "Asset category added successfully");
+      setForm({
+        name: "",
+        assetAccountId: "",
+        depreciationExpenseAccountId: "",
+        accumulatedDepreciationAccountId: "",
+        usefulLifeMonths: ""
+      });
+      setModalOpen(false);
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر إضافة تصنيف الأصل." : "Unable to add the asset category."
+      }));
+    }
   };
 
   const filtered = useMemo(() => {
@@ -263,7 +300,7 @@ function AssetCategoriesTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canManage)}
         onClose={() => setModalOpen(false)}
         title={ar ? "إضافة تصنيف أصل" : "Add Asset Category"}
         titleIcon={
@@ -286,7 +323,7 @@ function AssetCategoriesTab({
           </div>
         }
       >
-        <form id="asset-cat-form" className="circlemod-form" onSubmit={submit}>
+        <form id="asset-cat-form" className="circlemod-form" onSubmit={submit} noValidate>
           <div className="circlemod-section">
             <div className="circlemod-form-grid">
               <Field label={ar ? "اسم التصنيف" : "Category name"} required>
@@ -363,18 +400,22 @@ function AssetCategoriesTab({
 function AssetRegisterTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canRegister = true,
+  canPost = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canRegister?: boolean;
+  canPost?: boolean;
 }) {
   const categoriesQ = useAssetCategoriesQuery();
   const assetsQ = useFixedAssetsQuery();
   const centersQ = useCentersQuery();
   const suppliersQ = useSuppliersQuery();
   const expensesQ = useExpenseInvoicesQuery({});
-  const usersQ = useUsersQuery({ page: 1, pageSize: 200 }, true);
+  const usersQ = useUsersQuery({ role: "TEACHER", page: 1, pageSize: 200 }, true);
   const createM = useCreateFixedAssetMutation();
   const [userSearch, setUserSearch] = useState("");
   const centers = centersQ.data?.items ?? [];
@@ -408,36 +449,45 @@ function AssetRegisterTab({
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await createM.mutateAsync({
-      categoryId: Number(form.categoryId),
-      centerId: form.centerId ? Number(form.centerId) : undefined,
-      assetCode: form.assetCode,
-      name: form.name,
-      description: form.description || undefined,
-      purchaseDate: form.purchaseDate,
-      purchaseCost: Number(form.purchaseCost),
-      currentValue: form.currentValue ? Number(form.currentValue) : undefined,
-      usefulLifeMonths: form.usefulLifeMonths ? Number(form.usefulLifeMonths) : undefined,
-      status: form.status,
-      location: form.location || undefined,
-      custodianUserId: form.custodianUserId ? Number(form.custodianUserId) : undefined,
-      supplierId: form.supplierId ? Number(form.supplierId) : undefined,
-      expenseInvoiceId: form.expenseInvoiceId ? Number(form.expenseInvoiceId) : undefined,
-      notes: form.notes || undefined
-    });
-    setForm((current) => ({
-      ...current,
-      assetCode: "",
-      name: "",
-      description: "",
-      purchaseCost: "",
-      currentValue: "",
-      location: "",
-      notes: ""
-    }));
-    setModalOpen(false);
+    if (rejectInvalidForm(event.currentTarget, ar)) return;
+    try {
+      await createM.mutateAsync({
+        categoryId: Number(form.categoryId),
+        centerId: form.centerId ? Number(form.centerId) : undefined,
+        assetCode: form.assetCode,
+        name: form.name,
+        description: form.description || undefined,
+        purchaseDate: form.purchaseDate,
+        purchaseCost: Number(form.purchaseCost),
+        currentValue: form.currentValue ? Number(form.currentValue) : undefined,
+        usefulLifeMonths: form.usefulLifeMonths ? Number(form.usefulLifeMonths) : undefined,
+        status: form.status,
+        location: form.location || undefined,
+        custodianUserId: form.custodianUserId ? Number(form.custodianUserId) : undefined,
+        supplierId: form.supplierId ? Number(form.supplierId) : undefined,
+        expenseInvoiceId: form.expenseInvoiceId ? Number(form.expenseInvoiceId) : undefined,
+        notes: form.notes || undefined
+      });
+      notifySuccess(ar ? "تم تسجيل الأصل بنجاح" : "Asset registered successfully");
+      setForm((current) => ({
+        ...current,
+        assetCode: "",
+        name: "",
+        description: "",
+        purchaseCost: "",
+        currentValue: "",
+        location: "",
+        notes: ""
+      }));
+      setModalOpen(false);
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر تسجيل الأصل." : "Unable to register the asset."
+      }));
+    }
   };
 
   const filtered = useMemo(() => {
@@ -527,7 +577,7 @@ function AssetRegisterTab({
                       <Badge variant="warning" size="sm">
                         {ar ? "فاتورة" : "Invoice"}
                       </Badge>
-                    ) : !row.acquisitionJournalEntryId ? (
+                    ) : canPost && !row.acquisitionJournalEntryId ? (
                       <Button
                         size="sm"
                         variant="primary"
@@ -544,7 +594,7 @@ function AssetRegisterTab({
                         {ar ? "مرحل" : "Posted"}
                       </Badge>
                     )}
-                    {row.acquisitionJournalEntryId && (
+                    {canPost && row.acquisitionJournalEntryId && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -566,7 +616,7 @@ function AssetRegisterTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canRegister)}
         onClose={() => setModalOpen(false)}
         title={ar ? "تسجيل أصل جديد" : "Register New Asset"}
         titleIcon={
@@ -589,7 +639,7 @@ function AssetRegisterTab({
           </div>
         }
       >
-        <form id="asset-reg-form" className="circlemod-form" onSubmit={submit}>
+        <form id="asset-reg-form" className="circlemod-form" onSubmit={submit} noValidate>
           <div className="circlemod-section">
             <div className="circlemod-form-grid">
             <Field label={ar ? "التصنيف" : "Category"} required>
@@ -755,7 +805,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={!!acqModal}
+        isOpen={Boolean(acqModal && canPost)}
         onClose={() => setAcqModal(null)}
         title={ar ? "إنشاء قيد اقتناء الأصل" : "Post Asset Acquisition"}
         titleIcon={
@@ -781,15 +831,25 @@ function AssetRegisterTab({
         <form
           id="acq-form"
           className="circlemod-form"
+          noValidate
           onSubmit={async (e) => {
             e.preventDefault();
             if (!acqModal) return;
-            await postAcqM.mutateAsync({
-              id: acqModal.id,
-              payload: { financeAccountId: Number(acqForm.financeAccountId) }
-            });
-            setAcqModal(null);
-            setAcqForm({ financeAccountId: "" });
+            if (rejectInvalidForm(e.currentTarget, ar)) return;
+            try {
+              await postAcqM.mutateAsync({
+                id: acqModal.id,
+                payload: { financeAccountId: Number(acqForm.financeAccountId) }
+              });
+              notifySuccess(ar ? "تم إثبات اقتناء الأصل بنجاح" : "Asset acquisition posted successfully");
+              setAcqModal(null);
+              setAcqForm({ financeAccountId: "" });
+            } catch (error) {
+              notifyError(getLocalizedApiErrorMessage(error, {
+                ar,
+                fallback: ar ? "تعذر إثبات اقتناء الأصل." : "Unable to post the asset acquisition."
+              }));
+            }
           }}
         >
           <div className="circlemod-section">
@@ -823,7 +883,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={!!depModal}
+        isOpen={Boolean(depModal && canPost)}
         onClose={() => setDepModal(null)}
         title={ar ? "إهلاك الأصل للشهر" : "Run Asset Depreciation"}
         titleIcon={
@@ -852,11 +912,19 @@ function AssetRegisterTab({
           onSubmit={async (e) => {
             e.preventDefault();
             if (!depModal) return;
-            await postDepM.mutateAsync({
-              id: depModal.id,
-              payload: { periodYear: depForm.periodYear, periodMonth: depForm.periodMonth }
-            });
-            setDepModal(null);
+            try {
+              await postDepM.mutateAsync({
+                id: depModal.id,
+                payload: { periodYear: depForm.periodYear, periodMonth: depForm.periodMonth }
+              });
+              notifySuccess(ar ? "تم تسجيل إهلاك الأصل بنجاح" : "Asset depreciation posted successfully");
+              setDepModal(null);
+            } catch (error) {
+              notifyError(getLocalizedApiErrorMessage(error, {
+                ar,
+                fallback: ar ? "تعذر تسجيل إهلاك الأصل." : "Unable to post asset depreciation."
+              }));
+            }
           }}
         >
           <div className="circlemod-section">
@@ -899,16 +967,18 @@ function AssetRegisterTab({
 function AssetCustodyTab({ 
   ar, 
   modalOpen, 
-  setModalOpen 
+  setModalOpen,
+  canManage = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
+  canManage?: boolean;
 }) {
   const assetsQ = useFixedAssetsQuery();
   const custodyQ = useAssetCustodyLogsQuery();
   const centersQ = useCentersQuery();
-  const usersQ = useUsersQuery({ page: 1, pageSize: 200 }, true);
+  const usersQ = useUsersQuery({ role: "TEACHER", page: 1, pageSize: 200 }, true);
   const assignM = useAssignAssetCustodyMutation();
   const [userSearch, setUserSearch] = useState("");
   const centers = centersQ.data?.items ?? [];
@@ -924,20 +994,29 @@ function AssetCustodyTab({
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await assignM.mutateAsync({
-      assetId: Number(form.assetId),
-      payload: {
-        toUserId: form.toUserId ? Number(form.toUserId) : undefined,
-        centerId: form.centerId ? Number(form.centerId) : undefined,
-        assignedAt: form.assignedAt,
-        returnedAt: form.returnedAt || undefined,
-        notes: form.notes || undefined
-      }
-    });
-    setForm((current) => ({ ...current, toUserId: "", notes: "" }));
-    setModalOpen(false);
+    if (rejectInvalidForm(event.currentTarget, ar)) return;
+    try {
+      await assignM.mutateAsync({
+        assetId: Number(form.assetId),
+        payload: {
+          toUserId: form.toUserId ? Number(form.toUserId) : undefined,
+          centerId: form.centerId ? Number(form.centerId) : undefined,
+          assignedAt: form.assignedAt,
+          returnedAt: form.returnedAt || undefined,
+          notes: form.notes || undefined
+        }
+      });
+      notifySuccess(ar ? "تم تسجيل تسليم العهدة بنجاح" : "Asset custody assigned successfully");
+      setForm((current) => ({ ...current, toUserId: "", notes: "" }));
+      setModalOpen(false);
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر تسجيل تسليم العهدة." : "Unable to assign asset custody."
+      }));
+    }
   };
 
   const filtered = useMemo(() => {
@@ -998,7 +1077,7 @@ function AssetCustodyTab({
       </div>
 
       <Modal
-        isOpen={modalOpen}
+        isOpen={Boolean(modalOpen && canManage)}
         onClose={() => setModalOpen(false)}
         title={ar ? "تسجيل تسليم عهدة" : "Assign Custody"}
         titleIcon={
@@ -1021,7 +1100,7 @@ function AssetCustodyTab({
           </div>
         }
       >
-        <form id="custody-form" className="circlemod-form" onSubmit={submit}>
+        <form id="custody-form" className="circlemod-form" onSubmit={submit} noValidate>
           <div className="circlemod-section">
             <div className="circlemod-form-grid">
             <Field label={ar ? "الأصل" : "Asset"} required>

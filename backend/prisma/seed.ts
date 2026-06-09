@@ -1,4 +1,4 @@
-﻿import {
+import {
   AttemptStatus,
   ActivityType,
   AuditAction,
@@ -549,10 +549,11 @@ async function seed() {
   }) => {
     return prisma.invoice.upsert({
       where: {
-        studentId_month_year: {
+        studentId_month_year_invoiceType: {
           studentId: input.studentId,
           month: input.month,
-          year: input.year
+          year: input.year,
+          invoiceType: "TUITION_MONTHLY"
         }
       },
       update: {
@@ -626,7 +627,9 @@ async function seed() {
         amount: 2500,
         method: PaymentMethod.CASH,
         receivedById: centerAdmin.id,
-        receivedAt: new Date(currentYear, currentMonth - 1, 10, 11, 0, 0)
+        receivedAt: new Date(currentYear, currentMonth - 1, 10, 11, 0, 0),
+        centerId: centerNorth.id,
+        organizationId: organization.id
       }
     });
   }

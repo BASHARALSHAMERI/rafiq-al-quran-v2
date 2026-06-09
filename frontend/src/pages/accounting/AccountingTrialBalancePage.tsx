@@ -20,6 +20,8 @@ import { useAccountingTrialBalanceQuery } from "./accounting.hooks";
 import type { TrialBalanceResponse } from "./accounting.api";
 import { printAccountingDocument, formatYemeniCurrency } from "../../features/accounting/printAccounting";
 import { NavLink } from "react-router-dom";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -243,6 +245,15 @@ export default function AccountingTrialBalancePage() {
               <RefreshCw className="w-8 h-8 animate-spin text-brand-500" />
               <span className="text-slate-500 font-medium">جاري جلب الميزان...</span>
             </div>
+          ) : trialBalanceQ.isError ? (
+            <ErrorState
+              title="تعذر تحميل ميزان المراجعة"
+              description={getLocalizedApiErrorMessage(trialBalanceQ.error, {
+                ar: true,
+                fallback: "تعذر تحميل أرصدة الحسابات. حاول مرة أخرى."
+              })}
+              onRetry={() => void trialBalanceQ.refetch()}
+            />
           ) : filteredRows.length === 0 ? (
             <FinanceEmptyState
               variant={searchTerm ? "filtered" : "first-time"}

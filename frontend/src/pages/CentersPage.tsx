@@ -126,6 +126,7 @@ export default function CentersPage() {
   const [statusTarget, setStatusTarget] = useState<Center | null>(null);
   const [quickRole, setQuickRole] = useState<QuickRole | null>(null);
   const [quickErr, setQuickErr] = useState<string | null>(null);
+  const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
 
   const centerAdminSchedulesQ = useStaffSchedulesForCenter(activeCenter?.id, {
     enabled: modalMode === "edit" && Boolean(activeCenter?.id)
@@ -201,6 +202,19 @@ export default function CentersPage() {
 
   const pending = createM.isPending || updateM.isPending || statusM.isPending;
 
+  useEffect(() => {
+    if (!centersQ.isLoading) {
+      setShowSlowLoadMessage(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowSlowLoadMessage(true);
+    }, 8_000);
+
+    return () => window.clearTimeout(timer);
+  }, [centersQ.isLoading]);
+
   const resetFilters = () => {
     setQ("");
     setGFilter("ALL");
@@ -231,6 +245,9 @@ export default function CentersPage() {
       gender: center.gender || "",
       logoUrl: String(center.logoUrl ?? ""),
       mosqueName: String(center.mosqueName ?? ""),
+      latitude: (center as any).latitude != null ? String((center as any).latitude) : "",
+      longitude: (center as any).longitude != null ? String((center as any).longitude) : "",
+      allowedRadiusMeters: (center as any).allowedRadiusMeters != null ? String((center as any).allowedRadiusMeters) : "500",
       centerAdminUserId: typeof center.centerAdminUserId === "number" ? center.centerAdminUserId : "",
       supervisorUserIds: (center.centerSupervisors ?? []).map((item) => item.supervisorUserId),
       scheduleRows: createEmptyScheduleDraftRows()
@@ -274,6 +291,9 @@ export default function CentersPage() {
       gender: draft.gender,
       logoUrl: draft.logoUrl.trim() ? draft.logoUrl.trim() : null,
       mosqueName: draft.mosqueName.trim() || undefined,
+      latitude: draft.latitude ? Number(draft.latitude) : null,
+      longitude: draft.longitude ? Number(draft.longitude) : null,
+      allowedRadiusMeters: draft.allowedRadiusMeters ? Number(draft.allowedRadiusMeters) : null,
       centerAdminUserId: Number(draft.centerAdminUserId),
       supervisorUserIds: draft.supervisorUserIds
     };
@@ -444,7 +464,7 @@ export default function CentersPage() {
                 />
               ) : null}
 
-              {centersQ.isLoading ? (
+              {centersQ.isLoading && !showSlowLoadMessage ? (
                 <div className={view === "grid" ? "ctr-centers-grid" : "ctr-centers-list"}>
                   {Array.from({ length: view === "grid" ? 6 : 4 }).map((_, index) => (
                     <div
@@ -458,6 +478,19 @@ export default function CentersPage() {
                     />
                   ))}
                 </div>
+              ) : null}
+
+              {centersQ.isLoading && showSlowLoadMessage ? (
+                <ErrorState
+                  title={ar ? "البيانات تستغرق وقتاً أطول من المتوقع" : "Data is taking longer than expected"}
+                  description={
+                    ar
+                      ? "لا تزال بيانات المراكز قيد التحميل. يمكنك إعادة المحاولة أو فحص اتصال الخادم."
+                      : "Centers data is still loading. Retry or check the server connection."
+                  }
+                  onRetry={() => void refreshAll()}
+                  retryLabel={ar ? "إعادة المحاولة" : "Retry"}
+                />
               ) : null}
 
               {centersQ.isError ? (

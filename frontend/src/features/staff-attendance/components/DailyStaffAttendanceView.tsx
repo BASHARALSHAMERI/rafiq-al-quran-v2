@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ChevronLeft,
   UserCheck,
-  MoreHorizontal,
   Calendar,
   User
 } from "lucide-react";
@@ -21,6 +20,7 @@ import { ErrorState } from "../../../components/ui/ErrorState";
 import { Button } from "../../../components/ui/Button";
 import type { StaffAttendanceRecord } from "../staff-attendance.api";
 import { useStaffAttendance } from "../staff-attendance.api";
+import { useTimeFormat, fmtTime } from "../../../shared/utils/time-format";
 import {
   useClientPagination
 } from "../../../shared/ui/useClientPagination";
@@ -104,50 +104,57 @@ const getGeoStateBadge = (state: string | null | undefined, ar: boolean) => {
   }
 };
 
-const getScheduleDetails = (record: StaffAttendanceRecord, date: string) => {
+const getScheduleDetails = (record: StaffAttendanceRecord, date: string, hour12 = true) => {
+  if (record.effectiveShiftStart && record.effectiveShiftEnd) {
+    const expectedHours =
+      (new Date(record.effectiveShiftEnd).getTime() -
+        new Date(record.effectiveShiftStart).getTime()) /
+      3_600_000;
+    const locale = hour12 ? "ar-SA" : "ar-SA-u-nu-latn";
+    return {
+      scheduledTime: `${fmtTime(record.effectiveShiftStart, locale, hour12)} - ${fmtTime(record.effectiveShiftEnd, locale, hour12)}`,
+      expectedHours
+    };
+  }
+
   if (record.user.role !== "TEACHER") {
     return { scheduledTime: "", expectedHours: 0 };
   }
 
   const currentDayName = dayNames[new Date(date).getDay()] ?? "SUNDAY";
   const slots = (record.user.taughtCircles ?? []).flatMap((circle) =>
-    (circle.weeklyScheduleSlots ?? []).filter((slot) => slot.dayOfWeek === currentDayName)
+    (circle.weeklyScheduleSlots ?? []).filter(
+      (slot) => slot.dayOfWeek === currentDayName && slot.fromTime && slot.toTime
+    )
   );
 
   let expectedHours = 0;
 
   for (const slot of slots) {
-    const [startHour, startMinute] = slot.fromTime.split(":").map(Number);
-    const [endHour, endMinute] = slot.toTime.split(":").map(Number);
+    if (!slot.fromTime || !slot.toTime) continue;
+    const [startHour = 0, startMinute = 0] = slot.fromTime.split(":").map(Number);
+    const [endHour = 0, endMinute = 0] = slot.toTime.split(":").map(Number);
     expectedHours += endHour + endMinute / 60 - (startHour + startMinute / 60);
   }
 
   return {
-    scheduledTime: slots.map((slot) => `${slot.fromTime} - ${slot.toTime}`).join(", "),
+    scheduledTime: slots
+      .filter((s) => s.fromTime && s.toTime)
+      .map((slot) => `${slot.fromTime} - ${slot.toTime}`)
+      .join(", "),
     expectedHours
   };
-};
-
-const formatTime = (value: string | undefined, ar: boolean) => {
-  if (!value) {
-    return "—";
-  }
-
-  return new Date(value).toLocaleTimeString(ar ? "ar-EG" : "en-US", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
 };
 
 export function DailyStaffAttendanceView() {
   const { language } = useI18n();
   const ar = language === "ar";
-
   const [date, setDate] = useState(DEFAULT_DATE);
   const [search, setSearch] = useState("");
 
   const attendanceQuery = useStaffAttendance(date);
   const records = attendanceQuery.data ?? [];
+  const { hour12 } = useTimeFormat();
 
   const filteredRecords = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -294,7 +301,7 @@ export function DailyStaffAttendanceView() {
         ) : (
           <div className="ctr-grid-modern">
             {pagination.pagedRows.map((record) => {
-              const { expectedHours } = getScheduleDetails(record, date);
+              const { expectedHours, scheduledTime } = getScheduleDetails(record, date, hour12);
               const lateMinutes = record.lateMinutes ?? 0;
               const actualHours =
                 record.checkInTime && record.checkOutTime
@@ -333,12 +340,12 @@ export function DailyStaffAttendanceView() {
                   <div className="ctr-card-details bg-slate-50/30 p-3 rounded-xl mt-3 space-y-2">
                     <div className="ctr-card-detail-row">
                       <span className="ctr-card-detail-label text-[10px]">{ar ? "وقت الحضور" : "Check-in"}</span>
-                      <span className="ctr-card-detail-val text-[11px] font-bold">{formatTime(record.checkInTime, ar)}</span>
+                      <span className="ctr-card-detail-val text-[11px] font-bold">{fmtTime(record.checkInTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}</span>
                     </div>
 
                     <div className="ctr-card-detail-row">
                       <span className="ctr-card-detail-label text-[10px]">{ar ? "وقت الانصراف" : "Check-out"}</span>
-                      <span className="ctr-card-detail-val text-[11px] font-bold">{formatTime(record.checkOutTime, ar)}</span>
+                      <span className="ctr-card-detail-val text-[11px] font-bold">{fmtTime(record.checkOutTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}</span>
                     </div>
 
                     <div className="ctr-card-detail-row">
@@ -350,9 +357,14 @@ export function DailyStaffAttendanceView() {
 
                     <div className="ctr-card-detail-row">
                       <span className="ctr-card-detail-label text-[10px]">{ar ? "ساعات العمل" : "Work Hours"}</span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[11px] font-bold text-brand">{actualHours > 0 ? actualHours.toFixed(1) : "—"}</span>
-                        <span className="text-[9px] text-slate-400">/ {expectedHours.toFixed(1)}</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-[11px] font-bold text-brand">{actualHours > 0 ? actualHours.toFixed(1) : "—"}</span>
+                          <span className="text-[9px] text-slate-400">/ {expectedHours.toFixed(1)}</span>
+                        </div>
+                        {scheduledTime && (
+                          <span className="text-[9px] text-slate-400">{scheduledTime}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -363,10 +375,6 @@ export function DailyStaffAttendanceView() {
                       <span className={`text-[11px] font-bold ${lateMinutes > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
                         {lateMinutes > 0 ? (ar ? `${lateMinutes} دقيقة` : `${lateMinutes} min`) : (ar ? "لا يوجد" : "None")}
                       </span>
-                    </div>
-                    
-                    <div className="p-1.5 bg-slate-100 text-slate-400 rounded-lg group-hover:bg-brand group-hover:text-white transition-colors cursor-default">
-                      <MoreHorizontal size={14} />
                     </div>
                   </div>
                 </motion.div>

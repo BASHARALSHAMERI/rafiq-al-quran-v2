@@ -21,6 +21,7 @@ import type { Circle, CircleType } from "../features/org/types";
 import { useUsersQuery } from "../features/users/users.hooks";
 import { createEmptyScheduleDraftRows, hydrateScheduleDraftRows, serializeScheduleDraftRows, validateScheduleDraftRows } from "../features/org/circleSchedule";
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
+import { notifyInfo } from "../shared/ui/feedback";
 import { fadeUp, stagger } from "../shared/pageAnimations";
 
 import {
@@ -64,8 +65,7 @@ export default function CirclesPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const isTeacher = user?.role === "TEACHER";
-  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "SUPERVISOR" || user?.role === "CENTER_ADMIN";
+  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCenterId = parseNumber(searchParams.get("centerId"));
@@ -97,6 +97,12 @@ export default function CirclesPage() {
   const teacherCenterId = typeof draft.centerId === "number" ? draft.centerId : selectedCenterId;
   const teachersQ = useUsersQuery({ role: "TEACHER" as Role, centerId: teacherCenterId });
   const teachers = teachersQ.data?.items ?? [];
+
+  useEffect(() => {
+    if (user?.role === "TEACHER") {
+      notifyInfo(ar ? "تعرض هذه الصفحة الحلقات المعيّنة لك فقط." : "This page shows only circles assigned to you.");
+    }
+  }, [ar, user?.role]);
 
   useEffect(() => {
     if (!requestedCenterId || centersQ.isLoading || centersData.length === 0) return;
@@ -138,7 +144,7 @@ export default function CirclesPage() {
   const rangeFrom = filtered.length === 0 ? 0 : (curPage - 1) * pageSize + 1;
   const rangeTo = Math.min(filtered.length, curPage * pageSize);
 
-  const centerOpts = centersData.map((center) => ({ id: center.id, label: center.name }));
+  const centerOpts = centersData.map((center) => ({ id: center.id, label: center.name, mosqueName: center.mosqueName, latitude: center.latitude, longitude: center.longitude }));
   const teacherOpts = teachers.map((teacher) => ({ id: teacher.id, label: teacher.fullName }));
   const selectedDraftCenter = typeof draft.centerId === "number" ? centersData.find((center) => center.id === draft.centerId) : undefined;
   const pending = createM.isPending || updateM.isPending || statusM.isPending;
@@ -268,12 +274,6 @@ export default function CirclesPage() {
             }
           />
         </motion.div>
-
-        {isTeacher ? (
-          <motion.div variants={fadeUp} className="p-4 text-sm font-semibold text-blue-800 rounded-xl bg-blue-50 border border-blue-100">
-            {ar ? "تعرض هذه الصفحة الحلقات المعيّنة لك فقط." : "This page shows only circles assigned to you."}
-          </motion.div>
-        ) : null}
 
         {scopeMsg ? (
           <motion.div variants={fadeUp} className="ctr-inline-err">

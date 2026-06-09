@@ -10,6 +10,7 @@ import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/section_header.dart';
 import '../../core/utils/data_parsing_helper.dart';
@@ -62,13 +63,10 @@ class ChildDetailScreen extends ConsumerWidget {
     }
 
     if (link == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF7F8F5),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFF7F8F5),
-          centerTitle: false,
-        ),
-        body: const PageStateView.empty(
+      return const Scaffold(
+        backgroundColor: Color(0xFFF7F8F5),
+        appBar: StandardAppBar(title: ''),
+        body: PageStateView.empty(
           title: 'الابن غير موجود',
           message: 'لم يتم العثور على بيانات هذا الابن في الحساب الحالي.',
         ),
@@ -84,10 +82,7 @@ class ChildDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: Text('متابعة $name'),
-        centerTitle: false,
-      ),
+      appBar: StandardAppBar(title: 'متابعة $name'),
       body: profile == null
           ? const PageStateView.loading(
               title: 'جارٍ تحميل التفاصيل',

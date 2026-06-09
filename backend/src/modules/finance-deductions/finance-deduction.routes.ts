@@ -18,7 +18,7 @@ financeDeductionRouter.use(authGuard, attachScope);
 
 financeDeductionRouter.get(
   "/rules",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.ACCOUNTANT, Role.FINANCE_MANAGER, Role.AUDITOR]),
   financeDeductionController.listRules
 );
 
@@ -31,7 +31,7 @@ financeDeductionRouter.post(
 
 financeDeductionRouter.get(
   "/deductions",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.ACCOUNTANT, Role.FINANCE_MANAGER, Role.AUDITOR]),
   validateQuery(listEventsQuerySchema),
   financeDeductionController.listEvents
 );
@@ -45,7 +45,7 @@ financeDeductionRouter.post(
 
 financeDeductionRouter.patch(
   "/deductions/:id/review",
-  requireRoles([Role.SUPER_ADMIN]),
+  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_MANAGER]),
   validateBody(reviewEventSchema),
   financeDeductionController.reviewEvent
 );

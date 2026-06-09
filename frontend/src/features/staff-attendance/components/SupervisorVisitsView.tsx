@@ -20,8 +20,9 @@ import { ErrorState } from "../../../components/ui/ErrorState";
 import { fadeUp } from "../../../shared/pageAnimations";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import { entityFeedback, type LocalizedLabel } from "../../../shared/ui/feedback";
-
-import { useSupervisorVisitLogs } from "../staff-attendance.api";
+import {
+  useSupervisorVisitLogs,
+} from "../staff-attendance.api";
 import {
   useClientPagination
 } from "../../../shared/ui/useClientPagination";
@@ -39,13 +40,28 @@ export const getVisitStatusBadge = (status: string, ar: boolean) => {
 };
 
 
+const DEFAULT_MONTH = (() => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+})();
+
 export function SupervisorVisitsView() {
   const { language } = useI18n();
   const ar = language === "ar";
-
   const [search, setSearch] = useState("");
+  const [monthStr, setMonthStr] = useState(DEFAULT_MONTH);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
-  const visitsQuery = useSupervisorVisitLogs();
+
+  const queryFilters = useMemo(() => {
+    if (!monthStr) return undefined;
+    const [year, month] = monthStr.split("-").map(Number);
+    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    return { startDate, endDate };
+  }, [monthStr]);
+
+  const visitsQuery = useSupervisorVisitLogs(queryFilters);
   const visits = visitsQuery.data ?? [];
 
   const filteredVisits = useMemo(() => {
@@ -150,18 +166,37 @@ export function SupervisorVisitsView() {
       </div>
 
       <div className="ctr-controls mb-6">
-        <div className="ctr-search-wrap">
-          <Search className="ctr-search-icon" size={16} />
-          <input
-            type="text"
-            className="ctr-search-input"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              pagination.setCurrentPage(1);
-            }}
-            placeholder={ar ? "ابحث بالمشرف أو المركز أو التصنيف..." : "Search by supervisor, center, or category..."}
-          />
+        <div className="flex gap-4 items-center flex-1 flex-wrap">
+          <div className="ctr-search-wrap max-w-[280px] w-full">
+            <Search className="ctr-search-icon" size={16} />
+            <input
+              type="text"
+              className="ctr-search-input"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                pagination.setCurrentPage(1);
+              }}
+              placeholder={ar ? "ابحث بالمشرف أو المركز أو التصنيف..." : "Search by supervisor, center, or category..."}
+            />
+          </div>
+
+          <div className="ctr-search-wrap max-w-[240px] w-full">
+            <CalendarDays className="ctr-search-icon" size={16} />
+            <input
+              type="month"
+              className="ctr-search-input !px-10"
+              value={monthStr}
+              onChange={(e) => {
+                setMonthStr(e.target.value);
+                pagination.setCurrentPage(1);
+              }}
+            />
+          </div>
+
+          <div className="text-[12px] text-slate-500 italic hidden md:block">
+            {ar ? "يتم تحديث البيانات تلقائياً عند تغيير الشهر" : "Data updates automatically on month change"}
+          </div>
         </div>
         
         <div className="ctr-filters-group">
@@ -170,9 +205,10 @@ export function SupervisorVisitsView() {
             size="sm"
             onClick={() => {
               setSearch("");
+              setMonthStr(DEFAULT_MONTH);
               pagination.setCurrentPage(1);
             }}
-            disabled={!search.trim()}
+            disabled={!search.trim() && monthStr === DEFAULT_MONTH}
           >
             {ar ? "إعادة الضبط" : "Reset"}
           </Button>
@@ -262,14 +298,16 @@ export function SupervisorVisitsView() {
                        <div>
                          {getVisitStatusBadge(visit.status, ar)}
                        </div>
-                     <Button
-                       variant="ghost"
-                       size="sm"
-                       className="h-8 text-[11px] text-brand font-bold hover:bg-brand/5"
-                       onClick={(e) => { e.stopPropagation(); setSelectedVisitId(visit.id); }}
-                      >
-                       {ar ? "عرض التقرير" : "View Report"}
-                     </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-[11px] text-brand font-bold hover:bg-brand/5"
+                          onClick={(e) => { e.stopPropagation(); setSelectedVisitId(visit.id); }}
+                        >
+                          {ar ? "عرض" : "View"}
+                        </Button>
+                      </div>
                    </div>
                  </motion.div>
                );

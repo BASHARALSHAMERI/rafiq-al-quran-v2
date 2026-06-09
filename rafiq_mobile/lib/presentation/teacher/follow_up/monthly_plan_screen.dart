@@ -8,6 +8,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../../../core/utils/data_parsing_helper.dart';
 import '../../../../core/utils/period_label_formatter.dart';
 import '../../../../data/models/teacher_panel_dtos.dart';
@@ -15,6 +16,7 @@ import '../../shared/states/app_empty_state.dart';
 import '../../shared/states/app_error_state.dart';
 import '../../shared/states/app_loading_state.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/standard_app_bar.dart';
 
 class MonthlyPlanScreen extends ConsumerStatefulWidget {
   const MonthlyPlanScreen({super.key});
@@ -55,19 +57,17 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
           );
       ref.invalidate(teacherMonthlyPlansProvider(_period));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            automatic
-                ? 'تم اقتراح ${result.generated} خطة تلقائياً للشهر القادم.'
-                : 'تم توليد ${result.generated} خطة مع المحافظة على ${result.preserved} خطة معدلة أو معتمدة.',
-          ),
-        ),
+      AppSnackBar.success(
+        context,
+        automatic
+            ? 'تم اقتراح ${result.generated} خطة تلقائياً للشهر القادم.'
+            : 'تم توليد ${result.generated} خطة مع المحافظة على ${result.preserved} خطة معدلة أو معتمدة.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر توليد الخطط: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر توليد الخطط. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -95,13 +95,12 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
           );
       ref.invalidate(teacherMonthlyPlansProvider(_period));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم اعتماد $approved خطة بنجاح.')),
-      );
+      AppSnackBar.success(context, 'تم اعتماد $approved خطة بنجاح.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر اعتماد جميع الخطط: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر اعتماد جميع الخطط. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -141,9 +140,8 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('التخطيط الشهري'),
-        centerTitle: false,
+      appBar: const StandardAppBar(
+        title: 'التخطيط الشهري',
       ),
       body: circleId == null
           ? const AppEmptyState(
@@ -198,14 +196,7 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
                         onApproveAll: _approveAllPlans,
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      const Text(
-                        'خطط الطلاب',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 30,
-                          height: 1.2,
-                        ),
-                      ),
+                      const _SectionTitle(title: 'خطط الطلاب'),
                       const SizedBox(height: AppSpacing.md),
                       if (sortedPlans.isEmpty)
                         const AppEmptyState(
@@ -228,6 +219,41 @@ class _MonthlyPlanScreenState extends ConsumerState<MonthlyPlanScreen> {
                 );
               },
             ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              fontFamily: 'Cairo',
+            ),
+          ),
+          Container(
+            width: 24,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -259,63 +285,80 @@ class _MonthlyPlanOverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       padding: EdgeInsets.zero,
-      child: DecoratedBox(
+      child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFF8FBF8), Colors.white],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-          borderRadius: BorderRadius.circular(28),
+          color: AppColors.cardLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               Row(
                 children: [
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(18),
+                      color: AppColors.primaryLight.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.1)),
                     ),
                     child: const Icon(
                       Icons.calendar_month_rounded,
                       color: AppColors.primaryLight,
-                      size: 28,
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'خطة $monthLabel',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: AppColors.textPrimaryLight,
+                            fontFamily: 'Cairo',
+                          ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           circleName,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.textSecondaryLight,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          style: const TextStyle(
+                            color: AppColors.textSecondaryLight,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontFamily: 'Cairo',
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 16),
               Row(
                 children: [
+                  Expanded(
+                    child: _SummaryBox(
+                      value: '$approvedCount',
+                      label: 'خطط معتمدة',
+                      color: AppColors.successLight,
+                      background: const Color(0xFFEEF9F1),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _SummaryBox(
                       value: '$waitingCount',
@@ -324,22 +367,13 @@ class _MonthlyPlanOverviewCard extends StatelessWidget {
                       background: const Color(0xFFFFF8EC),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _SummaryBox(
-                      value: '$approvedCount',
-                      label: 'خطط معتمدة',
-                      color: AppColors.successLight,
-                      background: const Color(0xFFF2FBF5),
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 12),
               if (!hasPlans)
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 48,
                   child: OutlinedButton.icon(
                     onPressed: isGenerating ? null : () => onGenerate(),
                     style: OutlinedButton.styleFrom(
@@ -348,37 +382,40 @@ class _MonthlyPlanOverviewCard extends StatelessWidget {
                       ),
                       foregroundColor: AppColors.primaryLight,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     icon: isGenerating
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryLight),
                           )
-                        : const Icon(Icons.auto_awesome_rounded),
+                        : const Icon(Icons.auto_awesome_rounded, size: 18),
                     label: Text(
                       isGenerating ? 'جار الاقتراح...' : 'اقتراح خطط الطلاب',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
                   ),
                 )
               else if (waitingCount > 0)
                 SizedBox(
                   width: double.infinity,
-                  height: 54,
+                  height: 48,
                   child: ElevatedButton.icon(
                     onPressed: isApprovingAll ? null : onApproveAll,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          AppColors.primaryLight.withValues(alpha: 0.10),
+                      backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
                       foregroundColor: AppColors.primaryLight,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(14),
                         side: BorderSide(
-                          color: AppColors.primaryLight.withValues(alpha: 0.18),
+                          color: AppColors.primaryLight.withValues(alpha: 0.15),
                         ),
                       ),
                     ),
@@ -391,31 +428,37 @@ class _MonthlyPlanOverviewCard extends StatelessWidget {
                               color: AppColors.primaryLight,
                             ),
                           )
-                        : const Icon(Icons.check_rounded),
+                        : const Icon(Icons.check_rounded, size: 18),
                     label: const Text(
                       'اعتماد جميع الخطط',
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
                   ),
                 )
               else
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.successLight.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.successLight.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_rounded, color: AppColors.successLight),
-                      SizedBox(width: 8),
+                      Icon(Icons.check_rounded, color: AppColors.successLight, size: 18),
+                      SizedBox(width: 6),
                       Text(
                         'تم اعتماد جميع الخطط',
                         style: TextStyle(
                           color: AppColors.successLight,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'Cairo',
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -445,10 +488,10 @@ class _SummaryBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
@@ -456,18 +499,21 @@ class _SummaryBox extends StatelessWidget {
             value,
             style: TextStyle(
               color: color,
-              fontWeight: FontWeight.w900,
-              fontSize: 34,
-              height: 1,
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              height: 1.1,
+              fontFamily: 'Cairo',
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w700,
-                ),
+            style: const TextStyle(
+              color: AppColors.textSecondaryLight,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              fontFamily: 'Cairo',
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -486,142 +532,188 @@ class _StudentPlanCard extends StatelessWidget {
     final studentName = plan.student?.fullName ?? 'طالب';
     final levelLabel = DataParsingHelper.studentLevelLabel(plan.student?.level);
     final levelColor = DataParsingHelper.studentLevelColor(levelLabel);
+    
+    final hifzRange = _formatPlanRange(plan.hifz);
+    final reviewRange = _formatPlanRange(plan.review);
+    
     final isApproved = plan.status.toUpperCase() == 'APPROVED';
-    final progress = plan.progress.hifzCompletionRate.clamp(0, 100);
 
-    return AppCard(
-      onTap: () => context.push(RouteNames.teacherMonthlyPlanDetails(plan.id)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    final statusColor = isApproved ? AppColors.successLight : AppColors.warningLight;
+    final statusBg = isApproved ? const Color(0xFFEEF9F1) : const Color(0xFFFFF8EC);
+    final statusText = isApproved ? 'معتمد' : 'مسودة';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push(RouteNames.teacherMonthlyPlanDetails(plan.id)),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    if (levelLabel != null)
-                      _LevelPill(
-                        label: levelLabel,
-                        color: levelColor,
-                      ),
-                    if (levelLabel != null) const SizedBox(height: 10),
-                    Text(
-                      studentName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 24,
-                        height: 1.2,
+                    _StudentAvatar(name: studentName),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  studentName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimaryLight,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    fontFamily: 'Cairo',
+                                  ),
+                                ),
+                              ),
+                              if (levelLabel != null) ...[
+                                const SizedBox(width: 6),
+                                _LevelPill(label: levelLabel, color: levelColor),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusBg,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${_hifzStartLabel(plan.hifz)} · ${_formatPages(plan.hifz.dailyRate)} صفحة/يوم',
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                      ),
+                    const SizedBox(width: 12),
+                    const Icon(
+                      Icons.keyboard_arrow_left_rounded,
+                      size: 20,
+                      color: AppColors.textSecondaryLight,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              _StudentAvatar(name: studentName),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _PlanStateChip(
-                label: isApproved ? 'خطة الحفظ' : 'خطة الحفظ',
-                approved: isApproved,
-              ),
-              _PlanStateChip(
-                label: isApproved ? 'خطة المراجعة' : 'خطة المراجعة',
-                approved: isApproved,
-              ),
-            ],
-          ),
-          if (isApproved) ...[
-            const SizedBox(height: 14),
-            Text(
-              '${progress.toStringAsFixed(0)}%',
-              style: const TextStyle(
-                color: AppColors.textSecondaryLight,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: (progress / 100).clamp(0.0, 1.0),
-                minHeight: 8,
-                color: AppColors.primaryLight,
-                backgroundColor: AppColors.borderLight.withValues(alpha: 0.5),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                'التقدم',
-                style: TextStyle(
-                  color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.borderLight),
+                const SizedBox(height: 12),
+                _PlanRowItem(
+                  title: 'خطة الحفظ',
+                  range: hifzRange,
+                  pages: plan.hifz.targetPages,
+                  color: AppColors.primaryLight,
+                  backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
                 ),
-              ),
+                const SizedBox(height: 10),
+                _PlanRowItem(
+                  title: 'خطة المراجعة',
+                  range: reviewRange,
+                  pages: plan.review.targetPages,
+                  color: AppColors.infoLight,
+                  backgroundColor: AppColors.infoLight.withValues(alpha: 0.08),
+                ),
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _PlanStateChip extends StatelessWidget {
-  final String label;
-  final bool approved;
+class _PlanRowItem extends StatelessWidget {
+  final String title;
+  final String range;
+  final double? pages;
+  final Color color;
+  final Color backgroundColor;
 
-  const _PlanStateChip({
-    required this.label,
-    required this.approved,
+  const _PlanRowItem({
+    required this.title,
+    required this.range,
+    required this.pages,
+    required this.color,
+    required this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = approved ? AppColors.successLight : AppColors.warningLight;
-    final background =
-        approved ? const Color(0xFFEEF9F1) : const Color(0xFFFFF8EC);
-    final icon = approved ? Icons.check_rounded : Icons.hourglass_top_rounded;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
+    return Row(
+      children: [
+        Container(
+          width: 80,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            title,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 11,
+              fontFamily: 'Cairo',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            range,
+            style: const TextStyle(
+              color: AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              fontFamily: 'Cairo',
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 12),
+        if (pages != null)
           Text(
-            label,
+            '${_formatPages(pages)} صفحة',
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w800,
               fontSize: 12,
+              fontFamily: 'Cairo',
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -638,7 +730,7 @@ class _LevelPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
@@ -647,8 +739,9 @@ class _LevelPill extends StatelessWidget {
         label,
         style: TextStyle(
           color: color,
-          fontWeight: FontWeight.w800,
-          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+          fontFamily: 'Cairo',
         ),
       ),
     );
@@ -662,20 +755,23 @@ class _StudentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initial = name.trim().isEmpty ? '؟' : name.trim().characters.first;
+
     return Container(
-      width: 58,
-      height: 58,
+      width: 44,
+      height: 44,
       decoration: const BoxDecoration(
         color: Color(0xFFE8F0ED),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
-          name.trim().isEmpty ? '؟' : name.trim().characters.first,
+          initial,
           style: const TextStyle(
-            color: AppColors.primaryLight,
+            color: Color(0xFF1E2A25),
             fontWeight: FontWeight.w900,
-            fontSize: 28,
+            fontSize: 20,
+            fontFamily: 'Cairo',
           ),
         ),
       ),
@@ -701,21 +797,30 @@ bool _isAutomaticSuggestionWindow(YearMonth period) {
   return suggested.month == period.month && suggested.year == period.year;
 }
 
-String _hifzStartLabel(TeacherPlanSegmentDto segment) {
-  if (segment.fromSurah == null || segment.fromAyah == null) {
-    return 'لم يحدد النطاق';
+String _formatPlanRange(TeacherPlanSegmentDto segment) {
+  if (segment.fromSurah == null) return 'غير محدد';
+  
+  final fromSurahName = QuranData.findByNumber(segment.fromSurah!)?.name ?? 'سورة ${segment.fromSurah}';
+  final toSurahNum = segment.toSurah;
+  final toSurahName = toSurahNum != null ? (QuranData.findByNumber(toSurahNum)?.name ?? 'سورة $toSurahNum') : null;
+  
+  if (toSurahNum == null || toSurahNum == segment.fromSurah) {
+    if (segment.fromAyah != null && segment.toAyah != null) {
+      return '$fromSurahName (${segment.fromAyah}-${segment.toAyah})';
+    }
+    return fromSurahName;
   }
-
-  final surah = QuranData.findByNumber(segment.fromSurah!);
-  return '${surah?.name ?? 'سورة ${segment.fromSurah}'} آية ${segment.fromAyah}';
+  
+  final fromAyahStr = segment.fromAyah != null ? ' (${segment.fromAyah})' : '';
+  final toAyahStr = segment.toAyah != null ? ' (${segment.toAyah})' : '';
+  return '$fromSurahName$fromAyahStr - $toSurahName$toAyahStr';
 }
 
 String _formatPages(double? value) {
-  if (value == null) {
-    return '0';
-  }
-
+  if (value == null) return '0';
   return value == value.roundToDouble()
       ? value.toStringAsFixed(0)
       : value.toStringAsFixed(1);
 }
+
+

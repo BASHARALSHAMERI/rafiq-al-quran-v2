@@ -8,9 +8,10 @@ interface DonorCardProps {
   ar: boolean;
   view: "grid" | "list";
   openEdit: (donor: FinanceDonorV2) => void;
+  canEdit?: boolean;
 }
 
-export default function DonorCard({ donor, ar, view, openEdit }: DonorCardProps) {
+export default function DonorCard({ donor, ar, view, openEdit, canEdit = true }: DonorCardProps) {
   const totalReceived = (donor.donations ?? [])
     .filter((d) => d.status === "RECEIVED")
     .reduce((sum, d) => sum + d.amount, 0);
@@ -65,16 +66,18 @@ export default function DonorCard({ donor, ar, view, openEdit }: DonorCardProps)
           </div>
         </div>
 
-        <div className="ctr-card-actions">
-          <button
-            type="button"
-            className="ctr-card-btn-icon"
-            onClick={() => openEdit(donor)}
-            title={ar ? "تعديل" : "Edit"}
-          >
-            <Edit3 size={16} />
-          </button>
-        </div>
+        {canEdit ? (
+          <div className="ctr-card-actions">
+            <button
+              type="button"
+              className="ctr-card-btn-icon"
+              onClick={() => openEdit(donor)}
+              title={ar ? "تعديل" : "Edit"}
+            >
+              <Edit3 size={16} />
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -145,12 +148,14 @@ export default function DonorCard({ donor, ar, view, openEdit }: DonorCardProps)
         )}
       </div>
 
-      <div className="ctr-card-actions">
-        <button type="button" className="ctr-card-btn primary" onClick={() => openEdit(donor)}>
-          <Edit3 size={16} />
-          {ar ? "تعديل المتبرع" : "Edit Donor"}
-        </button>
-      </div>
+      {canEdit ? (
+        <div className="ctr-card-actions">
+          <button type="button" className="ctr-card-btn primary" onClick={() => openEdit(donor)}>
+            <Edit3 size={16} />
+            {ar ? "تعديل المتبرع" : "Edit Donor"}
+          </button>
+        </div>
+      ) : null}
     </motion.div>
   );
 }

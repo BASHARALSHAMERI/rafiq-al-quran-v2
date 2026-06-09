@@ -48,6 +48,10 @@ type CreateCenterInput = {
   gender: Gender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone: string;
   centerAdminUserId: number;
   supervisorUserIds: number[];
@@ -61,6 +65,10 @@ type UpdateCenterInput = {
   gender?: Gender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string | null;
   centerAdminUserId?: number;
   supervisorUserIds?: number[];
@@ -118,6 +126,8 @@ const centerSelect = {
   gender: true,
   logoUrl: true,
   mosqueName: true,
+  latitude: true,
+  longitude: true,
   timezone: true,
   centerAdminUserId: true,
   code: true,
@@ -212,6 +222,44 @@ const circleSelect = {
       toTime: true,
       fromPrayer: true,
       toPrayer: true
+    }
+  }
+} satisfies Prisma.CircleSelect;
+
+const circleListSelect = {
+  id: true,
+  name: true,
+  gender: true,
+  circleType: true,
+  isActive: true,
+  centerId: true,
+  teacherId: true,
+  mosqueName: true,
+  locationText: true,
+  latitude: true,
+  longitude: true,
+  allowedRadiusMeters: true,
+  createdAt: true,
+  updatedAt: true,
+  center: {
+    select: {
+      id: true,
+      name: true,
+      gender: true,
+      code: true
+    }
+  },
+  teacher: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      isActive: true
+    }
+  },
+  _count: {
+    select: {
+      enrollments: true
     }
   }
 } satisfies Prisma.CircleSelect;
@@ -464,7 +512,7 @@ export const orgRepository = {
     return prisma.circle.findMany({
       where,
       orderBy: [{ centerId: "asc" }, { name: "asc" }],
-      select: circleSelect
+      select: circleListSelect
     });
   },
 
@@ -551,6 +599,10 @@ export const orgRepository = {
           gender: input.gender,
           logoUrl: input.logoUrl ?? null,
           mosqueName: input.mosqueName ?? null,
+          locationText: input.locationText ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
+          allowedRadiusMeters: input.allowedRadiusMeters ?? null,
           timezone: input.timezone,
           centerAdminUserId: input.centerAdminUserId,
           code: input.code,
@@ -615,7 +667,11 @@ export const orgRepository = {
           ...(input.gender !== undefined ? { gender: input.gender } : {}),
           ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl ?? null } : {}),
           ...(input.mosqueName !== undefined ? { mosqueName: input.mosqueName ?? null } : {}),
-          ...(input.timezone !== undefined ? { timezone: input.timezone ?? "Asia/Riyadh" } : {}),
+          ...(input.locationText !== undefined ? { locationText: input.locationText ?? null } : {}),
+          ...(input.latitude !== undefined ? { latitude: input.latitude ?? null } : {}),
+          ...(input.longitude !== undefined ? { longitude: input.longitude ?? null } : {}),
+          ...(input.allowedRadiusMeters !== undefined ? { allowedRadiusMeters: input.allowedRadiusMeters ?? null } : {}),
+          ...(input.timezone !== undefined ? { timezone: input.timezone ?? "Asia/Aden" } : {}),
           ...(input.centerAdminUserId !== undefined
             ? { centerAdminUserId: input.centerAdminUserId }
             : {}),

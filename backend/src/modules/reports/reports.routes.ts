@@ -1,8 +1,9 @@
-import { Role } from "@prisma/client";
+﻿import { Role } from "@prisma/client";
 import { Router } from "express";
 import { authGuard } from "../../shared/middleware/auth.middleware";
 import { requireRoles } from "../../shared/middleware/rbac.middleware";
 import { attachScope } from "../../shared/middleware/scope.middleware";
+import { verifyScope } from "../../shared/middleware/verify-scope.middleware";
 import { validateBody, validateParams, validateQuery } from "../../shared/middleware/validate.middleware";
 import { reportsController } from "./reports.controller";
 import {
@@ -17,17 +18,38 @@ import {
   studentMonthlyExportParamSchema,
   studentMonthlyReportQuerySchema,
   supervisorDashboardQuerySchema,
+  summaryCenterCircleQuerySchema,
+  summaryCenterQuerySchema,
   teacherMonthlyExportBodySchema,
   teacherMonthlyHalqaQuerySchema
 } from "./reports.validation";
 
 const reportsRouter = Router();
+const reportsFinanceRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+const reportsExportRoles = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.SUPERVISOR,
+  Role.TEACHER,
+  Role.PARENT,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
 
 reportsRouter.use(authGuard, attachScope);
 
 reportsRouter.get(
   "/reports/catalog",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   reportsController.catalog
 );
 
@@ -68,7 +90,7 @@ reportsRouter.get(
 
 reportsRouter.get(
   "/reports/finance",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsFinanceRoles),
   validateQuery(financeReportQuerySchema),
   reportsController.finance
 );
@@ -98,14 +120,14 @@ reportsRouter.post(
 
 reportsRouter.post(
   "/reports/export",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   validateBody(exportReportBodySchema),
   reportsController.export
 );
 
 reportsRouter.get(
   "/reports/exports/:id/download",
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.PARENT]),
+  requireRoles(reportsExportRoles),
   validateParams(reportExportIdParamSchema),
   reportsController.download
 );
@@ -121,19 +143,32 @@ reportsRouter.get(
 reportsRouter.get(
   "/reports/summary/circles",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterQuerySchema),
+  verifyScope("center", "query", "centerId"),
   reportsController.circlesSummary
 );
 
 reportsRouter.get(
   "/reports/summary/students",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterCircleQuerySchema),
+  verifyScope("center", "query", "centerId"),
+  verifyScope("circle", "query", "circleId"),
   reportsController.studentsSummary
 );
 
 reportsRouter.get(
   "/reports/summary/golden-records",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(summaryCenterQuerySchema),
+  verifyScope("center", "query", "centerId"),
   reportsController.goldenRecordsSummary
 );
 
 export default reportsRouter;
+
+
+
+
+
+

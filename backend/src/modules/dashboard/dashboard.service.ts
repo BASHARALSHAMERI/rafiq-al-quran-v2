@@ -214,7 +214,7 @@ export const dashboardService = {
     const allowed = ["SUPER_ADMIN", "CENTER_ADMIN", "SUPERVISOR", "TEACHER"];
 
     if (!allowed.includes(scope.role)) {
-      throw new AppError("Dashboard access is restricted for your role", 403);
+      throw new AppError("لوحة التحكم مقيدة لدورك", 403);
     }
   }
 };

@@ -55,7 +55,7 @@ const normalizeCenter = (value: Center): Center => {
     gender: value.gender,
     logoUrl: typeof value.logoUrl === "string" ? value.logoUrl : null,
     mosqueName: typeof value.mosqueName === "string" ? value.mosqueName : null,
-    timezone: typeof value.timezone === "string" ? value.timezone : "Asia/Riyadh",
+    timezone: typeof value.timezone === "string" ? value.timezone : "Asia/Aden",
     centerAdminUserId:
       typeof value.centerAdminUserId === "number" ? value.centerAdminUserId : null,
     organizationId: typeof value.organizationId === "number" ? value.organizationId : null,

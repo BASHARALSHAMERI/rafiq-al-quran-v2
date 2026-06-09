@@ -31,7 +31,7 @@ const examCriteriaBodySchema = z
     if (value.minQuestionCount > value.defaultQuestionCount) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "defaultQuestionCount must be greater than or equal to minQuestionCount",
+        message: "عدد الأسئلة الافتراضي يجب أن يكون أكبر من أو يساوي الحد الأدنى",
         path: ["defaultQuestionCount"]
       });
     }
@@ -39,7 +39,7 @@ const examCriteriaBodySchema = z
     if (value.defaultQuestionCount > value.maxQuestionCount) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "defaultQuestionCount must be less than or equal to maxQuestionCount",
+        message: "عدد الأسئلة الافتراضي يجب أن يكون أقل من أو يساوي الحد الأقصى",
         path: ["defaultQuestionCount"]
       });
     }
@@ -61,7 +61,7 @@ const committeeMembersBodySchema = z
     if (chairCount !== 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Committee must contain exactly one chair",
+        message: "اللجنة يجب أن تحتوي على رئيس واحد بالضبط",
         path: ["committeeMembers"]
       });
     }
@@ -127,7 +127,7 @@ export const listQuestionBankQuerySchema = z
       value.toSurah === undefined ||
       value.fromSurah <= value.toSurah,
     {
-      message: "fromSurah must be less than or equal to toSurah",
+      message: "سورة البداية يجب أن تكون أقل من أو تساوي سورة النهاية",
       path: ["fromSurah"]
     }
   );
@@ -147,7 +147,7 @@ export const createExamBodySchema = z
     if (value.passScore > value.maxScore) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "passScore cannot exceed maxScore",
+        message: "درجة النجاح لا يمكن أن تتجاوز الدرجة القصوى",
         path: ["passScore"]
       });
     }
@@ -156,7 +156,7 @@ export const createExamBodySchema = z
     if (value.type === "JUZ" && !hasBranch) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "examBranch is required for JUZ",
+        message: "فرع الاختبار مطلوب لاختبارات الجزء",
         path: ["examBranch"]
       });
     }
@@ -164,7 +164,7 @@ export const createExamBodySchema = z
     if (value.type === "FULL_QURAN" && hasBranch) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "examBranch must be empty for FULL_QURAN",
+        message: "فرع الاختبار يجب أن يكون فارغاً لاختبارات المصحف كاملاً",
         path: ["examBranch"]
       });
     }
@@ -182,7 +182,7 @@ export const updateExamBodySchema = z
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 export const createNominationRequestBodySchema = z
@@ -246,7 +246,7 @@ export const createQuestionBankItemBodySchema = z
       value.fromSurah < value.toSurah ||
       (value.fromSurah === value.toSurah && value.fromAyah <= value.toAyah),
     {
-      message: "Question range is invalid",
+      message: "نطاق الأسئلة غير صحيح",
       path: ["fromSurah"]
     }
   );
@@ -274,7 +274,7 @@ export const updateAttemptCommitteeBodySchema = z
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 export const generateAttemptQuestionsBodySchema = z
@@ -296,7 +296,7 @@ export const createAttemptQuestionBodySchema = z
       value.fromSurah < value.toSurah ||
       (value.fromSurah === value.toSurah && value.fromAyah <= value.toAyah),
     {
-      message: "Question range is invalid",
+      message: "نطاق الأسئلة غير صحيح",
       path: ["fromSurah"]
     }
   );

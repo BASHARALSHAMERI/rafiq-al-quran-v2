@@ -13,8 +13,9 @@ import {
 import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
-import { accountingService } from "../../accounting/accounting.service";
-import { postVoucherTx } from "../finance-v2.internal";
+import { accountingService, ensurePeriodOpenTx } from "../../accounting/accounting.service";
+import { financeV2Domain } from "../finance-v2.domain";
+import { nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
   return tx.accountingAccount.findFirst({
@@ -27,6 +28,39 @@ const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organization
     },
     orderBy: [{ systemKey: "desc" }, { code: "desc" }, { id: "asc" }]
   });
+};
+
+const resolveExpenseInvoiceCenterWhere = (
+  scope: ScopeContext,
+  centerId?: number
+): Prisma.ExpenseInvoiceWhereInput => {
+  financeV2Domain.ensureCenterAllowed(scope, centerId);
+
+  if (centerId) {
+    return { centerId };
+  }
+
+  if (scope.allAccess) {
+    return {};
+  }
+
+  return { centerId: { in: scope.centerIds } };
+};
+
+const ensureExpenseInvoiceScope = (
+  scope: ScopeContext,
+  invoice: { centerId: number | null }
+) => {
+  financeV2Domain.ensureScopedCenterRequired(scope, invoice.centerId);
+};
+
+const ensureFinanceAccountScope = (
+  scope: ScopeContext,
+  financeAccount: { centerId: number | null }
+) => {
+  if (financeAccount.centerId) {
+    financeV2Domain.ensureCenterAllowed(scope, financeAccount.centerId);
+  }
 };
 
 export const expensesService = {
@@ -78,7 +112,7 @@ export const expensesService = {
         }
       });
       if (!account) {
-        throw new AppError("Expense posting account not found", 404);
+        throw new AppError("حساب ترحيل المصروفات غير موجود", 404);
       }
     }
 
@@ -97,10 +131,12 @@ export const expensesService = {
     scope: ScopeContext,
     query: { centerId?: number; status?: ExpenseInvoiceStatus; supplierId?: number }
   ) {
+    const centerWhere = resolveExpenseInvoiceCenterWhere(scope, query.centerId);
+
     const invoices = await prisma.expenseInvoice.findMany({
       where: {
         organizationId: scope.organizationId,
-        ...(query.centerId ? { centerId: query.centerId } : {}),
+        ...centerWhere,
         ...(query.status ? { status: query.status } : {}),
         ...(query.supplierId ? { supplierId: query.supplierId } : {})
       },
@@ -128,6 +164,7 @@ export const expensesService = {
     }
   ) {
     const invoiceDate = new Date(input.invoiceDate);
+    financeV2Domain.ensureScopedCenterRequired(scope, input.centerId);
     
     // Check if period open
     await prisma.$transaction(async (tx) => {
@@ -159,10 +196,12 @@ export const expensesService = {
       });
 
       if (!invoice || invoice.organizationId !== scope.organizationId) {
-        throw new AppError("Invoice not found", 404);
+        throw new AppError("الفاتورة غير موجودة", 404);
       }
+      ensureExpenseInvoiceScope(scope, invoice);
+
       if (invoice.status !== ExpenseInvoiceStatus.DRAFT && invoice.status !== ExpenseInvoiceStatus.PENDING_APPROVAL) {
-        throw new AppError("Only DRAFT/PENDING invoices can be approved", 400);
+        throw new AppError("فقط الفواتير المسودة أو المعلقة يمكن اعتمادها", 400);
       }
 
       await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
@@ -190,13 +229,15 @@ export const expensesService = {
           }
         });
         if (!categoryAccount) {
-          throw new AppError("Expense category is not linked to a posting expense account", 409);
+          throw new AppError("التصنيف غير مرتبط بحساب مصروفات ترحيل", 409);
         }
 
         // Find AP Account
         const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
 
         if (apAccount) {
+          const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
+
           const entry = await tx.journalEntry.create({
             data: {
               organizationId: scope.organizationId,
@@ -206,6 +247,7 @@ export const expensesService = {
               sourceType: JournalSourceType.EXPENSE_INVOICE,
               sourceId: invoice.id,
               status: JournalEntryStatus.POSTED,
+              fiscalPeriodId: fiscalPeriod?.id ?? null,
               description: invoice.description,
               postedById: scope.userId,
               postedAt: new Date()
@@ -256,16 +298,18 @@ export const expensesService = {
       });
 
       if (!invoice || invoice.organizationId !== scope.organizationId) {
-        throw new AppError("Invoice not found", 404);
+        throw new AppError("الفاتورة غير موجودة", 404);
       }
+      ensureExpenseInvoiceScope(scope, invoice);
+
       if (invoice.status !== ExpenseInvoiceStatus.APPROVED && invoice.status !== ExpenseInvoiceStatus.PARTIALLY_PAID) {
-        throw new AppError("Invoice must be approved to be paid", 400);
+        throw new AppError("الفاتورة يجب أن تكون معتمدة للدفع", 400);
       }
 
       const paymentAmount = new Prisma.Decimal(input.amount);
       const paidAt = new Date();
       if (paymentAmount.lte(0)) {
-        throw new AppError("Payment amount must be greater than zero", 400);
+        throw new AppError("مبلغ الدفع يجب أن يكون أكبر من صفر", 400);
       }
 
       const existingPayments = await tx.expensePayment.aggregate({
@@ -275,7 +319,7 @@ export const expensesService = {
       const alreadyPaid = existingPayments._sum.amount || new Prisma.Decimal(0);
       const remainingAmount = invoice.amount.minus(alreadyPaid);
       if (paymentAmount.gt(remainingAmount)) {
-        throw new AppError("Payment exceeds expense invoice remaining balance", 409, {
+        throw new AppError("الدفعة تتجاوز الرصيد المتبقي للفاتورة", 409, {
           invoiceId: invoice.id,
           remainingAmount: remainingAmount.toFixed(2),
           paymentAmount: paymentAmount.toFixed(2)
@@ -296,8 +340,9 @@ export const expensesService = {
       });
 
       if (!financeAccount) {
-        throw new AppError("Finance account not found", 404, undefined, "ENTITY_NOT_FOUND");
+        throw new AppError("الحساب المالي غير موجود", 404, undefined, "ENTITY_NOT_FOUND");
       }
+      ensureFinanceAccountScope(scope, financeAccount);
 
       if (
         !financeAccount.accountingAccountId ||
@@ -314,7 +359,7 @@ export const expensesService = {
         })) > 0
       ) {
         throw new AppError(
-          "Finance account is not linked to an active posting asset ledger account",
+          "الحساب المالي غير مرتبط بحساب أصول ترحيل نشط",
           409,
           { financeAccountId: financeAccount.id, expectedType: AccountingAccountType.ASSET },
           "FINANCE_ACCOUNT_LEDGER_MAPPING_MISSING"
@@ -322,7 +367,7 @@ export const expensesService = {
       }
 
       // Create Finance Voucher (Disbursement)
-      const voucherNo = `DISB-${Date.now()}`;
+      const voucherNo = await nextVoucherNoTx(tx, "DV", scope.organizationId);
       const voucher = await tx.financeVoucher.create({
         data: {
           organizationId: scope.organizationId,
@@ -371,59 +416,11 @@ export const expensesService = {
 
       // TODO: Add audit log for EXPENSE_INVOICE payment (AUDIT-TRAIL-FINANCE-1)
 
-      // Create AP Payment Journal Entry
-      const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
-
-      const creditAccountId = financeAccount.accountingAccountId;
-
-      if (apAccount && creditAccountId) {
-        const entry = await tx.journalEntry.create({
-          data: {
-            organizationId: scope.organizationId,
-            centerId: invoice.centerId,
-            entryNo: `PAY-EXP-${payment.id}`,
-            entryDate: paidAt,
-            sourceType: JournalSourceType.EXPENSE_PAYMENT,
-            sourceId: payment.id,
-            status: JournalEntryStatus.POSTED,
-            description: `Payment for expense invoice ${invoice.id}`,
-            postedById: scope.userId,
-            postedAt: new Date()
-          }
-        });
-
-        await tx.journalEntryLine.createMany({
-          data: [
-            {
-              organizationId: scope.organizationId,
-              journalEntryId: entry.id,
-              accountId: apAccount.id,
-              centerId: invoice.centerId,
-              debit: paymentAmount,
-              credit: new Prisma.Decimal(0),
-              memo: `AP settlement for invoice ${invoice.id}`,
-              sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
-              sourceLineId: payment.id
-            },
-            {
-              organizationId: scope.organizationId,
-              journalEntryId: entry.id,
-              accountId: creditAccountId,
-              centerId: invoice.centerId,
-              debit: new Prisma.Decimal(0),
-              credit: paymentAmount,
-              memo: `Cash payment for invoice ${invoice.id}`,
-              sourceLineType: JournalSourceType.EXPENSE_PAYMENT,
-              sourceLineId: payment.id
-            }
-          ]
-        });
-
-        await tx.expensePayment.update({
-          where: { id: payment.id },
-          data: { journalEntryId: entry.id }
-        });
-      }
+      await accountingService.postExpensePaymentSettlementJournalEntryTx(tx, scope, {
+        expensePaymentId: payment.id,
+        voucherId: voucher.id,
+        postedById: scope.userId
+      });
 
       return payment;
     });

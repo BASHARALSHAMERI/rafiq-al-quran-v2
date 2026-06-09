@@ -132,7 +132,7 @@ const resolveWriteVisibilityScope = async (
 
   if (input.visibility === "ORG") {
     if (scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Only super admin can create ORG visibility items", 403);
+      throw new AppError("فقط مدير النظام يمكنه إنشاء عناصر مرئية للمنظمة", 403);
     }
 
     return {
@@ -152,7 +152,7 @@ const resolveWriteVisibilityScope = async (
     });
 
     if (!center) {
-      throw new AppError("Center not found", 404);
+      throw new AppError("المركز غير موجود", 404);
     }
 
     return {
@@ -170,13 +170,13 @@ const resolveWriteVisibilityScope = async (
   });
 
   if (!circle) {
-    throw new AppError("Circle not found", 404);
+    throw new AppError("الحلقة غير موجودة", 404);
   }
 
   libraryDomain.assertCenterInAccess(accessWindow, circle.centerId);
 
   if (input.centerId && input.centerId !== circle.centerId) {
-    throw new AppError("circleId does not belong to selected center", 400);
+    throw new AppError("الحلقة لا تنتمي للمركز المحدد", 400);
   }
 
   return {
@@ -204,11 +204,11 @@ const ensureCategoryCompatibility = async (input: {
   });
 
   if (!category) {
-    throw new AppError("Category not found", 404);
+    throw new AppError("التصنيف غير موجود", 404);
   }
 
   if (category.centerId && category.centerId !== input.centerId) {
-    throw new AppError("Category does not belong to selected center scope", 400);
+    throw new AppError("التصنيف لا ينتمي لنطاق المركز المحدد", 400);
   }
 
   return category.id;
@@ -268,11 +268,11 @@ export const libraryService = {
     const normalizedCode = libraryDomain.normalizeCategoryCode(input.code);
 
     if (!normalizedCode) {
-      throw new AppError("Category code is invalid", 400);
+      throw new AppError("رمز التصنيف غير صالح", 400);
     }
 
     if (!input.centerId && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("centerId is required for your role", 400);
+      throw new AppError("معرف المركز مطلوب لدورك", 400);
     }
 
     if (input.centerId) {
@@ -284,7 +284,7 @@ export const libraryService = {
       });
 
       if (!center) {
-        throw new AppError("Center not found", 404);
+        throw new AppError("المركز غير موجود", 404);
       }
     }
 
@@ -297,7 +297,7 @@ export const libraryService = {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Category code already exists", 409);
+        throw new AppError("رمز التصنيف موجود مسبقاً", 409);
       }
 
       throw error;
@@ -385,30 +385,30 @@ export const libraryService = {
     libraryDomain.assertCanWriteItems(scope);
 
     if (!file) {
-      throw new AppError("File upload is required", 400);
+      throw new AppError("رفع ملف مطلوب", 400);
     }
 
     if (!libraryStorage.isAllowedMimeType(file.mimeType)) {
-      throw new AppError("Unsupported file type", 400);
+      throw new AppError("نوع الملف غير مدعوم", 400);
     }
 
     if (file.size > LIBRARY_MAX_FILE_SIZE_BYTES) {
-      throw new AppError("Uploaded file exceeds size limit", 413, undefined, "PAYLOAD_TOO_LARGE");
+      throw new AppError("الملف المرفوع يتجاوز الحد المسموح", 413, undefined, "PAYLOAD_TOO_LARGE");
     }
 
     // Strict MIME-type to LibraryItemType enforcement
     const mime = file.mimeType.toLowerCase();
     if (input.type === LibraryItemType.AUDIO && !mime.startsWith("audio/")) {
-      throw new AppError("Payload type is AUDIO but file content is not an audio family", 400);
+      throw new AppError("نوع المحتوى صوتي ولكن الملف ليس من نوع صوتي", 400);
     }
     if (input.type === LibraryItemType.VIDEO && !mime.startsWith("video/")) {
-      throw new AppError("Payload type is VIDEO but file content is not a video family", 400);
+      throw new AppError("نوع المحتوى فيديو ولكن الملف ليس من نوع فيديو", 400);
     }
     if (
       input.type === LibraryItemType.DOCUMENT &&
       !(mime.startsWith("application/") || mime.startsWith("image/") || mime.startsWith("text/"))
     ) {
-      throw new AppError("Payload type is DOCUMENT but file content is not a document/image family", 400);
+      throw new AppError("نوع المحتوى مستند ولكن الملف ليس من نوع مستند/صورة", 400);
     }
 
     const accessWindow = await resolveAccessWindow(scope);
@@ -419,7 +419,7 @@ export const libraryService = {
     });
 
     if (scope.role === Role.TEACHER && input.visibility === "ORG") {
-      throw new AppError("Teacher cannot upload ORG visibility items", 403);
+      throw new AppError("المعلم لا يمكنه رفع عناصر على مستوى المنظمة", 403);
     }
 
     const categoryId = await ensureCategoryCompatibility({
@@ -432,7 +432,6 @@ export const libraryService = {
       organizationId: scope.organizationId,
       centerId: visibilityScope.centerId,
       mimeType: file.mimeType,
-      originalFileName: file.originalName,
       buffer: file.buffer
     });
 
@@ -442,7 +441,6 @@ export const libraryService = {
         organizationId: scope.organizationId,
         centerId: visibilityScope.centerId,
         mimeType: cover.mimeType,
-        originalFileName: cover.originalName,
         buffer: cover.buffer
       });
       coverStorageKey = savedCover.storageKey;
@@ -504,7 +502,7 @@ export const libraryService = {
     });
 
     if (!item || item.status === "ARCHIVED") {
-      throw new AppError("Library item not found", 404);
+      throw new AppError("عنصر المكتبة غير موجود", 404);
     }
 
     if (
@@ -514,7 +512,7 @@ export const libraryService = {
         circleId: item.circleId
       })
     ) {
-      throw new AppError("Library item is outside your scope", 403);
+      throw new AppError("عنصر المكتبة خارج نطاق صلاحياتك", 403);
     }
 
     const absolutePath = libraryStorage.resolveAbsolutePath(item.storageKey);
@@ -522,7 +520,7 @@ export const libraryService = {
     try {
       await access(absolutePath);
     } catch {
-      throw new AppError("Library file is missing from storage", 404);
+      throw new AppError("ملف المكتبة غير موجود في التخزين", 404);
     }
 
     await auditLogger.log({
@@ -557,7 +555,7 @@ export const libraryService = {
     });
 
     if (!item || item.status === "ARCHIVED") {
-      throw new AppError("Library item not found", 404);
+      throw new AppError("عنصر المكتبة غير موجود", 404);
     }
 
     if (
@@ -567,11 +565,11 @@ export const libraryService = {
         circleId: item.circleId
       })
     ) {
-      throw new AppError("Library item is outside your scope", 403);
+      throw new AppError("عنصر المكتبة خارج نطاق صلاحياتك", 403);
     }
 
     if (!item.coverStorageKey) {
-      throw new AppError("Library item does not have a cover", 404);
+      throw new AppError("عنصر المكتبة ليس له غلاف", 404);
     }
 
     const absolutePath = libraryStorage.resolveAbsolutePath(item.coverStorageKey);
@@ -579,7 +577,7 @@ export const libraryService = {
     try {
       await access(absolutePath);
     } catch {
-      throw new AppError("Library cover image is missing from storage", 404);
+      throw new AppError("صورة الغلاف غير موجودة في التخزين", 404);
     }
 
     return {
@@ -598,7 +596,7 @@ export const libraryService = {
     });
 
     if (!existingItem) {
-      throw new AppError("Library item not found", 404);
+      throw new AppError("عنصر المكتبة غير موجود", 404);
     }
 
     if (
@@ -608,7 +606,7 @@ export const libraryService = {
         circleId: existingItem.circleId
       })
     ) {
-      throw new AppError("Library item is outside your scope", 403);
+      throw new AppError("عنصر المكتبة خارج نطاق صلاحياتك", 403);
     }
 
     libraryDomain.assertTeacherOwnsItem(scope, existingItem.createdById);
@@ -692,7 +690,7 @@ export const libraryService = {
     });
 
     if (!existingItem) {
-      throw new AppError("Library item not found", 404);
+      throw new AppError("عنصر المكتبة غير موجود", 404);
     }
 
     if (
@@ -702,7 +700,7 @@ export const libraryService = {
         circleId: existingItem.circleId
       })
     ) {
-      throw new AppError("Library item is outside your scope", 403);
+      throw new AppError("عنصر المكتبة خارج نطاق صلاحياتك", 403);
     }
 
     libraryDomain.assertTeacherOwnsItem(scope, existingItem.createdById);

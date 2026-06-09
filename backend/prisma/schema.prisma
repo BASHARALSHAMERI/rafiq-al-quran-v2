@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Organization {
@@ -21,7 +22,6 @@ model Organization {
   attendancePolicy         AttendancePolicy?
   auditLogs                AuditLog[]
   centers                  Center[]
-  correctionRequests       CorrectionRequest[]
   donations                Donation[]
   donors                   Donor[]
   ExamGradeScale           ExamGradeScale[]
@@ -46,6 +46,7 @@ model Organization {
   matnCatalogs             MatnCatalog[]
   monthlyPlans             MonthlyPlan[]
   notifications            Notification[]
+  payments                 Payment[]
   payrollBatches           PayrollBatch[]
   payrollProfiles          PayrollProfile[]
   reportFiles              ReportFile[]
@@ -93,7 +94,7 @@ model Center {
   gender                   Gender                    @default(MALE)
   centerAdminUserId        Int                       @map("center_admin_user_id")
   logoUrl                  String?                   @map("logo_url") @db.VarChar(500)
-  timezone                 String                    @default("Asia/Riyadh") @db.VarChar(64)
+  timezone                 String                    @default("Asia/Aden") @db.VarChar(64)
   mosqueName               String?                   @map("mosque_name") @db.VarChar(255)
   allowedRadiusMeters      Int?                      @default(500) @map("allowed_radius_meters")
   latitude                 Decimal?                  @db.Decimal(10, 7)
@@ -108,7 +109,6 @@ model Center {
   centerAdmin              User                      @relation("ManagedCenters", fields: [centerAdminUserId], references: [id])
   organization             Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   circles                  Circle[]
-  correctionRequests       CorrectionRequest[]
   donations                Donation[]
   donors                   Donor[]
   examNominationRequests   ExamNominationRequest[]
@@ -127,7 +127,9 @@ model Center {
   libraryItems             LibraryItem[]
   monthlyPlans             MonthlyPlan[]
   notifications            Notification[]
+  payments                 Payment[]
   payrollBatches           PayrollBatch[]
+  payrollItems             PayrollItem[]
   payrollProfiles          PayrollProfile[]
   prayerTimeCache          PrayerTimeCache[]
   remoteRecitationBookings RemoteRecitationBooking[]
@@ -185,7 +187,6 @@ model Circle {
   weeklyScheduleSlots      CircleScheduleSlot[]
   center                   Center                    @relation(fields: [centerId], references: [id], onDelete: Cascade)
   teacher                  User                      @relation("TeacherCircles", fields: [teacherId], references: [id])
-  correctionRequests       CorrectionRequest[]
   examAttempts             ExamAttempt[]             @relation("ExamAttemptCircle")
   examNominationRequests   ExamNominationRequest[]
   exams                    Exam[]
@@ -346,9 +347,6 @@ model User {
   centerSupervisorLinks                    CenterSupervisor[]           @relation("CenterSupervisorUser")
   managedCenters                           Center[]                     @relation("ManagedCenters")
   taughtCircles                            Circle[]                     @relation("TeacherCircles")
-  correctionRequestsApplied                CorrectionRequest[]          @relation("CorrectionRequestAppliedBy")
-  correctionRequestsCreated                CorrectionRequest[]          @relation("CorrectionRequestRequestedBy")
-  correctionRequestsReviewed               CorrectionRequest[]          @relation("CorrectionRequestReviewedBy")
   examAttemptCommitteeAssignments          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeAssignedBy")
   examAttemptCommitteeMemberships          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeUser")
   examAttemptsApproved                     ExamAttempt[]                @relation("ExamAttemptApprovedBy")
@@ -395,6 +393,7 @@ model User {
   createdLibraryItems                      LibraryItem[]                @relation("LibraryItemCreatedBy")
   monthlyPlansAsStudent                    MonthlyPlan[]                @relation("MonthlyPlanStudent")
   monthlyPlansAsTeacher                    MonthlyPlan[]                @relation("MonthlyPlanTeacher")
+  monthlyPlansApproved                     MonthlyPlan[]                @relation("MonthlyPlanApprovedBy")
   notificationsCreated                     Notification[]               @relation("NotificationCreatedBy")
   notificationsReceived                    Notification[]               @relation("NotificationRecipient")
   createdParentProfiles                    ParentProfile[]              @relation("ParentProfileCreatedBy")
@@ -498,18 +497,20 @@ model TeacherProfile {
 }
 
 model SupervisorProfile {
-  userId             Int                     @id
-  assignedAt         DateTime?               @db.Date
-  status             SupervisorProfileStatus @default(ACTIVE)
-  educationLevel     String?                 @db.VarChar(120)
-  yearsExperience    Int?
-  quranQualification KhatmType?
-  professionalNotes  String?                 @db.VarChar(500)
-  createdByUserId    Int?
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  createdByUser      User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
-  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               Int                     @id
+  assignedAt           DateTime?               @db.Date
+  status               SupervisorProfileStatus @default(ACTIVE)
+  educationLevel       String?                 @db.VarChar(120)
+  yearsExperience      Int?
+  quranQualification   KhatmType?
+  professionalNotes    String?                 @db.VarChar(500)
+  monthlyHoursTarget   Int                     @default(80) @map("monthly_hours_target")
+  monthlyVisitsTarget  Int                     @default(20) @map("monthly_visits_target")
+  createdByUserId      Int?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  createdByUser        User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([createdByUserId])
@@ -728,7 +729,8 @@ model AttendancePolicy {
   defaultShiftDurationMinutes    Int            @default(480) @map("default_shift_duration_minutes")
   earlyDepartureThresholdMinutes Int            @default(15) @map("early_departure_threshold_minutes")
   prayerApiSource                String         @default("ALADHAN") @map("prayer_api_source") @db.VarChar(120)
-  timezone                       String         @default("Asia/Riyadh") @db.VarChar(64)
+  timezone                       String         @default("Asia/Aden") @db.VarChar(64)
+  timeFormat                     TimeFormat     @default(HOUR_12) @map("time_format")
   createdAt                      DateTime       @default(now()) @map("created_at")
   updatedAt                      DateTime       @updatedAt @map("updated_at")
   organization                   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -959,12 +961,15 @@ model FollowUpRecord {
   teacherId               Int                      @map("teacher_id")
   recordDate              DateTime                 @map("record_date") @db.Date
   type                    FollowUpType
+  /// @deprecated Legacy single-surah bridge for older mobile clients. Service (parseLegacySurahNumber) and mobile (student_profile_tabs, follow_up_widgets) still read this. Use fromSurah/toSurah for new writes. Remove in DB-CLEAN-4 after mobile migration confirmed.
   surah                   String?                  @db.VarChar(120)
   fromAyah                Int?                     @map("from_ayah")
   toAyah                  Int?                     @map("to_ayah")
   pagesCount              Decimal?                 @map("pages_count") @db.Decimal(5, 1)
   rating                  Int?
+  /// @deprecated Unstructured display fallback. Mobile reads this (student_profile_tabs). Use matnId FK to MatnCatalog for structured data. Remove in DB-CLEAN-4.
   matnName                String?                  @map("matn_name") @db.VarChar(120)
+  /// @deprecated Free-text mirror field. Mobile reads this (student_profile_tabs). No active enum link (MatnProgressStatus is orphaned). Remove in DB-CLEAN-4.
   matnStatus              String?                  @map("matn_status") @db.VarChar(50)
   notes                   String?                  @db.VarChar(500)
   createdAt               DateTime                 @default(now()) @map("created_at")
@@ -988,6 +993,7 @@ model FollowUpRecord {
 
   @@index([studentId, recordDate])
   @@index([circleId, recordDate])
+  @@index([teacherId, recordDate])
   @@index([status, recordDate])
   @@index([matnId])
   @@map("follow_up_records")
@@ -1037,39 +1043,6 @@ model SupervisorNote {
   @@index([category])
   @@index([status])
   @@map("supervisor_notes")
-}
-
-model CorrectionRequest {
-  id              Int                     @id @default(autoincrement())
-  organizationId  Int                     @map("organization_id")
-  centerId        Int                     @map("center_id")
-  circleId        Int                     @map("circle_id")
-  targetType      CorrectionTargetType    @map("target_type")
-  targetId        Int                     @map("target_id")
-  requestedById   Int                     @map("requested_by_id")
-  requestedByRole Role                    @map("requested_by_role")
-  reason          String
-  proposedChanges Json                    @map("proposed_changes")
-  currentSnapshot Json                    @map("current_snapshot")
-  status          CorrectionRequestStatus @default(PENDING)
-  reviewedById    Int?                    @map("reviewed_by_id")
-  reviewNote      String?                 @map("review_note") @db.VarChar(500)
-  reviewedAt      DateTime?               @map("reviewed_at")
-  appliedById     Int?                    @map("applied_by_id")
-  appliedAt       DateTime?               @map("applied_at")
-  createdAt       DateTime                @default(now()) @map("created_at")
-  updatedAt       DateTime                @updatedAt @map("updated_at")
-  appliedBy       User?                   @relation("CorrectionRequestAppliedBy", fields: [appliedById], references: [id])
-  center          Center                  @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  circle          Circle                  @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestedBy     User                    @relation("CorrectionRequestRequestedBy", fields: [requestedById], references: [id])
-  reviewedBy      User?                   @relation("CorrectionRequestReviewedBy", fields: [reviewedById], references: [id])
-
-  @@index([organizationId, status, createdAt])
-  @@index([targetType, targetId])
-  @@index([requestedById, createdAt])
-  @@map("correction_requests")
 }
 
 model QuranAyahIndex {
@@ -1562,6 +1535,7 @@ model TuitionPlan {
   @@map("tuition_plans")
 }
 
+/// @deprecated Not referenced by any active service or controller. Only appears in prisma/seed.ts for demo data. StudentFeeProfile (billing.service.ts) is the authoritative fee mechanism. Schedule removal in DB-CLEAN-4 after confirming no mobile/reporting dependency.
 model StudentTuitionAssignment {
   id            Int                     @id @default(autoincrement())
   studentId     Int
@@ -1596,11 +1570,11 @@ model Invoice {
   lockVersion   Int           @default(0) @map("lock_version")
   notes         String?       @db.VarChar(500)
   cancelledBy   User?         @relation("InvoiceCancelledBy", fields: [cancelledById], references: [id])
-  center        Center        @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  center        Center        @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  student       User          @relation("InvoiceStudent", fields: [studentId], references: [id], onDelete: Restrict)
   payments      Payment[]
 
-  @@unique([studentId, month, year])
+  @@unique([studentId, month, year, invoiceType])
   @@index([centerId, year, month])
   @@index([studentId])
   @@index([status, dueDate])
@@ -1617,12 +1591,14 @@ model Payment {
   receivedAt           DateTime        @default(now())
   createdAt            DateTime        @default(now())
   attachmentStorageKey String?         @map("attachment_storage_key") @db.VarChar(255)
-  centerId             Int?
+  centerId             Int
   externalTransferRef  String?         @map("external_transfer_ref") @db.VarChar(120)
   idempotencyKey       String?         @db.VarChar(128)
-  organizationId       Int?
+  organizationId       Int
   voucherId            Int?            @unique
+  center               Center          @relation(fields: [centerId], references: [id], onDelete: Restrict)
   invoice              Invoice         @relation(fields: [invoiceId], references: [id])
+  organization         Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   receivedBy           User            @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
   voucher              FinanceVoucher? @relation(fields: [voucherId], references: [id])
 
@@ -1638,6 +1614,7 @@ model FinancePolicyProfile {
   id                          Int          @id @default(autoincrement())
   organizationId              Int
   centerId                    Int?
+  feesEnabled                 Boolean?
   requireTransferAttachment   Boolean      @default(true)
   requireApprovalDisbursement Boolean      @default(true)
   requireApprovalReceipt      Boolean      @default(false)
@@ -1790,6 +1767,7 @@ model Donation {
   paymentMethod        PaymentMethod
   purpose              String?         @db.VarChar(255)
   status               DonationStatus  @default(PLEDGED)
+  /// @deprecated Redundant with (status == PLEDGED). Actively kept in sync by donors.service.ts. No separate business logic should depend on this field alone. Remove in DB-CLEAN-4 only after donors.service.ts is updated to derive from status.
   isPledge             Boolean         @default(true)
   pledgeDueDate        DateTime?       @db.Date
   receivedDate         DateTime?       @db.Date
@@ -1844,6 +1822,7 @@ model ExchangeRate {
   currency     Currency     @relation(fields: [organizationId, currencyCode], references: [organizationId, code])
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, currencyCode, effectiveDate])
   @@index([organizationId, currencyCode, effectiveDate])
   @@index([organizationId, currencyCode, createdAt])
   @@map("exchange_rates")
@@ -1931,8 +1910,14 @@ model AccountingAccount {
   assetCategoryAssetAccounts                   AssetCategory[]         @relation("AssetCategoryAssetAccount")
   assetCategoryDepreciationExpenseAccounts     AssetCategory[]         @relation("AssetCategoryDepreciationExpenseAccount")
   assetCategoryAccumulatedDepreciationAccounts AssetCategory[]         @relation("AssetCategoryAccumulatedDepreciationAccount")
+  financeSettingsDefaultCash                   FinanceSettings[]       @relation("FinanceSettingsDefaultCash")
+  financeSettingsDefaultBank                   FinanceSettings[]       @relation("FinanceSettingsDefaultBank")
+  financeSettingsDefaultStudentRevenue         FinanceSettings[]       @relation("FinanceSettingsDefaultStudentRevenue")
+  financeSettingsDefaultDonationRevenue        FinanceSettings[]       @relation("FinanceSettingsDefaultDonationRevenue")
+  financeSettingsDefaultPayrollExpense         FinanceSettings[]       @relation("FinanceSettingsDefaultPayrollExpense")
+  financeSettingsDefaultOperatingExpense       FinanceSettings[]       @relation("FinanceSettingsDefaultOperatingExpense")
   organization                                 Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id])
+  parent                                       AccountingAccount?      @relation("AccountingAccountTree", fields: [parentId], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
   @@unique([organizationId, systemKey])
@@ -1956,10 +1941,13 @@ model JournalEntry {
   postedAt               DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
+  /// FK to FiscalPeriod resolved from entryDate at posting time. Nullable so postings can proceed when a fiscal calendar is not configured.
+  fiscalPeriodId         Int?                    @map("fiscal_period_id")
   center                 Center?                 @relation(fields: [centerId], references: [id])
+  fiscalPeriod           FiscalPeriod?           @relation("JournalEntryFiscalPeriod", fields: [fiscalPeriodId], references: [id])
   lines                  JournalEntryLine[]
   expensePayments        ExpensePayment[]
-  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization           Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   postedBy               User?                   @relation("JournalEntryPostedBy", fields: [postedById], references: [id])
   assetAcquisition       FixedAsset?             @relation("AssetAcquisitionEntry")
   assetDepreciationEntry AssetDepreciationEntry? @relation("AssetDepreciationEntry")
@@ -1970,6 +1958,7 @@ model JournalEntry {
   @@index([organizationId, status, entryDate])
   @@index([centerId, entryDate])
   @@index([postedById])
+  @@index([organizationId, fiscalPeriodId])
   @@map("journal_entries")
 }
 
@@ -1986,7 +1975,7 @@ model JournalEntryLine {
   account        AccountingAccount  @relation(fields: [accountId], references: [id])
   center         Center?            @relation(fields: [centerId], references: [id])
   journalEntry   JournalEntry       @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   organizationId Int
 
   @@index([journalEntryId])
@@ -2010,9 +1999,9 @@ model StudentFeeProfile {
   notes          String?      @db.VarChar(500)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  center         Center       @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  student        User         @relation("StudentFeeProfileStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  center         Center       @relation(fields: [centerId], references: [id], onDelete: Restrict)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  student        User         @relation("StudentFeeProfileStudent", fields: [studentId], references: [id], onDelete: Restrict)
   tuitionPlan    TuitionPlan? @relation(fields: [tuitionPlanId], references: [id])
 
   @@index([centerId, studentId, isActive])
@@ -2045,8 +2034,8 @@ model PayrollProfile {
   salaryGrade          SalaryGrade?  @relation(fields: [salaryGradeId], references: [id])
   approvedBy           User?         @relation("PayrollProfileApprovedBy", fields: [approvedById], references: [id])
   center               Center?       @relation(fields: [centerId], references: [id])
-  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user                 User          @relation("PayrollProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user                 User          @relation("PayrollProfileUser", fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([centerId, userId, isActive])
   @@index([organizationId, isActive])
@@ -2157,8 +2146,10 @@ model PayrollItem {
   updatedAt            DateTime          @updatedAt
   batch                PayrollBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
   beneficiary          User              @relation("PayrollItemBeneficiary", fields: [beneficiaryUserId], references: [id])
+  center               Center?           @relation(fields: [centerId], references: [id], onDelete: Restrict)
   voucher              FinanceVoucher?   @relation(fields: [voucherId], references: [id])
 
+  @@unique([batchId, beneficiaryUserId])
   @@index([batchId, status])
   @@index([beneficiaryUserId, status])
   @@index([centerId])
@@ -2180,9 +2171,9 @@ model RewardProfile {
   notes             String?               @db.VarChar(500)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
-  beneficiary       User                  @relation("RewardProfileBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Cascade)
+  beneficiary       User                  @relation("RewardProfileBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Restrict)
   center            Center?               @relation(fields: [centerId], references: [id])
-  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization      Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, beneficiaryUserId, isActive])
   @@index([centerId, cycle, isActive])
@@ -2240,10 +2231,11 @@ model RewardItem {
   updatedAt         DateTime              @updatedAt
   batch             RewardBatch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
   beneficiary       User                  @relation("RewardItemBeneficiary", fields: [beneficiaryUserId], references: [id])
-  center            Center                @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center            Center                @relation(fields: [centerId], references: [id], onDelete: Restrict)
   circle            Circle?               @relation(fields: [circleId], references: [id])
   voucher           FinanceVoucher?       @relation(fields: [voucherId], references: [id])
 
+  @@unique([batchId, beneficiaryUserId])
   @@index([batchId, status])
   @@index([beneficiaryUserId, status])
   @@map("reward_items")
@@ -2323,6 +2315,8 @@ model Notification {
 
   @@index([recipientUserId, isRead, createdAt])
   @@index([organizationId, createdAt])
+  @@index([centerId, createdAt])
+  @@index([circleId, createdAt])
   @@map("notifications")
 }
 
@@ -2431,6 +2425,7 @@ model MonthlyPlan {
   reviewDailyRate   Decimal?          @map("review_daily_rate") @db.Decimal(5, 2)
   status            MonthlyPlanStatus @default(PENDING)
   approvedAt        DateTime?         @map("approved_at")
+  approvedById      Int?              @map("approved_by_id")
   notes             String?           @db.VarChar(500)
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
@@ -2439,8 +2434,10 @@ model MonthlyPlan {
   organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   student           User              @relation("MonthlyPlanStudent", fields: [studentId], references: [id], onDelete: Cascade)
   teacher           User              @relation("MonthlyPlanTeacher", fields: [teacherId], references: [id])
+  approvedBy        User?             @relation("MonthlyPlanApprovedBy", fields: [approvedById], references: [id])
 
   @@unique([studentId, circleId, month, year])
+  @@index([approvedById])
   @@index([circleId, month, year])
   @@index([organizationId, centerId, month, year])
   @@index([teacherId])
@@ -2526,6 +2523,10 @@ enum Role {
   TEACHER
   PARENT
   STUDENT
+  ACCOUNTANT
+  FINANCE_MANAGER
+  TREASURER
+  AUDITOR
 }
 
 enum Gender {
@@ -2630,6 +2631,11 @@ enum GeoEnforcement {
   DISABLED
   WARN_ONLY
   STRICT
+}
+
+enum TimeFormat {
+  HOUR_12
+  HOUR_24
 }
 
 enum ParentRelationType {
@@ -2750,25 +2756,12 @@ enum FollowUpRecordStatus {
   FINAL
 }
 
+/// @deprecated No model field in schema references this enum. Only echoed as free-text in FollowUpRecord.matn_status (also deprecated). Zero rows use any of these values in rafiq_v2_clean_dev. Candidate for removal in DB-CLEAN-4.
 enum MatnProgressStatus {
   NOT_STARTED
   IN_PROGRESS
   COMPLETED
   PAUSED
-}
-
-enum CorrectionTargetType {
-  ATTENDANCE
-  FOLLOW_UP
-  EXAM_ATTEMPT
-}
-
-enum CorrectionRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  APPLIED
-  CANCELLED
 }
 
 enum ExamStatus {
@@ -2923,6 +2916,7 @@ enum FinanceMovementType {
   PAYROLL_PAYOUT
   REWARD_PAYOUT
   VOID_REVERSAL
+  /// @deprecated Zero rows use this value (rafiq_v2_clean_dev precheck). No active backend code references it. Was a one-time historical import marker. PostgreSQL enum value removal requires full enum recreation — defer to DB-CLEAN-4.
   LEGACY_BACKFILL
 }
 
@@ -3089,6 +3083,7 @@ enum NotificationType {
   SUPERVISOR_VISIT_ASSIGNED
   STAFF_SHIFT_REMINDER
   STAFF_LATE_ALERT
+  STAFF_ABSENCE_MARKED
 }
 
 enum AuditEntityType {
@@ -3221,7 +3216,13 @@ model FinanceSettings {
   createdAt                        DateTime @default(now())
   updatedAt                        DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization                   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  defaultCashAccount             AccountingAccount? @relation("FinanceSettingsDefaultCash", fields: [defaultCashAccountId], references: [id])
+  defaultBankAccount             AccountingAccount? @relation("FinanceSettingsDefaultBank", fields: [defaultBankAccountId], references: [id])
+  defaultStudentRevenueAccount   AccountingAccount? @relation("FinanceSettingsDefaultStudentRevenue", fields: [defaultStudentRevenueAccountId], references: [id])
+  defaultDonationRevenueAccount  AccountingAccount? @relation("FinanceSettingsDefaultDonationRevenue", fields: [defaultDonationRevenueAccountId], references: [id])
+  defaultPayrollExpenseAccount   AccountingAccount? @relation("FinanceSettingsDefaultPayrollExpense", fields: [defaultPayrollExpenseAccountId], references: [id])
+  defaultOperatingExpenseAccount AccountingAccount? @relation("FinanceSettingsDefaultOperatingExpense", fields: [defaultOperatingExpenseAccountId], references: [id])
 
   @@map("finance_settings")
 }
@@ -3263,7 +3264,8 @@ model FiscalPeriod {
 
   fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  closedBy     User?        @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  closedBy       User?          @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  journalEntries JournalEntry[] @relation("JournalEntryFiscalPeriod")
 
   @@unique([fiscalYearId, periodNumber])
   @@index([organizationId, startDate, endDate])
@@ -3372,7 +3374,7 @@ model ExpensePayment {
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invoice        ExpenseInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice        ExpenseInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   financeAccount FinanceAccount? @relation(fields: [financeAccountId], references: [id])
   voucher        FinanceVoucher? @relation(fields: [voucherId], references: [id])
   journalEntry   JournalEntry?   @relation(fields: [journalEntryId], references: [id])

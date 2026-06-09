@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+scratch
+storage
+docs
+scripts
+tests
+*.log
+.codex-temp
+.git

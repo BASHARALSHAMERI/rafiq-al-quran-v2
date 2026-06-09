@@ -250,6 +250,59 @@ export const notificationsService = {
     return { createdCount: result.count };
   },
 
+  async notifyStaffAbsence(input: {
+    organizationId: number;
+    centerId: number;
+    circleId?: number | null;
+    recipientUserId: number;
+    absenceDate: string;
+    absenceMarker: string;
+    centerName: string;
+    circleName?: string | null;
+  }) {
+    const alreadySent = await hasNotificationMarker({
+      organizationId: input.organizationId,
+      recipientUserId: input.recipientUserId,
+      type: "STAFF_ABSENCE_MARKED",
+      markerKey: "absenceMarker",
+      markerValue: input.absenceMarker,
+      when: input.absenceDate
+    });
+
+    if (alreadySent) {
+      return { createdCount: 0 };
+    }
+
+    const targetLabel = input.circleName?.trim() || input.centerName;
+    const title = "تسجيل غياب تلقائي";
+    const body = `تم تسجيل غيابك عن ${targetLabel} بتاريخ ${input.absenceDate} بشكل تلقائي. إذا كان ذلك خطأً يرجى تقديم عذر أو التواصل مع المسؤول.`;
+
+    const result = await notificationsRepository.createMany({
+      data: [
+        {
+          organizationId: input.organizationId,
+          centerId: input.centerId,
+          circleId: input.circleId ?? null,
+          type: "STAFF_ABSENCE_MARKED",
+          title,
+          body,
+          payload: {
+            workflow: "STAFF_ATTENDANCE",
+            absenceDate: input.absenceDate,
+            absenceMarker: input.absenceMarker,
+            centerId: input.centerId,
+            circleId: input.circleId ?? null,
+            targetLabel
+          },
+          recipientUserId: input.recipientUserId,
+          createdById: null
+        }
+      ]
+    });
+
+    return { createdCount: result.count };
+  },
+
   async notifyGoldenRecordNominationApproved(
     input: {
       organizationId: number;
@@ -397,7 +450,7 @@ export const notificationsService = {
     });
 
     if (!existing) {
-      throw new AppError("Notification not found", 404);
+      throw new AppError("الإشعار غير موجود", 404);
     }
 
     notificationsDomain.ensureNotificationVisible(scope, existing);

@@ -87,7 +87,7 @@ const jsonAuthRequest = (
 };
 
 const waitForServer = async () => {
-  for (let i = 0; i < 40; i += 1) {
+  for (let i = 0; i < 200; i += 1) {
     try {
       const health = await request("/system/health");
       if (health.status === 200) {

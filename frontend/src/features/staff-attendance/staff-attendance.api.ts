@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../shared/api/http";
+import { useAuthStore } from "../auth/auth.store";
 
 type PaginatedResponse<T> = {
   records: T[];
@@ -10,6 +11,7 @@ type PaginatedResponse<T> = {
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
+const ATTENDANCE_DAILY_LIMIT = 500;
 
 // --- Types ---
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "ON_LEAVE";
@@ -65,8 +67,8 @@ export interface StaffAttendanceRecord {
       name: string;
       weeklyScheduleSlots: Array<{
         dayOfWeek: string;
-        fromTime: string;
-        toTime: string;
+        fromTime: string | null;
+        toTime: string | null;
       }>;
     }>;
   };
@@ -94,6 +96,7 @@ export interface StaffExcuseRequest {
   };
 }
 
+export type SupervisorVisitLog = SupervisorVisitRecord;
 export interface SupervisorVisitRecord {
   id: number;
   organizationId: number;
@@ -242,6 +245,7 @@ export interface SelfAttendanceResponse {
     holidays: AttendanceHolidayPeriod[];
     geoEnforcement: "REQUIRED" | "OPTIONAL";
     timezone: string;
+    timeFormat?: "HOUR_12" | "HOUR_24";
   };
   eligibility?: {
     canCheckIn: boolean;
@@ -303,6 +307,15 @@ export interface AttendancePolicy {
   timezone: string;
   defaultShiftDurationMinutes: number;
   prayerApiSource: string;
+  timeFormat: "HOUR_12" | "HOUR_24";
+}
+
+export interface PrayerTimes {
+  fajr: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
 }
 
 export interface VisitPlanItem {
@@ -387,6 +400,9 @@ export const staffOpsKeys = {
   visitLogs: (filters?: unknown) => [...staffOpsKeys.all, "visitLogs", filters] as const,
   deductionRules: () => [...staffOpsKeys.all, "deductionRules"] as const,
   deductionEvents: (filters?: unknown) => [...staffOpsKeys.all, "deductionEvents", filters] as const,
+  staffSchedules: (filters?: unknown) => [...staffOpsKeys.all, "staffSchedules", filters] as const,
+  staffUsers: (role?: string) => [...staffOpsKeys.all, "staffUsers", role] as const,
+  prayerTimes: (centerId: number, date?: string) => [...staffOpsKeys.all, "prayerTimes", centerId, date] as const,
 };
 
 
@@ -397,7 +413,7 @@ export function useStaffAttendance(date: string) {
     queryFn: async () => {
       const res = await apiClient.get<{ data: PaginatedResponse<StaffAttendanceRecord> }>(
         "/staff-operations",
-        { params: { date, page: DEFAULT_PAGE, limit: DEFAULT_LIMIT } }
+        { params: { date, page: DEFAULT_PAGE, limit: ATTENDANCE_DAILY_LIMIT } }
       );
       return res.data.data.records;
     },
@@ -581,7 +597,14 @@ export function useUpdatePolicy() {
       const res = await apiClient.put<{ data: AttendancePolicy }>("/attendance-policy", payload);
       return res.data.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.policy() }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.policy() });
+      // Keep AuthStore in sync so useTimeFormat() reflects the change immediately
+      const user = useAuthStore.getState().user;
+      if (user && data.timeFormat) {
+        useAuthStore.getState().setUser({ ...user, timeFormat: data.timeFormat });
+      }
+    },
   });
 }
 
@@ -767,6 +790,181 @@ export function useGenerateDeductions() {
   });
 }
 
+// ─────────────────────────────────────────────────
+// Staff Schedule Types + Hooks
+// ─────────────────────────────────────────────────
+export interface StaffScheduleSlot {
+  id?: number;
+  dayOfWeek: string;
+  mode: "CLOCK" | "PRAYER";
+  fromTime?: string | null;
+  toTime?: string | null;
+  fromPrayer?: string | null;
+  toPrayer?: string | null;
+  fromPrayerOffsetMinutes?: number | null;
+  toPrayerOffsetMinutes?: number | null;
+  defaultDurationMinutes?: number | null;
+}
+
+export interface StaffScheduleAssignment {
+  id: number;
+  userId: number;
+  staffRole: string;
+  centerId: number;
+  circleId?: number | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  slots: StaffScheduleSlot[];
+  user: { id: number; fullName: string; role: string };
+  center: { id: number; name: string };
+  circle?: { id: number; name: string } | null;
+}
+
+export type CreateSchedulePayload = {
+  userId: number;
+  staffRole: string;
+  centerId: number;
+  circleId?: number | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  slots: Omit<StaffScheduleSlot, "id">[];
+};
+
+export type UpdateSchedulePayload = {
+  effectiveTo?: string | null;
+  slots?: Omit<StaffScheduleSlot, "id">[];
+};
+
+export interface StaffUserOption {
+  id: number;
+  fullName: string;
+  role: string;
+}
+
+export function useStaffSchedules(filters?: { centerId?: number; staffRole?: string; isActive?: boolean; userId?: number }) {
+  return useQuery({
+    queryKey: staffOpsKeys.staffSchedules(filters),
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: StaffScheduleAssignment[] }>("/staff-schedules", { params: filters });
+      return res.data.data;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useStaffUsersByRole(role?: string) {
+  return useQuery({
+    queryKey: staffOpsKeys.staffUsers(role),
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: StaffUserOption[] }>("/users", { params: role ? { role } : {} });
+      return res.data.data;
+    },
+    enabled: !!role,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateStaffSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateSchedulePayload) => {
+      const res = await apiClient.post<{ data: StaffScheduleAssignment }>("/staff-schedules", payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
+  });
+}
+
+export function useUpdateStaffSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: UpdateSchedulePayload }) => {
+      const res = await apiClient.put<{ data: StaffScheduleAssignment }>(`/staff-schedules/${id}`, payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
+  });
+}
+
+export function useDeactivateStaffSchedule() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await apiClient.delete(`/staff-schedules/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.staffSchedules() });
+      queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
+    },
+  });
+}
+
+export type CreateVisitPayload = {
+  centerId: number;
+  circleId?: number | null;
+  planItemId?: number | null;
+  startLatitude?: number | null;
+  startLongitude?: number | null;
+  observations?: string | null;
+};
+
+export type EndVisitPayload = {
+  endLatitude?: number | null;
+  endLongitude?: number | null;
+  rating?: number | null;
+  observations?: string | null;
+  checklist?: unknown[];
+};
+
+export function useCreateVisitLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateVisitPayload) => {
+      const res = await apiClient.post<{ data: SupervisorVisitLog }>("/staff-operations/visits", payload);
+      return res.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.all }),
+  });
+}
+
+export function useEndVisitLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ visitId, payload }: { visitId: number; payload: EndVisitPayload }) => {
+      const res = await apiClient.patch<{ data: SupervisorVisitLog }>(`/staff-operations/visits/${visitId}/end`, payload);
+      return res.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.all }),
+  });
+}
+
+export function useExportMonthlyReport() {
+  return useMutation({
+    mutationFn: async ({ month, year }: { month: number; year: number }) => {
+      const res = await apiClient.get("/staff-operations/reports/export", {
+        params: { month, year },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: "text/csv;charset=utf-8;" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attendance-report-${year}-${String(month).padStart(2, "0")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+  });
+}
+
 export function useReviewDeduction() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -790,5 +988,18 @@ export function useReviewDeduction() {
       return res.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: staffOpsKeys.all }),
+  });
+}
+
+export function usePrayerTimes(centerId: number, date?: string, enabled = true) {
+  return useQuery({
+    queryKey: staffOpsKeys.prayerTimes(centerId, date),
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: PrayerTimes | null }>(`/staff-operations/prayer-times/${centerId}`, {
+        params: date ? { date } : undefined
+      });
+      return res.data.data;
+    },
+    enabled: enabled && !!centerId
   });
 }

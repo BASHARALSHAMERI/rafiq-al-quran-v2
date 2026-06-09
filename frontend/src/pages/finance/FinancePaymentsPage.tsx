@@ -9,6 +9,7 @@ import {
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { LoadingState } from "../../components/ui/LoadingState";
 import { FinancePageFilters } from "../../features/finance-v2/components/page/FinancePageFilters";
@@ -58,6 +59,12 @@ function PaymentKpi({
 export default function FinancePaymentsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canRecordPayment =
+    user?.role === "SUPER_ADMIN" ||
+    user?.role === "ACCOUNTANT" ||
+    user?.role === "FINANCE_MANAGER" ||
+    user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -119,15 +126,17 @@ export default function FinancePaymentsPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="shadow-lg shadow-brand-500/20"
-                  leftIcon={<Plus className="w-4 h-4" />}
-                  onClick={() => setShowNewPaymentModal(true)}
-                >
-                  {ar ? "تسجيل دفعة" : "Record Payment"}
-                </Button>
+                {canRecordPayment ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="shadow-lg shadow-brand-500/20"
+                    leftIcon={<Plus className="w-4 h-4" />}
+                    onClick={() => setShowNewPaymentModal(true)}
+                  >
+                    {ar ? "تسجيل دفعة" : "Record Payment"}
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -187,10 +196,10 @@ export default function FinancePaymentsPage() {
         <Suspense fallback={<LoadingState />}>
           <FinancePaymentsTab
             centerId={centerId}
-            isAdmin={true}
-            isSuperAdmin={true}
+            isAdmin={canRecordPayment}
+            isSuperAdmin={user?.role === "SUPER_ADMIN"}
             ar={ar}
-            externalShowPaymentForm={showNewPaymentModal}
+            externalShowPaymentForm={canRecordPayment && showNewPaymentModal}
             onExternalPaymentFormClose={() => setShowNewPaymentModal(false)}
           />
         </Suspense>

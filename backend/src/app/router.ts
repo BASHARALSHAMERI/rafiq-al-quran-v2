@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { env } from "../config/env";
+import { healthRouter } from "./health";
 import authRouter from "../modules/auth/auth.routes";
 import orgRouter from "../modules/org/org.routes";
 import usersRouter from "../modules/users/users.routes";
@@ -15,7 +16,6 @@ import reportsRouter from "../modules/reports/reports.routes";
 import notificationsRouter from "../modules/notifications/notifications.routes";
 import followUpsRouter from "../modules/follow-ups/follow-ups.routes";
 import quranRouter from "../modules/quran/quran.routes";
-import correctionsRouter from "../modules/corrections/corrections.routes";
 import auditRouter from "../modules/audit/audit.routes";
 import systemRouter from "../modules/system/system.routes";
 import metricsRouter from "../modules/system/metrics.routes";
@@ -42,6 +42,8 @@ if (env.METRICS_ENABLED) {
   router.use(metricsRouter);
 }
 
+router.use(healthRouter());
+
 router.use(systemRouter);
 
 router.use("/auth", authRouter);
@@ -59,7 +61,6 @@ router.use(reportsRouter);
 router.use(notificationsRouter);
 router.use("/follow-ups", followUpsRouter);
 router.use(quranRouter);
-router.use(correctionsRouter);
 router.use(auditRouter);
 router.use(supervisorNotesRouter);
 router.use("/staff-operations", staffOpsRouter);

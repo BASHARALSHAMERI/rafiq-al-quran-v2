@@ -37,7 +37,7 @@ const ensureCircleAccessible = async (scope: ScopeContext, circleId: number) => 
   });
 
   if (!circle) {
-    throw new AppError("Access denied for requested circle", 403);
+    throw new AppError("ليس لديك صلاحية الوصول للحلقة المطلوبة", 403);
   }
 
   return circle;
@@ -132,12 +132,12 @@ export const attendanceService = {
     const studentIds = normalizedRecords.map((item) => item.studentId);
     const uniqueStudentIds = new Set(studentIds);
     if (uniqueStudentIds.size !== studentIds.length) {
-      throw new AppError("Duplicate studentId is not allowed in attendance records payload", 422, undefined, "VALIDATION_FAILED");
+      throw new AppError("لا يمكن تكرار معرف الطالب في سجلات الحضور", 422, undefined, "VALIDATION_FAILED");
     }
 
     const invalidStudent = normalizedRecords.find((record) => !enrolledSet.has(record.studentId));
     if (invalidStudent) {
-      throw new AppError(`Student is not enrolled in this circle: ${invalidStudent.studentId}`, 400);
+      throw new AppError(`الطالب غير مسجل في هذه الحلقة: ${invalidStudent.studentId}`, 400);
     }
 
     const existingRows = await attendanceRepository.findAttendanceForStudentsForDate({

@@ -3,9 +3,10 @@ import axios, {
   AxiosHeaders,
   type InternalAxiosRequestConfig
 } from "axios";
-import { hasRefreshSession } from "../../features/auth/session";
+import { getStoredRefreshToken, hasRefreshSession } from "../../features/auth/session";
 import { useAuthStore } from "../../features/auth/auth.store";
 import type { AuthSessionResponse } from "../../features/auth/types";
+import { notifyError } from "../ui/feedback";
 import type { ApiResponse } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
@@ -37,6 +38,27 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & {
 };
 
 let refreshPromise: Promise<string | null> | null = null;
+let sessionExpiryNotified = false;
+
+const clearExpiredSession = () => {
+  const state = useAuthStore.getState();
+  const hadSession = Boolean(state.accessToken || state.user || hasRefreshSession());
+  state.clearAuth();
+
+  if (!hadSession || sessionExpiryNotified) {
+    return;
+  }
+
+  sessionExpiryNotified = true;
+  notifyError(
+    getAcceptLanguage() === "ar"
+      ? "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
+      : "Your session has expired. Please sign in again."
+  );
+  window.setTimeout(() => {
+    sessionExpiryNotified = false;
+  }, 5000);
+};
 
 const isAuthRoute = (url?: string): boolean => {
   if (!url) {
@@ -67,16 +89,17 @@ const requestRefreshToken = async (): Promise<string | null> => {
   }
 
   try {
+    const storedRefreshToken = getStoredRefreshToken();
     const response = await refreshClient.post<ApiResponse<AuthSessionResponse>>(
       "/auth/refresh",
-      {}
+      storedRefreshToken ? { refreshToken: storedRefreshToken } : {}
     );
 
     const session = response.data.data;
     useAuthStore.getState().setSession(session);
     return session.accessToken;
   } catch {
-    useAuthStore.getState().clearAuth();
+    clearExpiredSession();
     return null;
   }
 };
@@ -91,8 +114,18 @@ export const ensureFreshAccessToken = async (): Promise<string | null> => {
   return refreshPromise;
 };
 
+const getAcceptLanguage = (): string => {
+  try {
+    const lang = window.localStorage.getItem("app-language");
+    return lang === "en" ? "en" : "ar";
+  } catch {
+    return "ar";
+  }
+};
+
 apiClient.interceptors.request.use((config) => {
   config.withCredentials = isAuthRoute(config.url);
+  config.headers.set("Accept-Language", getAcceptLanguage());
 
   const accessToken = useAuthStore.getState().accessToken;
 
@@ -118,7 +151,7 @@ apiClient.interceptors.response.use(
     }
 
     if ((originalRequest._retryCount ?? 0) >= 1) {
-      useAuthStore.getState().clearAuth();
+      clearExpiredSession();
       throw error;
     }
 
@@ -127,7 +160,7 @@ apiClient.interceptors.response.use(
     const refreshedAccessToken = await ensureFreshAccessToken();
 
     if (!refreshedAccessToken) {
-      useAuthStore.getState().clearAuth();
+      clearExpiredSession();
       throw error;
     }
 
@@ -136,7 +169,7 @@ apiClient.interceptors.response.use(
       return await apiClient(originalRequest);
     } catch (retryError) {
       if (axios.isAxiosError(retryError) && retryError.response?.status === 401) {
-        useAuthStore.getState().clearAuth();
+        clearExpiredSession();
       }
       throw retryError;
     }

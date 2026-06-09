@@ -8,6 +8,7 @@ import '../../application/teacher/teacher_panel_providers.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../core/utils/period_label_formatter.dart';
 import '../../core/utils/report_export_helper.dart';
 import '../../data/models/teacher_panel_dtos.dart';
@@ -15,6 +16,7 @@ import '../shared/states/app_empty_state.dart';
 import '../shared/states/app_error_state.dart';
 import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/app_card.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class TeacherHalqaReportScreen extends ConsumerStatefulWidget {
   final int? halqaId;
@@ -81,17 +83,15 @@ class _TeacherHalqaReportScreenState
         await openDownloadedReport(filePath);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            shareAfterDownload ? 'تمت مشاركة التقرير.' : 'تم فتح التقرير.',
-          ),
-        ),
+      AppSnackBar.success(
+        context,
+        shareAfterDownload ? 'تمت مشاركة التقرير.' : 'تم فتح التقرير.',
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تصدير التقرير: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر تصدير التقرير. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -175,17 +175,7 @@ class _TeacherHalqaReportScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text(
-          'تقرير الحلقة الشهري',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.textPrimaryLight,
-        surfaceTintColor: Colors.white,
-      ),
+      appBar: const StandardAppBar(title: 'تقرير الحلقة الشهري'),
       body: reportAsync.when(
         loading: () =>
             const AppLoadingState(message: 'جار تحميل التقرير الشهري...'),

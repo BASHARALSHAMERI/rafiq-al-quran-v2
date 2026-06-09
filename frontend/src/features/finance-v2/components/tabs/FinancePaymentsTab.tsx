@@ -49,6 +49,7 @@ const PAYMENT_ENTITY = { ar: "الدفعة", en: "payment" };
 
 export default function FinancePaymentsTab({ 
   centerId, 
+  isAdmin,
   ar,
   externalShowPaymentForm,
   onExternalPaymentFormClose
@@ -130,7 +131,7 @@ export default function FinancePaymentsTab({
   return (
     <div className="flex flex-col gap-6 animate-premium mt-4">
       <Modal
-        isOpen={showPaymentForm}
+        isOpen={Boolean(showPaymentForm && isAdmin)}
         onClose={closePaymentModal}
         title={ar ? "تسجيل دفعة جديدة" : "Record New Payment"}
         titleIcon={
@@ -316,7 +317,7 @@ export default function FinancePaymentsTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (inv) => (
                       <div className="flex items-center gap-2">
-                        {inv.remainingAmount > 0 && (
+                        {isAdmin && inv.remainingAmount > 0 && (
                           <Button 
                             size="sm" 
                             variant="primary" 

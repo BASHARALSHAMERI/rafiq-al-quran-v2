@@ -1,5 +1,6 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { orgApi } from "./org.api";
+import { staffOpsKeys } from "../staff-attendance/staff-attendance.api";
 import type {
   CreateCenterPayload,
   CreateCirclePayload,
@@ -21,7 +22,8 @@ export const useOrgBrandingQuery = (options?: { enabled?: boolean }) => {
     queryKey: ORG_QUERY_KEYS.branding(),
     queryFn: () => orgApi.getBranding(),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 60_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -30,7 +32,9 @@ export const useCentersQuery = (options?: { enabled?: boolean }) => {
     queryKey: ORG_QUERY_KEYS.centers(),
     queryFn: () => orgApi.getCenters(),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 300_000,
+    gcTime: 600_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -42,7 +46,9 @@ export const useCirclesQuery = (
     queryKey: ORG_QUERY_KEYS.circles(centerId),
     queryFn: () => orgApi.getCircles({ centerId }),
     enabled: options?.enabled ?? true,
-    staleTime: 60_000
+    staleTime: 300_000,
+    gcTime: 600_000,
+    placeholderData: keepPreviousData
   });
 };
 
@@ -111,6 +117,7 @@ export const useUpdateCircleMutation = () => {
       orgApi.updateCircle(input.circleId, input.payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ORG_QUERY_KEYS.all });
+      await queryClient.invalidateQueries({ queryKey: staffOpsKeys.self() });
     }
   });
 };

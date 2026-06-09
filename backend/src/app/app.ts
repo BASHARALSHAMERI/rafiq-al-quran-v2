@@ -11,10 +11,15 @@ import { AppError } from "../shared/errors/app-error";
 import { requestIdMiddleware } from "../shared/middleware/request-id.middleware";
 import { httpLoggerMiddleware } from "../shared/middleware/http-logger.middleware";
 import { errorMiddleware } from "../shared/middleware/error.middleware";
+import { localeMiddleware, t } from "../shared/i18n";
+import { messages } from "../shared/i18n/messages";
 import { metrics } from "../shared/metrics/metrics";
 import { notFoundHandler } from "../shared/middleware/not-found.middleware";
 
 const app = express();
+// Trust the first proxy hop (nginx / load balancer) so that express-rate-limit
+// reads the real client IP from X-Forwarded-For instead of the proxy address.
+app.set("trust proxy", 1);
 const localDevOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 const shouldAllowCredentials = (requestPath: string) => {
@@ -60,14 +65,16 @@ const buildCorsOptions: CorsOptionsDelegate = (req, callback) => {
 };
 
 const buildRateLimitResponse = (req: express.Request, max: number, windowMs: number) => {
+  const lang = req.lang ?? "ar";
+  const msg = t(messages.errors.auth.rateLimited, lang);
   return {
     ok: false as const,
     error: {
       code: "RATE_LIMITED",
-      message: "Too many requests. Please try again later.",
+      message: msg,
       requestId: req.requestId ?? "unknown"
     },
-    message: "Too many requests. Please try again later.",
+    message: msg,
     details: {
       limit: max,
       windowMs
@@ -103,6 +110,7 @@ const generalLimiter = rateLimit({
 });
 
 app.use(requestIdMiddleware);
+app.use(localeMiddleware);
 app.use(httpLoggerMiddleware);
 app.use(
   helmet(
@@ -143,6 +151,7 @@ app.use("/auth/check-user", authLoginLimiter);
 app.use("/auth/login", authLoginLimiter);
 app.use("/auth/forgot-password", authLoginLimiter);
 app.use("/auth/reset-password", authLoginLimiter);
+app.use("/auth/refresh", authLoginLimiter);
 app.use(generalLimiter);
 app.use(
   "/uploads",

@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
   Calendar,
+  Clock,
   DollarSign,
   MapPin,
   Settings,
-  FileText
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { useAuthStore } from "../../auth/auth.store";
@@ -17,10 +17,9 @@ import { FinanceDeductionReview } from "./FinanceDeductionReview";
 import { StaffExcusesRequestsView } from "./StaffExcusesRequestsView";
 import { SupervisorVisitsView } from "./SupervisorVisitsView";
 import { VisitPlanManagement } from "./VisitPlanManagement";
-import { MonthlyStaffReportView } from "./MonthlyStaffReportView";
+import { StaffSchedulesView } from "./StaffSchedulesView";
 
 import "../../../styles/pages/staff-operations-v1.css";
-import "../../../styles/pages/centers-modern.css";
 
 type StaffOpsTabId =
   | "daily"
@@ -28,8 +27,8 @@ type StaffOpsTabId =
   | "visits"
   | "plans"
   | "finance"
-  | "report"
-  | "policy";
+  | "policy"
+  | "schedules";
 
 type StaffOpsTab = {
   id: StaffOpsTabId;
@@ -59,20 +58,20 @@ export function StaffOperationsDashboard() {
   
   const isOpsAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-
+  const canReviewFinanceDeductions = user?.role === "SUPER_ADMIN";
   const tabs: StaffOpsTab[] = [
-    {
-      id: "daily",
-      label: ar ? "الحضور اليومي" : "Daily Attendance",
-      icon: <Calendar size={16} />
-    },
-    {
-      id: "visits",
-      label: ar ? "الزيارات الإشرافية" : "Supervisor Visits",
-      icon: <MapPin size={16} />
-    },
     ...(isOpsAdmin
       ? [
+          {
+            id: "daily" as const,
+            label: ar ? "الحضور اليومي" : "Daily Attendance",
+            icon: <Calendar size={16} />
+          },
+          {
+            id: "visits" as const,
+            label: ar ? "الزيارات الإشرافية" : "Supervisor Visits",
+            icon: <MapPin size={16} />
+          },
           {
             id: "requests" as const,
             label: ar ? "الأعذار والإجازات" : "Staff Requests",
@@ -90,9 +89,9 @@ export function StaffOperationsDashboard() {
             icon: <DollarSign size={16} />
           },
           {
-            id: "report" as const,
-            label: ar ? "التقرير الشهري" : "Monthly Report",
-            icon: <FileText size={16} />
+            id: "schedules" as const,
+            label: ar ? "جداول الموظفين" : "Staff Schedules",
+            icon: <Clock size={16} />
           }
         ]
       : []),
@@ -108,7 +107,7 @@ export function StaffOperationsDashboard() {
   ];
 
   return (
-    <div className="staff-ops-dashboard-root relative z-10 max-w-[1400px] mx-auto px-6 w-full" dir={ar ? "rtl" : "ltr"}>
+    <div className="staff-ops-dashboard-root w-full">
       <motion.div initial="hidden" animate="visible" className="flex flex-col gap-8">
         
         {/* ── Tabs Navigation ── */}
@@ -118,7 +117,9 @@ export function StaffOperationsDashboard() {
             role="tablist"
             aria-label={ar ? "تبويبات شؤون الموظفين" : "Staff operations tabs"}
           >
-            {tabs.map((tab) => {
+            {tabs
+              .filter((tab) => tab.id !== "finance" || canReviewFinanceDeductions)
+              .map((tab) => {
               const isActive = activeTab === tab.id;
 
               return (
@@ -152,12 +153,12 @@ export function StaffOperationsDashboard() {
                 exit={{ opacity: 0, x: ar ? -15 : 15 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
               >
-                {activeTab === "daily" && <DailyStaffAttendanceView />}
-                {activeTab === "requests" && <StaffExcusesRequestsView />}
-                {activeTab === "visits" && <SupervisorVisitsView />}
+                {activeTab === "daily" && isOpsAdmin && <DailyStaffAttendanceView />}
+                {activeTab === "requests" && isOpsAdmin && <StaffExcusesRequestsView />}
+                {activeTab === "visits" && isOpsAdmin && <SupervisorVisitsView />}
                 {activeTab === "plans" && isOpsAdmin && <VisitPlanManagement />}
-                {activeTab === "finance" && isOpsAdmin && <FinanceDeductionReview />}
-                {activeTab === "report" && isOpsAdmin && <MonthlyStaffReportView />}
+                {activeTab === "finance" && canReviewFinanceDeductions && <FinanceDeductionReview />}
+                {activeTab === "schedules" && isOpsAdmin && <StaffSchedulesView />}
                 {activeTab === "policy" && isSuperAdmin && <AttendancePolicySettings />}
               </motion.div>
             </AnimatePresence>

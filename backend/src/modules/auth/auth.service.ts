@@ -25,6 +25,10 @@ type AuthUserResponse = {
   gender?: string | null;
   organizationName?: string;
   organizationLogoUrl?: string | null;
+  // TRANSIENT: timeFormat lives here temporarily until a proper
+  // OrganizationSettings layer is introduced. Do NOT add timezone,
+  // currency, language, dateFormat, or hijriEnabled to this type.
+  timeFormat?: "HOUR_12" | "HOUR_24";
 };
 
 type ClientInfo = {
@@ -33,10 +37,19 @@ type ClientInfo = {
   platform?: "web" | "mobile";
 };
 
-const INVALID_CREDENTIALS_MESSAGE = "Invalid login credentials";
+const INVALID_CREDENTIALS_MESSAGE = "بيانات الدخول غير صحيحة";
 const FORGOT_PASSWORD_GENERIC_MESSAGE =
-  "If the provided credentials are valid, reset instructions have been sent.";
-const INVALID_RESET_TOKEN_MESSAGE = "Invalid or expired reset token";
+  "إذا كانت بيانات الحساب صحيحة، فسيتم إرسال تعليمات إعادة التعيين.";
+const INVALID_RESET_TOKEN_MESSAGE = "رمز إعادة التعيين غير صالح أو منتهي الصلاحية";
+const WEB_ACCESS_ROLES: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.CENTER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+const MOBILE_ACCESS_ROLES: Role[] = [Role.SUPERVISOR, Role.TEACHER, Role.PARENT, Role.STUDENT];
 
 const resolveFrontendBaseUrl = () => {
   const base = env.FRONTEND_BASE_URL ?? env.CORS_ORIGIN;
@@ -59,7 +72,8 @@ const toAuthResponseUser = (user: AuthUser): AuthUserResponse => {
     phone: user.profile?.phoneNormalized ?? null,
     gender: user.profile?.gender ?? null,
     organizationName: user.organization?.name ?? undefined,
-    organizationLogoUrl: user.organization?.logoUrl ?? null
+    organizationLogoUrl: user.organization?.logoUrl ?? null,
+    timeFormat: user.organization?.attendancePolicy?.timeFormat ?? "HOUR_12"
   };
 };
 
@@ -102,17 +116,17 @@ export const authService = {
     }
 
     if (clientInfo.platform === "web") {
-      if (user.role !== Role.SUPER_ADMIN && user.role !== Role.CENTER_ADMIN) {
-        throw new AppError("Web access is restricted to administrators only", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
+      if (!WEB_ACCESS_ROLES.includes(user.role)) {
+        throw new AppError("نسخة الويب مخصّصة للمدير العام ومدير المركز فقط", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
       }
     } else {
-      if (user.role === Role.SUPER_ADMIN || user.role === Role.CENTER_ADMIN) {
-        throw new AppError("Mobile access is restricted to teachers, supervisors, students, and parents", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
+      if (!MOBILE_ACCESS_ROLES.includes(user.role)) {
+        throw new AppError("نسخة الجوال مخصّصة للمعلمين والمشرفين والطلاب وأولياء الأمور فقط", 403, undefined, "AUTH_FORBIDDEN_PLATFORM");
       }
     }
 
     if (!user.passwordHash) {
-      throw new AppError("Account requires password setup", 401, undefined, "AUTH_PASSWORD_NOT_SET");
+      throw new AppError("الحساب يتطلب إنشاء كلمة مرور", 401, undefined, "AUTH_PASSWORD_NOT_SET");
     }
 
     const validPassword = await verifyPassword(input.password, user.passwordHash);
@@ -142,7 +156,7 @@ export const authService = {
     const parsedIdentifier = parseLoginIdentifier(input.identifier);
 
     if (parsedIdentifier.kind === "invalid") {
-      throw new AppError("Invalid identifier", 400);
+      throw new AppError("المُعرّف غير صالح", 400);
     }
 
     const user = await authRepository.findByIdentifier(parsedIdentifier);
@@ -167,11 +181,11 @@ export const authService = {
     const user = await authRepository.findByIdentifier(parsedIdentifier);
 
     if (!user || !user.isActive) {
-      throw new AppError("User not found or inactive", 404);
+      throw new AppError("المستخدم غير موجود أو غير نشط", 404);
     }
 
     if (user.passwordHash !== null) {
-      throw new AppError("Account already has a password", 400);
+      throw new AppError("الحساب لديه كلمة مرور بالفعل", 400);
     }
 
     const passwordHash = await hashPassword(input.newPassword);
@@ -210,8 +224,10 @@ export const authService = {
 
         const resetUrl = buildResetPasswordUrl(resetToken);
 
-        // Send Email
-        await emailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
+        // Send Email asynchronously without blocking
+        emailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl).catch((error) => {
+          logger.error({ error, userId: user.id }, "Background email sending failed");
+        });
 
         if (env.NODE_ENV !== "production") {
           logger.info(
@@ -284,11 +300,11 @@ export const authService = {
     const tokenRecord = await authRepository.findValidRefreshTokenByHash(hashedToken);
 
     if (!tokenRecord || !tokenRecord.user.isActive) {
-      throw new AppError("Invalid refresh token", 401);
+      throw new AppError("رمز التحديث غير صالح", 401);
     }
 
     if (tokenRecord.userId !== payload.sub) {
-      throw new AppError("Refresh token mismatch", 401);
+      throw new AppError("رمز التحديث غير مطابق", 401);
     }
 
     await authRepository.markRefreshTokenUsed(tokenRecord.id);
@@ -341,7 +357,7 @@ export const authService = {
     const user = await authRepository.findById(userId);
 
     if (!user || !user.isActive) {
-      throw new AppError("User not found", 404);
+      throw new AppError("المستخدم غير موجود", 404);
     }
 
     return toAuthResponseUser(user);
@@ -374,7 +390,7 @@ export const authService = {
     const user = await authRepository.findValidActivationTokenByHash(tokenHash);
 
     if (!user || !user.isActive) {
-      throw new AppError("Invalid or expired activation token", 400, undefined, "AUTH_INVALID_ACTIVATION_TOKEN");
+      throw new AppError("رمز التفعيل غير صالح أو منتهي الصلاحية", 400, undefined, "AUTH_INVALID_ACTIVATION_TOKEN");
     }
 
     const passwordHash = await hashPassword(input.newPassword);
@@ -385,7 +401,7 @@ export const authService = {
     });
 
     if (result.count === 0) {
-      throw new AppError("Invalid or expired activation token", 400, undefined, "AUTH_INVALID_ACTIVATION_TOKEN");
+      throw new AppError("رمز التفعيل غير صالح أو منتهي الصلاحية", 400, undefined, "AUTH_INVALID_ACTIVATION_TOKEN");
     }
 
     await authRepository.createActivityLog({

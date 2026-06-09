@@ -4,13 +4,18 @@ import { useSuppliersQuery, useCreateSupplierMutation } from "../../features/fin
 import { FinanceDataTable } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
+import { notifyError, notifyRequiredFields, notifySuccess } from "../../shared/ui/feedback";
 
 export function FinanceSuppliersTab({ 
   ar,
+  canManage = true,
   externalShowForm,
   onExternalFormClose
 }: { 
   ar: boolean,
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
@@ -24,8 +29,8 @@ export function FinanceSuppliersTab({
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    if (externalShowForm) setIsModalOpen(true);
-  }, [externalShowForm]);
+    if (externalShowForm && canManage) setIsModalOpen(true);
+  }, [externalShowForm, canManage]);
 
   const handleClose = () => {
     setIsModalOpen(false);
@@ -33,17 +38,36 @@ export function FinanceSuppliersTab({
   };
 
   const handleCreate = async () => {
-    if (!name) return;
-    await createM.mutateAsync({ name, phone, address, notes });
-    handleClose();
-    setName(""); setPhone(""); setAddress(""); setNotes("");
+    if (!name.trim()) {
+      notifyRequiredFields(ar);
+      requestAnimationFrame(() => document.getElementById("supplier-name")?.focus());
+      return;
+    }
+    try {
+      await createM.mutateAsync({ name: name.trim(), phone, address, notes });
+      notifySuccess(ar ? "تمت إضافة المورد بنجاح" : "Supplier added successfully");
+      handleClose();
+      setName(""); setPhone(""); setAddress(""); setNotes("");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر إضافة المورد." : "Unable to add the supplier."
+      }));
+    }
   };
 
   return (
     <div className="fin-premium-panel animate-premium">
       <div className="fin-premium-panel__content p-0">
 
-      <FinanceDataTable
+      {suppliersQ.isError ? <ErrorState
+        title={ar ? "تعذر تحميل الموردين" : "Unable to load suppliers"}
+        description={getLocalizedApiErrorMessage(suppliersQ.error, {
+          ar,
+          fallback: ar ? "تعذر تحميل الموردين. حاول مرة أخرى." : "Unable to load suppliers."
+        })}
+        onRetry={() => void suppliersQ.refetch()}
+      /> : <FinanceDataTable
         columns={[
           { id: "id", header: "#", render: (row: any) => row.id },
           { id: "name", header: ar ? "الاسم" : "Name", render: (row: any) => row.name },
@@ -55,11 +79,11 @@ export function FinanceSuppliersTab({
         rowKey="id"
         loading={suppliersQ.isLoading}
         density="dense"
-      />
+      />}
     </div>
 
       <Modal 
-        isOpen={isModalOpen} 
+        isOpen={Boolean(isModalOpen && canManage)}
         onClose={handleClose} 
         title={ar ? "إضافة مورد" : "Add Supplier"}
         titleIcon={
@@ -87,7 +111,7 @@ export function FinanceSuppliersTab({
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--lg">
                 <label>{ar ? "اسم المورد" : "Supplier Name"} *</label>
-                <input type="text" className="circlemod-input" value={name} onChange={(e) => setName(e.target.value)} />
+                <input id="supplier-name" type="text" className="circlemod-input" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
             </div>
             <div className="circlemod-row">

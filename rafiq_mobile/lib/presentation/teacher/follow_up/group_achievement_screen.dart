@@ -11,7 +11,9 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/standard_app_bar.dart';
 
 import '../../../../application/follow_up/follow_up_controller.dart';
 import '../../../../data/models/follow_up_dtos.dart';
@@ -99,7 +101,8 @@ class _GroupAchievementScreenState
 
     try {
       final controller = ref.read(followUpControllerProvider.notifier);
-      final activityLabel = activityTypes.firstWhere((t) => t.id == _selectedTypeId).label;
+      final activityLabel =
+          activityTypes.firstWhere((t) => t.id == _selectedTypeId).label;
       final fullTitle = '$activityLabel: ${_titleController.text.trim()}';
       final notes = _descriptionController.text.trim();
 
@@ -120,7 +123,8 @@ class _GroupAchievementScreenState
           );
           successCount++;
         } catch (e) {
-          debugPrint('Failed to save achievement for student ${student.id}: $e');
+          debugPrint(
+              'Failed to save achievement for student ${student.id}: $e');
         }
       }
 
@@ -131,14 +135,9 @@ class _GroupAchievementScreenState
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('تم تسجيل النشاط بنجاح لـ $successCount طالب'),
-              backgroundColor: AppColors.successLight,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
+          AppSnackBar.success(
+            context,
+            'تم تسجيل النشاط بنجاح لـ $successCount طالب',
           );
         }
       } else {
@@ -152,15 +151,7 @@ class _GroupAchievementScreenState
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.errorLight,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md)),
-      ),
-    );
+    AppSnackBar.error(context, message);
   }
 
   void _handleReset() {
@@ -178,10 +169,8 @@ class _GroupAchievementScreenState
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('الإنجاز الجماعي'),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: const StandardAppBar(
+        title: 'الإنجاز الجماعي',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -455,7 +444,9 @@ class _GroupAchievementScreenState
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     gradient: _isSaving ? null : AppGradients.deepPrimary,
-                    color: _isSaving ? AppColors.textSecondaryLight.withValues(alpha: 0.3) : null,
+                    color: _isSaving
+                        ? AppColors.textSecondaryLight.withValues(alpha: 0.3)
+                        : null,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     boxShadow: _isSaving ? null : AppShadows.primaryGlow,
                   ),
@@ -472,10 +463,13 @@ class _GroupAchievementScreenState
                           ),
                         )
                       else
-                        const Icon(Icons.save_rounded, color: Colors.white, size: 18),
+                        const Icon(Icons.save_rounded,
+                            color: Colors.white, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        _isSaving ? 'جار الحفظ...' : 'حفظ وتسجيل للطلاب الحاضرين',
+                        _isSaving
+                            ? 'جار الحفظ...'
+                            : 'حفظ وتسجيل للطلاب الحاضرين',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,

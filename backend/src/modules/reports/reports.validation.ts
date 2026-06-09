@@ -95,3 +95,17 @@ export const studentMonthlyExportBodySchema = z
     format: z.nativeEnum(ReportFileKind)
   })
   .strict();
+
+export const summaryCenterQuerySchema = z
+  .object({
+    centerId: optionalId
+  })
+  .strict();
+
+export const summaryCenterCircleQuerySchema = z
+  .object({
+    centerId: optionalId,
+    circleId: optionalId,
+    activeOnly: z.coerce.boolean().optional()
+  })
+  .strict();

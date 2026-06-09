@@ -25,7 +25,7 @@ const weekdaySchema = z.enum([
   "THURSDAY"
 ]);
 const prayerNameSchema = z.enum(["FAJR", "DHUHR", "ASR", "MAGHRIB", "ISHA"]);
-const hhmmSchema = z.string().trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time format");
+const hhmmSchema = z.string().trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "صيغة الوقت غير صحيحة");
 
 const circleScheduleRowSchema = z.discriminatedUnion("mode", [
   z
@@ -56,7 +56,7 @@ const weeklyScheduleSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: [index, "day"],
-          message: "Duplicate day is not allowed"
+          message: "اليوم المكرر غير مسموح"
         });
         return;
       }
@@ -85,6 +85,10 @@ const centerWriteShape = {
   gender: genderSchema.optional(),
   logoUrl: optionalMediaUrlSchema,
   mosqueName: optionalMosqueNameSchema,
+  locationText: optionalLocationTextSchema,
+  latitude: latitudeSchema.optional().nullable(),
+  longitude: longitudeSchema.optional().nullable(),
+  allowedRadiusMeters: positiveInt.optional().nullable(),
   timezone: optionalTimezoneSchema,
   centerAdminUserId: positiveInt.optional(),
   supervisorUserIds: z.array(positiveInt).max(50).optional(),
@@ -96,13 +100,13 @@ export const createCenterBodySchema = z
   .object(centerWriteShape)
   .strict()
   .refine((value) => Boolean(value.nameAr ?? value.name), {
-    message: "nameAr is required"
+    message: "الاسم بالعربية مطلوب"
   })
   .refine((value) => value.gender !== undefined, {
-    message: "gender is required"
+    message: "الجنس مطلوب"
   })
   .refine((value) => value.centerAdminUserId !== undefined, {
-    message: "centerAdminUserId is required"
+    message: "معرف مدير المركز مطلوب"
   });
 
 export const updateCenterBodySchema = z
@@ -121,7 +125,7 @@ export const updateCenterBodySchema = z
       value.centerAdminSchedule !== undefined ||
       value.code !== undefined,
     {
-      message: "At least one field is required"
+      message: "حقل واحد على الأقل مطلوب"
     }
   );
 
@@ -150,16 +154,16 @@ export const createCircleBodySchema = z
   .object(circleWriteShape)
   .strict()
   .refine((value) => value.centerId !== undefined, {
-    message: "centerId is required"
+    message: "معرف المركز مطلوب"
   })
   .refine((value) => Boolean(value.nameAr ?? value.name), {
-    message: "nameAr is required"
+    message: "الاسم بالعربية مطلوب"
   })
   .refine((value) => value.circleType !== undefined, {
-    message: "circleType is required"
+    message: "نوع الحلقة مطلوب"
   })
   .refine((value) => value.primaryTeacherUserId !== undefined || value.teacherId !== undefined, {
-    message: "primaryTeacherUserId is required"
+    message: "معرف المعلم الأساسي مطلوب"
   })
   .superRefine((value, ctx) => {
     const hasLatitude = value.latitude !== undefined && value.latitude !== null;
@@ -170,7 +174,7 @@ export const createCircleBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [hasLatitude ? "longitude" : "latitude"],
-        message: "latitude and longitude must be provided together"
+        message: "خط العرض وخط الطول يجب إدخالهما معاً"
       });
     }
 
@@ -178,7 +182,7 @@ export const createCircleBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["allowedRadiusMeters"],
-        message: "allowedRadiusMeters is required when latitude/longitude are provided"
+        message: "نطاق السماح (بالأمتار) مطلوب عند إدخال خط العرض/الطول"
       });
     }
   });
@@ -200,7 +204,7 @@ export const updateCircleBodySchema = z
       value.allowedRadiusMeters !== undefined ||
       value.weeklySchedule !== undefined,
     {
-      message: "At least one field is required"
+      message: "حقل واحد على الأقل مطلوب"
     }
   )
   .superRefine((value, ctx) => {
@@ -214,7 +218,7 @@ export const updateCircleBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [hasLatitude ? "longitude" : "latitude"],
-        message: "latitude and longitude must be provided together"
+        message: "خط العرض وخط الطول يجب إدخالهما معاً"
       });
     }
 
@@ -222,7 +226,7 @@ export const updateCircleBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [clearsLatitude ? "longitude" : "latitude"],
-        message: "latitude and longitude must be cleared together"
+        message: "يجب مسحهما معاً"
       });
     }
 
@@ -230,7 +234,7 @@ export const updateCircleBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["allowedRadiusMeters"],
-        message: "allowedRadiusMeters is required when updating latitude/longitude"
+        message: "نطاق السماح (بالأمتار) مطلوب عند تحديث خط العرض/الطول"
       });
     }
   }
@@ -245,7 +249,7 @@ export const orgBrandingUpdateBodySchema = z
   })
   .strict()
   .refine((value) => value.name !== undefined || value.logoUrl !== undefined, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 // ==========================================

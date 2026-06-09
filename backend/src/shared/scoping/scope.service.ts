@@ -35,7 +35,7 @@ export const scopeService = {
       scope = mergeScope(scope, [], circleIdsFromCenters);
     }
 
-    if (scope.circleIds.length) {
+    if (scope.circleIds.length && scope.role !== Role.CENTER_ADMIN) {
       const centerIdsFromCircles = await scopeRepository.findCenterIdsByCircleIds(scope.circleIds);
       scope = mergeScope(scope, centerIdsFromCircles, []);
     }

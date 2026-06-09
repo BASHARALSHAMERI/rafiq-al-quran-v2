@@ -11,6 +11,7 @@ import '../../shared/states/app_empty_state.dart';
 import '../../shared/states/app_error_state.dart';
 import '../../shared/states/app_loading_state.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/standard_app_bar.dart';
 
 class _RecordEntry {
   final String student;
@@ -121,9 +122,7 @@ class RecordsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('السجل اليومي'),
-      ),
+      appBar: const StandardAppBar(title: 'السجل اليومي'),
       body: recordsAsync.when(
         loading: () => const AppLoadingState(
           message: 'جار تحميل سجل الحلقة...',

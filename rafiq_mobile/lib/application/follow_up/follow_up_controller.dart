@@ -4,7 +4,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../data/models/follow_up_dtos.dart';
 import '../../domain/repositories/follow_up_repository.dart';
 import '../sync/sync_queue_service.dart';
+import '../teacher/teacher_panel_providers.dart';
 import 'follow_up_providers.dart';
+import 'today_follow_ups_provider.dart';
 
 part 'follow_up_controller.freezed.dart';
 
@@ -36,6 +38,13 @@ class FollowUpController extends StateNotifier<FollowUpState> {
       CreateFollowUpRequestDto request) async {
     try {
       final newRecord = await _repository.createFollowUp(request);
+
+      // Invalidate Riverpod Cache
+      _ref.invalidate(studentProfileProvider(request.studentId));
+      _ref.invalidate(todayFollowUpsProvider(request.circleId));
+      final now = DateTime.now();
+      _ref.invalidate(teacherMonthlyPlansProvider((month: now.month, year: now.year)));
+
       // Automatically refresh the list if we were in loaded state
       if (state is _Loaded) {
         final currentRecords = (state as _Loaded).records;
@@ -51,7 +60,13 @@ class FollowUpController extends StateNotifier<FollowUpState> {
           data: request.toJson(),
           description: 'تسجيل متابعة: ${request.type}',
         );
-        
+
+        // Invalidate Riverpod Cache for offline support
+        _ref.invalidate(studentProfileProvider(request.studentId));
+        _ref.invalidate(todayFollowUpsProvider(request.circleId));
+        final now = DateTime.now();
+        _ref.invalidate(teacherMonthlyPlansProvider((month: now.month, year: now.year)));
+
         // Return a mock success so UI continues
         return null;
       }

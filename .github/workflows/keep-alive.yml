@@ -1,0 +1,13 @@
+name: Keep API Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Endpoint
+        run: curl -s https://rufaqa-api-demo.onrender.com/health > /dev/null

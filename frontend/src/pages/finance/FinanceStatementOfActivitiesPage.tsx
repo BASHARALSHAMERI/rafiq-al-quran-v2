@@ -13,6 +13,7 @@ import { useCentersQuery } from "../../features/org/org.hooks";
 import { canReadCenters } from "../../features/org/org.permissions";
 import { useFinanceV2ReportStatementOfActivitiesQuery } from "../../features/finance-v2/finance-v2.hooks";
 import type { FinancialPositionItemV2 } from "../../features/finance-v2/types";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 // import { Badge } from "../../components/ui/Badge";
 
 const formatCurrency = (val: number) =>
@@ -134,6 +135,10 @@ export default function FinanceStatementOfActivitiesPage() {
       ) : reportQ.isError ? (
         <ErrorState
           title={ar ? "فشل تحميل التقرير" : "Failed to load report"}
+          description={getLocalizedApiErrorMessage(reportQ.error, {
+            ar,
+            fallback: ar ? "تعذر تحميل قائمة الأنشطة. حاول مرة أخرى." : "Unable to load the statement of activities."
+          })}
           onRetry={() => void reportQ.refetch()}
         />
       ) : !data ? (

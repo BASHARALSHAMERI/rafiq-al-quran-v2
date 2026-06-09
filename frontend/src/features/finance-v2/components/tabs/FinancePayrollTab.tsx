@@ -5,6 +5,8 @@ import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import {
   entityFeedback,
+  notifyError,
+  notifyRequiredFields,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
@@ -31,6 +33,7 @@ type Props = {
   month: number;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canCreateBatch?: boolean;
   ar: boolean;
   methodLabels: Record<PaymentMethodV2, string>;
   centers: { id: number; name: string }[];
@@ -176,6 +179,8 @@ export default function FinancePayrollTab({
   centerId, 
   year: propYear, 
   month: propMonth,
+  isAdmin,
+  canCreateBatch = isAdmin,
   ar, 
   methodLabels,
   externalShowBatchForm, 
@@ -231,7 +236,11 @@ export default function FinancePayrollTab({
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!centerId) return;
+    if (!centerId) {
+      setPayrollError(ar ? "المركز مطلوب لإنشاء دفعة الرواتب." : "A center is required to create a payroll batch.");
+      notifyRequiredFields(ar);
+      return;
+    }
 
     try {
       await createBatchM.mutateAsync({
@@ -242,7 +251,12 @@ export default function FinancePayrollTab({
       notifySuccess(entityFeedback.success(ar, "create", PAYROLL_BATCH_ENTITY));
       closeBatchModal();
     } catch (err) {
-      setPayrollError(getLocalizedApiErrorMessage(err, { ar, fallback: "Error" }));
+      const message = getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر إنشاء دفعة الرواتب." : "Unable to create the payroll batch."
+      });
+      setPayrollError(message);
+      notifyError(message);
     }
   };
 
@@ -258,35 +272,64 @@ export default function FinancePayrollTab({
 
   const handlePayItem = async () => {
     if (!paymentDraft) return;
-    const updated = await payBatchM.mutateAsync({
-      batchId: paymentDraft.batch.id,
-      payments: [{
-        itemId: paymentDraft.item.id,
-        method: paymentDraft.method,
-        manualReferenceNo: paymentDraft.reference || undefined,
-        externalTransferRef: paymentDraft.method === "TRANSFER" ? paymentDraft.reference || undefined : undefined
-      }]
-    });
-    setSelectedBatch(updated);
-    setPaymentDraft(null);
-    notifySuccess(ar ? "تم صرف راتب الموظف" : "Employee salary paid");
+    try {
+      const updated = await payBatchM.mutateAsync({
+        batchId: paymentDraft.batch.id,
+        payments: [{
+          itemId: paymentDraft.item.id,
+          method: paymentDraft.method,
+          manualReferenceNo: paymentDraft.reference || undefined,
+          externalTransferRef: paymentDraft.method === "TRANSFER" ? paymentDraft.reference || undefined : undefined
+        }]
+      });
+      setSelectedBatch(updated);
+      setPaymentDraft(null);
+      notifySuccess(ar ? "تم صرف راتب الموظف" : "Employee salary paid");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر صرف راتب الموظف." : "Unable to pay the employee salary."
+      }));
+    }
   };
 
   const handleFailItem = async () => {
-    if (!paymentDraft || !paymentDraft.failureReason.trim()) return;
-    const updated = await failItemM.mutateAsync({
-      itemId: paymentDraft.item.id,
-      failureReason: paymentDraft.failureReason
-    });
-    setSelectedBatch(updated);
-    setPaymentDraft(null);
-    notifySuccess(ar ? "تم تسجيل فشل الصرف" : "Payment failure recorded");
+    if (!paymentDraft || !paymentDraft.failureReason.trim()) {
+      notifyRequiredFields(ar);
+      return;
+    }
+    try {
+      const updated = await failItemM.mutateAsync({
+        itemId: paymentDraft.item.id,
+        failureReason: paymentDraft.failureReason
+      });
+      setSelectedBatch(updated);
+      setPaymentDraft(null);
+      notifySuccess(ar ? "تم تسجيل فشل الصرف" : "Payment failure recorded");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر تسجيل فشل صرف الراتب." : "Unable to record the payroll payment failure."
+      }));
+    }
+  };
+
+  const handleSubmitBatch = async (batchId: number) => {
+    try {
+      await submitBatchM.mutateAsync({ batchId });
+      notifySuccess(ar ? "تم اعتماد دفعة الرواتب بنجاح" : "Payroll batch approved successfully");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر اعتماد دفعة الرواتب." : "Unable to approve the payroll batch."
+      }));
+    }
   };
 
   return (
     <>
       <Modal
-        isOpen={showBatchForm}
+        isOpen={Boolean(showBatchForm && canCreateBatch)}
         onClose={closeBatchModal}
         title={ar ? "إنشاء دفعة رواتب" : "Create Payroll Batch"}
         titleIcon={
@@ -546,7 +589,7 @@ export default function FinancePayrollTab({
                     header: ar ? "الإجراء" : "Action",
                     render: (item) => (
                       <div className="flex items-center gap-2">
-                        {selectedBatch && PAYABLE_BATCH_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
+                        {isAdmin && selectedBatch && PAYABLE_BATCH_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
                           <Button
                             size="sm"
                             variant={item.status === "FAILED" ? "secondary" : "primary"}
@@ -572,7 +615,7 @@ export default function FinancePayrollTab({
       </Modal>
 
       <Modal
-        isOpen={!!paymentDraft}
+        isOpen={Boolean(paymentDraft && isAdmin)}
         onClose={() => setPaymentDraft(null)}
         title={ar ? "صرف راتب موظف" : "Pay employee salary"}
         description={paymentDraft?.item.beneficiary?.fullName}
@@ -690,13 +733,13 @@ export default function FinancePayrollTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {b.status === "DRAFT" && (
+                        {canCreateBatch && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 
                             className="shadow-sm"
                             leftIcon={<Calculator className="w-4 h-4" />}
-                            onClick={() => submitBatchM.mutate({ batchId: b.id })} 
+                            onClick={() => void handleSubmitBatch(b.id)}
                             isLoading={submitBatchM.isPending}
                           >
                             {ar ? "اعتماد" : "Approve"}

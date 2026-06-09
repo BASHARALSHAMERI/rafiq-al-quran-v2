@@ -8,7 +8,7 @@ export const stagger = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.08 },
+    transition: { staggerChildren: 0.02, delayChildren: 0.03 },
   },
 } as const;
 

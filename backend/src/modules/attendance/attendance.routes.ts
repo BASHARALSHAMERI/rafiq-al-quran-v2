@@ -9,15 +9,13 @@ import { attendanceController } from "./attendance.controller";
 import { attendanceBulkBodySchema, attendanceQuerySchema } from "./attendance.validation";
 
 const attendanceRouter = Router();
-
-attendanceRouter.use(
-  authGuard,
-  attachScope,
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER])
-);
+const attendanceRoles = [Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER];
 
 attendanceRouter.get(
   "/attendance",
+  authGuard,
+  attachScope,
+  requireRoles(attendanceRoles),
   validateQuery(attendanceQuerySchema),
   verifyScope("circle", "query", "circleId"),
   attendanceController.listForDate
@@ -26,6 +24,9 @@ attendanceRouter.get(
 // واجهة المعلم — طلاب الحلقة مع حالة الحضور
 attendanceRouter.get(
   "/attendance/students",
+  authGuard,
+  attachScope,
+  requireRoles(attendanceRoles),
   validateQuery(attendanceQuerySchema),
   verifyScope("circle", "query", "circleId"),
   attendanceController.getCircleStudents
@@ -33,6 +34,9 @@ attendanceRouter.get(
 
 attendanceRouter.post(
   "/attendance/bulk",
+  authGuard,
+  attachScope,
+  requireRoles(attendanceRoles),
   validateBody(attendanceBulkBodySchema),
   verifyScope("circle", "body", "circleId"),
   attendanceController.submitBulk

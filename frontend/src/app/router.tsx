@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactElement } from "react";
+import React, { Suspense, type ReactElement } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import RequireAuth from "../components/guards/RequireAuth";
 import RequireRole from "../components/guards/RequireRole";
@@ -11,43 +11,45 @@ import AdminLayout from "./AdminLayout";
 import { getRoleLandingPath } from "./role-landing";
 import { ADMIN_ROUTES, type AdminRouteId } from "./route-meta";
 
-const DashboardPage = lazy(() => import("../pages/DashboardPage"));
-const NotificationsPage = lazy(() => import("../pages/NotificationsPage"));
-const CentersPage = lazy(() => import("../pages/CentersPage"));
-const CirclesPage = lazy(() => import("../pages/CirclesPage"));
-const StudentsPage = lazy(() => import("../pages/StudentsPage"));
-const CenterAdminsPage = lazy(() => import("../pages/CenterAdminsPage"));
-const TeachersPage = lazy(() => import("../pages/TeachersPage"));
-const ParentsPage = lazy(() => import("../pages/ParentsPage"));
-const SupervisorsPage = lazy(() => import("../pages/SupervisorsPage"));
-const StaffOperationsPage = lazy(() => import("../pages/StaffOperationsPage"));
-const ExamsPage = lazy(() => import("../pages/ExamsPage"));
-const GoldenRecordsPage = lazy(() => import("../pages/GoldenRecordsPage"));
-const LibraryPage = lazy(() => import("../pages/LibraryPage"));
-const FinanceInvoicesPage = lazy(() => import("../pages/finance/FinanceInvoicesPage"));
-const FinancePaymentsPage = lazy(() => import("../pages/finance/FinancePaymentsPage"));
-const FinanceVouchersPage = lazy(() => import("../pages/finance/FinanceVouchersPage"));
-const FinanceDonorsPage = lazy(() => import("../pages/finance/FinanceDonorsPage"));
-const FinanceTreasuryPage = lazy(() => import("../pages/finance/FinanceTreasuryPage"));
-const FinancePayrollPage = lazy(() => import("../pages/finance/FinancePayrollPage"));
-const FinanceRewardsPage = lazy(() => import("../pages/finance/FinanceRewardsPage"));
-const FinanceCurrenciesPage = lazy(() => import("../pages/finance/FinanceCurrenciesPage"));
-const FinanceExpensesPage = lazy(() => import("../pages/finance/FinanceExpensesPage"));
-const FinanceAssetsPage = lazy(() => import("../pages/finance/FinanceAssetsPage"));
-const FinanceCenterFundingPage = lazy(() => import("../pages/finance/FinanceCenterFundingPage"));
-const FinanceStatementOfFinancialPositionPage = lazy(() => import("../pages/finance/FinanceStatementOfFinancialPositionPage"));
-const FinanceStatementOfActivitiesPage = lazy(() => import("../pages/finance/FinanceStatementOfActivitiesPage"));
-const AccountingAccountsPage = lazy(() => import("../pages/accounting/AccountingAccountsPage"));
-const AccountingJournalEntriesPage = lazy(() => import("../pages/accounting/AccountingJournalEntriesPage"));
-const AccountingLedgerPage = lazy(() => import("../pages/accounting/AccountingLedgerPage"));
-const AccountingTrialBalancePage = lazy(() => import("../pages/accounting/AccountingTrialBalancePage"));
-const ReportsPage = lazy(() => import("../pages/ReportsPage"));
-const AuditPage = lazy(() => import("../pages/AuditPage"));
-const SettingsPage = lazy(() => import("../pages/SettingsPage"));
-const RoleLandingPage = lazy(() => import("../pages/RoleLandingPage"));
-const ForgotPasswordPage = lazy(() => import("../pages/ForgotPasswordPage"));
-const ResetPasswordPage = lazy(() => import("../pages/ResetPasswordPage"));
-const ActivateAccountPage = lazy(() => import("../pages/ActivateAccountPage"));
+// ─── Lazy-loaded pages (loaded on demand, not on initial bundle) ───
+const DashboardPage = React.lazy(() => import("../pages/DashboardPage"));
+const NotificationsPage = React.lazy(() => import("../pages/NotificationsPage"));
+const CentersPage = React.lazy(() => import("../pages/CentersPage"));
+const CirclesPage = React.lazy(() => import("../pages/CirclesPage"));
+const StudentsPage = React.lazy(() => import("../pages/StudentsPage"));
+const CenterAdminsPage = React.lazy(() => import("../pages/CenterAdminsPage"));
+const TeachersPage = React.lazy(() => import("../pages/TeachersPage"));
+const ParentsPage = React.lazy(() => import("../pages/ParentsPage"));
+const SupervisorsPage = React.lazy(() => import("../pages/SupervisorsPage"));
+const AccountantsPage = React.lazy(() => import("../pages/AccountantsPage"));
+const StaffOperationsPage = React.lazy(() => import("../pages/StaffOperationsPage"));
+const SelfAttendancePage = React.lazy(() => import("../pages/SelfAttendancePage"));
+const ExamsPage = React.lazy(() => import("../pages/ExamsPage"));
+const GoldenRecordsPage = React.lazy(() => import("../pages/GoldenRecordsPage"));
+const LibraryPage = React.lazy(() => import("../pages/LibraryPage"));
+const FinanceInvoicesPage = React.lazy(() => import("../pages/finance/FinanceInvoicesPage"));
+const FinancePaymentsPage = React.lazy(() => import("../pages/finance/FinancePaymentsPage"));
+const FinanceVouchersPage = React.lazy(() => import("../pages/finance/FinanceVouchersPage"));
+const FinanceDonorsPage = React.lazy(() => import("../pages/finance/FinanceDonorsPage"));
+const FinanceTreasuryPage = React.lazy(() => import("../pages/finance/FinanceTreasuryPage"));
+const FinancePayrollPage = React.lazy(() => import("../pages/finance/FinancePayrollPage"));
+const FinanceRewardsPage = React.lazy(() => import("../pages/finance/FinanceRewardsPage"));
+const FinanceCurrenciesPage = React.lazy(() => import("../pages/finance/FinanceCurrenciesPage"));
+const FinanceExpensesPage = React.lazy(() => import("../pages/finance/FinanceExpensesPage"));
+const FinanceAssetsPage = React.lazy(() => import("../pages/finance/FinanceAssetsPage"));
+const FinanceCenterFundingPage = React.lazy(() => import("../pages/finance/FinanceCenterFundingPage"));
+const FinanceStatementOfFinancialPositionPage = React.lazy(() => import("../pages/finance/FinanceStatementOfFinancialPositionPage"));
+const FinanceStatementOfActivitiesPage = React.lazy(() => import("../pages/finance/FinanceStatementOfActivitiesPage"));
+const AccountingAccountsPage = React.lazy(() => import("../pages/accounting/AccountingAccountsPage"));
+const AccountingJournalEntriesPage = React.lazy(() => import("../pages/accounting/AccountingJournalEntriesPage"));
+const AccountingLedgerPage = React.lazy(() => import("../pages/accounting/AccountingLedgerPage"));
+const AccountingTrialBalancePage = React.lazy(() => import("../pages/accounting/AccountingTrialBalancePage"));
+const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
+const AuditPage = React.lazy(() => import("../pages/AuditPage"));
+const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
+const ForgotPasswordPage = React.lazy(() => import("../pages/ForgotPasswordPage"));
+const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
+const ActivateAccountPage = React.lazy(() => import("../pages/ActivateAccountPage"));
 
 const RouteFallback = () => {
   const message =
@@ -76,7 +78,9 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   teachers: <TeachersPage />,
   parents: <ParentsPage />,
   supervisors: <SupervisorsPage />,
+  accountants: <AccountantsPage />,
   staff_attendance: <StaffOperationsPage />,
+  self_attendance: <SelfAttendancePage />,
   exams: <ExamsPage />,
   graduation_candidates: <Navigate to="/golden-records?tab=candidates" replace />,
   golden_records: <GoldenRecordsPage />,
@@ -129,19 +133,11 @@ function AppRouter() {
           <Route path="/" element={<AuthLandingRedirect />} />
           <Route
             path="/parent/home"
-            element={withRouteFallback(
-              <RequireRole allowedRoles={["PARENT"]}>
-                <RoleLandingPage />
-              </RequireRole>
-            )}
+            element={<ForbiddenPage />}
           />
           <Route
             path="/student/home"
-            element={withRouteFallback(
-              <RequireRole allowedRoles={["STUDENT"]}>
-                <RoleLandingPage />
-              </RequireRole>
-            )}
+            element={<ForbiddenPage />}
           />
 
           <Route element={<AdminLayout />}>

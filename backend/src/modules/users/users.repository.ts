@@ -80,7 +80,6 @@ type CenterAdminProfileWriteInput = {
 
 type StudentProfileWriteInput = {
   nickname?: string | null;
-  nationalId?: string | null;
   level?: StudentLevel;
   studentStatus?: StudentProfileStatus;
   joinDate?: Date | null;
@@ -242,6 +241,7 @@ const baseUserSelect = {
         select: {
           id: true,
           name: true,
+          centerId: true,
           center: {
             select: {
               id: true,
@@ -366,6 +366,7 @@ const resolveRoleProfile = (user: {
     case "PARENT":
       return user.parentProfile ?? null;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       return null;
   }
 };
@@ -706,7 +707,6 @@ const createRoleProfileForUser = async (
           createdByUserId: input.createdByUserId ?? null,
           ...pickDefined({
             nickname: input.studentProfile?.nickname ?? null,
-            nationalId: input.studentProfile?.nationalId ?? null,
             level: input.studentProfile?.level ?? StudentLevel.BEGINNER,
             studentStatus: input.studentProfile?.studentStatus ?? StudentProfileStatus.REGULAR,
             joinDate: input.studentProfile?.joinDate ?? null
@@ -726,6 +726,7 @@ const createRoleProfileForUser = async (
       });
       break;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       break;
   }
 };
@@ -831,13 +832,11 @@ const updateRoleProfileForUser = async (
           studentStatus: input.studentProfile.studentStatus ?? StudentProfileStatus.REGULAR,
           ...pickDefined({
             nickname: input.studentProfile.nickname ?? null,
-            nationalId: input.studentProfile.nationalId ?? null,
             joinDate: input.studentProfile.joinDate ?? null
           })
         },
         update: pickDefined({
           nickname: input.studentProfile.nickname,
-          nationalId: input.studentProfile.nationalId,
           level: input.studentProfile.level,
           studentStatus: input.studentProfile.studentStatus,
           joinDate: input.studentProfile.joinDate
@@ -859,6 +858,7 @@ const updateRoleProfileForUser = async (
       });
       return;
     case "SUPER_ADMIN":
+    case "ACCOUNTANT":
       return;
   }
 };
@@ -1064,12 +1064,30 @@ export const usersRepository = {
       { includeInactive: input.includeInactive }
     );
 
-    const user = await prisma.user.findFirst({
-      where,
-      select: detailedUserSelect
-    });
+    try {
+      const user = await prisma.user.findFirst({
+        where,
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await prisma.user.findFirst({
+          where,
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async findScopedUserById(input: FindScopedUserByIdInput) {
@@ -1077,12 +1095,30 @@ export const usersRepository = {
       includeInactive: input.includeInactive
     });
 
-    const user = await prisma.user.findFirst({
-      where,
-      select: detailedUserSelect
-    });
+    try {
+      const user = await prisma.user.findFirst({
+        where,
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await prisma.user.findFirst({
+          where,
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async createUser(input: {
@@ -1164,7 +1200,7 @@ export const usersRepository = {
         links: input.links
       });
 
-      return this.findUserByIdWithClient(tx, { userId: user.id });
+      return usersRepository.findUserByIdWithClient(tx, { userId: user.id });
     });
   },
 
@@ -1261,7 +1297,7 @@ export const usersRepository = {
         links: input.links
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1344,7 +1380,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1359,7 +1395,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.userId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.userId })
       };
     });
   },
@@ -1373,7 +1409,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.userId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.userId });
     });
   },
 
@@ -1388,7 +1424,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.userId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.userId })
       };
     });
   },
@@ -1409,7 +1445,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.parentId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.parentId });
     });
   },
 
@@ -1424,7 +1460,7 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.parentId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.parentId })
       };
     });
   },
@@ -1444,7 +1480,7 @@ export const usersRepository = {
         }
       });
 
-      return this.findUserByIdWithClient(tx, { userId: input.studentId });
+      return usersRepository.findUserByIdWithClient(tx, { userId: input.studentId });
     });
   },
 
@@ -1459,20 +1495,40 @@ export const usersRepository = {
 
       return {
         deletedCount: deleted.count,
-        user: await this.findUserByIdWithClient(tx, { userId: input.studentId })
+        user: await usersRepository.findUserByIdWithClient(tx, { userId: input.studentId })
       };
     });
   },
 
   async findUserByIdWithClient(tx: Prisma.TransactionClient, input: { userId: number }) {
-    const user = await getClient(tx).user.findUnique({
-      where: {
-        id: input.userId
-      },
-      select: detailedUserSelect
-    });
+    try {
+      const user = await getClient(tx).user.findUnique({
+        where: {
+          id: input.userId
+        },
+        select: detailedUserSelect
+      });
 
-    return user ? syncLegacyNameMirrors(user) : null;
+      return user ? syncLegacyNameMirrors(user) : null;
+    } catch (error) {
+      const isPrismaError =
+        error instanceof Error &&
+        (("code" in error && typeof (error as any).code === "string") ||
+          error.constructor.name === "PrismaClientValidationError");
+
+      if (isPrismaError) {
+        const user = await getClient(tx).user.findUnique({
+          where: {
+            id: input.userId
+          },
+          select: baseUserSelect
+        });
+
+        return user ? syncLegacyNameMirrors(user) : null;
+      }
+
+      throw error;
+    }
   },
 
   async userHasCenterAccess(input: { userId: number; centerId: number }) {
@@ -1594,6 +1650,32 @@ export const usersRepository = {
             teacher: {
               select: { fullName: true }
             }
+          }
+        },
+        monthlyPlansAsStudent: {
+          where: { status: "APPROVED" },
+          orderBy: [
+            { year: "desc" },
+            { month: "desc" }
+          ],
+          take: 1,
+          select: {
+            id: true,
+            month: true,
+            year: true,
+            hifzFromSurah: true,
+            hifzFromAyah: true,
+            hifzToSurah: true,
+            hifzToAyah: true,
+            hifzTargetPages: true,
+            hifzDailyRate: true,
+            reviewFromSurah: true,
+            reviewFromAyah: true,
+            reviewToSurah: true,
+            reviewToAyah: true,
+            reviewTargetPages: true,
+            reviewDailyRate: true,
+            status: true
           }
         }
       }

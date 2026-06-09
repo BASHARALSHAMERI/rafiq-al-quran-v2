@@ -1,9 +1,12 @@
 import type { ErrorRequestHandler } from "express";
+import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { env } from "../../config/env";
 import { AppError } from "../errors/app-error";
 import { logger } from "../logger/logger";
 import { metrics } from "../metrics/metrics";
+import { t, type Lang } from "../i18n";
+import { messages } from "../i18n/messages";
 
 type NormalizedError = {
   statusCode: number;
@@ -12,12 +15,12 @@ type NormalizedError = {
   details?: unknown;
 };
 
-const toNormalizedError = (error: unknown): NormalizedError => {
+const toNormalizedError = (error: unknown, lang: Lang): NormalizedError => {
   if (error instanceof AppError) {
     return {
       statusCode: error.statusCode,
       code: error.code,
-      message: error.message,
+      message: error.localized ? t(error.localized, lang) : error.message,
       details: error.details
     };
   }
@@ -26,9 +29,25 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      message: "Validation failed",
+      message: t(messages.system.zodValidationError, lang),
       details: error.flatten()
     };
+  }
+
+  // Intercept Prisma errors before they leak schema/constraint details.
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return { statusCode: 409, code: "CONFLICT", message: t(messages.system.internalServerError, lang) };
+    }
+    if (error.code === "P2025") {
+      return { statusCode: 404, code: "ENTITY_NOT_FOUND", message: t(messages.system.internalServerError, lang) };
+    }
+    // All other known Prisma errors → generic 500, no detail
+    return { statusCode: 500, code: "INTERNAL_SERVER_ERROR", message: t(messages.system.internalServerError, lang) };
+  }
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return { statusCode: 400, code: "VALIDATION_ERROR", message: t(messages.system.internalServerError, lang) };
   }
 
   if (
@@ -40,7 +59,7 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 413,
       code: "PAYLOAD_TOO_LARGE",
-      message: "Request payload too large"
+      message: t(messages.system.payloadTooLarge, lang)
     };
   }
 
@@ -53,19 +72,20 @@ const toNormalizedError = (error: unknown): NormalizedError => {
     return {
       statusCode: 400,
       code: "INVALID_JSON",
-      message: "Invalid JSON body"
+      message: t(messages.system.invalidJson, lang)
     };
   }
 
   return {
     statusCode: 500,
     code: "INTERNAL_SERVER_ERROR",
-    message: "Internal server error"
+    message: t(messages.system.internalServerError, lang)
   };
 };
 
 export const errorMiddleware: ErrorRequestHandler = (error, req, res, _next) => {
-  const normalized = toNormalizedError(error);
+  const lang = req.lang ?? "ar";
+  const normalized = toNormalizedError(error, lang);
   const requestId = req.requestId ?? "unknown";
   metrics.recordError({
     code: normalized.code,

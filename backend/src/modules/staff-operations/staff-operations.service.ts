@@ -7,22 +7,24 @@ import {
   LeaveType,
   DeductionEventStatus,
   StaffRoleType,
-  Role
+  Role,
+  GeoState
 } from "@prisma/client";
 import { prisma } from "../../shared/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import { ScopeContext } from "../../shared/types/auth.types";
 import { effectiveShiftService } from "./effective-shift.service";
 import { attendancePolicyService } from "./attendance-policy.service";
+import { logger } from "../../shared/logger/logger";
 
 const toStartOfDay = (value: string | Date) => {
-  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  const date = new Date(value);
   date.setHours(0, 0, 0, 0);
   return date;
 };
 
 const toEndOfDay = (value: string | Date) => {
-  const date = typeof value === "string" ? new Date(value) : new Date(value);
+  const date = new Date(value);
   date.setHours(23, 59, 59, 999);
   return date;
 };
@@ -369,43 +371,106 @@ export const staffOperationsService = {
     const targetDate = query.date ? toStartOfDay(query.date) : toStartOfDay(new Date());
     const skip = (query.page - 1) * query.limit;
 
-    let whereClause: Prisma.StaffAttendanceRecordWhereInput = {
+    logger.info(
+      { scopeUserId: scope.userId, scopeRole: scope.role, allAccess: scope.allAccess, centerIds: scope.centerIds, targetDate: targetDate.toISOString(), page: query.page, limit: query.limit },
+      "[listAttendance] start"
+    );
+
+    let userWhereClause: Prisma.UserWhereInput = {
       organizationId: scope.organizationId,
-      attendanceDate: targetDate,
+      isActive: true,
+      role: {
+        in: [
+          Role.CENTER_ADMIN,
+          Role.TEACHER,
+          Role.ACCOUNTANT,
+          Role.FINANCE_MANAGER,
+          Role.TREASURER,
+          Role.AUDITOR
+        ]
+      }
     };
 
     if (!scope.allAccess && scope.centerIds.length > 0) {
-      whereClause.centerId = { in: scope.centerIds };
+      userWhereClause.OR = [
+        { managedCenters: { some: { id: { in: scope.centerIds } } } },
+        { centerSupervisorLinks: { some: { centerId: { in: scope.centerIds } } } },
+        { taughtCircles: { some: { centerId: { in: scope.centerIds } } } },
+        { staffSchedules: { some: { centerId: { in: scope.centerIds }, isActive: true } } },
+        { centerAccesses: { some: { centerId: { in: scope.centerIds } } } }
+      ];
     }
 
     if (scope.role === Role.TEACHER) {
-      whereClause.userId = scope.userId;
+      userWhereClause.id = scope.userId;
     }
 
-    const [records, total] = await prisma.$transaction([
-      (prisma as any).staffAttendanceRecord.findMany({
-        where: whereClause,
+    const [users, total] = await prisma.$transaction([
+      prisma.user.findMany({
+        where: userWhereClause,
         include: {
-          user: {
-            select: {
-              id: true,
-              fullName: true,
-              role: true,
-              profile: { select: { phone: true, gender: true } },
-              taughtCircles: {
-                include: { weeklyScheduleSlots: true }
-              }
-            },
+          profile: { select: { phone: true, gender: true } },
+          taughtCircles: {
+            include: { weeklyScheduleSlots: true }
           },
+          staffAttendances: {
+            where: { attendanceDate: targetDate }
+          }
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { fullName: "asc" },
         skip,
         take: query.limit,
       }),
-      prisma.staffAttendanceRecord.count({
-        where: whereClause,
+      prisma.user.count({
+        where: userWhereClause,
       })
     ]);
+
+    logger.info(
+      { usersFound: users.length, totalUsers: total, targetDate: targetDate.toISOString() },
+      "[listAttendance] query complete"
+    );
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const targetDateStr = targetDate.toISOString().slice(0, 10);
+    const isToday = todayStr === targetDateStr;
+
+    const records = users
+      .map((user: any) => {
+        const attendance = user.staffAttendances?.[0];
+        if (attendance) {
+          return { ...attendance, user };
+        }
+        // Do not pre-mark ABSENT for today before shift ends; show empty state instead
+        if (isToday) {
+          return null;
+        }
+        return {
+          id: -(user.id),
+          organizationId: scope.organizationId,
+          centerId: scope.centerIds[0] || 0,
+          userId: user.id,
+          attendanceDate: targetDate,
+          status: "ABSENT",
+          checkInTime: null,
+          checkOutTime: null,
+          markedById: null,
+          note: null,
+          createdAt: targetDate,
+          updatedAt: targetDate,
+          earlyDepartureMinutes: null,
+          lateMinutes: null,
+          source: "SYSTEM",
+          staffRole: user.role,
+          user: user
+        };
+      })
+      .filter(Boolean);
+
+    logger.info(
+      { recordsCount: records.length, hasAttendance: records.filter((r: any) => r.id > 0).length, absentCount: records.filter((r: any) => r.id < 0).length },
+      "[listAttendance] records mapped"
+    );
 
     const supervisorIds: number[] = Array.from(
       new Set(
@@ -434,17 +499,26 @@ export const staffOperationsService = {
       visitCounts.map((visit) => [visit.supervisorId, visit._count._all ?? 0])
     );
 
-    const effectiveShifts = await Promise.all(
-      records.map(async (record: any) => {
-        const shift = await effectiveShiftService.resolveEffectiveShift(
-          record.userId,
-          new Date(record.attendanceDate),
-          record.centerId,
-          scope.organizationId
-        );
-        return [record.id, shift] as const;
-      })
-    );
+    let effectiveShifts: Array<readonly [number, { start: Date; end: Date } | null]> = [];
+    try {
+      effectiveShifts = await Promise.all(
+        records.map(async (record: any) => {
+          const shift = await effectiveShiftService.resolveEffectiveShift(
+            record.userId,
+            new Date(record.attendanceDate),
+            record.centerId,
+            scope.organizationId
+          );
+          return [record.id, shift] as const;
+        })
+      );
+    } catch (err) {
+      logger.error(
+        { err: err instanceof Error ? err.message : String(err), stack: err instanceof Error ? err.stack : undefined, recordsCount: records.length },
+        "[listAttendance] effectiveShifts failed"
+      );
+      throw err;
+    }
 
     const shiftByRecordId = new Map<number, { start: Date; end: Date } | null>(effectiveShifts);
 
@@ -479,16 +553,23 @@ export const staffOperationsService = {
         // Teacher can only mark their own attendance
         const myRecord = records.find(r => r.userId === scope.userId);
         if (!myRecord) {
-            throw new AppError("Teachers can only mark their own attendance", 403);
+            throw new AppError("المعلم يمكنه تسجيل حضوره فقط", 403);
         }
         records = [myRecord];
     } else if (!scope.allAccess && scope.centerIds.length > 0) {
       // Admin/Supervisor can only mark within their center
       const invalid = records.find(r => !scope.centerIds.includes(r.centerId));
       if (invalid) {
-        throw new AppError("Access denied for one or more centers", 403);
+        throw new AppError("الوصول ممنوع لواحد أو أكثر من المراكز", 403);
       }
     }
+
+    const userIds = [...new Set(records.map((r) => r.userId))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, role: true }
+    });
+    const roleByUserId = new Map(users.map((u) => [u.id, u.role]));
 
     return prisma.$transaction(
       records.map((record) =>
@@ -513,7 +594,7 @@ export const staffOperationsService = {
             note: record.note,
             markedById: scope.userId,
             source: AttendanceSource.MANUAL,
-            staffRole: resolveStaffRole(Role.TEACHER), // Fallback, will be updated by trigger or later
+            staffRole: resolveStaffRole(roleByUserId.get(record.userId) ?? Role.TEACHER),
           },
         })
       )
@@ -524,13 +605,21 @@ export const staffOperationsService = {
     scope: ScopeContext,
     query: { centerId?: number; circleId?: number; month?: number; year?: number }
   ) {
+    logger.info(
+      { scopeUserId: scope.userId, scopeRole: scope.role, centerId: query.centerId, circleId: query.circleId },
+      "[getSelfAttendance] start"
+    );
     const circle = await resolveSelfAttendanceTarget(scope, {
       centerId: query.centerId,
       circleId: query.circleId
     });
+    logger.info(
+      { circleId: circle.id, centerId: (circle as any).centerId },
+      "[getSelfAttendance] target resolved"
+    );
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const todayUtc = getAttendanceDateForTimeZone(now, timezone);
     const currentMonthYear = getMonthYearForTimeZone(now, timezone);
     
@@ -680,7 +769,8 @@ export const staffOperationsService = {
         weekendDays: policy.weekendDays,
         holidays: policy.holidays,
         geoEnforcement: policy.geoEnforcement,
-        timezone
+        timezone,
+        timeFormat: policy.timeFormat
       },
       eligibility,
       today: {
@@ -831,7 +921,7 @@ export const staffOperationsService = {
     });
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
 
     const [existing, effectiveShift, approvedLeave] = await Promise.all([
@@ -863,11 +953,11 @@ export const staffOperationsService = {
     ]);
 
     if (existing?.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("Cannot check in while ON_LEAVE", 409, undefined, "INVALID_STATE");
+      throw new AppError("لا يمكن تسجيل الحضور أثناء إجازة", 409, undefined, "INVALID_STATE");
     }
 
     if (existing?.checkOutTime) {
-      throw new AppError("Attendance already closed for today", 409, undefined, "INVALID_STATE");
+      throw new AppError("تم إغلاق الحضور لهذا اليوم", 409, undefined, "INVALID_STATE");
     }
 
     if (existing?.checkInTime && !existing.checkOutTime) {
@@ -977,7 +1067,7 @@ export const staffOperationsService = {
     });
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
-    const timezone = policy.timezone ?? "Asia/Riyadh";
+    const timezone = policy.timezone ?? "Asia/Aden";
     const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
     const [existing, effectiveShift, approvedLeave] = await Promise.all([
       prisma.staffAttendanceRecord.findUnique({
@@ -1008,11 +1098,11 @@ export const staffOperationsService = {
     ]);
 
     if (!existing?.checkInTime) {
-      throw new AppError("Check-in is required before check-out", 400, undefined, "INVALID_STATE");
+      throw new AppError("يرجى تسجيل الحضور أولاً قبل تسجيل الانصراف", 400, undefined, "INVALID_STATE");
     }
 
     if (existing.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("Cannot check out while ON_LEAVE", 409, undefined, "INVALID_STATE");
+      throw new AppError("لا يمكن تسجيل الانصراف أثناء إجازة", 409, undefined, "INVALID_STATE");
     }
 
     if (existing.checkOutTime) {
@@ -1161,7 +1251,7 @@ export const staffOperationsService = {
 
   async requestExcuse(scope: ScopeContext, data: { centerId: number; date: string | Date; reason: string }) {
     if (!scope.allAccess && !scope.centerIds.includes(data.centerId) && scope.role !== Role.TEACHER) {
-       throw new AppError("Access denied for this center", 403);
+       throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
     const absenceDate = typeof data.date === "string" 
@@ -1180,7 +1270,7 @@ export const staffOperationsService = {
     });
 
     if (existing) {
-      throw new AppError("Excuse already submitted for this date", 409);
+      throw new AppError("تم تقديم عذر لهذا التاريخ مسبقاً", 409);
     }
 
     return prisma.staffExcuseRequest.create({
@@ -1197,28 +1287,28 @@ export const staffOperationsService = {
 
   async updateExcuseStatus(scope: ScopeContext, excuseId: number, status: ExcuseRequestStatus, note?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update excuse status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة العذر", 403);
     }
 
     const excuse = await prisma.staffExcuseRequest.findUnique({ where: { id: excuseId } });
     if (!excuse || excuse.organizationId !== scope.organizationId) {
-      throw new AppError("Excuse not found", 404);
+      throw new AppError("العذر غير موجود", 404);
     }
 
     if (excuse.status !== ExcuseRequestStatus.PENDING) {
-      throw new AppError("Only pending excuses can be updated", 400, undefined, "INVALID_STATE");
+      throw new AppError("فقط الأعذار المعلقة يمكن تعديلها", 400, undefined, "INVALID_STATE");
     }
 
     if (status === ExcuseRequestStatus.PENDING) {
-      throw new AppError("Excuse status can only be approved or rejected", 400, undefined, "INVALID_STATE");
+      throw new AppError("حالة العذر يمكن أن تكون معتمدة أو مرفوضة فقط", 400, undefined, "INVALID_STATE");
     }
 
     if (excuse.userId === scope.userId) {
-      throw new AppError("Cannot handle your own excuse", 403);
+      throw new AppError("لا يمكن معالجة عذر خاص بك", 403);
     }
 
     if (!scope.allAccess && !scope.centerIds.includes(excuse.centerId)) {
-      throw new AppError("Access denied to update excuse in this center", 403);
+      throw new AppError("ليس لديك صلاحية لتحديث العذر في هذا المركز", 403);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -1338,7 +1428,7 @@ export const staffOperationsService = {
     }
   ) {
     if (!scope.allAccess && !scope.centerIds.includes(data.centerId) && scope.role !== Role.TEACHER) {
-      throw new AppError("Access denied for this center", 403);
+      throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
     const startDate = typeof data.startDate === "string" ? toStartOfDay(data.startDate) : data.startDate;
@@ -1363,24 +1453,24 @@ export const staffOperationsService = {
 
   async updateLeaveStatus(scope: ScopeContext, leaveId: number, status: LeaveRequestStatus, note?: string) {
     if (scope.role !== Role.CENTER_ADMIN && scope.role !== Role.SUPER_ADMIN) {
-      throw new AppError("Access denied: only admins can update leave status", 403);
+      throw new AppError("فقط المدراء يمكنهم تحديث حالة الإجازة", 403);
     }
 
     const leave = await prisma.staffLeaveRequest.findUnique({ where: { id: leaveId } });
     if (!leave || leave.organizationId !== scope.organizationId) {
-      throw new AppError("Leave request not found", 404);
+      throw new AppError("طلب الإجازة غير موجود", 404);
     }
 
     if (leave.status !== LeaveRequestStatus.LEAVE_PENDING) {
-      throw new AppError("Only pending leave requests can be updated", 400, undefined, "INVALID_STATE");
+      throw new AppError("فقط طلبات الإجازة المعلقة يمكن تعديلها", 400, undefined, "INVALID_STATE");
     }
 
     if (leave.userId === scope.userId) {
-      throw new AppError("Cannot handle your own leave request", 403);
+      throw new AppError("لا يمكن معالجة طلب إجازة خاص بك", 403);
     }
 
     if (!scope.allAccess && !scope.centerIds.includes(leave.centerId)) {
-      throw new AppError("Access denied to update leave request in this center", 403);
+      throw new AppError("ليس لديك صلاحية لتحديث طلب الإجازة في هذا المركز", 403);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -1453,7 +1543,7 @@ export const staffOperationsService = {
     }
   ) {
     if (scope.role === Role.TEACHER) {
-      throw new AppError("Access denied", 403);
+      throw new AppError("ليس لديك صلاحية", 403);
     }
 
     const skip = (query.page - 1) * query.limit;
@@ -1530,6 +1620,132 @@ export const staffOperationsService = {
       page: query.page,
       limit: query.limit
     };
+  },
+
+  async createVisitLog(
+    scope: ScopeContext,
+    input: {
+      centerId: number;
+      circleId?: number | null;
+      planItemId?: number | null;
+      startLatitude?: number | null;
+      startLongitude?: number | null;
+      observations?: string | null;
+    }
+  ) {
+    if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
+      throw new AppError("ليس لديك صلاحية", 403);
+    }
+
+    const supervisorId = scope.userId;
+
+    const center = await prisma.center.findFirst({
+      where: { id: input.centerId, organizationId: scope.organizationId },
+      select: { id: true, latitude: true, longitude: true, allowedRadiusMeters: true, locationText: true }
+    });
+
+    if (!center) throw new AppError("المركز غير موجود", 404);
+
+    let startGeoState: GeoState = GeoState.NOT_SENT;
+    let startDistanceMeters: number | null = null;
+
+    if (input.startLatitude != null && input.startLongitude != null && center.latitude != null && center.longitude != null && center.allowedRadiusMeters != null) {
+      startDistanceMeters = Math.round(haversineMeters({
+        fromLat: input.startLatitude,
+        fromLng: input.startLongitude,
+        toLat: Number(center.latitude),
+        toLng: Number(center.longitude)
+      }));
+      startGeoState = startDistanceMeters <= center.allowedRadiusMeters ? GeoState.INSIDE : GeoState.OUTSIDE;
+    }
+
+    const visitLog = await prisma.supervisorVisitLog.create({
+      data: {
+        organizationId: scope.organizationId,
+        supervisorId,
+        centerId: input.centerId,
+        circleId: input.circleId ?? null,
+        planItemId: input.planItemId ?? null,
+        startedAt: new Date(),
+        startLatitude: input.startLatitude ?? null,
+        startLongitude: input.startLongitude ?? null,
+        startGeoState,
+        startDistanceMeters,
+        observations: input.observations ?? null
+      },
+      include: {
+        supervisor: { select: { id: true, fullName: true } },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
+      }
+    });
+
+    return { ...visitLog, status: "PENDING", visitType: visitLog.planItemId ? "PLANNED" : "EMERGENCY" };
+  },
+
+  async endVisitLog(
+    scope: ScopeContext,
+    visitId: number,
+    input: {
+      endLatitude?: number | null;
+      endLongitude?: number | null;
+      rating?: number | null;
+      observations?: string | null;
+      checklist?: unknown[];
+    }
+  ) {
+    if (scope.role !== Role.SUPERVISOR && scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
+      throw new AppError("ليس لديك صلاحية", 403);
+    }
+
+    const existing = await prisma.supervisorVisitLog.findFirst({
+      where: { id: visitId, organizationId: scope.organizationId },
+      include: { center: { select: { latitude: true, longitude: true, allowedRadiusMeters: true } } }
+    });
+
+    if (!existing) throw new AppError("سجل الزيارة غير موجود", 404);
+    if (existing.supervisorId !== scope.userId && scope.role !== Role.SUPER_ADMIN) {
+      throw new AppError("ليس لديك صلاحية", 403);
+    }
+    if (existing.endedAt) throw new AppError("الزيارة منتهية بالفعل", 409);
+
+    const endedAt = new Date();
+    const durationMinutes = Math.round((endedAt.getTime() - existing.startedAt.getTime()) / 60_000);
+
+    let endGeoState: GeoState = GeoState.NOT_SENT;
+    let endDistanceMeters: number | null = null;
+
+    if (input.endLatitude != null && input.endLongitude != null && existing.center.latitude != null && existing.center.longitude != null && existing.center.allowedRadiusMeters != null) {
+      endDistanceMeters = Math.round(haversineMeters({
+        fromLat: input.endLatitude,
+        fromLng: input.endLongitude,
+        toLat: Number(existing.center.latitude),
+        toLng: Number(existing.center.longitude)
+      }));
+      endGeoState = endDistanceMeters <= existing.center.allowedRadiusMeters ? GeoState.INSIDE : GeoState.OUTSIDE;
+    }
+
+    const updated = await prisma.supervisorVisitLog.update({
+      where: { id: visitId },
+      data: {
+        endedAt,
+        durationMinutes,
+        endLatitude: input.endLatitude ?? null,
+        endLongitude: input.endLongitude ?? null,
+        endGeoState,
+        endDistanceMeters,
+        rating: input.rating ?? null,
+        observations: input.observations ?? existing.observations,
+        checklist: input.checklist ? (input.checklist as object[]) : undefined
+      },
+      include: {
+        supervisor: { select: { id: true, fullName: true } },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
+      }
+    });
+
+    return { ...updated, status: "COMPLETED", visitType: updated.planItemId ? "PLANNED" : "EMERGENCY" };
   },
 
   // ==========================================
@@ -1710,30 +1926,23 @@ async function resolveTeacherCircle(scope: ScopeContext, circleId?: number) {
   return circle;
 }
 
-async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?: number) {
-  if (scope.role !== Role.CENTER_ADMIN) {
-    throw new AppError("Forbidden", 403, undefined, "FORBIDDEN");
-  }
-
+async function resolveCenterByScope(
+  scope: ScopeContext,
+  centerId?: number,
+  accessConditions: Prisma.CenterWhereInput[] = []
+) {
   const resolvedCenterId = centerId ?? scope.centerIds[0];
-  const directCenterAccess = [
-    { centerAdminUserId: scope.userId },
-    { userCenterAccesses: { some: { userId: scope.userId } } }
-  ];
-  const scopedCenterAccess = scope.centerIds.length ? [{ id: { in: scope.centerIds } }] : [];
+  const scopeFilter: Prisma.CenterWhereInput[] = scope.centerIds.length
+    ? [{ id: { in: scope.centerIds } }]
+    : [];
+  const combinedAccess = [...accessConditions, ...scopeFilter];
 
   const center = await prisma.center.findFirst({
     where: {
       organizationId: scope.organizationId,
       isActive: true,
-      ...(resolvedCenterId
-        ? {
-            id: resolvedCenterId,
-            OR: [...directCenterAccess, ...scopedCenterAccess]
-          }
-        : {
-            OR: [...directCenterAccess, ...scopedCenterAccess]
-          })
+      ...(resolvedCenterId ? { id: resolvedCenterId } : {}),
+      ...(combinedAccess.length > 0 ? { OR: combinedAccess } : {})
     },
     select: {
       id: true,
@@ -1746,12 +1955,25 @@ async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?
     }
   });
 
+  return center;
+}
+
+async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  if (scope.role !== Role.CENTER_ADMIN) {
+    throw new AppError("غير مصرح بهذه العملية", 403, undefined, "FORBIDDEN");
+  }
+
+  const center = await resolveCenterByScope(scope, centerId, [
+    { centerAdminUserId: scope.userId },
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
   if (!center) {
-    throw new AppError("No assigned center found for attendance", 404, undefined, "NOT_FOUND");
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
   }
 
   return {
-    id: 0,
+    id: center.id,
     centerId: center.id,
     latitude: center.latitude,
     longitude: center.longitude,
@@ -1762,12 +1984,70 @@ async function resolveCenterAdminAttendanceCenter(scope: ScopeContext, centerId?
   };
 }
 
+async function resolveSupervisorAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  const center = await resolveCenterByScope(scope, centerId, [
+    { centerSupervisors: { some: { supervisorUserId: scope.userId, isActive: true } } },
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
+  if (!center) {
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
+  }
+
+  return {
+    id: center.id,
+    centerId: center.id,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    allowedRadiusMeters: center.allowedRadiusMeters,
+    name: center.name,
+    locationText: center.locationText ?? center.name,
+    timezone: center.timezone
+  };
+}
+
+async function resolveFinanceStaffAttendanceCenter(scope: ScopeContext, centerId?: number) {
+  const center = await resolveCenterByScope(scope, centerId, [
+    { userCenterAccesses: { some: { userId: scope.userId } } }
+  ]);
+
+  if (!center) {
+    throw new AppError("لم يتم العثور على مركز مسند للحضور", 404, undefined, "NOT_FOUND");
+  }
+
+  return {
+    id: center.id,
+    centerId: center.id,
+    latitude: center.latitude,
+    longitude: center.longitude,
+    allowedRadiusMeters: center.allowedRadiusMeters,
+    name: center.name,
+    locationText: center.locationText ?? center.name,
+    timezone: center.timezone
+  };
+}
+
+const financeRoles: Role[] = [
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.TREASURER,
+  Role.AUDITOR
+];
+
 async function resolveSelfAttendanceTarget(
   scope: ScopeContext,
   input: { centerId?: number; circleId?: number }
 ) {
   if (scope.role === Role.CENTER_ADMIN) {
     return resolveCenterAdminAttendanceCenter(scope, input.centerId);
+  }
+
+  if (scope.role === Role.SUPERVISOR) {
+    return resolveSupervisorAttendanceCenter(scope, input.centerId);
+  }
+
+  if (financeRoles.includes(scope.role)) {
+    return resolveFinanceStaffAttendanceCenter(scope, input.centerId);
   }
 
   return resolveTeacherCircle(scope, input.circleId);

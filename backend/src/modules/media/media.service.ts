@@ -16,7 +16,6 @@ export const mediaService = {
       organizationId: input.organizationId,
       kind: input.kind,
       mimeType: input.file.mimeType,
-      originalFileName: input.file.originalName,
       buffer: input.file.buffer
     });
 

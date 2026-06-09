@@ -32,7 +32,7 @@ const pageSizeSchema = z.coerce.number().int().positive().max(100).optional();
 const currencyCodeSchema = z
   .string()
   .trim()
-  .regex(/^[A-Za-z]{3}$/, "currency code must be 3 letters")
+  .regex(/^[A-Za-z]{3}$/, "رمز العملة يجب أن يكون 3 أحرف")
   .transform((value) => value.toUpperCase());
 const optionalOriginalAmount = z.coerce.number().positive().max(100000000).optional();
 const optionalCurrencyCode = currencyCodeSchema.optional();
@@ -52,6 +52,7 @@ export const policyEffectiveQuerySchema = z
 
 export const patchPolicyBodySchema = z
   .object({
+    feesEnabled: z.boolean().optional(),
     requireTransferAttachment: z.boolean().optional(),
     requireApprovalDisbursement: z.boolean().optional(),
     requireApprovalReceipt: z.boolean().optional(),
@@ -61,7 +62,7 @@ export const patchPolicyBodySchema = z
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {
-    message: "At least one policy field is required"
+    message: "حقل سياسة واحد على الأقل مطلوب"
   });
 
 export const listStudentFeeProfilesQuerySchema = z
@@ -104,7 +105,7 @@ export const updateStudentFeeProfileBodySchema = z
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 export const listInvoicesV2QuerySchema = z
@@ -208,7 +209,7 @@ export const createVoucherBodySchema = z
       }
       return true;
     },
-    { message: "accountingCategory does not match voucherType", path: ["accountingCategory"] }
+    { message: "التصنيف المحاسبي لا يتطابق مع نوع السند", path: ["accountingCategory"] }
   );
 
 export const listDonorsQuerySchema = z
@@ -270,7 +271,7 @@ export const createDonationBodySchema = z
   .strict()
   .refine(
     (data) => data.amount !== undefined || data.originalAmount !== undefined,
-    { message: "amount or originalAmount is required", path: ["amount"] }
+    { message: "المبلغ أو المبلغ الأصلي مطلوب", path: ["amount"] }
   );
 
 export const receiveDonationBodySchema = z
@@ -387,7 +388,7 @@ export const updatePayrollProfileBodySchema = z
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {
-    message: "At least one field is required"
+    message: "حقل واحد على الأقل مطلوب"
   });
 
 export const listPayrollBatchesQuerySchema = z
@@ -588,7 +589,7 @@ export const updateCurrencyBodySchema = z
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {
-    message: "At least one currency field is required"
+    message: "حقل عملة واحد على الأقل مطلوب"
   });
 
 export const listExchangeRatesQuerySchema = z

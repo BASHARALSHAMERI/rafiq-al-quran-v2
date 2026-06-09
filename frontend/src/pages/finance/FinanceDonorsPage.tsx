@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Gift, Plus, RefreshCw, AlertTriangle, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "../../app/i18n";
+import { useAuthStore } from "../../features/auth/auth.store";
 import { Button } from "../../components/ui/Button";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
@@ -129,6 +130,9 @@ const statusClass = (status: DonationStatusV2) => {
 export default function FinanceDonorsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
+  const user = useAuthStore((state) => state.user);
+  const canManageDonors =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
 
   const [centerId, setCenterId] = useState<number | undefined>();
   const [q, setQ] = useState("");
@@ -449,12 +453,16 @@ export default function FinanceDonorsPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonor}>
-                  {ar ? "إضافة متبرع" : "Add Donor"}
-                </Button>
-                <Button variant="primary" size="sm" className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonation}>
-                  {ar ? "إضافة تبرع" : "Add Donation"}
-                </Button>
+                {canManageDonors ? (
+                  <>
+                    <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonor}>
+                      {ar ? "إضافة متبرع" : "Add Donor"}
+                    </Button>
+                    <Button variant="primary" size="sm" className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonation}>
+                      {ar ? "إضافة تبرع" : "Add Donation"}
+                    </Button>
+                  </>
+                ) : null}
               </div>
             }
           />
@@ -539,6 +547,7 @@ export default function FinanceDonorsPage() {
                       ar={ar}
                       view={view}
                       openEdit={openEditDonor}
+                      canEdit={canManageDonors}
                     />
                   ))}
                 </motion.div>
@@ -695,7 +704,7 @@ export default function FinanceDonorsPage() {
                               </span>
                             </td>
                             <td>
-                              {donation.status === "PLEDGED" && (
+                              {canManageDonors && donation.status === "PLEDGED" && (
                                 <Button size="sm" variant="primary" onClick={() => openReceivePledge(donation)}>
                                   {ar ? "استلام" : "Receive"}
                                 </Button>

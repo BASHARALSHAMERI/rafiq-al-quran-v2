@@ -43,25 +43,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
     case 'SUPERVISOR':
       return const [
         RoleNavigationItem(
-          label: 'الحلقات',
-          icon: Icons.groups_outlined,
-          selectedIcon: Icons.groups,
-          route: RouteNames.supervisorHalaqat,
-          matchPrefixes: [
-            RouteNames.halqaVisitBase,
-            RouteNames.supervisorTodayVisits,
-            RouteNames.supervisorTeacherEval,
-            RouteNames.supervisorNotes,
-            RouteNames.approvals,
-          ],
-        ),
-        RoleNavigationItem(
-          label: 'الاختبارات',
-          icon: Icons.assignment_outlined,
-          selectedIcon: Icons.assignment,
-          route: RouteNames.homeExams,
-        ),
-        RoleNavigationItem(
           label: 'الرئيسية',
           icon: Icons.home_outlined,
           selectedIcon: Icons.home,
@@ -69,10 +50,25 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           includeDescendants: false,
         ),
         RoleNavigationItem(
-          label: 'الإشعارات',
-          icon: Icons.notifications_outlined,
-          selectedIcon: Icons.notifications,
-          route: RouteNames.notifications,
+          label: 'الزيارات',
+          icon: Icons.explore_outlined,
+          selectedIcon: Icons.explore,
+          route: RouteNames.supervisorTodayVisits,
+          matchPrefixes: [
+            RouteNames.supervisorHalaqat,
+            RouteNames.supervisorHalqaVisitBase,
+            RouteNames.supervisorTeacherEval,
+            RouteNames.supervisorNotes,
+          ],
+        ),
+        RoleNavigationItem(
+          label: 'التقارير',
+          icon: Icons.analytics_outlined,
+          selectedIcon: Icons.analytics,
+          route: RouteNames.supervisorReports,
+          matchPrefixes: [
+            RouteNames.supervisorHalqaReportBase,
+          ],
         ),
         RoleNavigationItem(
           label: 'حسابي',
@@ -83,9 +79,20 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
       ];
     case 'CENTER_ADMIN':
     case 'SUPER_ADMIN':
+    case 'ACCOUNTANT':
+    case 'FINANCE_MANAGER':
+    case 'TREASURER':
+    case 'AUDITOR':
       return const [];
     case 'PARENT':
       return const [
+        RoleNavigationItem(
+          label: 'الرئيسية',
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          route: RouteNames.parentHome,
+          includeDescendants: false,
+        ),
         RoleNavigationItem(
           label: 'الأبناء',
           icon: Icons.school_outlined,
@@ -100,19 +107,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           route: RouteNames.homeExams,
         ),
         RoleNavigationItem(
-          label: 'الرئيسية',
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          route: RouteNames.parentHome,
-          includeDescendants: false,
-        ),
-        RoleNavigationItem(
-          label: 'الإشعارات',
-          icon: Icons.notifications_outlined,
-          selectedIcon: Icons.notifications,
-          route: RouteNames.notifications,
-        ),
-        RoleNavigationItem(
           label: 'حسابي',
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
@@ -121,6 +115,13 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
       ];
     case 'STUDENT':
       return const [
+        RoleNavigationItem(
+          label: 'الرئيسية',
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          route: RouteNames.studentHome,
+          includeDescendants: false,
+        ),
         RoleNavigationItem(
           label: 'رحلتي',
           icon: Icons.auto_stories_outlined,
@@ -139,19 +140,6 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           route: RouteNames.homeExams,
         ),
         RoleNavigationItem(
-          label: 'الرئيسية',
-          icon: Icons.home_outlined,
-          selectedIcon: Icons.home,
-          route: RouteNames.studentHome,
-          includeDescendants: false,
-        ),
-        RoleNavigationItem(
-          label: 'الإشعارات',
-          icon: Icons.notifications_outlined,
-          selectedIcon: Icons.notifications,
-          route: RouteNames.notifications,
-        ),
-        RoleNavigationItem(
           label: 'حسابي',
           icon: Icons.person_outline,
           selectedIcon: Icons.person,
@@ -159,28 +147,7 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
         ),
       ];
     case 'TEACHER':
-    default:
       return const [
-        RoleNavigationItem(
-          label: 'الحلقة',
-          icon: Icons.groups_outlined,
-          selectedIcon: Icons.groups,
-          route: RouteNames.teacherHalqa,
-          matchPrefixes: [
-            RouteNames.teacherStudentBase,
-            RouteNames.teacherAttendance,
-            RouteNames.teacherPreparation,
-            RouteNames.teacherGroupAchievement,
-            RouteNames.teacherMonthlyPlan,
-            RouteNames.teacherRemoteRecitation,
-          ],
-        ),
-        RoleNavigationItem(
-          label: 'الاختبارات',
-          icon: Icons.assignment_outlined,
-          selectedIcon: Icons.assignment,
-          route: RouteNames.homeExams,
-        ),
         RoleNavigationItem(
           label: 'الرئيسية',
           icon: Icons.home_outlined,
@@ -189,10 +156,23 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           includeDescendants: false,
         ),
         RoleNavigationItem(
-          label: 'الإشعارات',
-          icon: Icons.notifications_outlined,
-          selectedIcon: Icons.notifications,
-          route: RouteNames.notifications,
+          label: 'الحلقة',
+          icon: Icons.groups_outlined,
+          selectedIcon: Icons.groups,
+          route: RouteNames.teacherHalqa,
+          matchPrefixes: [
+            RouteNames.teacherStudentBase,
+            RouteNames.teacherAttendance,
+            RouteNames.teacherGroupAchievement,
+            RouteNames.teacherMonthlyPlan,
+            RouteNames.teacherRemoteRecitation,
+          ],
+        ),
+        RoleNavigationItem(
+          label: 'تحضيري',
+          icon: Icons.fact_check_outlined,
+          selectedIcon: Icons.fact_check,
+          route: RouteNames.teacherPreparation,
         ),
         RoleNavigationItem(
           label: 'حسابي',
@@ -201,6 +181,8 @@ List<RoleNavigationItem> navigationItemsForRole(String role) {
           route: RouteNames.profile,
         ),
       ];
+    default:
+      return const [];
   }
 }
 

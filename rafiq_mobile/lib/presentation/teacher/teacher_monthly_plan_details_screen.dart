@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/context/context_controller.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
+
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../core/utils/period_label_formatter.dart';
 import '../../data/models/teacher_panel_dtos.dart';
 import '../shared/states/app_error_state.dart';
 import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/app_card.dart';
 import '../shared/widgets/quran_range_picker.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 enum _PlanTab { hifz, review }
 
@@ -45,9 +47,7 @@ class _TeacherMonthlyPlanDetailsScreenState
   ) async {
     if (!_isValidOrderedRange(result.hifzRange) ||
         !_isValidOrderedRange(result.reviewRange)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تأكد من صحة نطاق الآيات قبل الحفظ.')),
-      );
+      AppSnackBar.warning(context, 'تأكد من صحة نطاق الآيات قبل الحفظ.');
       return;
     }
 
@@ -75,13 +75,12 @@ class _TeacherMonthlyPlanDetailsScreenState
         teacherMonthlyPlansProvider((month: plan.month, year: plan.year)),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ تعديل الخطة الشهرية.')),
-      );
+      AppSnackBar.success(context, 'تم حفظ تعديل الخطة الشهرية.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر حفظ التعديلات: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر حفظ التعديلات. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -102,13 +101,12 @@ class _TeacherMonthlyPlanDetailsScreenState
         teacherMonthlyPlansProvider((month: plan.month, year: plan.year)),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم اعتماد الخطة بنجاح.')),
-      );
+      AppSnackBar.success(context, 'تم اعتماد الخطة بنجاح.');
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر اعتماد الخطة: $error')),
+      AppSnackBar.error(
+        context,
+        'تعذر اعتماد الخطة. يرجى المحاولة مرة أخرى.',
       );
     } finally {
       if (mounted) {
@@ -133,18 +131,13 @@ class _TeacherMonthlyPlanDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final circleName = ref.watch(
-      contextControllerProvider.select((state) => state.selectedCircleName),
-    );
     final planAsync =
         ref.watch(teacherMonthlyPlanDetailsProvider(widget.planId));
 
     return Scaffold(
+
       backgroundColor: const Color(0xFFF7F8F5),
-      appBar: AppBar(
-        title: const Text('الخطة الشهرية'),
-        centerTitle: false,
-      ),
+      appBar: const StandardAppBar(title: 'الخطة الشهرية'),
       body: planAsync.when(
         loading: () => const AppLoadingState(
           message: 'جار تحميل تفاصيل الخطة...',
@@ -155,22 +148,8 @@ class _TeacherMonthlyPlanDetailsScreenState
           onRetry: _refresh,
         ),
         data: (plan) {
-          final rosterAsync = ref.watch(
-            teacherMonthlyPlansProvider((month: plan.month, year: plan.year)),
-          );
-          final studentOrder = _resolveStudentOrder(rosterAsync, plan.id);
           final selectedSegment =
               _selectedTab == _PlanTab.hifz ? plan.hifz : plan.review;
-          final completionRate = _selectedTab == _PlanTab.hifz
-              ? plan.progress.hifzCompletionRate
-              : plan.progress.reviewCompletionRate;
-          final executedPages = _selectedTab == _PlanTab.hifz
-              ? plan.progress.hifzExecutedPages
-              : plan.progress.reviewExecutedPages;
-          final remainingPages = _remainingPages(
-            target: selectedSegment.targetPages,
-            executed: executedPages,
-          );
           final isApproved = _isApproved(plan.status);
           final studentName = plan.student?.fullName ?? 'طالب';
           final planLabel = formatGregorianMonthLabel(
@@ -191,67 +170,53 @@ class _TeacherMonthlyPlanDetailsScreenState
               children: [
                 _StudentHeaderCard(
                   studentName: studentName,
-                  circleName: circleName ?? 'الحلقة الحالية',
                   periodLabel: planLabel,
                   levelLabel: _levelLabel(plan.student?.level),
-                  rankLabel: studentOrder,
                   dailyRateLabel:
                       '${_formatPages(plan.hifz.dailyRate)} صفحة/يوم',
                   attendanceLabel:
                       '${plan.progress.attendance.presentDays}/${plan.progress.attendance.totalDays}',
                   memorizedPagesLabel: '${plan.progress.memorizedPages ?? 0}',
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
                 _PlanTabSelector(
                   selectedTab: _selectedTab,
                   onChanged: (tab) => setState(() => _selectedTab = tab),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _LatestReachedCard(latestReached: plan.progress.latestReached),
-                const SizedBox(height: AppSpacing.md),
-                _ProposedPlanCard(
+                _PlanDetailsCard(
                   title: _selectedTab == _PlanTab.hifz
-                      ? 'خطة الحفظ المقترحة'
-                      : 'خطة المراجعة المقترحة',
+                      ? 'تفاصيل خطة الحفظ'
+                      : 'تفاصيل خطة المراجعة',
                   segment: selectedSegment,
+                  latestReached: plan.progress.latestReached,
                   note: _selectedTab == _PlanTab.review
                       ? 'تُراجع مادة الشهر مرتين افتراضياً ويمكن تعديلها.'
                       : plan.notes,
                   isApproved: isApproved,
-                  onEdit: isApproved ? null : () => _openEditSheet(plan),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _TargetPagesCard(
-                  targetPages: selectedSegment.targetPages ?? 0,
-                  dailyRate: selectedSegment.dailyRate ?? 0,
                   accent: _selectedTab == _PlanTab.hifz
                       ? AppColors.primaryLight
                       : AppColors.infoLight,
-                  subtitle: _selectedTab == _PlanTab.review
+                  pageSubtitle: _selectedTab == _PlanTab.review
                       ? 'النطاق نفسه محسوب للمراجعة مرتين'
                       : 'عدد الصفحات محسوب تلقائياً من نطاق الآيات',
+                  onEdit: isApproved ? null : () => _openEditSheet(plan),
                 ),
                 if (isApproved) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _ProgressCard(
-                    title: 'التقدم الحالي',
-                    completionRate: completionRate,
-                    executedPages: executedPages,
-                    remainingPages: remainingPages,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
                   const _ApprovedStateCard(),
+
                 ] else ...[
                   const SizedBox(height: AppSpacing.lg),
                   SizedBox(
-                    height: 60,
+                    height: 52,
                     child: ElevatedButton.icon(
                       onPressed: _isApproving ? null : () => _approvePlan(plan),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryLight,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         elevation: 0,
                       ),
@@ -268,8 +233,9 @@ class _TeacherMonthlyPlanDetailsScreenState
                       label: Text(
                         _isApproving ? 'جار اعتماد الخطة...' : 'اعتماد الخطة',
                         style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          fontFamily: 'Cairo',
                         ),
                       ),
                     ),
@@ -286,20 +252,16 @@ class _TeacherMonthlyPlanDetailsScreenState
 
 class _StudentHeaderCard extends StatelessWidget {
   final String studentName;
-  final String circleName;
   final String periodLabel;
   final String? levelLabel;
-  final String? rankLabel;
   final String dailyRateLabel;
   final String attendanceLabel;
   final String memorizedPagesLabel;
 
   const _StudentHeaderCard({
     required this.studentName,
-    required this.circleName,
     required this.periodLabel,
     required this.levelLabel,
-    required this.rankLabel,
     required this.dailyRateLabel,
     required this.attendanceLabel,
     required this.memorizedPagesLabel,
@@ -308,103 +270,93 @@ class _StudentHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: EdgeInsets.zero,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFF8FBF8), Colors.white],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          Row(
             children: [
               CircleAvatar(
-                radius: 36,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.10),
+                radius: 24,
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
                 child: Text(
                   studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
                   style: const TextStyle(
                     color: AppColors.primaryLight,
                     fontWeight: FontWeight.w900,
-                    fontSize: 28,
+                    fontSize: 20,
+                    fontFamily: 'Cairo',
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                studentName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      studentName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppColors.textPrimaryLight,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      periodLabel,
+                      style: const TextStyle(
+                        color: AppColors.textSecondaryLight,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                '$circleName · $periodLabel',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                textAlign: TextAlign.center,
+              const SizedBox(width: 8),
+              if (levelLabel != null)
+                _StatusChip(
+                  label: levelLabel!,
+                  color: _levelColor(levelLabel!),
+                  background: _levelColor(levelLabel!).withValues(alpha: 0.08),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.borderLight),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _HeaderMetric(
+                  value: dailyRateLabel,
+                  label: 'معدل الحفظ',
+                ),
               ),
-              const SizedBox(height: 10),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (levelLabel != null)
-                    _StatusChip(
-                      label: levelLabel!,
-                      color: _levelColor(levelLabel!),
-                      background:
-                          _levelColor(levelLabel!).withValues(alpha: 0.12),
-                    ),
-                  if (rankLabel != null)
-                    _StatusChip(
-                      label: rankLabel!,
-                      color: AppColors.textSecondaryLight,
-                      background: const Color(0xFFF2F4F5),
-                    ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HeaderMetric(
+                  value: attendanceLabel,
+                  label: 'يوم حضور',
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              const Divider(height: 1),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: _HeaderMetric(
-                      value: dailyRateLabel,
-                      label: 'صفحة/يوم',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _HeaderMetric(
-                      value: attendanceLabel,
-                      label: 'يوم حضور',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _HeaderMetric(
-                      value: memorizedPagesLabel,
-                      label: 'صفحة محفوظة',
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HeaderMetric(
+                  value: memorizedPagesLabel,
+                  label: 'صفحة محفوظة',
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 }
+
 
 class _PlanTabSelector extends StatelessWidget {
   final _PlanTab selectedTab;
@@ -418,10 +370,10 @@ class _PlanTabSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F2ED),
-        borderRadius: BorderRadius.circular(22),
+        color: const Color(0xFFF1F3F0),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
@@ -460,19 +412,19 @@ class _TabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
           color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -482,6 +434,8 @@ class _TabButton extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: FontWeight.w800,
+            fontSize: 13,
+            fontFamily: 'Cairo',
             color: selected
                 ? AppColors.textPrimaryLight
                 : AppColors.textSecondaryLight,
@@ -492,138 +446,196 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class _LatestReachedCard extends StatelessWidget {
-  final TeacherPlanLatestReachedDto? latestReached;
-
-  const _LatestReachedCard({required this.latestReached});
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _formatLatestReached(latestReached);
-
-    return AppCard(
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.infoLight.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.menu_book_outlined,
-              color: AppColors.infoLight,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'آخر موضع وصل إليه',
-                  style: TextStyle(
-                    color: AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 19,
-                    height: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProposedPlanCard extends StatelessWidget {
+class _PlanDetailsCard extends StatelessWidget {
   final String title;
   final TeacherPlanSegmentDto segment;
+  final TeacherPlanLatestReachedDto? latestReached;
   final String? note;
   final bool isApproved;
+  final Color accent;
+  final String pageSubtitle;
   final VoidCallback? onEdit;
 
-  const _ProposedPlanCard({
+  const _PlanDetailsCard({
     required this.title,
     required this.segment,
+    required this.latestReached,
     required this.note,
     required this.isApproved,
+    required this.accent,
+    required this.pageSubtitle,
     required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
+    final rangeStart = _formatSegmentStart(segment);
+    final rangeEnd = _formatSegmentEnd(segment);
+    final latestReachedStr = _formatLatestReached(latestReached);
+
     return AppCard(
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                  ),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: AppColors.textPrimaryLight,
+                  fontFamily: 'Cairo',
                 ),
               ),
               if (!isApproved && onEdit != null)
-                TextButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('تعديل'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primaryLight,
+                SizedBox(
+                  height: 32,
+                  child: TextButton.icon(
+                    onPressed: onEdit,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                      foregroundColor: accent,
+                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text(
+                      'تعديل النطاق',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.borderLight),
+          const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _PlanRangeColumn(
-                  label: 'من',
-                  value: _formatSegmentStart(segment),
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'النطاق المقترح للشهر',
+                      style: TextStyle(
+                        color: AppColors.textSecondaryLight,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$rangeStart - $rangeEnd',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: AppColors.textPrimaryLight,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
-                child: _PlanRangeColumn(
-                  label: 'إلى',
-                  value: _formatSegmentEnd(segment),
+                flex: 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'آخر موضع وصل إليه',
+                      style: TextStyle(
+                        color: AppColors.textSecondaryLight,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        fontFamily: 'Cairo',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      latestReachedStr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: AppColors.textPrimaryLight,
+                        fontFamily: 'Cairo',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.12)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.adjust_rounded, color: accent, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'الصفحات المستهدفة: ${_formatPages(segment.targetPages)} صفحة',
+                        style: TextStyle(
+                          color: accent,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$pageSubtitle · ${_formatPages(segment.dailyRate)} صفحة/يوم',
+                        style: TextStyle(
+                          color: accent.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (note != null && note!.trim().isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F8F5),
-                borderRadius: BorderRadius.circular(18),
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Text(
                 note!,
                 style: const TextStyle(
                   color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w700,
-                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  fontFamily: 'Cairo',
+                  height: 1.4,
                 ),
               ),
             ),
@@ -634,195 +646,6 @@ class _ProposedPlanCard extends StatelessWidget {
   }
 }
 
-class _PlanRangeColumn extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _PlanRangeColumn({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textSecondaryLight,
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 18,
-            height: 1.3,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TargetPagesCard extends StatelessWidget {
-  final double targetPages;
-  final double dailyRate;
-  final Color accent;
-  final String subtitle;
-
-  const _TargetPagesCard({
-    required this.targetPages,
-    required this.dailyRate,
-    required this.accent,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.adjust_rounded, color: accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'الصفحات المستهدفة',
-                  style: TextStyle(
-                    color: AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_formatPages(targetPages)} صفحة',
-                  style: TextStyle(
-                    color: accent,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 28,
-                    height: 1,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$subtitle · ${_formatPages(dailyRate)} صفحة/يوم',
-                  style: TextStyle(
-                    color: accent.withValues(alpha: 0.85),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProgressCard extends StatelessWidget {
-  final String title;
-  final double completionRate;
-  final double executedPages;
-  final double remainingPages;
-
-  const _ProgressCard({
-    required this.title,
-    required this.completionRate,
-    required this.executedPages,
-    required this.remainingPages,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final safeValue = (completionRate / 100).isFinite
-        ? (completionRate / 100).clamp(0.0, 1.0)
-        : 0.0;
-
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                  ),
-                ),
-              ),
-              Text(
-                '${completionRate.toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 28,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: safeValue,
-              minHeight: 9,
-              color: AppColors.primaryLight,
-              backgroundColor: AppColors.borderLight.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'تم تنفيذ ${_formatPages(executedPages)} صفحة',
-                  style: const TextStyle(
-                    color: AppColors.textSecondaryLight,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                'المتبقي ${_formatPages(remainingPages)} صفحة',
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _ApprovedStateCard extends StatelessWidget {
   const _ApprovedStateCard();
@@ -831,10 +654,10 @@ class _ApprovedStateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 18),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.successLight.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.successLight.withValues(alpha: 0.16),
         ),
@@ -842,14 +665,15 @@ class _ApprovedStateCard extends StatelessWidget {
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_rounded, color: AppColors.successLight),
+          Icon(Icons.check_rounded, color: AppColors.successLight, size: 20),
           SizedBox(width: 8),
           Text(
             'تم اعتماد الخطة',
             style: TextStyle(
               color: AppColors.successLight,
-              fontWeight: FontWeight.w900,
-              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -870,10 +694,11 @@ class _HeaderMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
@@ -881,19 +706,21 @@ class _HeaderMetric extends StatelessWidget {
             value,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
               height: 1.2,
+              fontFamily: 'Cairo',
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.textSecondaryLight,
               fontWeight: FontWeight.w700,
-              fontSize: 12,
+              fontSize: 11,
+              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -916,7 +743,7 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
@@ -926,7 +753,8 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w800,
-          fontSize: 12,
+          fontSize: 11,
+          fontFamily: 'Cairo',
         ),
       ),
     );
@@ -1187,32 +1015,6 @@ bool _isValidOrderedRange(QuranRangeValue range) {
 
 bool _isApproved(String status) => status.trim().toUpperCase() == 'APPROVED';
 
-double _remainingPages({
-  required double? target,
-  required double executed,
-}) {
-  final resolvedTarget = target ?? 0;
-  return (resolvedTarget - executed).clamp(0, double.infinity).toDouble();
-}
-
-String? _resolveStudentOrder(
-  AsyncValue<TeacherMonthlyPlansListDto> rosterAsync,
-  int currentPlanId,
-) {
-  final plans = rosterAsync.valueOrNull?.plans.toList(growable: false);
-  if (plans == null || plans.isEmpty) return null;
-
-  final sorted = plans.toList(growable: false)
-    ..sort(
-      (a, b) => (a.student?.fullName ?? '').compareTo(
-        b.student?.fullName ?? '',
-      ),
-    );
-  final index = sorted.indexWhere((plan) => plan.id == currentPlanId);
-  if (index < 0) return null;
-
-  return 'الطالب ${index + 1} من ${sorted.length}';
-}
 
 String _formatLatestReached(TeacherPlanLatestReachedDto? latestReached) {
   if (latestReached?.toSurah == null || latestReached?.toAyah == null) {
@@ -1278,3 +1080,82 @@ Color _levelColor(String level) {
       return AppColors.primaryLight;
   }
 }
+
+class _TargetPagesCard extends StatelessWidget {
+  final double targetPages;
+  final double dailyRate;
+  final Color accent;
+  final String subtitle;
+
+  const _TargetPagesCard({
+    required this.targetPages,
+    required this.dailyRate,
+    required this.accent,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.1)),
+            ),
+            child: Icon(Icons.adjust_rounded, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'الصفحات المستهدفة',
+                  style: TextStyle(
+                    color: AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_formatPages(targetPages)} صفحة',
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    fontFamily: 'Cairo',
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$subtitle · ${_formatPages(dailyRate)} صفحة/يوم',
+                  style: TextStyle(
+                    color: accent.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 11,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

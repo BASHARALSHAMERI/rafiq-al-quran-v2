@@ -5,6 +5,8 @@ import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import {
   entityFeedback,
+  notifyError,
+  notifyRequiredFields,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
@@ -31,6 +33,7 @@ type Props = {
   month: number;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  canCreateBatch?: boolean;
   ar: boolean;
   centers: { id: number; name: string }[];
   externalShowBatchForm?: boolean;
@@ -85,6 +88,8 @@ export default function FinanceRewardsTab({
   centerId, 
   year, 
   month,
+  isAdmin,
+  canCreateBatch = isAdmin,
   ar, 
   externalShowBatchForm, 
   onExternalBatchFormClose 
@@ -141,7 +146,11 @@ export default function FinanceRewardsTab({
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!centerId) return;
+    if (!centerId) {
+      setRewardError(ar ? "المركز مطلوب لإنشاء دفعة المكافآت." : "A center is required to create a reward batch.");
+      notifyRequiredFields(ar);
+      return;
+    }
 
     try {
       await createBatchM.mutateAsync({
@@ -155,7 +164,12 @@ export default function FinanceRewardsTab({
       notifySuccess(entityFeedback.success(ar, "create", REWARD_BATCH_ENTITY));
       closeBatchModal();
     } catch (err) {
-      setRewardError(getLocalizedApiErrorMessage(err, { ar, fallback: "Error" }));
+      const message = getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر إنشاء دفعة المكافآت." : "Unable to create the reward batch."
+      });
+      setRewardError(message);
+      notifyError(message);
     }
   };
 
@@ -171,35 +185,64 @@ export default function FinanceRewardsTab({
 
   const handlePayItem = async () => {
     if (!paymentDraft) return;
-    const updated = await payBatchM.mutateAsync({
-      batchId: paymentDraft.batch.id,
-      payments: [{
-        itemId: paymentDraft.item.id,
-        method: paymentDraft.method,
-        manualReferenceNo: paymentDraft.reference || undefined,
-        externalTransferRef: paymentDraft.method === "TRANSFER" ? paymentDraft.reference || undefined : undefined
-      }]
-    });
-    setSelectedBatch(updated);
-    setPaymentDraft(null);
-    notifySuccess(ar ? "تم صرف المكافأة" : "Reward paid");
+    try {
+      const updated = await payBatchM.mutateAsync({
+        batchId: paymentDraft.batch.id,
+        payments: [{
+          itemId: paymentDraft.item.id,
+          method: paymentDraft.method,
+          manualReferenceNo: paymentDraft.reference || undefined,
+          externalTransferRef: paymentDraft.method === "TRANSFER" ? paymentDraft.reference || undefined : undefined
+        }]
+      });
+      setSelectedBatch(updated);
+      setPaymentDraft(null);
+      notifySuccess(ar ? "تم صرف المكافأة" : "Reward paid");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر صرف المكافأة." : "Unable to pay the reward."
+      }));
+    }
   };
 
   const handleFailItem = async () => {
-    if (!paymentDraft || !paymentDraft.failureReason.trim()) return;
-    const updated = await failItemM.mutateAsync({
-      itemId: paymentDraft.item.id,
-      failureReason: paymentDraft.failureReason
-    });
-    setSelectedBatch(updated);
-    setPaymentDraft(null);
-    notifySuccess(ar ? "تم تسجيل فشل الصرف" : "Reward payment failure recorded");
+    if (!paymentDraft || !paymentDraft.failureReason.trim()) {
+      notifyRequiredFields(ar);
+      return;
+    }
+    try {
+      const updated = await failItemM.mutateAsync({
+        itemId: paymentDraft.item.id,
+        failureReason: paymentDraft.failureReason
+      });
+      setSelectedBatch(updated);
+      setPaymentDraft(null);
+      notifySuccess(ar ? "تم تسجيل فشل الصرف" : "Reward payment failure recorded");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر تسجيل فشل صرف المكافأة." : "Unable to record the reward payment failure."
+      }));
+    }
+  };
+
+  const handleSubmitBatch = async (batchId: number) => {
+    try {
+      await submitBatchM.mutateAsync({ batchId });
+      notifySuccess(ar ? "تم اعتماد دفعة المكافآت بنجاح" : "Reward batch approved successfully");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر اعتماد دفعة المكافآت." : "Unable to approve the reward batch."
+      }));
+    }
   };
 
   return (
     <>
       <Modal
-        isOpen={showBatchForm}
+        isOpen={Boolean(showBatchForm && canCreateBatch)}
         onClose={closeBatchModal}
         title={ar ? "إنشاء دفعة مكافآت" : "Create Reward Batch"}
         titleIcon={
@@ -429,7 +472,7 @@ export default function FinanceRewardsTab({
                 header: ar ? "الإجراء" : "Action",
                 render: (item) => (
                   <div className="flex items-center gap-2">
-                    {selectedBatch && PAYABLE_REWARD_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
+                    {isAdmin && selectedBatch && PAYABLE_REWARD_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
                       <Button
                         size="sm"
                         variant={item.status === "FAILED" ? "secondary" : "primary"}
@@ -450,7 +493,7 @@ export default function FinanceRewardsTab({
       </Modal>
 
       <Modal
-        isOpen={!!paymentDraft}
+        isOpen={Boolean(paymentDraft && isAdmin)}
         onClose={() => setPaymentDraft(null)}
         title={ar ? "صرف مكافأة" : "Pay reward"}
         description={paymentDraft?.item.beneficiary?.fullName}
@@ -565,13 +608,13 @@ export default function FinanceRewardsTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (b) => (
                       <div className="flex items-center gap-2">
-                        {b.status === "DRAFT" && (
+                        {canCreateBatch && b.status === "DRAFT" && (
                           <Button 
                             size="sm" 
                             variant="primary" 
                             className="shadow-sm"
                             leftIcon={<Gift className="w-4 h-4" />}
-                            onClick={() => submitBatchM.mutate({ batchId: b.id })} 
+                            onClick={() => void handleSubmitBatch(b.id)}
                             isLoading={submitBatchM.isPending}
                           >
                             {ar ? "اعتماد وصرف" : "Approve & Pay"}

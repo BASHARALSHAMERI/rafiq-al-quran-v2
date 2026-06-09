@@ -205,6 +205,116 @@ function CreatePlanModal({
   );
 }
 
+function PlanDetailsModal({
+  ar,
+  plan,
+  onClose,
+  onActivate,
+  onAddVisit,
+  onEditItem,
+  onRemoveItem
+}: {
+  ar: boolean;
+  plan: VisitPlan;
+  onClose: () => void;
+  onActivate: () => void;
+  onAddVisit: () => void;
+  onEditItem: (item: VisitPlanItem) => void;
+  onRemoveItem: (itemId: number) => void;
+}) {
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="lg"
+      title={ar ? `خطة الزيارات: ${plan.supervisor.fullName}` : `Visit Plan: ${plan.supervisor.fullName}`}
+      panelClassName="users-modal-panel staff-ops-users-modal-panel"
+      bodyClassName="users-modal-body staff-ops-users-modal-body !p-0 bg-slate-50/30"
+    >
+      <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-white">
+        <div className="flex items-center gap-2 text-slate-700">
+          <MapPin size={18} className="text-brand" />
+          <h3 className="font-bold text-[15px]">{ar ? "جدول الزيارات اليومية" : "Daily Visit Schedule"}</h3>
+        </div>
+        <div className="flex gap-2">
+          {plan.status === "DRAFT" && (
+            <Button size="sm" variant="primary" onClick={onActivate}>
+              {ar ? "تفعيل الخطة" : "Activate Plan"}
+            </Button>
+          )}
+          {plan.status !== "COMPLETED" && (
+            <Button size="sm" variant="ghost" className="bg-white border border-slate-200 shadow-sm hover:border-brand" onClick={onAddVisit}>
+              <Plus size={14} className="me-1" /> {ar ? "إضافة زيارة" : "Add Visit"}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4">
+        {plan.items.length === 0 ? (
+          <div className="col-span-full py-8 text-center text-slate-400 text-[13px]">
+            {ar ? "لم يتم إضافة زيارات لهذه الخطة بعد" : "No visits added to this plan yet"}
+          </div>
+        ) : (
+          plan.items
+            .slice()
+            .sort((a, b) => a.plannedDate.localeCompare(b.plannedDate))
+            .map((item) => (
+              <div key={item.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:border-brand/30 hover:shadow-md transition-all group">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-[13px] text-slate-800">
+                      {item.center?.name || `Center #${item.centerId}`}
+                    </span>
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
+                      <Calendar size={10} />
+                      <span>{new Date(item.plannedDate).toLocaleDateString(ar ? "ar-SA-u-nu-latn" : "en-US")}</span>
+                      <span>•</span>
+                      <span>{getDayLabel(item.plannedDate, ar)}</span>
+                    </div>
+                  </div>
+                  {getItemStatusBadge(item.status, ar)}
+                </div>
+
+                <div className="flex flex-col gap-1.5 mb-3 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" size="sm" className="text-[10px]">
+                      {item.circle?.name || (ar ? "زيارة مركز" : "Center Visit")}
+                    </Badge>
+                    <Badge
+                      variant={item.priority === "URGENT" ? "error" : item.priority === "HIGH" ? "warning" : "secondary"}
+                      size="sm"
+                      className="text-[10px]"
+                    >
+                      {item.priority}
+                    </Badge>
+                  </div>
+                  {item.notes && <p className="text-[11px] text-slate-500 italic line-clamp-1 mt-1">"{item.notes}"</p>}
+                </div>
+
+                {plan.status !== "COMPLETED" && item.status !== "COMPLETED" && (
+                  <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-slate-50 mt-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => onEditItem(item)}>
+                      <Pencil size={12} className="me-1" /> {ar ? "تعديل" : "Edit"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50"
+                      onClick={() => onRemoveItem(item.id)}
+                    >
+                      <Trash2 size={12} className="me-1" /> {ar ? "حذف" : "Delete"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function PlanItemModal({
   ar,
   mode,
@@ -617,11 +727,11 @@ export function VisitPlanManagement() {
                     <div className="ctr-card-actions mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
                       <Button
                         size="sm"
-                        variant={isExpanded ? "primary" : "ghost"}
-                        className={`h-8 text-[11px] font-bold ${!isExpanded && "text-brand hover:bg-brand/5"}`}
-                        onClick={() => setExpandedPlanId(isExpanded ? null : plan.id)}
+                        variant="ghost"
+                        className="h-8 text-[11px] font-bold text-brand hover:bg-brand/5"
+                        onClick={() => setExpandedPlanId(plan.id)}
                       >
-                        {isExpanded ? (ar ? "إغلاق التفاصيل" : "Close Details") : ar ? "عرض الزيارات" : "View Visits"}
+                        {ar ? "عرض الزيارات" : "View Visits"}
                       </Button>
                       
                       <div className="flex gap-1">
@@ -635,74 +745,7 @@ export function VisitPlanManagement() {
               })}
             </div>
 
-            {/* ── Expanded Plan Details ── */}
-            <AnimatePresence>
-              {expandedPlan && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="ctr-card-modern !bg-slate-50/50 border-dashed border-2 border-slate-200">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <MapPin size={18} className="text-brand" />
-                        <h3 className="font-bold text-[15px]">{ar ? "جدول الزيارات اليومية" : "Daily Visit Schedule"}</h3>
-                      </div>
-                      <div className="flex gap-2">
-                        {expandedPlan.status === "DRAFT" && (
-                          <Button size="sm" variant="primary" onClick={() => updatePlanStatus.mutate({ planId: expandedPlan.id, status: 'ACTIVE' })}>
-                            {ar ? "تفعيل الخطة" : "Activate Plan"}
-                          </Button>
-                        )}
-                         {expandedPlan.status !== "COMPLETED" && (
-                          <Button size="sm" variant="ghost" className="bg-white border border-slate-200" onClick={() => { setItemPlan(expandedPlan); setItemForm(createItemForm(expandedPlan.centerId, expandedPlan.month, expandedPlan.year)); }}>
-                            <Plus size={14} className="me-1" /> {ar ? "إضافة زيارة" : "Add Visit"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {expandedPlan.items.length === 0 ? (
-                        <div className="col-span-full py-8 text-center text-slate-400 text-[13px]">{ar ? "لم يتم إضافة زيارات لهذه الخطة بعد" : "No visits added to this plan yet"}</div>
-                      ) : expandedPlan.items.slice().sort((a,b) => a.plannedDate.localeCompare(b.plannedDate)).map(item => (
-                        <div key={item.id} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:border-brand/30 transition-all group">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-[13px] text-slate-800">{item.center?.name || `Center #${item.centerId}`}</span>
-                              <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                                <Calendar size={10} />
-                                <span>{new Date(item.plannedDate).toLocaleDateString(ar ? 'ar-SA-u-nu-latn' : 'en-US')}</span>
-                                <span>•</span>
-                                <span>{getDayLabel(item.plannedDate, ar)}</span>
-                              </div>
-                            </div>
-                            {getItemStatusBadge(item.status, ar)}
-                          </div>
-                          
-                          <div className="flex flex-col gap-1.5 mb-3">
-                             <div className="flex items-center gap-2">
-                                <Badge variant="secondary" size="sm" className="text-[10px]">{item.circle?.name || (ar ? "زيارة مركز" : "Center Visit")}</Badge>
-                                <Badge variant={item.priority === 'URGENT' ? 'error' : item.priority === 'HIGH' ? 'warning' : 'secondary'} size="sm" className="text-[10px]">{item.priority}</Badge>
-                             </div>
-                             {item.notes && <p className="text-[11px] text-slate-500 italic line-clamp-1">"{item.notes}"</p>}
-                          </div>
-
-                          {expandedPlan.status !== 'COMPLETED' && item.status !== 'COMPLETED' && (
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={() => { setEditingItem({ plan: expandedPlan, item }); setItemForm(itemToForm(item)); }}><Pencil size={12} className="me-1" /> {ar ? "تعديل" : "Edit"}</Button>
-                              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-red-600 hover:bg-red-50" onClick={() => removePlanItem.mutate(item.id)}><Trash2 size={12} className="me-1" /> {ar ? "حذف" : "Delete"}</Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         )}
       </AnimatePresence>
@@ -728,6 +771,24 @@ export function VisitPlanManagement() {
       )}
 
       {/* ── Modals ── */}
+      {expandedPlan && (
+        <PlanDetailsModal
+          ar={ar}
+          plan={expandedPlan}
+          onClose={() => setExpandedPlanId(null)}
+          onActivate={() => updatePlanStatus.mutate({ planId: expandedPlan.id, status: 'ACTIVE' })}
+          onAddVisit={() => {
+            setItemPlan(expandedPlan);
+            setItemForm(createItemForm(expandedPlan.centerId, expandedPlan.month, expandedPlan.year));
+          }}
+          onEditItem={(item) => {
+            setEditingItem({ plan: expandedPlan, item });
+            setItemForm(itemToForm(item));
+          }}
+          onRemoveItem={(itemId) => removePlanItem.mutate(itemId)}
+        />
+      )}
+
       {showCreateModal && (
         <CreatePlanModal
           ar={ar}

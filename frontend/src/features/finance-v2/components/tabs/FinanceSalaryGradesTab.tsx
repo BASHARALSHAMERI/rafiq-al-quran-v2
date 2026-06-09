@@ -14,6 +14,13 @@ import {
   useUpdateFinanceV2SalaryGradeMutation
 } from "../../finance-v2.hooks";
 import type { SalaryGradeV2 } from "../../types";
+import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
+import {
+  focusFirstInvalidField,
+  notifyError,
+  notifyRequiredFields,
+  notifySuccess
+} from "../../../../shared/ui/feedback";
 
 // Default curated options (shown until data loads or as suggestions)
 const DEFAULT_JOB_TITLES = [
@@ -38,6 +45,7 @@ const DEFAULT_GRADE_LEVELS = [
 type Props = {
   centerId: number | undefined;
   ar: boolean;
+  canManage?: boolean;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 };
@@ -45,6 +53,7 @@ type Props = {
 export default function FinanceSalaryGradesTab({ 
   centerId, 
   ar, 
+  canManage = true,
   externalShowForm, 
   onExternalFormClose 
 }: Props) {
@@ -53,10 +62,10 @@ export default function FinanceSalaryGradesTab({
 
   // Sync with parent's trigger
   useEffect(() => {
-    if (externalShowForm) {
+    if (externalShowForm && canManage) {
       openNew();
     }
-  }, [externalShowForm]);
+  }, [externalShowForm, canManage]);
 
   const gradesQ = useFinanceV2SalaryGradesQuery(centerId);
   const grades = useMemo(() => gradesQ.data ?? [], [gradesQ.data]);
@@ -91,12 +100,14 @@ export default function FinanceSalaryGradesTab({
   }, [grades]);
 
   const openNew = () => {
+    if (!canManage) return;
     setFormState({ jobTitle: "", gradeLevel: "", baseSalary: 0, currencyCode: "", isActive: true, notes: "" });
     setEditingGrade(null);
     setFormOpen(true);
   };
 
   const openEdit = (g: SalaryGradeV2) => {
+    if (!canManage) return;
     setFormState({
       jobTitle: g.jobTitle,
       gradeLevel: g.gradeLevel,
@@ -109,9 +120,13 @@ export default function FinanceSalaryGradesTab({
     setFormOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formState.jobTitle.trim() || !formState.gradeLevel.trim()) return;
+    if (!formState.jobTitle.trim() || !formState.gradeLevel.trim()) {
+      focusFirstInvalidField(e.currentTarget);
+      notifyRequiredFields(ar);
+      return;
+    }
     try {
       if (editingGrade) {
         await updateGradeM.mutateAsync({
@@ -124,9 +139,15 @@ export default function FinanceSalaryGradesTab({
           centerId,
         });
       }
+      notifySuccess(editingGrade
+        ? (ar ? "تم تحديث سلم الراتب بنجاح" : "Salary grade updated successfully")
+        : (ar ? "تمت إضافة سلم الراتب بنجاح" : "Salary grade added successfully"));
       setFormOpen(false);
     } catch (err) {
-      console.error(err);
+      notifyError(getLocalizedApiErrorMessage(err, {
+        ar,
+        fallback: ar ? "تعذر حفظ سلم الراتب." : "Unable to save the salary grade."
+      }));
     }
   };
 
@@ -204,6 +225,7 @@ export default function FinanceSalaryGradesTab({
                 header: ar ? "الإجراءات" : "Actions",
                 render: (g) => (
                   <div className="flex items-center gap-2">
+                    {canManage ? (
                     <button
                       className="fin-action-btn view"
                       onClick={() => openEdit(g)}
@@ -211,6 +233,7 @@ export default function FinanceSalaryGradesTab({
                     >
                       <Edit size={16} />
                     </button>
+                    ) : null}
                   </div>
                 ),
               },
@@ -223,7 +246,7 @@ export default function FinanceSalaryGradesTab({
 
       {/* Add / Edit Modal */}
       <Modal
-        isOpen={formOpen}
+        isOpen={Boolean(formOpen && canManage)}
         onClose={handleClose}
         title={
           ar
@@ -264,6 +287,7 @@ export default function FinanceSalaryGradesTab({
           className="circlemod-form"
           onSubmit={handleSubmit}
           dir={ar ? "rtl" : "ltr"}
+          noValidate
         >
           <div className="circlemod-section">
             <div className="circlemod-section-head">

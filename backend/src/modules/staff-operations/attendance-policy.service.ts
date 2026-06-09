@@ -22,6 +22,7 @@ type PolicyData = {
   earlyDepartureThresholdMinutes: number;
   prayerApiSource: string;
   timezone: string;
+  timeFormat: string;
 };
 
 type HolidayPeriod = {
@@ -41,7 +42,8 @@ const attendancePolicySelect = {
   defaultShiftDurationMinutes: true,
   earlyDepartureThresholdMinutes: true,
   prayerApiSource: true,
-  timezone: true
+  timezone: true,
+  timeFormat: true
 } as const;
 
 const WEEKDAY_JS_MAP: Record<number, Weekday> = {
@@ -141,6 +143,7 @@ const toPolicyResponse = (
     earlyDepartureThresholdMinutes: number;
     prayerApiSource: string;
     timezone: string;
+    timeFormat: string;
   }
 ) => ({
   id: policy.id,
@@ -155,7 +158,8 @@ const toPolicyResponse = (
   defaultShiftDurationMinutes: policy.defaultShiftDurationMinutes,
   earlyDepartureThresholdMinutes: policy.earlyDepartureThresholdMinutes,
   prayerApiSource: policy.prayerApiSource,
-  timezone: policy.timezone
+  timezone: policy.timezone,
+  timeFormat: policy.timeFormat
 });
 
 export const attendancePolicyService = {
@@ -201,7 +205,7 @@ export const attendancePolicyService = {
     }>
   ) {
     if (scope.role !== "SUPER_ADMIN") {
-      throw new AppError("Only SUPER_ADMIN can update attendance policy", 403);
+      throw new AppError("فقط مدير النظام يمكنه تحديث سياسة الحضور", 403);
     }
 
     // Ensure policy exists
@@ -216,7 +220,7 @@ export const attendancePolicyService = {
     if (input.geoEnforcement !== undefined) {
       const mappedGeo = mapGeoEnforcementFromApi(input.geoEnforcement);
       if (!mappedGeo) {
-        throw new AppError("Invalid geoEnforcement value", 400, undefined, "VALIDATION_FAILED");
+        throw new AppError("قيمة التفعيل الجغرافي غير صالحة", 400, undefined, "VALIDATION_FAILED");
       }
       data.geoEnforcement = mappedGeo;
     }

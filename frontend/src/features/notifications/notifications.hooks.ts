@@ -33,7 +33,7 @@ export const useUnreadNotificationsCountQuery = (enabled = true) => {
     queryKey: NOTIFICATIONS_QUERY_KEYS.unreadCount(),
     queryFn: () => notificationsApi.unreadCount(),
     enabled,
-    staleTime: 10_000
+    staleTime: 60_000
   });
 };
 

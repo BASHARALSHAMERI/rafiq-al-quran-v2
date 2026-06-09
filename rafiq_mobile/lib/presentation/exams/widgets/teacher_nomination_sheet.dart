@@ -6,6 +6,7 @@ import '../../../application/exams/exam_providers.dart';
 import '../../../application/exams/exam_controller.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../data/models/exam_dtos.dart';
 import '../../shared/widgets/primary_button.dart';
 import '../../shared/widgets/custom_text_field.dart';
@@ -43,9 +44,7 @@ class _TeacherNominationSheetState
 
   Future<void> _submit() async {
     if (_selectedExamId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار نوع الاختبار')),
-      );
+      AppSnackBar.warning(context, 'يرجى اختيار نوع الاختبار');
       return;
     }
 
@@ -66,16 +65,14 @@ class _TeacherNominationSheetState
 
       if (mounted) {
         ref.invalidate(examControllerProvider);
+        final messenger = ScaffoldMessenger.of(context);
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إرسال طلب الترشيح بنجاح')),
-        );
+        AppSnackBar.successOnState(messenger, 'تم إرسال طلب الترشيح بنجاح');
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('حدث خطأ: $e')),
-        );
+        AppSnackBar.error(
+            context, 'تعذر إرسال طلب الترشيح. يرجى المحاولة مرة أخرى.');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

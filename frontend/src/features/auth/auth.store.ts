@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   isBootstrapping: false,
 
   setSession: (session) => {
-    setRefreshSessionAvailable(true);
+    setRefreshSessionAvailable(true, session.refreshToken);
 
     set((state) => ({
       accessToken: session.accessToken,
@@ -78,28 +78,10 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         return;
       }
 
-      // [FIX] بعد نجاح الـ refresh، كان user يبقى null حتى يأتي طلب آخر.
-      // الآن نجلب بيانات المستخدم فوراً قبل ضبط hasBootstrapped=true،
-      // مما يمنع وميض "غير مخوّل" ويضمن صحة الـ UI من أول render.
-      let user: AuthUser | null = null;
-      try {
-        user = await authApi.me();
-      } catch {
-        // [FIX] إذا فشل جلب بيانات المستخدم (غير متوقع)،
-        // نُسجّل الخروج تلقائياً بدلاً من إبقاء النظام في حالة غير متسقة.
-        clearAuthSession();
-        set({
-          accessToken: null,
-          user: null,
-          hasBootstrapped: true,
-          isBootstrapping: false
-        });
-        return;
-      }
-
+      // [FIX] user is already set by `setSession` inside `requestRefreshToken` in `http.ts`
+      // We don't need to call authApi.me() here, which saves a full round trip!
       set({
         accessToken: refreshedToken,
-        user,                     // [FIX] user متاح الآن قبل hasBootstrapped
         hasBootstrapped: true,
         isBootstrapping: false
       });

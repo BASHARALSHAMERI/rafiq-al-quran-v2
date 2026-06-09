@@ -20,6 +20,8 @@ import { useAccountingAccountsQuery, useAccountingLedgerQuery } from "./accounti
 import type { LedgerResponse } from "./accounting.api";
 import { printAccountingDocument, formatArabicDate, formatYemeniCurrency } from "../../features/accounting/printAccounting";
 import { NavLink } from "react-router-dom";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -262,6 +264,18 @@ export default function AccountingLedgerPage() {
               <RefreshCw className="w-8 h-8 animate-spin text-brand-500" />
               <span className="text-slate-500 font-medium">جاري جلب دفتر الأستاذ...</span>
             </div>
+          ) : accountsQ.isError || ledgerQ.isError ? (
+            <ErrorState
+              title="تعذر تحميل دفتر الأستاذ"
+              description={getLocalizedApiErrorMessage(accountsQ.error ?? ledgerQ.error, {
+                ar: true,
+                fallback: "تعذر تحميل حركة الحساب. حاول مرة أخرى."
+              })}
+              onRetry={() => {
+                void accountsQ.refetch();
+                void ledgerQ.refetch();
+              }}
+            />
           ) : rows.length === 0 ? (
             <FinanceEmptyState
               variant="first-time"

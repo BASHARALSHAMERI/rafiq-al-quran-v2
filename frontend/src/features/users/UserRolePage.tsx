@@ -87,8 +87,8 @@ export default function UserRolePage({
 
   const canLoadCenters = role === "CENTER_ADMIN" || role === "SUPERVISOR" || role === "TEACHER" || role === "STUDENT";
   const canLoadCircles = role === "SUPERVISOR" || role === "TEACHER" || role === "STUDENT";
-  const canCreate = authUser?.role === "SUPER_ADMIN";
-  const canManage = authUser?.role === "SUPER_ADMIN";
+  const canCreate = authUser?.role === "SUPER_ADMIN" || authUser?.role === "CENTER_ADMIN";
+  const canManage = authUser?.role === "SUPER_ADMIN" || authUser?.role === "CENTER_ADMIN";
 
   const usersQ = useUsersQuery({ role, centerId, circleId });
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
@@ -263,7 +263,7 @@ export default function UserRolePage({
       await refreshAll();
       notifySuccess(entityFeedback.success(ar, mode, USER_ENTITY));
     } catch (error) {
-      setFormError(
+      notifyError(
         getLocalizedApiErrorMessage(error, {
           ar,
           fallback: entityFeedback.error(ar, mode, USER_ENTITY)

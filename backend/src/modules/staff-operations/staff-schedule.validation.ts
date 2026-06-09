@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { StaffRoleType, Weekday, CircleScheduleMode, PrayerName, GeoEnforcement } from "@prisma/client";
+import { StaffRoleType, Weekday, CircleScheduleMode, PrayerName, GeoEnforcement, TimeFormat } from "@prisma/client";
 
 /**
  * Phase 3 — Staff Schedule Zod Validation Schemas
@@ -22,12 +22,12 @@ const slotSchema = z
   .superRefine((slot, ctx) => {
     if (slot.mode === "CLOCK") {
       if (!slot.fromTime) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fromTime"], message: "fromTime is required for CLOCK mode" });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fromTime"], message: "وقت البداية مطلوب لنظام الساعة" });
       }
     }
     if (slot.mode === "PRAYER") {
       if (!slot.fromPrayer) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fromPrayer"], message: "fromPrayer is required for PRAYER mode" });
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fromPrayer"], message: "وقت الأذان مطلوب لنظام الصلاة" });
       }
     }
   });
@@ -43,11 +43,11 @@ export const createAssignmentSchema = z
     slots: z.array(slotSchema).min(1).max(7)
   })
   .superRefine((value, ctx) => {
-    if (value.staffRole === StaffRoleType.TEACHER) {
+    if (value.staffRole === StaffRoleType.SUPERVISOR) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["staffRole"],
-        message: "Teacher schedules must be managed from the circle schedule."
+        message: "جداول المشرفين لا تُدار من هنا"
       });
     }
   })
@@ -86,7 +86,7 @@ const holidayPeriodSchema = z
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
   })
   .refine((value) => value.endDate >= value.startDate, {
-    message: "endDate must be on or after startDate",
+    message: "تاريخ النهاية يجب أن يكون بعد أو يساوي تاريخ البداية",
     path: ["endDate"]
   });
 
@@ -102,7 +102,8 @@ export const updatePolicySchema = z
     defaultShiftDurationMinutes: z.coerce.number().int().min(30).max(720).optional(),
     earlyDepartureThresholdMinutes: z.coerce.number().int().min(0).max(60).optional(),
     prayerApiSource: z.string().max(100).optional(),
-    timezone: z.string().max(50).optional()
+    timezone: z.string().max(50).optional(),
+    timeFormat: z.nativeEnum(TimeFormat).optional()
   })
   .strict();
 
