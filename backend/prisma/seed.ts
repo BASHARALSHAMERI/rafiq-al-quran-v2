@@ -970,7 +970,7 @@ async function seed() {
       committeeNotes: "نتيجة جيدة مع ملاحظات بسيطة",
       totalScore: 88,
       gradeLabel: "جيد جدًا",
-      status: AttemptStatus.REVIEWED,
+      status: AttemptStatus.APPROVED,
       startedAt: dateTimeDaysAgo(2, 17),
       submittedAt: dateTimeDaysAgo(2, 18),
       reviewedAt: dateTimeDaysAgo(2, 18),
@@ -1917,6 +1917,18 @@ async function seed() {
 }
 
 async function main() {
+  // Fix any existing attempts that have totalScore but status still SCHEDULED (seed bug fix)
+  const fixedAttempts = await prisma.examAttempt.updateMany({
+    where: {
+      totalScore: { not: null },
+      status: AttemptStatus.SCHEDULED
+    },
+    data: { status: AttemptStatus.APPROVED }
+  });
+  if (fixedAttempts.count > 0) {
+    console.log(`تم إصلاح ${fixedAttempts.count} محاولة اختبار كان بها درجة ولكن حالتها مجدولة`);
+  }
+
   await cleanup();
   await seed();
 }
