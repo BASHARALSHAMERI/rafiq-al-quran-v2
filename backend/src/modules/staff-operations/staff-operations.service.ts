@@ -435,23 +435,57 @@ export const staffOperationsService = {
     const targetDateStr = targetDate.toISOString().slice(0, 10);
     const isToday = todayStr === targetDateStr;
 
+    // ── Pre-compute workday, excuses, leaves for absent synthesis ──
+    const isWorkday = await attendancePolicyService.isWorkday(scope.organizationId, targetDate);
+
+    const syntheticUserIds = users
+      .filter((u: any) => !u.staffAttendances?.[0])
+      .map((u: any) => u.id);
+
+    const [approvedExcuses, approvedLeaves] = await Promise.all([
+      syntheticUserIds.length > 0
+        ? prisma.staffExcuseRequest.findMany({
+            where: {
+              organizationId: scope.organizationId,
+              userId: { in: syntheticUserIds },
+              absenceDate: targetDate,
+              status: ExcuseRequestStatus.APPROVED
+            },
+            select: { userId: true }
+          })
+        : Promise.resolve([]),
+      syntheticUserIds.length > 0
+        ? prisma.staffLeaveRequest.findMany({
+            where: {
+              organizationId: scope.organizationId,
+              userId: { in: syntheticUserIds },
+              startDate: { lte: targetDate },
+              endDate: { gte: targetDate },
+              status: LeaveRequestStatus.LEAVE_APPROVED
+            },
+            select: { userId: true }
+          })
+        : Promise.resolve([])
+    ]);
+
+    const excuseUserIds = new Set(approvedExcuses.map((e) => e.userId));
+    const leaveUserIds = new Set(approvedLeaves.map((l) => l.userId));
+
+    // Create virtual records for users without attendance (status will be resolved after shift check)
     const records = users
       .map((user: any) => {
         const attendance = user.staffAttendances?.[0];
         if (attendance) {
           return { ...attendance, user };
         }
-        // Do not pre-mark ABSENT for today before shift ends; show empty state instead
-        if (isToday) {
-          return null;
-        }
+        // Create a virtual marker — status resolved after effective shift check below
         return {
           id: -(user.id),
           organizationId: scope.organizationId,
           centerId: scope.centerIds[0] || 0,
           userId: user.id,
           attendanceDate: targetDate,
-          status: "ABSENT",
+          status: null as string | null,
           checkInTime: null,
           checkOutTime: null,
           markedById: null,
@@ -468,7 +502,7 @@ export const staffOperationsService = {
       .filter(Boolean);
 
     logger.info(
-      { recordsCount: records.length, hasAttendance: records.filter((r: any) => r.id > 0).length, absentCount: records.filter((r: any) => r.id < 0).length },
+      { recordsCount: records.length, hasAttendance: records.filter((r: any) => r.id > 0).length, virtualCount: records.filter((r: any) => r.id < 0).length },
       "[listAttendance] records mapped"
     );
 
@@ -522,7 +556,52 @@ export const staffOperationsService = {
 
     const shiftByRecordId = new Map<number, { start: Date; end: Date } | null>(effectiveShifts);
 
-    const enriched = records.map((record: any) => {
+    // ── Process virtual records: resolve status or filter out ──
+    const now = new Date();
+    const resolvedRecords = records.filter((record: any) => {
+      if (record.id > 0) return true; // Real attendance record, keep always
+
+      // Virtual (synthetic) record — resolve whether to show and with what status
+      const shift = shiftByRecordId.get(record.id);
+
+      // 1. No effective shift for this date → skip (no duty today)
+      if (!shift) {
+        logger.info({ userId: record.userId, date: targetDateStr }, "[listAttendance] skip virtual — no effective shift");
+        return false;
+      }
+
+      // 2. Not a workday (weekend / holiday) → skip
+      if (!isWorkday) {
+        logger.info({ userId: record.userId, date: targetDateStr }, "[listAttendance] skip virtual — not a workday");
+        return false;
+      }
+
+      // 3. For today: only mark absent if current time >= shift end
+      if (isToday && now < shift.end) {
+        logger.info({ userId: record.userId, date: targetDateStr, shiftEnd: shift.end.toISOString() }, "[listAttendance] skip virtual — shift not ended yet");
+        return false;
+      }
+
+      // 4. Approved excuse → EXCUSED
+      if (excuseUserIds.has(record.userId)) {
+        record.status = "EXCUSED";
+        record.note = "عذر مقبول";
+        return true;
+      }
+
+      // 5. Approved leave → ON_LEAVE
+      if (leaveUserIds.has(record.userId)) {
+        record.status = "ON_LEAVE";
+        record.note = "إجازة";
+        return true;
+      }
+
+      // 6. All conditions met → ABSENT
+      record.status = "ABSENT";
+      return true;
+    });
+
+    const enriched = resolvedRecords.map((record: any) => {
       const shift = shiftByRecordId.get(record.id) ?? null;
       return {
         ...record,
