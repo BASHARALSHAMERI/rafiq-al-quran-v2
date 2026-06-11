@@ -1,4 +1,4 @@
-import { BookOpen, FileText, Landmark, Scale, Table2 } from "lucide-react";
+import { BookOpen, CalendarClock, FileText, Landmark, Scale, Table2 } from "lucide-react";
 import type { DataTableColumn } from "../../components/ui/DataTable";
 import type { AccountingAccountType, AccountingNormalBalance, JournalEntryStatus, JournalSourceType } from "./accounting.api";
 import "./accounting-preview.css";
@@ -31,14 +31,19 @@ export const sourceTypeLabels: Record<JournalSourceType, string> = {
   MANUAL: "يدوي",
   PAYROLL: "رواتب",
   REWARD: "مكافآت",
-  DEDUCTION: "استقطاع"
+  DEDUCTION: "استقطاع",
+  EXPENSE_INVOICE: "فاتورة مصروف",
+  EXPENSE_PAYMENT: "دفع مصروف",
+  ASSET_ACQUISITION: "اقتناء أصل",
+  ASSET_DEPRECIATION: "إهلاك أصل"
 };
 
 export const accountingLinks = [
   { to: "/finance/accounting/accounts", label: "شجرة الحسابات", icon: Table2 },
   { to: "/finance/accounting/journal-entries", label: "القيود اليومية", icon: FileText },
   { to: "/finance/accounting/ledger", label: "دفتر الأستاذ", icon: BookOpen },
-  { to: "/finance/accounting/trial-balance", label: "ميزان المراجعة", icon: Scale }
+  { to: "/finance/accounting/trial-balance", label: "ميزان المراجعة", icon: Scale },
+  { to: "/finance/accounting/fiscal-periods", label: "الفترات المالية", icon: CalendarClock }
 ];
 
 export const toDisplayText = (value: unknown, fallback = "-"): string => {

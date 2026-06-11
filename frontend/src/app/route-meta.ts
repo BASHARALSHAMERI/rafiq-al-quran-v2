@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  CalendarClock,
   CalendarDays,
   FileText,
   ClipboardCheck,
@@ -89,7 +90,9 @@ export type AdminRouteId =
   | "accounting_journal_entries"
   | "accounting_ledger"
   | "accounting_trial_balance"
+  | "accounting_fiscal_periods"
   | "reports"
+  | "reports_student_monthly"
   | "audit"
   | "settings"
   | "graduation_candidates"
@@ -206,11 +209,12 @@ export const ADMIN_SECTIONS: AdminSectionMeta[] = [
       "finance_currencies",
       "finance_assets",
       "accounting_accounts",
-      // accounting_journal_entries / ledger / trial_balance: sidebar=false → مخفية
+      // accounting_journal_entries / ledger / trial_balance / fiscal_periods: sidebar=false → مخفية
       // accessible from AccountingShared internal tabs
       "accounting_journal_entries",
       "accounting_ledger",
       "accounting_trial_balance",
+      "accounting_fiscal_periods",
     ],
   },
   {
@@ -568,6 +572,16 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     sidebar: false,
   },
   {
+    // Hidden from sidebar — accessible via AccountingShared internal tabs
+    id: "accounting_fiscal_periods",
+    path: "/finance/accounting/fiscal-periods",
+    get label() { return document.documentElement.lang === "ar" ? "الفترات المالية" : "Fiscal Periods"; },
+    routeIcon: CalendarClock,
+    section: "financeLedger",
+    allowedRoles: FINANCE_WEB_ROLES,
+    sidebar: false,
+  },
+  {
     // FA-5.4: /finance/reports → /reports redirect
     id: "finance_reports",
     path: "/finance/reports",
@@ -586,6 +600,16 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     section: "reports",
     allowedRoles: REPORT_ROLES,
     sidebar: true,
+  },
+  {
+    // التقرير الشهري التفصيلي للطالب — يُفتح من كتالوج التقارير (غير ظاهر في الشريط الجانبي)
+    id: "reports_student_monthly",
+    path: "/reports/student-monthly",
+    get label() { return document.documentElement.lang === "ar" ? "التقرير الشهري التفصيلي للطالب" : "Student Monthly Detailed Report"; },
+    routeIcon: BarChart3,
+    section: "reports",
+    allowedRoles: REPORT_ROLES,
+    sidebar: false,
   },
   {
     id: "audit",

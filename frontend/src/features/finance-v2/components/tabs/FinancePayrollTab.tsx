@@ -26,6 +26,7 @@ import {
 import { FinanceDataTable } from "../../design/FinanceDataTable";
 import Modal from "../../../../components/ui/Modal";
 import useClientPagination from "../../../../shared/ui/useClientPagination";
+import { useOrgBrandingQuery } from "../../../org/org.hooks";
 
 type Props = {
   centerId: number | undefined;
@@ -103,20 +104,28 @@ const escapeHtml = (value: unknown) =>
 const printPayrollReport = (
   batch: PayrollBatchV2,
   ar: boolean,
-  methodLabels: Record<PaymentMethodV2, string>
+  methodLabels: Record<PaymentMethodV2, string>,
+  logoUrl?: string,
+  orgName?: string
 ) => {
+  const accentColor = "#2D9B7A";
+  const accentLight = "#E4F4EE";
+  const accentBg = "#F2FAF6";
+  const resolvedLogoUrl = logoUrl || "/brand/rafiq-logo.svg";
+  const resolvedOrgName = orgName || (ar ? "جمعية رفقاء القرآن" : "Rafiq Al-Quran Association");
+
   const summary = getPayrollSummary(batch);
   const rows = (batch.items ?? []).map((item) => `
     <tr>
       <td>${escapeHtml(item.beneficiary?.fullName)}</td>
-      <td>${item.baseAmount.toFixed(2)}</td>
-      <td>${item.bonusAmount.toFixed(2)}</td>
-      <td>${item.deductionAmount.toFixed(2)}</td>
-      <td>${item.netAmount.toFixed(2)}</td>
-      <td>${escapeHtml(getPayrollItemStatusLabel(item.status, ar))}</td>
-      <td>${escapeHtml(item.paymentMethod ? methodLabels[item.paymentMethod] : "-")}</td>
-      <td>${escapeHtml(item.paymentReference || "-")}</td>
-      <td>${escapeHtml(item.voucher?.voucherNo ?? (item.voucherId ? `#${item.voucherId}` : "-"))}</td>
+      <td class="text-left">${item.baseAmount.toFixed(2)}</td>
+      <td class="text-left">${item.bonusAmount.toFixed(2)}</td>
+      <td class="text-left">${item.deductionAmount.toFixed(2)}</td>
+      <td class="text-left">${item.netAmount.toFixed(2)}</td>
+      <td class="text-center">${escapeHtml(getPayrollItemStatusLabel(item.status, ar))}</td>
+      <td class="text-center">${escapeHtml(item.paymentMethod ? methodLabels[item.paymentMethod] : "-")}</td>
+      <td class="text-center">${escapeHtml(item.paymentReference || "-")}</td>
+      <td class="text-center">${escapeHtml(item.voucher?.voucherNo ?? (item.voucherId ? `#${item.voucherId}` : "-"))}</td>
     </tr>
   `).join("");
   const reportWindow = window.open("", "_blank", "width=1100,height=800");
@@ -124,49 +133,90 @@ const printPayrollReport = (
   reportWindow.opener = null;
   reportWindow.document.write(`
     <!doctype html>
-    <html lang="${ar ? "ar" : "en"}" dir="${ar ? "rtl" : "ltr"}">
+    <html lang="ar" dir="rtl">
       <head>
         <meta charset="utf-8" />
         <title>${ar ? "كشف رواتب" : "Payroll report"} #${batch.id}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
-          h1 { margin: 0 0 4px; font-size: 22px; }
-          .meta { color: #64748b; margin-bottom: 18px; }
-          .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 18px; }
-          .metric { border: 1px solid #e2e8f0; padding: 10px; }
-          .metric span { display: block; color: #64748b; font-size: 11px; margin-bottom: 4px; }
-          .metric strong { font-size: 15px; }
-          table { border-collapse: collapse; width: 100%; font-size: 12px; }
-          th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: start; }
-          th { background: #f8fafc; }
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; padding: 36px; color: #2D3748; background: #F7FAFC; }
+          .wrap { max-width: 1100px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; position: relative; }
+          .wrap::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: linear-gradient(90deg, ${accentColor}, ${accentColor}99, ${accentColor}); }
+          .inner { padding: 32px 36px 28px; }
+          .header { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: 2px solid ${accentLight}; margin-bottom: 22px; }
+          .header-logo { width: 52px; height: 52px; flex-shrink: 0; }
+          .header-center { flex: 1; }
+          .header-org-name { font-size: 17px; font-weight: 900; color: #1A365D; line-height: 1.3; }
+          .header-sub { font-size: 11px; color: ${accentColor}; font-weight: 600; }
+          .header-left { text-align: left; font-size: 11px; color: #718096; font-weight: 600; flex-shrink: 0; }
+          .title-section { text-align: center; margin-bottom: 22px; }
+          .title-section h1 { font-size: 22px; font-weight: 900; color: #1A365D; display: inline-block; position: relative; }
+          .title-section h1::after { content: ''; display: block; width: 50%; height: 4px; background: linear-gradient(90deg, transparent, ${accentColor}, transparent); margin: 8px auto 0; border-radius: 2px; }
+          .title-sub { font-size: 13px; color: #718096; font-weight: 600; margin-top: 4px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 22px; }
+          .metric { background: ${accentBg}; border: 1px solid ${accentLight}; border-radius: 10px; padding: 12px 14px; text-align: center; }
+          .metric-label { font-size: 11px; font-weight: 700; color: #718096; display: block; margin-bottom: 4px; }
+          .metric-value { font-size: 17px; font-weight: 900; color: ${accentColor}; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: ${accentBg}; color: ${accentColor}; font-size: 11px; font-weight: 800; border: 1px solid ${accentLight}; padding: 10px 8px; white-space: nowrap; }
+          td { border: 1px solid #E2E8F0; padding: 7px 8px; font-size: 12px; color: #2D3748; }
+          tr:nth-child(even) td { background: #FAFBFC; }
+          .text-right { text-align: right; } .text-center { text-align: center; } .text-left { text-align: left; }
+          .footer { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid #E2E8F0; }
+          .footer-text { font-size: 10px; color: #A0AEC0; font-weight: 600; }
+          @media print {
+            body { background: #FFFFFF; padding: 0; }
+            .wrap { box-shadow: none; border-radius: 0; }
+            .inner { padding: 20px 24px; }
+            @page { margin: 12mm 10mm; size: A4 landscape; }
+          }
         </style>
       </head>
       <body>
-        <h1>${ar ? "كشف رواتب" : "Payroll report"} #${batch.id}</h1>
-        <div class="meta">${batch.periodMonth}/${batch.periodYear}</div>
-        <div class="summary">
-          <div class="metric"><span>${ar ? "إجمالي الرواتب" : "Gross payroll"}</span><strong>${(summary.totalBase + summary.totalBonus).toFixed(2)}</strong></div>
-          <div class="metric"><span>${ar ? "الخصومات" : "Deductions"}</span><strong>${summary.totalDeduction.toFixed(2)}</strong></div>
-          <div class="metric"><span>${ar ? "الصافي" : "Net"}</span><strong>${summary.totalNet.toFixed(2)}</strong></div>
-          <div class="metric"><span>${ar ? "المصروف" : "Paid"}</span><strong>${summary.paidAmount.toFixed(2)}</strong></div>
-          <div class="metric"><span>${ar ? "المتبقي" : "Remaining"}</span><strong>${summary.remainingAmount.toFixed(2)}</strong></div>
+        <div class="wrap">
+          <div class="inner">
+            <div class="header">
+              <img class="header-logo" src="${resolvedLogoUrl}" alt="Logo" />
+              <div class="header-center">
+                <div class="header-org-name">${resolvedOrgName}</div>
+                <div class="header-sub">${ar ? "إدارة الشؤون المالية" : "Financial Affairs Department"}</div>
+              </div>
+              <div class="header-left">${ar ? "تاريخ الطباعة:" : "Print date:"} ${new Date().toLocaleDateString("ar-YE-u-nu-latn")}</div>
+            </div>
+            <div class="title-section">
+              <h1>${ar ? "كشف رواتب" : "Payroll Report"}</h1>
+              <div class="title-sub">${ar ? "دفعة رقم" : "Batch"} #${batch.id} · ${batch.periodMonth}/${batch.periodYear}</div>
+            </div>
+            <div class="summary-grid">
+              <div class="metric"><span class="metric-label">${ar ? "إجمالي الرواتب" : "Gross Payroll"}</span><span class="metric-value">${(summary.totalBase + summary.totalBonus).toFixed(2)}</span></div>
+              <div class="metric"><span class="metric-label">${ar ? "الخصومات" : "Deductions"}</span><span class="metric-value">${summary.totalDeduction.toFixed(2)}</span></div>
+              <div class="metric"><span class="metric-label">${ar ? "الصافي" : "Net"}</span><span class="metric-value">${summary.totalNet.toFixed(2)}</span></div>
+              <div class="metric"><span class="metric-label">${ar ? "المصروف" : "Paid"}</span><span class="metric-value">${summary.paidAmount.toFixed(2)}</span></div>
+              <div class="metric"><span class="metric-label">${ar ? "المتبقي" : "Remaining"}</span><span class="metric-value">${summary.remainingAmount.toFixed(2)}</span></div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>${ar ? "الموظف" : "Employee"}</th>
+                  <th class="text-left">${ar ? "الأساسي" : "Base"}</th>
+                  <th class="text-left">${ar ? "البدلات" : "Bonus"}</th>
+                  <th class="text-left">${ar ? "الخصومات" : "Deductions"}</th>
+                  <th class="text-left">${ar ? "الصافي" : "Net"}</th>
+                  <th class="text-center">${ar ? "الحالة" : "Status"}</th>
+                  <th class="text-center">${ar ? "طريقة الصرف" : "Method"}</th>
+                  <th class="text-center">${ar ? "المرجع" : "Reference"}</th>
+                  <th class="text-center">${ar ? "السند" : "Voucher"}</th>
+                </tr>
+              </thead>
+              <tbody>${rows || `<tr><td colspan="9" class="text-center" style="padding:24px;color:#A0AEC0;">${ar ? "لا توجد بيانات" : "No data"}</td></tr>`}</tbody>
+            </table>
+            <div class="footer">
+              <div class="footer-text">${ar ? "نظام رفقاء القرآن - برنامج إدارة الجمعيات القرآنية" : "Rafiq Al-Quran System - Quranic Society Management"}</div>
+            </div>
+          </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>${ar ? "الموظف" : "Employee"}</th>
-              <th>${ar ? "الأساسي" : "Base"}</th>
-              <th>${ar ? "البدلات" : "Bonus"}</th>
-              <th>${ar ? "الخصومات" : "Deductions"}</th>
-              <th>${ar ? "الصافي" : "Net"}</th>
-              <th>${ar ? "الحالة" : "Status"}</th>
-              <th>${ar ? "طريقة الصرف" : "Method"}</th>
-              <th>${ar ? "المرجع" : "Reference"}</th>
-              <th>${ar ? "السند" : "Voucher"}</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
+        <script>window.onload = function () { window.focus(); setTimeout(function () { window.print(); }, 300); };</script>
       </body>
     </html>
   `);
@@ -217,6 +267,7 @@ export default function FinancePayrollTab({
     });
   }, [propYear, propMonth, ar]);
 
+  const brandingQ = useOrgBrandingQuery();
   const batchesQ = useFinanceV2PayrollBatchesQuery(centerId, propYear, propMonth);
   const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
   const pagination = useClientPagination(batches, { initialPageSize: 10 });
@@ -432,7 +483,7 @@ export default function FinancePayrollTab({
               <Button
                 variant="secondary"
                 leftIcon={<Printer className="w-4 h-4" />}
-                onClick={() => printPayrollReport(selectedBatch, ar, methodLabels)}
+                onClick={() => printPayrollReport(selectedBatch, ar, methodLabels, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
               >
                 {ar ? "طباعة كشف الرواتب" : "Print payroll report"}
               </Button>
@@ -754,7 +805,7 @@ export default function FinancePayrollTab({
                         </button>
                         <button 
                           className="fin-action-btn view" 
-                          onClick={() => printPayrollReport(b, ar, methodLabels)}
+                          onClick={() => printPayrollReport(b, ar, methodLabels, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
                           title={ar ? "طباعة الكشف" : "Print Payroll"}
                         >
                           <Printer size={16} />

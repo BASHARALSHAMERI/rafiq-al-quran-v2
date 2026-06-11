@@ -88,3 +88,12 @@ export const createJournalEntryBodySchema = z
     lines: z.array(journalLineSchema).min(2)
   })
   .strict();
+
+export const createFiscalYearBodySchema = z
+  .object({
+    year: z.coerce.number().int().min(2000).max(2100),
+    startDate: z.string().trim().min(1),
+    endDate: z.string().trim().min(1),
+    periodType: z.enum(["MONTHLY", "QUARTERLY"]).default("MONTHLY")
+  })
+  .strict();

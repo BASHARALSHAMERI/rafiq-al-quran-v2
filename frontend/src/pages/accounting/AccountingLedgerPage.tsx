@@ -19,6 +19,7 @@ import {
 import { useAccountingAccountsQuery, useAccountingLedgerQuery } from "./accounting.hooks";
 import type { LedgerResponse } from "./accounting.api";
 import { printAccountingDocument, formatArabicDate, formatYemeniCurrency } from "../../features/accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
@@ -111,6 +112,7 @@ function VouchersKpi({
 }
 
 export default function AccountingLedgerPage() {
+  const brandingQ = useOrgBrandingQuery();
   const accountsQ = useAccountingAccountsQuery();
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
   const [accountId, setAccountId] = useState<number | undefined>();
@@ -134,6 +136,8 @@ export default function AccountingLedgerPage() {
       title: "كشف حساب (دفتر الأستاذ)",
       subtitle: `${selectedAccount.code} - ${selectedAccount.name}`,
       rows: rows,
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
       summaryHtml: `
         <div style="display: flex; justify-content: space-between;">
           <div><strong>الرصيد الافتتاحي:</strong> ${formatYemeniCurrency(ledger.opening.balance)}</div>

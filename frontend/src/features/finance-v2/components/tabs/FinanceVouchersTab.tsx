@@ -30,6 +30,7 @@ import type { CreateFinanceVoucherV2Payload, FinanceVoucherV2, PaymentMethodV2, 
 import { getYemenModeStatus, money, posInt } from "../FinanceShared";
 import { VoucherAccountingStatus, VoucherCategoryBadge, VoucherTypeBadge } from "../../../../pages/accounting/AccountingShared";
 import { printVoucherReceipt } from "../../../accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../../org/org.hooks";
 
 type Props = {
   centerId: number | undefined;
@@ -75,6 +76,7 @@ export default function FinanceVouchersTab({
   const [reasonVoucherId, setReasonVoucherId] = useState<number | null>(null);
   const [reasonValue, setReasonValue] = useState("");
 
+  const brandingQ = useOrgBrandingQuery();
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
 
@@ -364,7 +366,7 @@ export default function FinanceVouchersTab({
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => printVoucherReceipt(voucher, ar)}
+              onClick={() => printVoucherReceipt(voucher, ar, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
               title={ar ? "طباعة" : "Print"}
             >
               <Printer className="w-4 h-4" />

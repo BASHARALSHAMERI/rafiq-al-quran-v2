@@ -120,11 +120,15 @@ export function MonthlyStaffReportView() {
               <span className="text-[10px] text-slate-400 uppercase">{ar ? "حضر" : "Pres"}</span>
               <span className="text-emerald-600 font-bold text-[13px]">{employee.presentDays}</span>
             </div>
-            <div className="flex flex-col items-center border-x border-slate-100 px-2">
+            <div className="flex flex-col items-center border-l border-slate-100 pl-2">
               <span className="text-[10px] text-slate-400 uppercase">{ar ? "غاب" : "Abs"}</span>
               <span className="text-rose-600 font-bold text-[13px]">{employee.absentDays}</span>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center border-l border-slate-100 pl-2">
+              <span className="text-[10px] text-slate-400 uppercase">{ar ? "بعذر" : "Exc"}</span>
+              <span className="text-amber-600 font-bold text-[13px]">{employee.excusedDays ?? 0}</span>
+            </div>
+            <div className="flex flex-col items-center border-l border-slate-100 pl-2">
               <span className="text-[10px] text-slate-400 uppercase">{ar ? "إجازة" : "Leave"}</span>
               <span className="text-blue-600 font-bold text-[13px]">{employee.onLeaveDays ?? 0}</span>
             </div>

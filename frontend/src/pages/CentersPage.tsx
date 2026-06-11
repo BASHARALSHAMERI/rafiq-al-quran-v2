@@ -49,8 +49,16 @@ import { useCreateUserMutation, useUsersQuery, USERS_QUERY_KEYS } from "../featu
 import { RoleAwareUserFormModal } from "../features/users/components/UserFormModal";
 import type { Role } from "../features/auth/types";
 import { getApiErrorMessage } from "../shared/api/error";
+import {
+  entityFeedback,
+  notifyError,
+  notifySuccess,
+  type LocalizedLabel
+} from "../shared/ui/feedback";
 import { stagger, fadeUp } from "../shared/pageAnimations";
 import { apiClient } from "../shared/api/http";
+
+const CENTER_ENTITY: LocalizedLabel = { ar: "المركز", en: "center" };
 
 function useStaffSchedulesForCenter(centerId: number | undefined, options?: { enabled?: boolean }) {
   return useQuery({
@@ -270,6 +278,7 @@ export default function CentersPage() {
 
   const submitCenter = async () => {
     if (!modalMode) return;
+    const action = modalMode === "create" ? "create" : "update";
 
     const validationError = validateCenter(draft, ar);
     if (validationError) {
@@ -306,24 +315,42 @@ export default function CentersPage() {
       else await updateM.mutateAsync({ centerId: activeCenter!.id, payload });
       setModalMode(null);
       await refreshAll();
+      notifySuccess(entityFeedback.success(ar, action, CENTER_ENTITY));
     } catch (error) {
-      setFormErr(getApiErrorMessage(error, ar ? "تعذر الحفظ" : "Save failed"));
+      const message = getApiErrorMessage(error, entityFeedback.error(ar, action, CENTER_ENTITY));
+      setFormErr(message);
+      notifyError(message);
     }
   };
 
   const confirmToggleStatus = async () => {
     if (!statusTarget) return;
+    const nextIsActive = !(statusTarget.isActive ?? true);
 
     try {
       setActionErr(null);
       await statusM.mutateAsync({
         centerId: statusTarget.id,
-        payload: { isActive: !(statusTarget.isActive ?? true) }
+        payload: { isActive: nextIsActive }
       });
       setStatusTarget(null);
       await refreshAll();
+      notifySuccess(
+        nextIsActive
+          ? ar
+            ? "تم تفعيل المركز بنجاح"
+            : "Center activated successfully"
+          : ar
+            ? "تم تعطيل المركز بنجاح"
+            : "Center deactivated successfully"
+      );
     } catch (error) {
-      setActionErr(getApiErrorMessage(error, ar ? "تعذر التحديث" : "Update failed"));
+      const message = getApiErrorMessage(
+        error,
+        ar ? "تعذر تحديث حالة المركز. يرجى المحاولة مرة أخرى." : "Unable to update center status. Please try again."
+      );
+      setActionErr(message);
+      notifyError(message);
     }
   };
 
@@ -351,8 +378,22 @@ export default function CentersPage() {
       }
 
       await qc.invalidateQueries({ queryKey: USERS_QUERY_KEYS.all });
+      notifySuccess(
+        savedRole === "CENTER_ADMIN"
+          ? ar
+            ? "تم إنشاء مدير المركز وإضافته إلى النموذج بنجاح"
+            : "Center manager created and added to the form successfully"
+          : ar
+            ? "تم إنشاء المشرف وإضافته إلى النموذج بنجاح"
+            : "Supervisor created and added to the form successfully"
+      );
     } catch (error) {
-      setQuickErr(getApiErrorMessage(error, ar ? "تعذر الإنشاء" : "Creation failed"));
+      const message = getApiErrorMessage(
+        error,
+        ar ? "تعذر إنشاء المستخدم. يرجى المحاولة مرة أخرى." : "Unable to create user. Please try again."
+      );
+      setQuickErr(message);
+      notifyError(message);
     }
   };
 

@@ -10,6 +10,33 @@ const requireScope = (req: Parameters<RequestHandler>[0]) => {
 };
 
 export const accountingController = {
+  listFiscalYears: (async (req, res, next) => {
+    try {
+      const data = await accountingService.listFiscalYears(requireScope(req));
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  createFiscalYear: (async (req, res, next) => {
+    try {
+      const data = await accountingService.createFiscalYear(requireScope(req), req.body);
+      res.status(201).json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  listFiscalPeriods: (async (req, res, next) => {
+    try {
+      const data = await accountingService.listFiscalPeriods(requireScope(req));
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   getAccounts: (async (req, res, next) => {
     try {
       const data = await accountingService.getChartOfAccounts(
@@ -76,6 +103,16 @@ export const accountingController = {
     try {
       const params = res.locals.validatedParams as { id: number };
       const data = await accountingService.closeFiscalPeriod(requireScope(req), params.id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  reopenFiscalPeriod: (async (req, res, next) => {
+    try {
+      const params = res.locals.validatedParams as { id: number };
+      const data = await accountingService.reopenFiscalPeriod(requireScope(req), params.id);
       res.json({ ok: true, data });
     } catch (error) {
       next(error);

@@ -1,6 +1,8 @@
+import { useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { reportsApi } from "./reports.api";
-import type { ExportReportPayload, ReportsFilters, ReportType } from "./types";
+import type { ExportReportPayload, ReportsFilters, ReportType, ReportFilterDefinition } from "./types";
 
 const reportsFiltersKey = (filters: ReportsFilters) => [
   filters.from,
@@ -101,3 +103,57 @@ export const useExportReportMutation = () => {
     mutationFn: (payload: ExportReportPayload) => reportsApi.exportReport(payload)
   });
 };
+
+/**
+ * Hook: يربط الفلاتر بـ URL query params
+ * الاستخدام المباشر لقيم الفلتر وتحديثها في URL
+ */
+export function useReportUrlFilters(filterDefs: ReportFilterDefinition[]) {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const filterIds = useMemo(() => filterDefs.map((f) => f.id), [filterDefs]);
+
+  const values = useMemo(() => {
+    const result: Record<string, string | number | undefined> = {};
+    for (const id of filterIds) {
+      const val = searchParams.get(id);
+      if (val != null && val !== "") result[id] = val;
+    }
+    return result;
+  }, [searchParams, filterIds]);
+
+  const activeCount = useMemo(() => {
+    return filterIds.filter((id) => searchParams.has(id) && searchParams.get(id) !== "").length;
+  }, [searchParams, filterIds]);
+
+  const setFilter = useCallback(
+    (filterId: string, value: string | number | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (value == null || value === "" || value === "all") {
+            next.delete(filterId);
+          } else {
+            next.set(filterId, String(value));
+          }
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  const resetFilters = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const id of filterIds) next.delete(id);
+        return next;
+      },
+      { replace: true }
+    );
+  }, [setSearchParams, filterIds]);
+
+  return { values, setFilter, resetFilters, activeCount };
+}

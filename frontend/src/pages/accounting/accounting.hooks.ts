@@ -1,13 +1,61 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { accountingApi } from "./accounting.api";
-import type { CreateJournalEntryPayload, UpsertAccountingAccountPayload } from "./accounting.api";
+import type { CreateFiscalYearPayload, CreateJournalEntryPayload, UpsertAccountingAccountPayload } from "./accounting.api";
 
 export const ACCOUNTING_QUERY_KEYS = {
   all: ["accounting-preview"] as const,
+  fiscalYears: () => [...ACCOUNTING_QUERY_KEYS.all, "fiscal-years"] as const,
+  fiscalPeriods: () => [...ACCOUNTING_QUERY_KEYS.all, "fiscal-periods"] as const,
   accounts: () => [...ACCOUNTING_QUERY_KEYS.all, "accounts"] as const,
   journalEntries: () => [...ACCOUNTING_QUERY_KEYS.all, "journal-entries"] as const,
   ledger: (accountId?: number) => [...ACCOUNTING_QUERY_KEYS.all, "ledger", accountId ?? null] as const,
   trialBalance: () => [...ACCOUNTING_QUERY_KEYS.all, "trial-balance"] as const
+};
+
+export const useFiscalYearsQuery = () =>
+  useQuery({
+    queryKey: ACCOUNTING_QUERY_KEYS.fiscalYears(),
+    queryFn: accountingApi.getFiscalYears,
+    staleTime: 30_000
+  });
+
+export const useCreateFiscalYearMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateFiscalYearPayload) => accountingApi.createFiscalYear(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ACCOUNTING_QUERY_KEYS.all });
+    }
+  });
+};
+
+
+
+export const useFiscalPeriodsQuery = () =>
+  useQuery({
+    queryKey: ACCOUNTING_QUERY_KEYS.fiscalPeriods(),
+    queryFn: accountingApi.getFiscalPeriods,
+    staleTime: 20_000
+  });
+
+export const useCloseFiscalPeriodMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (periodId: number) => accountingApi.closeFiscalPeriod(periodId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ACCOUNTING_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useReopenFiscalPeriodMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (periodId: number) => accountingApi.reopenFiscalPeriod(periodId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ACCOUNTING_QUERY_KEYS.all });
+    }
+  });
 };
 
 export const useAccountingAccountsQuery = (enabled = true) =>

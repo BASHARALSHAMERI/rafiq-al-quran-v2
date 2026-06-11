@@ -18,6 +18,8 @@ import {
   useSubmitFinanceV2RewardBatchMutation
 } from "../../finance-v2.hooks";
 import type { PaymentMethodV2, RewardBatchV2, RewardCycleV2, RewardItemV2, RewardTypeV2 } from "../../types";
+import { printRewardsReport } from "../../../accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../../org/org.hooks";
 import { FinSkeleton, voucherStatusLabels, FinancePaginationFooter } from "../FinanceShared";
 import { 
   FinanceMoney,
@@ -127,6 +129,7 @@ export default function FinanceRewardsTab({
     }));
   }, [month, year, ar]);
 
+  const brandingQ = useOrgBrandingQuery();
   const batchesQ = useFinanceV2RewardBatchesQuery(centerId, year);
   const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
   const pagination = useClientPagination(batches, { initialPageSize: 10 });
@@ -629,7 +632,7 @@ export default function FinanceRewardsTab({
                         </button>
                         <button 
                           className="fin-action-btn view" 
-                          onClick={() => window.print()}
+                          onClick={() => printRewardsReport(batches, ar, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
                           title={ar ? "طباعة الكشف" : "Print Rewards"}
                         >
                           <Printer size={16} />

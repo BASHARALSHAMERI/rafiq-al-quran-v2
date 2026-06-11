@@ -63,6 +63,7 @@ import {
 import Modal from "../../components/ui/Modal";
 
 import { printVoucherReceipt } from "../../features/accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { FINANCE_YEMEN_MODE } from "../../features/finance-v2/config";
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -146,6 +147,8 @@ export default function FinanceVouchersPage() {
   const canApproveVoucher = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const canPostVoucher =
     canCreateVoucher || user?.role === "TREASURER";
+
+  const brandingQ = useOrgBrandingQuery();
 
   // Search and filter state
   const [search, setSearch] = useState("");
@@ -374,7 +377,7 @@ export default function FinanceVouchersPage() {
 
   // Row actions
   const handlePrint = (v: FinanceVoucherV2) => {
-    printVoucherReceipt(v, ar);
+    printVoucherReceipt(v, ar, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined);
   };
 
   const handleSubmit = (v: FinanceVoucherV2) => {

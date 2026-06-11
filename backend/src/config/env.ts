@@ -29,6 +29,8 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
   RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
   RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_REFRESH_WINDOW_MS: z.coerce.number().int().positive().optional(),
+  RATE_LIMIT_REFRESH_MAX: z.coerce.number().int().positive().optional(),
   RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().int().positive().optional(),
   RATE_LIMIT_GENERAL_MAX: z.coerce.number().int().positive().optional(),
   REQUEST_BODY_LIMIT: z.string().optional(),
@@ -80,6 +82,9 @@ export const env = {
   RATE_LIMIT_LOGIN_WINDOW_MS:
     baseEnv.RATE_LIMIT_LOGIN_WINDOW_MS ?? baseEnv.RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000,
   RATE_LIMIT_LOGIN_MAX: baseEnv.RATE_LIMIT_LOGIN_MAX ?? baseEnv.RATE_LIMIT_MAX ?? 10,
+  RATE_LIMIT_REFRESH_WINDOW_MS:
+    baseEnv.RATE_LIMIT_REFRESH_WINDOW_MS ?? baseEnv.RATE_LIMIT_LOGIN_WINDOW_MS ?? 10 * 60 * 1000,
+  RATE_LIMIT_REFRESH_MAX: baseEnv.RATE_LIMIT_REFRESH_MAX ?? 60,
   RATE_LIMIT_GENERAL_WINDOW_MS:
     baseEnv.RATE_LIMIT_GENERAL_WINDOW_MS ?? baseEnv.RATE_LIMIT_WINDOW_MS ?? 5 * 60 * 1000,
   RATE_LIMIT_GENERAL_MAX: baseEnv.RATE_LIMIT_GENERAL_MAX ?? baseEnv.RATE_LIMIT_MAX ?? 300,

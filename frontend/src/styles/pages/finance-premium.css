@@ -291,9 +291,9 @@
 }
 
 .fin-premium-table td {
-  padding: var(--space-4) var(--space-6);
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   transition: background 0.2s ease;
 }

@@ -12,7 +12,55 @@ export type JournalSourceType =
   | "MANUAL"
   | "PAYROLL"
   | "REWARD"
-  | "DEDUCTION";
+  | "DEDUCTION"
+  | "EXPENSE_INVOICE"
+  | "EXPENSE_PAYMENT"
+  | "ASSET_ACQUISITION"
+  | "ASSET_DEPRECIATION";
+
+export type FiscalPeriodStatus = "OPEN" | "CLOSED";
+
+export type FiscalYear = {
+  id: number;
+  organizationId: number;
+  year: number;
+  startDate: string;
+  endDate: string;
+  status: FiscalPeriodStatus;
+  closedAt?: string | null;
+  closedById?: number | null;
+  closedBy?: { id: number; fullName: string } | null;
+  periods: FiscalPeriod[];
+};
+
+export type CreateFiscalYearPayload = {
+  year: number;
+  startDate: string;
+  endDate: string;
+  periodType: "MONTHLY" | "QUARTERLY";
+};
+
+export type FiscalPeriod = {
+  id: number;
+  organizationId: number;
+  fiscalYearId: number;
+  periodNumber: number;
+  periodName: string;
+  startDate: string;
+  endDate: string;
+  status: FiscalPeriodStatus;
+  closedAt?: string | null;
+  closedById?: number | null;
+  fiscalYear: {
+    id: number;
+    year: number;
+    status: FiscalPeriodStatus;
+  };
+  closedBy?: { id: number; fullName: string } | null;
+  _count: { journalEntries: number };
+  debit: number;
+  credit: number;
+};
 
 export type AccountingCenter = {
   id: number;
@@ -166,6 +214,38 @@ const normalizeJournalEntry = (entry: JournalEntry): JournalEntry => ({
 });
 
 export const accountingApi = {
+  async getFiscalYears(): Promise<FiscalYear[]> {
+    const response = await apiClient.get<ApiResponse<FiscalYear[]>>("/accounting/fiscal-years");
+    return response.data.data;
+  },
+
+  async createFiscalYear(payload: CreateFiscalYearPayload): Promise<FiscalYear> {
+    const response = await apiClient.post<ApiResponse<FiscalYear>>("/accounting/fiscal-years", payload);
+    return response.data.data;
+  },
+
+  async getFiscalPeriods(): Promise<FiscalPeriod[]> {
+    const response = await apiClient.get<ApiResponse<FiscalPeriod[]>>("/accounting/fiscal-periods");
+    return response.data.data;
+  },
+
+  async closeFiscalPeriod(periodId: number): Promise<FiscalPeriod> {
+    const response = await apiClient.post<ApiResponse<FiscalPeriod>>(
+      `/accounting/fiscal-periods/${periodId}/close`,
+      {}
+    );
+    return response.data.data;
+  },
+
+  async reopenFiscalPeriod(periodId: number): Promise<FiscalPeriod> {
+    const response = await apiClient.post<ApiResponse<FiscalPeriod>>(
+      `/accounting/fiscal-periods/${periodId}/reopen`,
+      {}
+    );
+    return response.data.data;
+  },
+
+
   async getAccounts(): Promise<AccountingAccount[]> {
     const response = await apiClient.get<ApiResponse<AccountingAccount[]>>("/accounting/accounts");
     return response.data.data.map((account) => normalizeAccount(account));

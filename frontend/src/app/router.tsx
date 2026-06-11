@@ -44,7 +44,9 @@ const AccountingAccountsPage = React.lazy(() => import("../pages/accounting/Acco
 const AccountingJournalEntriesPage = React.lazy(() => import("../pages/accounting/AccountingJournalEntriesPage"));
 const AccountingLedgerPage = React.lazy(() => import("../pages/accounting/AccountingLedgerPage"));
 const AccountingTrialBalancePage = React.lazy(() => import("../pages/accounting/AccountingTrialBalancePage"));
+const AccountingFiscalPeriodsPage = React.lazy(() => import("../pages/accounting/AccountingFiscalPeriodsPage"));
 const ReportsPage = React.lazy(() => import("../pages/ReportsPage"));
+const StudentMonthlyReportPage = React.lazy(() => import("../pages/StudentMonthlyReportPage"));
 const AuditPage = React.lazy(() => import("../pages/AuditPage"));
 const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
 const ForgotPasswordPage = React.lazy(() => import("../pages/ForgotPasswordPage"));
@@ -103,8 +105,10 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   accounting_journal_entries: <AccountingJournalEntriesPage />,
   accounting_ledger: <AccountingLedgerPage />,
   accounting_trial_balance: <AccountingTrialBalancePage />,
+  accounting_fiscal_periods: <AccountingFiscalPeriodsPage />,
   finance_reports: <Navigate to="/reports" replace />,
   reports: <ReportsPage />,
+  reports_student_monthly: <StudentMonthlyReportPage />,
   audit: <AuditPage />,
   settings: <SettingsPage />
 };

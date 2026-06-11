@@ -153,3 +153,46 @@ export type ExportReportResponse = {
   status: ReportRunStatus | "COMPLETED";
   downloadUrl: string;
 };
+
+// ─── Unified Report System types (V2) ───
+
+export type ReportCategory = 'overview' | 'education' | 'finance' | 'donors' | 'operations';
+
+export type ReportExportFormat = 'pdf' | 'excel' | 'print';
+
+export type ReportStatus = 'ready' | 'needs_backend' | 'in_progress';
+
+export type ReportFilterType = 'search' | 'select' | 'date' | 'month' | 'dateRange' | 'asyncSelect';
+
+export type ReportFilterDefinition = {
+  id: string;
+  label: string;
+  type: ReportFilterType;
+  options?: { value: string | number; label: string }[];
+  placeholder?: string;
+  defaultValue?: string | number;
+  dependsOn?: string;
+  asyncEndpoint?: string;
+};
+
+export type ReportDefinition = {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: ReportCategory;
+  icon: string;
+  route: string;
+  status: ReportStatus;
+  tags: string[];
+  filters: ReportFilterDefinition[];
+  exports: ReportExportFormat[];
+  permission: string;
+  dataSourceNote?: string;
+  printTemplate: string;
+};
+
+export type ReportExportPayload = {
+  reportId: string;
+  format: ReportExportFormat;
+  filters: Record<string, string | number | undefined>;
+};

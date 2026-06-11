@@ -19,6 +19,7 @@ import {
 import { useAccountingTrialBalanceQuery } from "./accounting.hooks";
 import type { TrialBalanceResponse } from "./accounting.api";
 import { printAccountingDocument, formatYemeniCurrency } from "../../features/accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
@@ -95,6 +96,7 @@ function VouchersKpi({
 
 export default function AccountingTrialBalancePage() {
   const trialBalanceQ = useAccountingTrialBalanceQuery();
+  const brandingQ = useOrgBrandingQuery();
   const data = trialBalanceQ.data;
   const rows = data?.rows ?? [];
 
@@ -117,6 +119,8 @@ export default function AccountingTrialBalancePage() {
       title: "ميزان المراجعة",
       subtitle: "الأرصدة الختامية لجميع الحسابات",
       rows: filteredRows,
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
       summaryHtml: `
         <div style="display: flex; justify-content: space-between;">
           <div><strong>إجمالي المدين:</strong> ${formatYemeniCurrency(data.totals.debit)}</div>

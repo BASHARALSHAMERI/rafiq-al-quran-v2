@@ -95,6 +95,19 @@ const authLoginLimiter = rateLimit({
   }
 });
 
+const authRefreshLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_REFRESH_WINDOW_MS,
+  limit: env.RATE_LIMIT_REFRESH_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    metrics.recordRateLimited();
+    res.status(429).json(
+      buildRateLimitResponse(req, env.RATE_LIMIT_REFRESH_MAX, env.RATE_LIMIT_REFRESH_WINDOW_MS)
+    );
+  }
+});
+
 const generalLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_GENERAL_WINDOW_MS,
   limit: env.RATE_LIMIT_GENERAL_MAX,
@@ -151,7 +164,7 @@ app.use("/auth/check-user", authLoginLimiter);
 app.use("/auth/login", authLoginLimiter);
 app.use("/auth/forgot-password", authLoginLimiter);
 app.use("/auth/reset-password", authLoginLimiter);
-app.use("/auth/refresh", authLoginLimiter);
+app.use("/auth/refresh", authRefreshLimiter);
 app.use(generalLimiter);
 app.use(
   "/uploads",

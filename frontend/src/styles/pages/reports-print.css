@@ -1,0 +1,284 @@
+/**
+ * Reports Print Styles — قالب طباعة رسمي للتقارير
+ * A4 / RTL / نظيف / بدون عناصر تفاعلية
+ */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  html,
+  body {
+    direction: rtl !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: "Cairo", "Tajawal", Arial, sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ─── Hide interactive elements ─── */
+  .no-print,
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  button,
+  .ctr-controls,
+  .ctr-filters-group,
+  .ctr-search-wrap,
+  .ctr-search-input,
+  .ctr-filter-select,
+  .rcc-fbar,
+  .rcc-header__actions,
+  .rcc-header__btn,
+  .app-data-table__pagination,
+  .pagination,
+  .page-header-unified > .page-header-actions,
+  .fin-premium-container > div > button:first-child:not(.print-header-button),
+  [class*="back-link"],
+  [class*="backBtn"],
+  select,
+  input,
+  textarea {
+    display: none !important;
+  }
+
+  /* ─── Show print-only elements ─── */
+  .print-only,
+  .print-header,
+  .print-footer,
+  .print-signatures {
+    display: block !important;
+  }
+
+  /* ─── Container adjustments ─── */
+  .fin-premium-container,
+  .ctr-page-modern,
+  .page,
+  .rcc,
+  [class*="container"] {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    min-height: auto !important;
+  }
+
+  /* ─── Cards ─── */
+  .bg-white,
+  [class*="rounded-2xl"],
+  [class*="rounded-xl"],
+  [class*="rounded-lg"],
+  .rcc-card,
+  .ctr-card-modern,
+  .fin-premium-container > div > div {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .bg-brand-50,
+  [class*="bg-amber-50"],
+  [class*="bg-red-50"],
+  [class*="bg-green-50"] {
+    background: #f9fafb !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  /* ─── Tables ─── */
+  table,
+  .app-data-table__table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9pt !important;
+    page-break-inside: auto;
+  }
+
+  thead,
+  .app-data-table__head {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  th,
+  td,
+  .app-data-table__header,
+  .app-data-table__cell {
+    border: 1px solid #d1d5db !important;
+    padding: 5px 7px !important;
+    text-align: right !important;
+    vertical-align: top !important;
+    background: #ffffff !important;
+  }
+
+  th,
+  .app-data-table__header {
+    background: #f3f4f6 !important;
+    font-weight: 700 !important;
+    font-size: 9pt !important;
+  }
+
+  .app-data-table__footer tfoot,
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tfoot td {
+    font-weight: 700 !important;
+    border-top: 2px solid #111827 !important;
+  }
+
+  /* ─── Text helpers ─── */
+  .text-gray-500,
+  .text-gray-400,
+  .text-gray-600,
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+
+  .text-brand-600,
+  .text-teal-700 {
+    color: #047857 !important;
+  }
+
+  /* ─── KPIs grid ─── */
+  .ctr-kpis-modern {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .ctr-kpi-modern {
+    padding: 8px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    break-inside: avoid;
+  }
+
+  .ctr-kpi-modern .ctr-kpi-icon-wrap {
+    display: none !important;
+  }
+
+  /* ─── Signatures ─── */
+  .print-signatures {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 24px !important;
+    margin-top: 32px !important;
+    page-break-inside: avoid;
+  }
+
+  .print-signature-box {
+    border-top: 1px solid #111827 !important;
+    padding-top: 8px !important;
+    text-align: center !important;
+  }
+
+  .print-signature-box span {
+    display: block !important;
+    font-size: 9pt !important;
+    color: #6b7280 !important;
+    margin-top: 4px !important;
+  }
+
+  /* ─── Report header ─── */
+  .print-report-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .print-report-header .logo-area {
+    text-align: center !important;
+  }
+
+  .print-report-header .logo-area h1 {
+    font-size: 14pt !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .print-report-header .logo-area p {
+    font-size: 8pt !important;
+    color: #6b7280 !important;
+    margin: 2px 0 0 0 !important;
+  }
+
+  .print-report-header .meta-area {
+    text-align: left !important;
+    font-size: 8pt !important;
+    color: #6b7280 !important;
+    line-height: 1.6 !important;
+  }
+
+  .print-report-header .meta-area strong {
+    color: #111827 !important;
+  }
+
+  /* ─── Report footer ─── */
+  .print-report-footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    border-top: 1px solid #d1d5db !important;
+    padding-top: 6px !important;
+    font-size: 7pt !important;
+    color: #9ca3af !important;
+    text-align: center !important;
+  }
+
+  .print-report-footer .page-number:after {
+    counter-increment: page;
+    content: counter(page);
+  }
+
+  /* ─── Statement tree (financial position) ─── */
+  .print-statement-tree {
+    page-break-inside: avoid;
+  }
+
+  /* ─── Data source warning ─── */
+  .print-warning {
+    border: 1px solid #f59e0b !important;
+    background: #fffbeb !important;
+    padding: 8px !important;
+    font-size: 8pt !important;
+    color: #92400e !important;
+    margin-bottom: 12px !important;
+    page-break-inside: avoid;
+  }
+}
+
+/* ─── Screen-only print preview ─── */
+.print-preview-mode .no-print {
+  display: none !important;
+}
+
+.print-preview-mode .print-only {
+  display: block !important;
+}
+
+/* ─── Print trigger button ─── */
+.print-trigger-btn {
+  cursor: pointer;
+}

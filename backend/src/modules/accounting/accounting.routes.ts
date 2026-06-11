@@ -8,6 +8,7 @@ import { accountingController } from "./accounting.controller";
 import {
   accountingEntityIdParamSchema,
   createAccountingAccountBodySchema,
+  createFiscalYearBodySchema,
   createJournalEntryBodySchema,
   ledgerQuerySchema,
   listAccountsQuerySchema,
@@ -77,11 +78,37 @@ accountingRouter.post(
   accountingController.postJournalEntry
 );
 
+accountingRouter.get(
+  "/accounting/fiscal-years",
+  requireRoles(accountingReadRoles),
+  accountingController.listFiscalYears
+);
+
+accountingRouter.post(
+  "/accounting/fiscal-years",
+  requireRoles(accountingAdminRoles),
+  validateBody(createFiscalYearBodySchema),
+  accountingController.createFiscalYear
+);
+
+accountingRouter.get(
+  "/accounting/fiscal-periods",
+  requireRoles(accountingReadRoles),
+  accountingController.listFiscalPeriods
+);
+
 accountingRouter.post(
   "/accounting/fiscal-periods/:id/close",
   requireRoles(accountingAdminRoles),
   validateParams(accountingEntityIdParamSchema),
   accountingController.closeFiscalPeriod
+);
+
+accountingRouter.post(
+  "/accounting/fiscal-periods/:id/reopen",
+  requireRoles(accountingAdminRoles),
+  validateParams(accountingEntityIdParamSchema),
+  accountingController.reopenFiscalPeriod
 );
 
 accountingRouter.get(

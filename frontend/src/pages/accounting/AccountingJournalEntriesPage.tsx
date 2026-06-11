@@ -31,6 +31,7 @@ import {
 } from "./accounting.hooks";
 import type { AccountingAccount, JournalEntry, JournalSourceType } from "./accounting.api";
 import { printAccountingDocument } from "../../features/accounting/printAccounting";
+import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
 
 import "../../styles/pages/centers-modern.css";
@@ -168,6 +169,7 @@ export default function AccountingJournalEntriesPage() {
   const canPostJournalEntry = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const entriesQ = useAccountingJournalEntriesQuery();
   const accountsQ = useAccountingAccountsQuery();
+  const brandingQ = useOrgBrandingQuery();
   const allEntries = entriesQ.data ?? [];
   const accounts = accountsQ.data ?? [];
 
@@ -318,6 +320,8 @@ export default function AccountingJournalEntriesPage() {
       title: "دفتر القيود اليومية",
       subtitle: "قائمة القيود المحاسبية للمرحلة الحالية",
       rows: filteredEntries,
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
       summaryHtml: `
         <strong>إجمالي المدين:</strong> ${stats.totalDebit.toLocaleString("ar-YE-u-nu-latn")} ريال
         &nbsp; | &nbsp;

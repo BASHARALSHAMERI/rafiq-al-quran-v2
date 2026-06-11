@@ -7,15 +7,11 @@ import {
   BookOpen,
   Building2,
   CalendarDays,
-  CheckCircle2,
   ChevronLeft,
-  ChevronRight,
   CircleDot,
   ClipboardCheck,
-  ExternalLink,
   FileCheck2,
   FileText,
-  Filter,
   HandHeart,
   Printer,
   RefreshCw,
@@ -23,18 +19,21 @@ import {
   Scale,
   Search,
   Star,
-  Table2,
-  Trophy,
   Users,
   Wallet2,
   Activity,
+  FileDown,
+  ArrowLeft,
+  Award
 } from "lucide-react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { PageHeader } from "../components/ui/PageHeader";
 import { DataTable, type DataTableColumn } from "../components/ui/DataTable";
 import { useI18n } from "../app/i18n";
 import { useAuthStore } from "../features/auth/auth.store";
-import { useCentersQuery } from "../features/org/org.hooks";
+import { useCentersQuery, useCirclesQuery, useOrgBrandingQuery } from "../features/org/org.hooks";
+import { printSummaryReport } from "../features/accounting/printAccounting";
 import { canReadCenters } from "../features/org/org.permissions";
 import {
   useReportQuery,
@@ -42,13 +41,16 @@ import {
   useCirclesSummaryQuery,
   useStudentsSummaryQuery,
   useGoldenRecordsSummaryQuery,
+  useExportReportMutation,
 } from "../features/reports/reports.hooks";
 import { ErrorState } from "../components/ui/ErrorState";
 import type { ReportsFilters, ReportType } from "../features/reports/types";
+import { ReportsSummaryCards } from "../features/reports/components/ReportsSummaryCards";
 import { MonthlyStaffReportView } from "../features/staff-attendance/components/MonthlyStaffReportView";
 
-import "../styles/pages/reports-v5.css";
-import "../styles/pages/reports-v6.css";
+import "../styles/pages/centers-modern.css";
+import "../styles/pages/finance-premium.css";
+import "../styles/pages/finance-v4.css";
 
 /* ─── Animation helpers ─── */
 const stagger = {
@@ -107,78 +109,31 @@ type ReportGroupDef = {
 /* ─── Report Catalog ─── */
 const REPORT_GROUPS: ReportGroupDef[] = [
   {
-    id: "admin", nameAr: "تقارير إدارية", nameEn: "Administrative Reports", color: "blue", icon: Building2,
+    id: "admin", nameAr: "نظرة عامة وإدارة", nameEn: "Overview & Admin", color: "teal", icon: Building2,
     cards: [
-      { id: "centers-summary", nameAr: "نظرة عامة على الجمعية", nameEn: "Organization Overview", descAr: "عدد المراكز والحلقات والموظفين", descEn: "Centers, circles and staff counts", icon: Building2, status: "ready", summaryKey: "centers", section: "admin", scope: "org", outputs: ["screen"], featured: true, visibility: "super" },
-      { id: "circles-summary", nameAr: "تقرير الحلقات", nameEn: "Circles Report", descAr: "الحلقات حسب المركز والمعلم والطلاب", descEn: "Circles by center, teacher and students", icon: CircleDot, status: "ready", summaryKey: "circles", section: "admin", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "students-summary", nameAr: "تقرير الطلاب", nameEn: "Students Report", descAr: "الطلاب حسب المركز والحالة", descEn: "Students by center and status", icon: Users, status: "ready", summaryKey: "students", section: "admin", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "center-compare", nameAr: "مقارنة المراكز", nameEn: "Centers Comparison", descAr: "مقارنة أداء المراكز والحلقات", descEn: "Compare centers performance", icon: BarChart3, status: "coming-soon", section: "admin", scope: "org", outputs: ["screen"], featured: true, visibility: "super" },
-      { id: "center-perf", nameAr: "أداء المراكز", nameEn: "Center Performance", descAr: "مؤشرات أداء كل مركز", descEn: "Performance metrics per center", icon: Activity, status: "coming-soon", section: "admin", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "teacher-perf", nameAr: "أداء المعلمين", nameEn: "Teachers Performance", descAr: "تقييم المعلمين وإنتاجيتهم", descEn: "Teacher evaluation and productivity", icon: Users, status: "coming-soon", section: "admin", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "struggling", nameAr: "الطلاب المتعثرون", nameEn: "Struggling Students", descAr: "الطلاب الذين يحتاجون متابعة خاصة", descEn: "Students needing special attention", icon: Users, status: "coming-soon", section: "admin", scope: "center", outputs: ["screen"], featured: true, visibility: "all" },
+      { id: "centers-summary", nameAr: "نظرة عامة على الجمعية", nameEn: "Organization Overview", descAr: "عدد المراكز والحلقات والموظفين", descEn: "Centers, circles and staff counts", icon: Building2, status: "ready", summaryKey: "centers", section: "admin", scope: "org", outputs: ["screen", "print", "excel"], featured: true, visibility: "super" },
+      { id: "circles-summary", nameAr: "تقرير الحلقات", nameEn: "Circles Report", descAr: "الحلقات حسب المركز والمعلم والطلاب", descEn: "Circles by center, teacher and students", icon: CircleDot, status: "ready", summaryKey: "circles", section: "admin", scope: "center", outputs: ["screen", "print", "excel"], visibility: "all" },
+      { id: "students-summary", nameAr: "تقرير الطلاب", nameEn: "Students Report", descAr: "الطلاب حسب المركز والحالة", descEn: "Students by center and status", icon: Users, status: "ready", summaryKey: "students", section: "admin", scope: "center", outputs: ["screen", "print", "excel"], visibility: "all" },
     ],
   },
   {
-    id: "educational", nameAr: "تقارير تعليمية", nameEn: "Educational Reports", color: "violet", icon: BookOpen,
+    id: "educational", nameAr: "تقارير تعليمية وحضور", nameEn: "Education & Attendance", color: "teal", icon: BookOpen,
     cards: [
-      { id: "circle-monthly", nameAr: "تقرير الحلقة الشهري", nameEn: "Monthly Circle Report", descAr: "أداء الحلقة الشهري الشامل", descEn: "Monthly circle performance", icon: CircleDot, status: "coming-soon", section: "educational", scope: "circle", outputs: ["screen", "print"], featured: true, visibility: "all" },
-      { id: "student-monthly", nameAr: "تقرير الطالب الشهري", nameEn: "Monthly Student Report", descAr: "أداء الطالب الشهري في الحفظ والحضور", descEn: "Monthly student memorization & attendance", icon: Users, status: "coming-soon", section: "educational", scope: "student", outputs: ["screen", "print"], featured: true, visibility: "all" },
-      { id: "follow-up", nameAr: "الحفظ والمراجعة", nameEn: "Memorization & Review", descAr: "سجل المتابعة والنشاطات", descEn: "Follow-up and activity log", icon: Activity, status: "ready", reportType: "FOLLOW_UP", section: "educational", scope: "circle", outputs: ["screen"], visibility: "all" },
-      { id: "plan-exec", nameAr: "تنفيذ الخطة", nameEn: "Plan Execution", descAr: "نسب تنفيذ الخطة التعليمية", descEn: "Educational plan completion rates", icon: CheckCircle2, status: "coming-soon", section: "educational", scope: "circle", outputs: ["screen"], visibility: "all" },
-      { id: "student-levels", nameAr: "مستويات الطلاب", nameEn: "Student Levels", descAr: "توزيع الطلاب حسب المستوى", descEn: "Students distribution by level", icon: BarChart3, status: "coming-soon", section: "educational", scope: "center", outputs: ["screen"], visibility: "all" },
+      { id: "follow-up", nameAr: "التقرير الشهري التفصيلي للطالب", nameEn: "Student Monthly Detailed Report", descAr: "تقرير شهري تفصيلي للطالب (حفظ/مراجعة/متون/إنجاز جماعي) للطباعة و PDF", descEn: "Detailed monthly student report (memorization/review/mutun) for print & PDF", icon: Activity, status: "ready", href: "/reports/student-monthly", section: "educational", scope: "student", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
+      { id: "attendance", nameAr: "حضور الطلاب", nameEn: "Student Attendance", descAr: "سجل الحضور والغياب والتأخير", descEn: "Attendance, absence and late records", icon: ClipboardCheck, status: "ready", reportType: "ATTENDANCE", section: "attendance", scope: "circle", outputs: ["screen", "print"], visibility: "all" },
+      { id: "exams", nameAr: "نتائج الاختبارات", nameEn: "Exam Results", descAr: "النتائج والنجاح ومعدل الأداء", descEn: "Results, pass rates and performance", icon: FileCheck2, status: "ready", reportType: "EXAMS", section: "exams", scope: "center", outputs: ["screen", "print"], visibility: "all" },
+      { id: "staff-report", nameAr: "حضور الكادر", nameEn: "Staff Attendance", descAr: "حضور الموظفين والإجازات والخصومات", descEn: "Staff attendance, leaves and deductions", icon: Users, status: "ready", section: "attendance", scope: "center", outputs: ["screen", "print"], visibility: "all" },
     ],
   },
   {
-    id: "attendance", nameAr: "تقارير الحضور والمتابعة", nameEn: "Attendance & Follow-up", color: "emerald", icon: CalendarDays,
+    id: "finance", nameAr: "تقارير مالية وللداعمين", nameEn: "Financial & Donors", color: "teal", icon: Wallet2,
     cards: [
-      { id: "attendance", nameAr: "حضور الطلاب", nameEn: "Student Attendance", descAr: "سجل الحضور والغياب والتأخير", descEn: "Attendance, absence and late records", icon: ClipboardCheck, status: "ready", reportType: "ATTENDANCE", section: "attendance", scope: "circle", outputs: ["screen"], visibility: "all" },
-      { id: "staff-report", nameAr: "حضور الكادر", nameEn: "Staff Attendance", descAr: "حضور الموظفين والإجازات والخصومات", descEn: "Staff attendance, leaves and deductions", icon: Users, status: "ready", section: "attendance", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "absence-late", nameAr: "الغياب والتأخير", nameEn: "Absence & Lateness", descAr: "إحصائيات الغياب والتأخير", descEn: "Absence and lateness statistics", icon: CalendarDays, status: "coming-soon", section: "attendance", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "daily-followup", nameAr: "المتابعة اليومية", nameEn: "Daily Follow-up", descAr: "سجل المتابعة اليومي", descEn: "Daily follow-up log", icon: FileText, status: "coming-soon", section: "attendance", scope: "circle", outputs: ["screen"], visibility: "all" },
-    ],
-  },
-  {
-    id: "exams", nameAr: "تقارير الاختبارات", nameEn: "Exams & Assessments", color: "amber", icon: FileCheck2,
-    cards: [
-      { id: "exams", nameAr: "نتائج الاختبارات", nameEn: "Exam Results", descAr: "النتائج والنجاح ومعدل الأداء", descEn: "Results, pass rates and performance", icon: FileCheck2, status: "ready", reportType: "EXAMS", section: "exams", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "exam-candidates", nameAr: "المرشحون", nameEn: "Exam Candidates", descAr: "قوائم المرشحين للاختبارات", descEn: "Candidates lists for exams", icon: Users, status: "coming-soon", section: "exams", scope: "center", outputs: ["screen"], visibility: "all" },
-      { id: "pass-rates", nameAr: "نسب النجاح", nameEn: "Pass Rates", descAr: "إحصائيات النجاح حسب المركز", descEn: "Pass rates by center", icon: BarChart3, status: "coming-soon", section: "exams", scope: "org", outputs: ["screen"], visibility: "super" },
-      { id: "mushaf-exams", nameAr: "اختبارات المصحف", nameEn: "Mushaf Exams", descAr: "اختبارات الحفظ الكامل", descEn: "Full memorization exams", icon: BookOpen, status: "coming-soon", section: "exams", scope: "org", outputs: ["screen"], visibility: "super" },
-    ],
-  },
-  {
-    id: "golden", nameAr: "تقارير السجل الذهبي", nameEn: "Golden Record Reports", color: "gold", icon: Trophy,
-    cards: [
-      { id: "golden-records", nameAr: "الخاتمون", nameEn: "Completers", descAr: "الخاتمون حسب المركز والرواية", descEn: "Completers by center and narration", icon: Trophy, status: "ready", summaryKey: "golden-records", section: "golden", scope: "org", outputs: ["screen"], visibility: "all" },
-      { id: "huffaz", nameAr: "الحفاظ", nameEn: "Huffaz", descAr: "قائمة الحفاظ المعتمدين", descEn: "Certified Huffaz list", icon: Star, status: "coming-soon", section: "golden", scope: "org", outputs: ["screen", "print"], visibility: "all" },
-      { id: "ijazat", nameAr: "الإجازات", nameEn: "Ijazat", descAr: "الإجازات الممنوحة", descEn: "Granted Ijazat", icon: FileText, status: "coming-soon", section: "golden", scope: "org", outputs: ["screen"], visibility: "super" },
-      { id: "yearly-achievements", nameAr: "الإنجازات السنوية", nameEn: "Yearly Achievements", descAr: "ملخص الإنجازات السنوي", descEn: "Annual achievements summary", icon: Trophy, status: "coming-soon", section: "golden", scope: "org", outputs: ["screen"], visibility: "super" },
-    ],
-  },
-  {
-    id: "finance", nameAr: "تقارير مالية ومحاسبية", nameEn: "Financial & Accounting", color: "teal", icon: Wallet2,
-    cards: [
-      { id: "finance-invoices", nameAr: "الفواتير والتحصيل", nameEn: "Invoices & Collection", descAr: "الفواتير والمبالغ المستحقة والمحصلة", descEn: "Invoices, amounts due and collected", icon: FileText, status: "ready", reportType: "FINANCE", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-pos", nameAr: "قائمة المركز المالي", nameEn: "Financial Position", descAr: "الأصول والخصوم وصافي الأصول", descEn: "Assets, liabilities and net assets", icon: Scale, status: "ready", href: "/finance/reports/financial-position", section: "finance", scope: "finance", outputs: ["screen", "print"], featured: true, visibility: "all" },
-      { id: "fin-activities", nameAr: "قائمة الأنشطة", nameEn: "Statement of Activities", descAr: "الإيرادات والمصروفات والفائض", descEn: "Revenue, expenses and surplus", icon: Activity, status: "ready", href: "/finance/reports/statement-of-activities", section: "finance", scope: "finance", outputs: ["screen", "print"], featured: true, visibility: "all" },
-      { id: "fin-center-funding", nameAr: "تمويل وتكلفة المراكز", nameEn: "Center Funding & Cost", descAr: "فجوة التمويل لكل مركز", descEn: "Funding gap per center", icon: Building2, status: "ready", href: "/finance/reports/center-funding", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-coa", nameAr: "شجرة الحسابات", nameEn: "Chart of Accounts", descAr: "هيكل الحسابات المحاسبية", descEn: "Accounting structure", icon: Table2, status: "ready", href: "/finance/accounting/accounts", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-ledger", nameAr: "دفتر الأستاذ", nameEn: "General Ledger", descAr: "حركات الحسابات التفصيلية", descEn: "Detailed account movements", icon: BookOpen, status: "ready", href: "/finance/accounting/ledger", section: "finance", scope: "finance", outputs: ["screen"], visibility: "super" },
-      { id: "fin-trial", nameAr: "ميزان المراجعة", nameEn: "Trial Balance", descAr: "أرصدة الحسابات الختامية", descEn: "Final account balances", icon: Scale, status: "ready", href: "/finance/accounting/trial-balance", section: "finance", scope: "finance", outputs: ["screen"], visibility: "super" },
-      { id: "fin-vouchers", nameAr: "السندات", nameEn: "Vouchers", descAr: "سندات القبض والصرف", descEn: "Receipt and payment vouchers", icon: ClipboardCheck, status: "ready", href: "/finance/vouchers", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-expenses", nameAr: "المصروفات", nameEn: "Expenses", descAr: "المصروفات والموردون", descEn: "Expenses and suppliers", icon: FileText, status: "ready", href: "/finance/expenses", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-donations", nameAr: "التبرعات", nameEn: "Donations", descAr: "المتبرعون والحملات", descEn: "Donors and campaigns", icon: HandHeart, status: "ready", href: "/finance/donors", section: "finance", scope: "finance", outputs: ["screen"], visibility: "all" },
-      { id: "fin-payroll", nameAr: "الرواتب", nameEn: "Payroll", descAr: "كشوف الرواتب والاستقطاعات", descEn: "Payroll sheets and deductions", icon: Users, status: "ready", href: "/finance/payroll", section: "finance", scope: "finance", outputs: ["screen"], visibility: "super" },
-    ],
-  },
-  {
-    id: "official", nameAr: "تقارير رسمية للطباعة", nameEn: "Official Printable Reports", color: "slate", icon: Printer,
-    cards: [
-      { id: "off-circle-monthly", nameAr: "تقرير أداء الحلقة الشهري الرسمي", nameEn: "Official Monthly Circle Report", descAr: "تقرير رسمي قابل للطباعة", descEn: "Official printable report", icon: Printer, status: "coming-soon", section: "official", scope: "circle", outputs: ["print", "pdf"], visibility: "all" },
-      { id: "off-grades", nameAr: "كشف درجات الطلاب", nameEn: "Student Grades Sheet", descAr: "كشف درجات رسمي", descEn: "Official grades sheet", icon: FileText, status: "coming-soon", section: "official", scope: "circle", outputs: ["print", "pdf"], visibility: "all" },
-      { id: "off-student-monthly", nameAr: "تقرير الطالب الشهري", nameEn: "Monthly Student Report", descAr: "تقرير طالب رسمي للطباعة", descEn: "Official student report", icon: Users, status: "coming-soon", section: "official", scope: "student", outputs: ["print", "pdf"], visibility: "all" },
-      { id: "off-attendance", nameAr: "كشف الحضور والغياب", nameEn: "Attendance Sheet", descAr: "كشف حضور رسمي", descEn: "Official attendance sheet", icon: ClipboardCheck, status: "coming-soon", section: "official", scope: "circle", outputs: ["print", "pdf"], visibility: "all" },
-      { id: "off-finance", nameAr: "التقارير المالية الرسمية", nameEn: "Official Financial Reports", descAr: "تقارير مالية رسمية للطباعة", descEn: "Official financial printable reports", icon: Scale, status: "coming-soon", section: "official", scope: "finance", outputs: ["print", "pdf"], visibility: "super" },
+      { id: "fin-pos", nameAr: "قائمة المركز المالي", nameEn: "Financial Position", descAr: "الأصول والخصوم وصافي الأصول للداعمين", descEn: "Assets, liabilities and net assets", icon: Scale, status: "ready", href: "/finance/reports/financial-position", section: "finance", scope: "finance", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
+      { id: "fin-activities", nameAr: "قائمة الأنشطة", nameEn: "Statement of Activities", descAr: "الإيرادات والمصروفات والفائض", descEn: "Revenue, expenses and surplus", icon: Activity, status: "ready", href: "/finance/reports/statement-of-activities", section: "finance", scope: "finance", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
+      { id: "fin-donations", nameAr: "التبرعات", nameEn: "Donations", descAr: "المتبرعون والحملات الداعمة", descEn: "Donors and campaigns", icon: HandHeart, status: "ready", href: "/finance/donors", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
+      { id: "fin-vouchers", nameAr: "السندات", nameEn: "Vouchers", descAr: "سندات القبض والصرف", descEn: "Receipt and payment vouchers", icon: ClipboardCheck, status: "ready", href: "/finance/vouchers", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
+      { id: "fin-expenses", nameAr: "المصروفات", nameEn: "Expenses", descAr: "المصروفات والموردون", descEn: "Expenses and suppliers", icon: FileText, status: "ready", href: "/finance/expenses", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
+      { id: "finance-invoices", nameAr: "الفواتير والتحصيل", nameEn: "Invoices & Collection", descAr: "الفواتير والمبالغ المستحقة والمحصلة", descEn: "Invoices, amounts due and collected", icon: FileText, status: "ready", reportType: "FINANCE", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
     ],
   },
 ];
@@ -202,7 +157,6 @@ const statusBadge = (value: string): "default" | "success" | "warning" | "error"
 
 const statusLabelAr: Record<ReportStatus, string> = { ready: "جاهز", "needs-data": "يحتاج بيانات", "coming-soon": "قريبًا" };
 const statusLabelEn: Record<ReportStatus, string> = { ready: "Ready", "needs-data": "Needs Data", "coming-soon": "Coming Soon" };
-const statusColorCls: Record<ReportStatus, string> = { ready: "rcc-badge--green", "needs-data": "rcc-badge--amber", "coming-soon": "rcc-badge--gray" };
 
 const sectionLabelAr: Record<SectionFilter, string> = { all: "الكل", admin: "إداري", educational: "تعليمي", attendance: "حضور", exams: "اختبارات", golden: "سجل ذهبي", finance: "مالي", official: "رسمي" };
 const sectionLabelEn: Record<SectionFilter, string> = { all: "All", admin: "Admin", educational: "Education", attendance: "Attendance", exams: "Exams", golden: "Golden", finance: "Finance", official: "Official" };
@@ -211,8 +165,6 @@ const statusFilterEn: Record<StatusFilter, string> = { all: "All", ready: "Ready
 const outputFilterAr: Record<OutputFilter, string> = { all: "الكل", screen: "شاشة", print: "طباعة", pdf: "PDF", excel: "Excel" };
 const outputFilterEn: Record<OutputFilter, string> = { all: "All", screen: "Screen", print: "Print", pdf: "PDF", excel: "Excel" };
 const scopeLabelAr: Record<ScopeTag, string> = { org: "جمعية", center: "مركز", circle: "حلقة", student: "طالب", finance: "مالي" };
-const outputLabelAr: Record<OutputTag, string> = { screen: "شاشة", print: "طباعة", pdf: "PDF", excel: "Excel" };
-const sectionBadgeCls: Record<string, string> = { admin: "rcc-badge--blue", educational: "rcc-badge--violet", attendance: "rcc-badge--green", exams: "rcc-badge--amber", golden: "rcc-badge--amber", finance: "rcc-badge--teal", official: "rcc-badge--slate" };
 
 const canSeeCard = (card: ReportCardDef, role: string | undefined): boolean => {
   if (role === "ACCOUNTANT") return card.section === "finance";
@@ -233,12 +185,15 @@ export default function ReportsPage() {
   const [viewLevel, setViewLevel] = useState<ViewLevel>("CATALOG");
   const [activeReportType, setActiveReportType] = useState<ReportType>("ATTENDANCE");
   const [activeSummary, setActiveSummary] = useState<string | null>(null);
-  const [activeTitle, setActiveTitle] = useState("");
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const activeCard = useMemo(() => ALL_CARDS.find(c => c.id === activeCardId), [activeCardId]);
   const [filters, setFilters] = useState<ReportsFilters>({ from: defaultFrom, to: defaultTo, search: "" });
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const exportMut = useExportReportMutation();
+  const brandingQ = useOrgBrandingQuery({ enabled: viewLevel === "UNIFIED" && !!activeSummary });
 
   /* catalog filters */
   const [searchQ, setSearchQ] = useState("");
@@ -247,6 +202,7 @@ export default function ReportsPage() {
   const [outputFlt, setOutputFlt] = useState<OutputFilter>("all");
 
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
+  const circlesQ = useCirclesQuery(filters.centerId, { enabled: canLoadCenters && !!filters.centerId });
 
   /* Standard report queries */
   const unifiedQ = useReportQuery(activeReportType, filters, viewLevel === "UNIFIED" && !activeSummary);
@@ -344,8 +300,73 @@ export default function ReportsPage() {
     rating: ar ? "التقييم" : "Rating", notes: ar ? "ملاحظات" : "Notes"
   };
 
-  const columns = useMemo<DataTableColumn<Record<string, any>>[]>(
-    () => headers.map((h) => ({
+  /* تعريف أعمدة ثابتة لكل نوع ملخص (بدلاً من الديناميكية) */
+  const SUMMARY_COLUMNS: Record<string, DataTableColumn<Record<string, any>>[]> = {
+    centers: [
+      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+        cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
+      { id: "name", header: ar ? "اسم المركز" : "Center Name",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
+      { id: "code", header: ar ? "الكود" : "Code", width: 80, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{r.code}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
+      { id: "circlesCount", header: ar ? "الحلقات" : "Circles", width: 80, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums">{r.circlesCount}</span> },
+      { id: "staffCount", header: ar ? "الموظفين" : "Staff", width: 80, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums">{r.staffCount}</span> },
+    ],
+    circles: [
+      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+        cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
+      { id: "name", header: ar ? "اسم الحلقة" : "Circle Name",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشطة" : "Active") : (ar ? "غير نشطة" : "Inactive")}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
+      { id: "teacherName", header: ar ? "المعلم" : "Teacher", width: 150,
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.teacherName}</span> },
+      { id: "studentCount", header: ar ? "الطلاب" : "Students", width: 80, align: "center", headerClassName: "text-center",
+        cell: (r) => <Badge variant="default" className="font-bold tabular-nums">{r.studentCount}</Badge> },
+    ],
+    students: [
+      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+        cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
+      { id: "name", header: ar ? "اسم الطالب" : "Student Name",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
+      { id: "level", header: ar ? "المستوى" : "Level", width: 100, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm">{r.level}</span> },
+      { id: "circleName", header: ar ? "الحلقة" : "Circle", width: 150,
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.circleName}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
+    ],
+    "golden-records": [
+      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+        cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
+      { id: "studentName", header: ar ? "اسم الطالب" : "Student Name",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.studentName}</span> },
+      { id: "type", header: ar ? "النوع" : "Type", width: 120, align: "center", headerClassName: "text-center",
+        cell: (r) => <Badge variant="success">{r.type}</Badge> },
+      { id: "narration", header: ar ? "الرواية" : "Narration", width: 120, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 font-medium">{r.narration}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
+      { id: "completionDate", header: ar ? "تاريخ الإتمام" : "Completion Date", width: 120, align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm">{r.completionDate}</span> },
+    ],
+  };
+
+  /* اختيار الأعمدة: ثابتة للملخصات، ديناميكية للتقارير العادية */
+  const columns = useMemo<DataTableColumn<Record<string, any>>[]>(() => {
+    if (activeSummary && SUMMARY_COLUMNS[activeSummary]) {
+      return SUMMARY_COLUMNS[activeSummary];
+    }
+    /* fallback: أعمدة ديناميكية للتقارير العادية */
+    return headers.map((h) => ({
       id: h,
       header: (
         <button className={`rpt-th-btn ${sortKey === h ? "rpt-th-btn--active" : ""}`} onClick={() => {
@@ -354,19 +375,64 @@ export default function ReportsPage() {
           setPage(1);
         }}>
           <span>{colLabels[h] ?? humanize(h)}</span>
-          <ArrowUpDown className="w-3 h-3 ml-1 opacity-50" />
+          <ArrowUpDown className="w-3 h-3 mr-1 opacity-50" />
         </button>
       ),
       cell: (row) => {
         const val = row[h];
-        if (val == null || val === "") return <span className="rpt-muted">-</span>;
+        if (val == null || val === "") return <span className="text-gray-300">-</span>;
         if (typeof val === "boolean") return <Badge variant={val ? "success" : "default"}>{val ? (ar ? "نعم" : "Yes") : (ar ? "لا" : "No")}</Badge>;
         if (typeof val === "string" && /status|state|isPassed/i.test(h)) return <Badge variant={statusBadge(val)}>{val}</Badge>;
-        return <span className="rpt-cell-text">{toDisplay(val)}</span>;
+        return <span className="text-gray-700 dark:text-gray-300">{toDisplay(val)}</span>;
       },
-    })),
-    [headers, sortKey, sortDir, ar]
-  );
+    }));
+  }, [activeSummary, headers, sortKey, sortDir, page, pageSize, ar]);
+
+  const reportTotals = useMemo(() => {
+    if (!sortedRows || sortedRows.length === 0) return null;
+    const totals: Record<string, number> = {};
+    const count = sortedRows.length;
+    let hasNumeric = false;
+
+    const numericKeys = ["studentCount", "circlesCount", "staffCount", "score", "pagesCount", "ayahCount", "amount", "total", "count", "present", "absent", "late", "excused", "studentsCount"];
+
+    if (activeSummary && SUMMARY_COLUMNS[activeSummary]) {
+      /* summary totals: sum numeric fields from rows */
+      const fieldMap: Record<string, string> = {
+        centers: "circlesCount",
+        circles: "studentCount",
+      };
+      const key = fieldMap[activeSummary];
+      if (key) {
+        const sum = sortedRows.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
+        totals[key] = sum;
+        if (sum > 0) hasNumeric = true;
+      }
+    } else {
+      headers.forEach(h => {
+        if (numericKeys.some(k => h.toLowerCase().includes(k.toLowerCase()))) {
+          const sum = sortedRows.reduce((acc, row) => acc + (Number(row[h]) || 0), 0);
+          totals[h] = sum;
+          hasNumeric = true;
+        }
+      });
+    }
+
+    if (!hasNumeric && count === 0) return null;
+
+    return (
+      <tr>
+        {(activeSummary && SUMMARY_COLUMNS[activeSummary]
+          ? SUMMARY_COLUMNS[activeSummary].map((c) => c.id)
+          : headers
+        ).map((h: string, i: number) => {
+          if (i === 0) return <td key={h} className="app-data-table__cell font-bold text-teal-700 dark:text-teal-400">{ar ? `الإجمالي (${count})` : `Total (${count})`}</td>;
+          if (totals[h] !== undefined) return <td key={h} className="app-data-table__cell font-bold text-teal-700 dark:text-teal-400">{totals[h]}</td>;
+          return <td key={h} className="app-data-table__cell text-gray-400">-</td>;
+        })}
+      </tr>
+    );
+  }, [sortedRows, headers, activeSummary, ar]);
 
   /* handlers */
   const handleBack = () => { setViewLevel("CATALOG"); setActiveSummary(null); };
@@ -375,7 +441,7 @@ export default function ReportsPage() {
     if (card.status !== "ready") return;
     if (card.href) { navigate(card.href); return; }
     if (card.id === "staff-report") { setViewLevel("STAFF"); return; }
-    setActiveTitle(ar ? card.nameAr : card.nameEn);
+    setActiveCardId(card.id);
     if (card.summaryKey) { setActiveSummary(card.summaryKey); setActiveReportType("ATTENDANCE"); }
     else if (card.reportType) { setActiveSummary(null); setActiveReportType(card.reportType); }
     setViewLevel("UNIFIED");
@@ -385,52 +451,310 @@ export default function ReportsPage() {
 
   const refreshData = () => { void (activeQuery as any).refetch?.(); };
 
-  /* ─── Render helpers ─── */
-  const renderBadges = (card: ReportCardDef) => (
-    <div className="rcc-card__badges">
-      <span className={`rcc-badge ${sectionBadgeCls[card.section] ?? "rcc-badge--gray"}`}>{ar ? sectionLabelAr[card.section] : card.section}</span>
-      <span className={`rcc-badge ${statusColorCls[card.status]}`}>{ar ? statusLabelAr[card.status] : statusLabelEn[card.status]}</span>
-      <span className="rcc-badge rcc-badge--gray">{ar ? scopeLabelAr[card.scope] : card.scope}</span>
-      {card.outputs.map((o) => (
-        <span key={o} className="rcc-badge rcc-badge--slate">{ar ? outputLabelAr[o] : o}</span>
-      ))}
-    </div>
-  );
+  const handlePrintCentersSummary = () => {
+    const data = centersSumQ.data;
+    if (!data) return;
+    printSummaryReport({
+      title: ar ? "نظرة عامة على الجمعية" : "Organization Overview",
+      subtitle: ar ? "المراكز والإحصائيات" : "Centers & Statistics",
+      kpis: [
+        { label: ar ? "إجمالي المراكز" : "Total Centers", value: data.kpis.totalCenters },
+        { label: ar ? "المراكز النشطة" : "Active Centers", value: data.kpis.activeCenters, color: "#2D9B7A" },
+        { label: ar ? "المراكز غير النشطة" : "Inactive Centers", value: data.kpis.inactiveCenters, color: "#E85858" },
+        { label: ar ? "إجمالي الحلقات" : "Total Circles", value: data.kpis.totalCircles },
+        { label: ar ? "إجمالي الموظفين" : "Total Staff", value: data.kpis.totalStaff },
+      ],
+      rows: data.rows,
+      columns: [
+        { label: ar ? "م" : "#", render: (_: any, i: number) => i + 1, align: "center" },
+        { label: ar ? "اسم المركز" : "Center Name", render: (r: any) => r.name },
+        { label: ar ? "الكود" : "Code", render: (r: any) => r.code, align: "center" },
+        { label: ar ? "الحالة" : "Status", render: (r: any) => r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive"), align: "center" },
+        { label: ar ? "عدد الحلقات" : "Circles", render: (r: any) => r.circlesCount, align: "center" },
+        { label: ar ? "عدد الموظفين" : "Staff", render: (r: any) => r.staffCount, align: "center" },
+      ],
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
+    });
+  };
 
-  const renderCard = (card: ReportCardDef, group: ReportGroupDef, idx: number) => {
+  const handleExportExcelCentersSummary = () => {
+    const data = centersSumQ.data;
+    if (!data || !data.rows.length) return;
+    const headers = [
+      ar ? "م" : "#",
+      ar ? "اسم المركز" : "Center Name",
+      ar ? "الكود" : "Code",
+      ar ? "الحالة" : "Status",
+      ar ? "عدد الحلقات" : "Circles",
+      ar ? "عدد الموظفين" : "Staff",
+    ];
+    const rows = data.rows.map((r: any, i: number) => [
+      i + 1, r.name, r.code, r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive"), r.circlesCount, r.staffCount,
+    ]);
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `centers-summary-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintCirclesSummary = () => {
+    const data = circlesSumQ.data;
+    if (!data) return;
+    printSummaryReport({
+      title: ar ? "تقرير الحلقات" : "Circles Report",
+      subtitle: ar ? "الحلقات حسب المركز والمعلم والطلاب" : "Circles by center, teacher and students",
+      kpis: [
+        { label: ar ? "إجمالي الحلقات" : "Total Circles", value: data.kpis.totalCircles },
+        { label: ar ? "الحلقات النشطة" : "Active Circles", value: data.kpis.activeCircles, color: "#2D9B7A" },
+        { label: ar ? "إجمالي الطلاب" : "Total Students", value: data.kpis.totalStudents },
+      ],
+      rows: data.rows,
+      columns: [
+        { label: ar ? "م" : "#", render: (_: any, i: number) => i + 1, align: "center" },
+        { label: ar ? "اسم الحلقة" : "Circle Name", render: (r: any) => r.name },
+        { label: ar ? "الحالة" : "Status", render: (r: any) => r.isActive ? (ar ? "نشطة" : "Active") : (ar ? "غير نشطة" : "Inactive"), align: "center" },
+        { label: ar ? "المركز" : "Center", render: (r: any) => r.centerName },
+        { label: ar ? "المعلم" : "Teacher", render: (r: any) => r.teacherName },
+        { label: ar ? "الطلاب" : "Students", render: (r: any) => r.studentCount, align: "center" },
+      ],
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
+    });
+  };
+
+  const handlePrintStudentsSummary = () => {
+    const data = studentsSumQ.data;
+    if (!data) return;
+    printSummaryReport({
+      title: ar ? "تقرير الطلاب" : "Students Report",
+      subtitle: ar ? "الطلاب حسب المركز والحالة" : "Students by center and status",
+      kpis: [
+        { label: ar ? "إجمالي الطلاب" : "Total Students", value: data.kpis.totalStudents },
+        { label: ar ? "الطلاب النشطون" : "Active Students", value: data.kpis.activeStudents, color: "#2D9B7A" },
+        { label: ar ? "الطلاب غير النشطين" : "Inactive Students", value: data.kpis.inactiveStudents, color: "#E85858" },
+      ],
+      rows: data.rows,
+      columns: [
+        { label: ar ? "م" : "#", render: (_: any, i: number) => i + 1, align: "center" },
+        { label: ar ? "اسم الطالب" : "Student Name", render: (r: any) => r.name },
+        { label: ar ? "الحالة" : "Status", render: (r: any) => r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive"), align: "center" },
+        { label: ar ? "المستوى" : "Level", render: (r: any) => r.level, align: "center" },
+        { label: ar ? "الحلقة" : "Circle", render: (r: any) => r.circleName },
+        { label: ar ? "المركز" : "Center", render: (r: any) => r.centerName },
+      ],
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
+    });
+  };
+
+  const handlePrintGoldenRecordsSummary = () => {
+    const data = goldenSumQ.data;
+    if (!data) return;
+    const byTypeKpis = Object.entries(data.kpis.byType || {}).map(([type, count]) => ({
+      label: type, value: count as number,
+    }));
+    printSummaryReport({
+      title: ar ? "السجل الذهبي" : "Golden Records",
+      subtitle: ar ? "الإجازات والأسانيد والروايات" : "Ijazah, Sanad and Riwaya",
+      kpis: [
+        { label: ar ? "إجمالي السجلات" : "Total Records", value: data.kpis.totalRecords },
+        ...byTypeKpis,
+      ],
+      rows: data.rows,
+      columns: [
+        { label: ar ? "م" : "#", render: (_: any, i: number) => i + 1, align: "center" },
+        { label: ar ? "اسم الطالب" : "Student Name", render: (r: any) => r.studentName },
+        { label: ar ? "النوع" : "Type", render: (r: any) => r.type, align: "center" },
+        { label: ar ? "الرواية" : "Narration", render: (r: any) => r.narration, align: "center" },
+        { label: ar ? "المركز" : "Center", render: (r: any) => r.centerName },
+        { label: ar ? "تاريخ الإتمام" : "Completion Date", render: (r: any) => r.completionDate, align: "center" },
+      ],
+      logoUrl: brandingQ.data?.logoUrl || undefined,
+      orgName: brandingQ.data?.name || undefined,
+    });
+  };
+
+  const handleExportExcelCirclesSummary = () => {
+    const data = circlesSumQ.data;
+    if (!data || !data.rows.length) return;
+    const h = [ar ? "م" : "#", ar ? "اسم الحلقة" : "Circle Name", ar ? "الحالة" : "Status", ar ? "المركز" : "Center", ar ? "المعلم" : "Teacher", ar ? "الطلاب" : "Students"];
+    const rows = data.rows.map((r: any, i: number) => [i + 1, r.name, r.isActive ? (ar ? "نشطة" : "Active") : (ar ? "غير نشطة" : "Inactive"), r.centerName, r.teacherName, r.studentCount]);
+    const csv = [h, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `circles-summary-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcelStudentsSummary = () => {
+    const data = studentsSumQ.data;
+    if (!data || !data.rows.length) return;
+    const h = [ar ? "م" : "#", ar ? "اسم الطالب" : "Student Name", ar ? "الحالة" : "Status", ar ? "المستوى" : "Level", ar ? "الحلقة" : "Circle", ar ? "المركز" : "Center"];
+    const rows = data.rows.map((r: any, i: number) => [i + 1, r.name, r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive"), r.level, r.circleName, r.centerName]);
+    const csv = [h, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `students-summary-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportExcelGoldenRecordsSummary = () => {
+    const data = goldenSumQ.data;
+    if (!data || !data.rows.length) return;
+    const h = [ar ? "م" : "#", ar ? "اسم الطالب" : "Student Name", ar ? "النوع" : "Type", ar ? "الرواية" : "Narration", ar ? "المركز" : "Center", ar ? "تاريخ الإتمام" : "Completion Date"];
+    const rows = data.rows.map((r: any, i: number) => [i + 1, r.studentName, r.type, r.narration, r.centerName, r.completionDate]);
+    const csv = [h, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `golden-records-summary-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintSummary = () => {
+    if (activeSummary === "centers") handlePrintCentersSummary();
+    else if (activeSummary === "circles") handlePrintCirclesSummary();
+    else if (activeSummary === "students") handlePrintStudentsSummary();
+    else if (activeSummary === "golden-records") handlePrintGoldenRecordsSummary();
+  };
+
+  const handleExportExcelSummary = () => {
+    if (activeSummary === "centers") handleExportExcelCentersSummary();
+    else if (activeSummary === "circles") handleExportExcelCirclesSummary();
+    else if (activeSummary === "students") handleExportExcelStudentsSummary();
+    else if (activeSummary === "golden-records") handleExportExcelGoldenRecordsSummary();
+  };
+
+  /* عرض بطاقات KPI حسب نوع الملخص */
+  const renderSummaryKpis = () => {
+    if (activeSummary === "centers" && centersSumQ.data?.kpis) {
+      const k = centersSumQ.data.kpis;
+      return (
+        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          {[
+            { label: ar ? "إجمالي المراكز" : "Total Centers", value: k.totalCenters, icon: Building2, cls: "blue" },
+            { label: ar ? "نشطة" : "Active", value: k.activeCenters, icon: Building2, cls: "emerald" },
+            { label: ar ? "غير نشطة" : "Inactive", value: k.inactiveCenters, icon: Building2, cls: "rose" },
+            { label: ar ? "الحلقات" : "Circles", value: k.totalCircles, icon: CircleDot, cls: "blue" },
+            { label: ar ? "الموظفين" : "Staff", value: k.totalStaff, icon: Users, cls: "amber" },
+          ].map((card) => (
+            <div key={card.label} className="fin-kpi-card">
+              <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
+              <div className="fin-kpi-card__content">
+                <span className="fin-kpi-card__value">{card.value}</span>
+                <span className="fin-kpi-card__label">{card.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeSummary === "circles" && circlesSumQ.data?.kpis) {
+      const k = circlesSumQ.data.kpis;
+      return (
+        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {[
+            { label: ar ? "إجمالي الحلقات" : "Total Circles", value: k.totalCircles, icon: CircleDot, cls: "blue" },
+            { label: ar ? "نشطة" : "Active", value: k.activeCircles, icon: CircleDot, cls: "emerald" },
+            { label: ar ? "الطلاب" : "Students", value: k.totalStudents, icon: Users, cls: "amber" },
+          ].map((card) => (
+            <div key={card.label} className="fin-kpi-card">
+              <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
+              <div className="fin-kpi-card__content">
+                <span className="fin-kpi-card__value">{card.value}</span>
+                <span className="fin-kpi-card__label">{card.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeSummary === "students" && studentsSumQ.data?.kpis) {
+      const k = studentsSumQ.data.kpis;
+      return (
+        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {[
+            { label: ar ? "إجمالي الطلاب" : "Total Students", value: k.totalStudents, icon: Users, cls: "blue" },
+            { label: ar ? "نشط" : "Active", value: k.activeStudents, icon: Users, cls: "emerald" },
+            { label: ar ? "غير نشط" : "Inactive", value: k.inactiveStudents, icon: Users, cls: "rose" },
+          ].map((card) => (
+            <div key={card.label} className="fin-kpi-card">
+              <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
+              <div className="fin-kpi-card__content">
+                <span className="fin-kpi-card__value">{card.value}</span>
+                <span className="fin-kpi-card__label">{card.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (activeSummary === "golden-records" && goldenSumQ.data?.kpis) {
+      const k = goldenSumQ.data.kpis;
+      const byTypeEntries = Object.entries(k.byType || {});
+      return (
+        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: `repeat(${Math.min(byTypeEntries.length + 1, 5)}, 1fr)` }}>
+          {[
+            { label: ar ? "إجمالي السجلات" : "Total Records", value: k.totalRecords, icon: Award, cls: "blue" },
+            ...byTypeEntries.map(([type, count]) => ({
+              label: type, value: count as number, icon: Award, cls: "emerald" as const,
+            })),
+          ].map((card) => (
+            <div key={card.label} className="fin-kpi-card">
+              <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
+              <div className="fin-kpi-card__content">
+                <span className="fin-kpi-card__value">{card.value}</span>
+                <span className="fin-kpi-card__label">{card.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  /* ─── Render helpers ─── */
+  const renderCard = (card: ReportCardDef, idx: number) => {
     const disabled = card.status !== "ready";
     return (
       <motion.button
         key={card.id}
-        className={`rcc-card ${disabled ? "rcc-card--disabled" : ""}`}
+        className={`ctr-card-modern ${disabled ? "is-inactive" : ""} !p-3 !gap-2`}
         onClick={() => openReport(card)}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: idx * 0.05, duration: 0.3 }}
-        whileHover={disabled ? undefined : { y: -4, scale: 1.01 }}
-        whileTap={disabled ? undefined : { scale: 0.98 }}
       >
-        <div className="rcc-card__top">
-          <div className={`rcc-card__ico rcc-sec__ico--${group.color}`}>
-            <card.icon size={18} />
+        <div className="ctr-card-header !gap-2.5">
+          <div className="ctr-card-icon-box !w-10 !h-10 !rounded-lg !shadow-sm">
+            <card.icon size={20} />
           </div>
-          <div className="rcc-card__info">
-            <span className="rcc-card__name">{ar ? card.nameAr : card.nameEn}</span>
-            <span className="rcc-card__desc">{ar ? card.descAr : card.descEn}</span>
+          <div className="ctr-card-title-wrap">
+            <h3 className="ctr-card-title !text-[0.95rem]">{ar ? card.nameAr : card.nameEn}</h3>
+            <span className="ctr-card-subtitle text-start !text-[0.7rem] !mt-0.5">{ar ? card.descAr : card.descEn}</span>
           </div>
         </div>
-        {renderBadges(card)}
-        <div className="rcc-card__cta">
-          {disabled
-            ? <span>{ar ? "قريبًا" : "Coming Soon"}</span>
-            : <>
-                <span>{ar ? "فتح التقرير" : "Open Report"}</span>
-                {card.href
-                  ? <ExternalLink size={13} />
-                  : <ChevronRight size={13} className={ar ? "rotate-180" : ""} />
-                }
-              </>
-          }
+        <div className="ctr-card-status-row mt-1">
+          <span className={`ctr-card-status !text-[0.65rem] !py-0.5 !px-1.5 ${disabled ? "inactive" : ""}`}>
+            {ar ? statusLabelAr[card.status] : statusLabelEn[card.status]}
+          </span>
+          <div className="flex gap-1">
+             <span className="ctr-card-gender male !text-[0.65rem] !py-0.5 !px-1.5">{ar ? sectionLabelAr[card.section] : card.section}</span>
+             <span className="ctr-card-gender female !text-[0.65rem] !py-0.5 !px-1.5">{ar ? scopeLabelAr[card.scope] : card.scope}</span>
+          </div>
+        </div>
+        <div className="ctr-card-actions w-full !pt-2 !mt-1">
+          <div className={`ctr-card-btn w-full !h-8 !text-[0.75rem] ${disabled ? "" : "primary"}`}>
+            {disabled
+              ? (ar ? "قريبًا" : "Coming Soon")
+              : (ar ? "فتح التقرير" : "Open Report")
+            }
+          </div>
         </div>
       </motion.button>
     );
@@ -438,100 +762,85 @@ export default function ReportsPage() {
 
   /* ════════════════ JSX ════════════════ */
   return (
-    <div className="rcc" dir={ar ? "rtl" : "ltr"}>
+    <div className="fin-premium-container ctr-page-modern p-4" dir={ar ? "rtl" : "ltr"}>
       <AnimatePresence mode="wait">
         {viewLevel === "CATALOG" ? (
           <motion.div key="catalog" variants={stagger} initial="hidden" animate="visible" className="flex flex-col" style={{ gap: "var(--rcc-gap)" }}>
 
             {/* ── 1. HEADER ── */}
-            <motion.header variants={fadeUp} className="rcc-header">
-              <div className="rcc-header__blob rcc-header__blob--1" />
-              <div className="rcc-header__blob rcc-header__blob--2" />
-              <div className="rcc-header__start">
-                <div className="rcc-header__icon-box"><BarChart3 size={20} /></div>
-                <div className="rcc-header__text">
-                  <h1 className="rcc-header__title">{ar ? "التقارير والتحليلات" : "Reports & Analytics"}</h1>
-                  <p className="rcc-header__desc">{ar ? "مركز موحد لمتابعة أداء الجمعية والمراكز والحلقات والمالية." : "Unified center for monitoring organization, centers, circles and finance performance."}</p>
-                </div>
-              </div>
-              <div className="rcc-header__actions">
-                <button className="rcc-header__btn" onClick={() => setSecFilter("finance")}>
-                  <Wallet2 size={14} />
-                  <span>{ar ? "التقارير المالية" : "Financial Reports"}</span>
-                </button>
-                <button className="rcc-header__btn" onClick={() => setSecFilter("official")}>
-                  <Printer size={14} />
-                  <span>{ar ? "التقارير الرسمية" : "Official Reports"}</span>
-                </button>
-              </div>
+            <motion.header variants={fadeUp} className="mb-4">
+              <PageHeader
+                title={ar ? "التقارير والتحليلات" : "Reports & Analytics"}
+                description={ar ? "مركز موحد لمتابعة أداء الجمعية والمراكز والحلقات والمالية." : "Unified center for monitoring organization, centers, circles and finance performance."}
+                icon={<BarChart3 className="w-6 h-6" />}
+                actions={
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<Wallet2 className="w-4 h-4" />} onClick={() => setSecFilter("finance")}>
+                      {ar ? "المالية" : "Finance"}
+                    </Button>
+                    <Button variant="primary" size="sm" leftIcon={<Printer className="w-4 h-4" />} onClick={() => setSecFilter("admin")}>
+                      {ar ? "التقارير الإدارية" : "Admin Reports"}
+                    </Button>
+                  </div>
+                }
+              />
             </motion.header>
 
             {/* ── 2. STATS BAR ── */}
-            <motion.section variants={fadeUp} className="rcc-stats">
-              {[
-                { label: ar ? "إجمالي التقارير" : "Total Reports", value: stats.total, icon: BarChart3, cls: "rcc-stat--blue" },
-                { label: ar ? "التقارير الجاهزة" : "Ready Reports", value: stats.ready, icon: CheckCircle2, cls: "rcc-stat--emerald" },
-                { label: ar ? "التقارير المالية" : "Financial Reports", value: stats.finance, icon: Wallet2, cls: "rcc-stat--teal" },
-                { label: ar ? "قابلة للطباعة" : "Printable", value: stats.printable, icon: Printer, cls: "rcc-stat--violet" },
-                { label: ar ? "قريبًا / قيد الربط" : "Coming Soon", value: stats.soon, icon: Star, cls: "rcc-stat--amber" },
-              ].map((s) => (
-                <div key={s.label} className={`rcc-stat ${s.cls}`}>
-                  <div className="rcc-stat__blob rcc-stat__blob--tl" />
-                  <div className="rcc-stat__blob rcc-stat__blob--br" />
-                  <div className="rcc-stat__body">
-                    <div className="rcc-stat__icon-wrap"><s.icon size={16} /></div>
-                    <div className="rcc-stat__text">
-                      <span className="rcc-stat__value">{s.value}</span>
-                      <span className="rcc-stat__label">{s.label}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <motion.section variants={fadeUp} className="mb-4">
+              <ReportsSummaryCards
+                stats={{
+                  total: stats.total,
+                  ready: stats.ready,
+                  finance: stats.finance,
+                  needsBackend: stats.soon,
+                }}
+              />
             </motion.section>
 
             {/* ── 3. FILTER BAR ── */}
-            <motion.div variants={fadeUp} className="rcc-fbar">
-              <label className="rcc-fbar__pill" style={{ minWidth: 200 }}>
-                <Search size={14} className="rcc-fbar__icon" />
-                <input className="rcc-fbar__input" placeholder={ar ? "بحث باسم التقرير..." : "Search reports..."} value={searchQ} onChange={(e) => setSearchQ(e.target.value)} />
-              </label>
-              <label className="rcc-fbar__pill">
-                <Filter size={14} className="rcc-fbar__icon" />
-                <select className="rcc-fbar__select" value={secFilter} onChange={(e) => setSecFilter(e.target.value as SectionFilter)}>
-                  {(Object.keys(sectionLabelAr) as SectionFilter[]).map((k) => <option key={k} value={k}>{ar ? sectionLabelAr[k] : sectionLabelEn[k]}</option>)}
-                </select>
-              </label>
-              <label className="rcc-fbar__pill">
-                <Filter size={14} className="rcc-fbar__icon" />
-                <select className="rcc-fbar__select" value={statusFlt} onChange={(e) => setStatusFlt(e.target.value as StatusFilter)}>
-                  {(Object.keys(statusFilterAr) as StatusFilter[]).map((k) => <option key={k} value={k}>{ar ? statusFilterAr[k] : statusFilterEn[k]}</option>)}
-                </select>
-              </label>
-              <label className="rcc-fbar__pill">
-                <Printer size={14} className="rcc-fbar__icon" />
-                <select className="rcc-fbar__select" value={outputFlt} onChange={(e) => setOutputFlt(e.target.value as OutputFilter)}>
-                  {(Object.keys(outputFilterAr) as OutputFilter[]).map((k) => <option key={k} value={k}>{ar ? outputFilterAr[k] : outputFilterEn[k]}</option>)}
-                </select>
-              </label>
-              <div className="rcc-fbar__spacer" />
-              {hasActiveFilters && (
-                <button className="rcc-fbar__reset" onClick={resetCatalogFilters} title={ar ? "إعادة ضبط" : "Reset"}>
-                  <RotateCcw size={14} />
-                </button>
-              )}
+            <motion.div variants={fadeUp} className="ctr-centers-shell mb-10">
+              <div className="ctr-controls">
+                <div className="ctr-filters-group">
+                  <select className="ctr-filter-select" value={secFilter} onChange={(e) => setSecFilter(e.target.value as SectionFilter)}>
+                    {(Object.keys(sectionLabelAr) as SectionFilter[]).map((k) => <option key={k} value={k}>{ar ? sectionLabelAr[k] : sectionLabelEn[k]}</option>)}
+                  </select>
+                  <select className="ctr-filter-select" value={statusFlt} onChange={(e) => setStatusFlt(e.target.value as StatusFilter)}>
+                    {(Object.keys(statusFilterAr) as StatusFilter[]).map((k) => <option key={k} value={k}>{ar ? statusFilterAr[k] : statusFilterEn[k]}</option>)}
+                  </select>
+                  <select className="ctr-filter-select" value={outputFlt} onChange={(e) => setOutputFlt(e.target.value as OutputFilter)}>
+                    {(Object.keys(outputFilterAr) as OutputFilter[]).map((k) => <option key={k} value={k}>{ar ? outputFilterAr[k] : outputFilterEn[k]}</option>)}
+                  </select>
+                  {hasActiveFilters && (
+                    <button className="flex items-center justify-center w-[38px] h-[38px] rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors" onClick={resetCatalogFilters} title={ar ? "إعادة ضبط" : "Reset"}>
+                      <RotateCcw size={16} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="ctr-search-wrap">
+                  <Search className="ctr-search-icon" size={16} />
+                  <input
+                    type="text"
+                    value={searchQ}
+                    onChange={(e) => setSearchQ(e.target.value)}
+                    className="ctr-search-input"
+                    placeholder={ar ? "بحث باسم التقرير..." : "Search reports..."}
+                  />
+                </div>
+              </div>
             </motion.div>
 
             {/* ── 4. FEATURED ── */}
             {!hasActiveFilters && featuredCards.length > 0 && (
               <motion.section variants={fadeUp}>
-                <div className="rcc-sec__head">
-                  <div className="rcc-sec__ico rcc-sec__ico--blue"><Star size={14} /></div>
-                  <h2 className="rcc-sec__title">{ar ? "التقارير الأكثر استخدامًا" : "Most Used Reports"}</h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-1.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400`}><Star size={16} /></div>
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{ar ? "التقارير الأكثر استخدامًا" : "Most Used Reports"}</h2>
                 </div>
-                <div className="rcc-featured">
+                <div className="grid gap-3 mb-10" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
                   {featuredCards.map((card, i) => {
-                    const group = REPORT_GROUPS.find((g) => g.id === card.section)!;
-                    return renderCard(card, group, i);
+                    return renderCard(card, i);
                   })}
                 </div>
               </motion.section>
@@ -541,13 +850,13 @@ export default function ReportsPage() {
             {filteredGroups.length > 0 ? (
               filteredGroups.map((group) => (
                 <motion.section key={group.id} variants={fadeUp}>
-                  <div className="rcc-sec__head">
-                    <div className={`rcc-sec__ico rcc-sec__ico--${group.color}`}><group.icon size={14} /></div>
-                    <h2 className="rcc-sec__title">{ar ? group.nameAr : group.nameEn}</h2>
-                    <span className="rcc-sec__count">{group.cards.length} {ar ? "تقارير" : "reports"}</span>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`p-1.5 rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400`}><group.icon size={16} /></div>
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{ar ? group.nameAr : group.nameEn}</h2>
+                    <span className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-full text-[0.7rem] font-bold mr-auto">{group.cards.length} {ar ? "تقارير" : "reports"}</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {group.cards.map((card, i) => renderCard(card, group, i))}
+                  <div className="grid gap-3 mb-10" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
+                    {group.cards.map((card, i) => renderCard(card, i))}
                   </div>
                 </motion.section>
               ))
@@ -574,76 +883,128 @@ export default function ReportsPage() {
             <MonthlyStaffReportView />
           </motion.div>
         ) : (
-          <motion.div key="unified" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button variant="secondary" size="sm" leftIcon={<ChevronLeft className={`w-4 h-4 ${ar ? "rotate-180" : ""}`} />} onClick={handleBack}>
-                {ar ? "رجوع للفهرس" : "Back"}
-              </Button>
-              <h2 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{activeTitle}</h2>
-              <div className="flex-1" />
-              <Button variant="secondary" size="sm" leftIcon={<RefreshCw className={`w-4 h-4 ${(activeQuery as any).isFetching ? "animate-spin" : ""}`} />} onClick={refreshData}>
-                {ar ? "تحديث" : "Refresh"}
-              </Button>
-            </div>
-
-            <div className="rcc-fbar">
-              <label className="rcc-fbar__pill" style={{ minWidth: 240 }}>
-                <Search size={14} className="rcc-fbar__icon" />
-                <input className="rcc-fbar__input" placeholder={ar ? "بحث في التقرير..." : "Search report..."} value={filters.search} onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setPage(1); }} />
-              </label>
-              {canLoadCenters && (
-                <label className="rcc-fbar__pill">
-                  <Building2 size={14} className="rcc-fbar__icon" />
-                  <select className="rcc-fbar__select" value={filters.centerId || ""} onChange={(e) => { setFilters({ ...filters, centerId: Number(e.target.value) || undefined }); setPage(1); }}>
-                    <option value="">{ar ? "كل المراكز" : "All Centers"}</option>
-                    {centersQ.data?.items.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
-              )}
-              {!activeSummary && (
-                <>
-                  <label className="rcc-fbar__pill">
-                    <CalendarDays size={14} className="rcc-fbar__icon" />
-                    <input type="date" className="rcc-fbar__input" style={{ width: 130 }} value={filters.from} onChange={(e) => { setFilters({ ...filters, from: e.target.value }); setPage(1); }} />
-                  </label>
-                  <label className="rcc-fbar__pill">
-                    <CalendarDays size={14} className="rcc-fbar__icon" />
-                    <input type="date" className="rcc-fbar__input" style={{ width: 130 }} value={filters.to} onChange={(e) => { setFilters({ ...filters, to: e.target.value }); setPage(1); }} />
-                  </label>
-                </>
-              )}
-              <div className="rcc-fbar__spacer" />
-              <button className="rcc-fbar__reset" onClick={() => { setFilters({ from: defaultFrom, to: defaultTo, search: "" }); setPage(1); }} title={ar ? "تصفير" : "Reset"}>
-                <RotateCcw size={14} />
+          <motion.div key="unified" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-5">
+            {/* ── 1. UNIFIED HEADER (FINANCIAL POSITION STYLE) ── */}
+            <div>
+              <button
+                onClick={handleBack}
+                className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 mb-6"
+              >
+                <ArrowLeft className={`w-4 h-4 mr-1 ${ar ? "rotate-180 ml-1 mr-0" : ""}`} />
+                {ar ? "العودة للتقارير" : "Back to Reports"}
               </button>
+
+              <PageHeader
+                title={activeCard ? (ar ? activeCard.nameAr : activeCard.nameEn) : ""}
+                description={activeCard ? (ar ? activeCard.descAr : activeCard.descEn) : ""}
+                icon={activeCard ? <activeCard.icon className="w-6 h-6 text-indigo-600" /> : undefined}
+                actions={
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {activeSummary ? (
+                      <>
+                        <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<RefreshCw className={(activeQuery as any).isFetching ? "animate-spin" : ""} />} onClick={refreshData}>
+                          {ar ? "تحديث" : "Refresh"}
+                        </Button>
+                        <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<Printer className="text-teal-600" />} onClick={handlePrintSummary}>
+                          {ar ? "طباعة" : "Print"}
+                        </Button>
+                        <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<FileDown className="text-emerald-600" />} onClick={handleExportExcelSummary}>
+                          {ar ? "تصدير Excel" : "Export Excel"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<RefreshCw className={(activeQuery as any).isFetching ? "animate-spin" : ""} />} onClick={refreshData}>
+                          {ar ? "تحديث" : "Refresh"}
+                        </Button>
+                        <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<FileDown className="text-emerald-600" />} onClick={() => exportMut.mutate({ reportType: activeReportType as any, format: "XLSX", filters })} disabled={exportMut.isPending}>
+                          {ar ? "تصدير Excel" : "Export Excel"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                }
+              />
             </div>
 
+            {/* ── 2. UNIFIED FILTERS (Premium style, contextual) ── */}
+            <div className="fin-filters-container">
+              <div className="fin-filters-scroll">
+                {canLoadCenters && (
+                  <div className="fin-filter-item">
+                    <Building2 className="fin-filter-icon" size={16} />
+                    <select value={filters.centerId || ""} onChange={(e) => { setFilters({ ...filters, centerId: Number(e.target.value) || undefined, circleId: undefined }); setPage(1); }}>
+                      <option value="">{ar ? "المركز: الكل" : "Center: All"}</option>
+                      {centersQ.data?.items.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {filters.centerId && activeSummary !== "centers" && (
+                  <div className="fin-filter-item">
+                    <CircleDot className="fin-filter-icon" size={16} />
+                    <select value={filters.circleId || ""} onChange={(e) => { setFilters({ ...filters, circleId: Number(e.target.value) || undefined }); setPage(1); }}>
+                      <option value="">{ar ? "الحلقة: الكل" : "Circle: All"}</option>
+                      {circlesQ.data?.items.filter(c => c.centerId === filters.centerId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {!activeSummary && (
+                  <>
+                    <div className="fin-filter-item">
+                      <CalendarDays className="fin-filter-icon" size={16} />
+                      <input type="date" value={filters.from} onChange={(e) => { setFilters({ ...filters, from: e.target.value }); setPage(1); }} title={ar ? "من" : "From"} />
+                    </div>
+                    <div className="fin-filter-item">
+                      <CalendarDays className="fin-filter-icon" size={16} />
+                      <input type="date" value={filters.to} onChange={(e) => { setFilters({ ...filters, to: e.target.value }); setPage(1); }} title={ar ? "إلى" : "To"} />
+                    </div>
+                  </>
+                )}
+                <div className="fin-filter-item" style={{ minWidth: 200 }}>
+                  <Search className="fin-filter-icon" size={16} />
+                  <input type="text" placeholder={ar ? "بحث..." : "Search..."} value={filters.search} onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setPage(1); }} />
+                </div>
+              </div>
+              {((filters.centerId || filters.circleId || filters.search) || (!activeSummary && (filters.from !== defaultFrom || filters.to !== defaultTo))) && (
+                <button className="fin-filter-reset" onClick={() => { setFilters({ from: defaultFrom, to: defaultTo, search: "", centerId: undefined, circleId: undefined }); setPage(1); }}>
+                  <RotateCcw size={14} />
+                  {ar ? "إعادة ضبط" : "Reset"}
+                </button>
+              )}
+            </div>
+
+            {/* ── 3. KPI CARDS (للملخصات فقط) ── */}
+            {activeSummary && renderSummaryKpis()}
+
+            {/* ── 4. UNIFIED TABLE ── */}
             {(activeQuery as any).isLoading ? (
-              <div className="flex flex-col gap-3">{[1, 2, 3].map((i) => <div key={i} className="rcc-skel" />)}</div>
+              <div className="flex flex-col gap-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">{[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-xl" />)}</div>
             ) : (activeQuery as any).isError ? (
               <ErrorState title={ar ? "تعذر تحميل بيانات التقرير" : "Unable to load report data"} onRetry={() => void (activeQuery as any).refetch()} />
             ) : (
-              <DataTable
-                columns={columns}
-                rows={pagedRows}
-                rowKey={(_, i) => i}
-                dense
-                emptyState={
-                  <div className="rcc-empty">
-                    <div className="rcc-empty__ico"><Search size={24} /></div>
-                    <p className="rcc-empty__title">{ar ? "لا توجد بيانات" : "No data found"}</p>
-                    <p className="rcc-empty__desc">{ar ? "جرّب تعديل الفلاتر." : "Try adjusting filters."}</p>
-                  </div>
-                }
-                pagination={{
-                  totalItems: sortedRows.length,
-                  pageSize,
-                  currentPage: page,
-                  totalPages: Math.max(1, Math.ceil(sortedRows.length / pageSize)),
-                  onPageChange: setPage,
-                  onPageSizeChange: setPageSize,
-                }}
-              />
+              <div className="fin-premium-panel">
+                <DataTable
+                  columns={columns}
+                  rows={pagedRows}
+                  rowKey={(_, i) => i}
+                  footer={reportTotals}
+                  emptyState={
+                    <div className="rcc-empty !py-16">
+                      <div className="rcc-empty__ico !w-16 !h-16 !bg-gray-50 !text-gray-300"><Search size={32} /></div>
+                      <p className="rcc-empty__title !text-xl">{ar ? "لا توجد بيانات مطابقة" : "No matching data"}</p>
+                      <p className="rcc-empty__desc">{ar ? "حاول تغيير فلاتر البحث أو النطاق الزمني." : "Try adjusting the search filters or date range."}</p>
+                    </div>
+                  }
+                  pagination={{
+                    totalItems: sortedRows.length,
+                    pageSize,
+                    currentPage: page,
+                    totalPages: Math.max(1, Math.ceil(sortedRows.length / pageSize)),
+                    onPageChange: setPage,
+                    onPageSizeChange: setPageSize,
+                  }}
+                />
+              </div>
             )}
           </motion.div>
         )}

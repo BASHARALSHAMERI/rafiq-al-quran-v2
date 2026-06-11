@@ -21,7 +21,13 @@ import type { Circle, CircleType } from "../features/org/types";
 import { useUsersQuery } from "../features/users/users.hooks";
 import { createEmptyScheduleDraftRows, hydrateScheduleDraftRows, serializeScheduleDraftRows, validateScheduleDraftRows } from "../features/org/circleSchedule";
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
-import { notifyInfo } from "../shared/ui/feedback";
+import {
+  entityFeedback,
+  notifyError,
+  notifyInfo,
+  notifySuccess,
+  type LocalizedLabel
+} from "../shared/ui/feedback";
 import { fadeUp, stagger } from "../shared/pageAnimations";
 
 import {
@@ -37,6 +43,8 @@ import CirclesEmpty from "../features/org/components/circles/CirclesEmpty";
 import CircleFormModal from "../features/org/components/circles/CircleFormModal";
 import CirclesKpis from "../features/org/components/circles/CirclesKpis";
 import CirclesToolbar from "../features/org/components/circles/CirclesToolbar";
+
+const CIRCLE_ENTITY: LocalizedLabel = { ar: "الحلقة", en: "circle" };
 
 const emptyDraft: CircleDraft = {
   centerId: "",
@@ -190,6 +198,7 @@ export default function CirclesPage() {
 
   const submitCircle = async () => {
     if (!modal) return;
+    const action = modal.mode === "create" ? "create" : "update";
 
     const validationError = validateCircle(draft, ar);
     if (validationError) {
@@ -215,13 +224,14 @@ export default function CirclesPage() {
 
       setModal(null);
       await refreshAll();
+      notifySuccess(entityFeedback.success(ar, action, CIRCLE_ENTITY));
     } catch (error) {
-      setFormErr(
-        getLocalizedApiErrorMessage(error, {
-          ar,
-          fallback: modal.mode === "create" ? (ar ? "تعذر إنشاء الحلقة" : "Unable to create circle") : ar ? "تعذر تحديث الحلقة" : "Unable to update circle"
-        })
-      );
+      const message = getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: entityFeedback.error(ar, action, CIRCLE_ENTITY)
+      });
+      setFormErr(message);
+      notifyError(message);
     }
   };
 
@@ -235,13 +245,24 @@ export default function CirclesPage() {
       await statusM.mutateAsync({ circleId: statusTarget.id, payload: { isActive: nextIsActive } });
       setStatusTarget(null);
       await refreshAll();
-    } catch (error) {
-      setActionErr(
-        getLocalizedApiErrorMessage(error, {
-          ar,
-          fallback: ar ? "تعذر تحديث حالة الحلقة" : "Unable to update circle status"
-        })
+      notifySuccess(
+        nextIsActive
+          ? ar
+            ? "تم تفعيل الحلقة بنجاح"
+            : "Circle activated successfully"
+          : ar
+            ? "تم تعطيل الحلقة بنجاح"
+            : "Circle deactivated successfully"
       );
+    } catch (error) {
+      const message = getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar
+          ? "تعذر تحديث حالة الحلقة. يرجى المحاولة مرة أخرى."
+          : "Unable to update circle status. Please try again."
+      });
+      setActionErr(message);
+      notifyError(message);
     }
   };
 

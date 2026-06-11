@@ -1,0 +1,274 @@
+/**
+ * أنماط "التقرير الشهري التفصيلي للطالب"
+ * مصمّم أساسًا للطباعة A4 Landscape (RTL)، مع معاينة على الشاشة.
+ */
+
+/* ─── الحاوية العامة (شاشة) ─── */
+.student-monthly-print-report {
+  direction: rtl;
+  background: #fff;
+  color: #111;
+  font-family: "Tajawal", "Cairo", "Segoe UI", Tahoma, sans-serif;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* المعاينة على الشاشة تسمح بتمرير أفقي للجدول العريض */
+.student-monthly-scroll {
+  overflow-x: auto;
+}
+
+/* ─── بطاقة العنوان (الهيدر) ─── */
+.student-report-title-card {
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  text-align: center;
+  page-break-inside: avoid;
+}
+
+.student-report-title-card h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #2f7f7b;
+}
+
+.student-report-title-card p {
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.student-report-meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #555;
+}
+
+.student-report-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 18px 0 6px;
+  text-align: right;
+  color: #1f2937;
+}
+
+/* ─── الجداول ─── */
+.student-monthly-table,
+.group-achievement-table,
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.student-monthly-table th,
+.student-monthly-table td,
+.group-achievement-table th,
+.group-achievement-table td,
+.summary-table th,
+.summary-table td {
+  border: 1px solid #555;
+  padding: 4px 5px;
+  text-align: center;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.student-monthly-table th {
+  font-weight: 700;
+  background: #f3f4f6;
+}
+
+.hifz-header {
+  background: #dff3f7;
+}
+
+.revision-header {
+  background: #e8f4df;
+}
+
+.mutun-header {
+  background: #eeeeee;
+}
+
+/* تلوين خفيف لصفوف الغياب */
+.absent-excused-row td {
+  background: #fffbe6;
+}
+
+.absent-unexcused-row td {
+  background: #fff1f2;
+}
+
+.empty-cell {
+  color: #9ca3af;
+}
+
+.attendance-chip {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.attendance-chip--excused {
+  color: #b45309;
+}
+
+.attendance-chip--unexcused {
+  color: #be123c;
+}
+
+.attendance-chip--late {
+  color: #9a3412;
+}
+
+/* تلوين صفوف الإنجاز الجماعي حسب النوع */
+.group-achievement-row.tajweed td {
+  background: #fffbe6;
+}
+
+.group-achievement-row.tafseer td {
+  background: #e8f6ff;
+}
+
+/* ─── الملخص ─── */
+.summary-section {
+  margin-top: 18px;
+  page-break-inside: avoid;
+}
+
+.summary-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-align: right;
+}
+
+.summary-table th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+/* ─── الملاحظات والتوقيعات ─── */
+.report-notes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  page-break-inside: avoid;
+}
+
+.report-note-box {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 60px;
+}
+
+.report-note-box h4 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #374151;
+}
+
+.report-note-box p {
+  margin: 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.print-signatures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 24px;
+  page-break-inside: avoid;
+}
+
+.print-signature-box {
+  border-top: 1px solid #111;
+  padding-top: 8px;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* تكرار رأس الجدول عند تعدّد الصفحات */
+.student-monthly-table thead,
+.group-achievement-table thead {
+  display: table-header-group;
+}
+
+.student-monthly-table tr,
+.group-achievement-table tr {
+  page-break-inside: avoid;
+}
+
+/* ════════════════ الطباعة ════════════════ */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    direction: rtl;
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* إخفاء كل شيء خارج التقرير */
+  .no-print,
+  .screen-actions,
+  .filters-panel,
+  .back-link,
+  .pagination,
+  .sidebar,
+  .app-sidebar,
+  .app-header {
+    display: none !important;
+  }
+
+  .student-monthly-print-report {
+    width: 100%;
+    background: #fff;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .student-monthly-scroll {
+    overflow: visible !important;
+  }
+
+  .student-monthly-table,
+  .group-achievement-table,
+  .summary-table {
+    font-size: 10.5px;
+  }
+
+  /* ضمان طباعة الألوان الخفيفة */
+  .student-monthly-table th,
+  .hifz-header,
+  .revision-header,
+  .mutun-header,
+  .absent-excused-row td,
+  .absent-unexcused-row td,
+  .group-achievement-row.tajweed td,
+  .group-achievement-row.tafseer td,
+  .summary-table th {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

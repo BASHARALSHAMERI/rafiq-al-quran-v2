@@ -30,6 +30,7 @@ export interface DataTableProps<TRow> {
   emptyState?: ReactNode;
   pagination?: PaginationProps;
   rowClassName?: (row: TRow, index: number) => string | undefined;
+  footer?: ReactNode;
 }
 
 const resolveRowKey = <TRow,>(
@@ -56,7 +57,8 @@ export function DataTable<TRow>({
   loadingState,
   emptyState,
   pagination,
-  rowClassName
+  rowClassName,
+  footer
 }: DataTableProps<TRow>) {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -128,6 +130,11 @@ export function DataTable<TRow>({
                   </tr>
                 ))}
               </tbody>
+              {footer && (
+                <tfoot className="app-data-table__footer" style={{ position: "sticky", bottom: 0, zIndex: 10, backgroundColor: "var(--bg-surface-hover, #f9fafb)", borderTop: "2px solid var(--border-default, #e5e7eb)" }}>
+                  {footer}
+                </tfoot>
+              )}
             </table>
           </div>
         )}

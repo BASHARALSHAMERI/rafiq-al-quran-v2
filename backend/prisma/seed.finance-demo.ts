@@ -152,6 +152,22 @@ const ensureUser = async (
     });
   }
 
+  if (input.role === Role.SUPERVISOR) {
+    await prisma.supervisorProfile.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: { userId: user.id, assignedAt: new Date(effectiveFrom), status: "ACTIVE" }
+    });
+  }
+
+  if (input.role === Role.PARENT) {
+    await prisma.parentProfile.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: { userId: user.id, relationType: "FATHER" }
+    });
+  }
+
   return user;
 };
 

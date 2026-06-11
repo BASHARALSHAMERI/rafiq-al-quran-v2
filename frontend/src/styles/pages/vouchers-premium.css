@@ -73,9 +73,9 @@
 
 .fin-premium-table {
   width: 100%;
-  border-spacing: 0 10px !important;
+  border-spacing: 0 4px !important;
   border-collapse: separate !important;
-  margin-bottom: 0 !important; /* Remove bottom gap */
+  margin-bottom: 0 !important;
 }
 
 .fin-premium-table thead th {
@@ -84,7 +84,26 @@
   border-radius: 12px;
   border-bottom: none !important;
   color: var(--primary-700);
-  padding: 1rem 1.5rem !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.fin-premium-table .app-data-table__scroll {
+  max-height: calc(100vh - 340px);
+  overflow: auto;
+}
+
+.fin-premium-table .app-data-table__scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
 }
 
 .fin-floating-row {
@@ -98,7 +117,7 @@
 
 .fin-floating-row td {
   border-bottom: none !important;
-  padding: 1.15rem 1.5rem !important;
+  padding: 0.45rem 1rem !important;
 }
 
 .fin-floating-row td:first-child {

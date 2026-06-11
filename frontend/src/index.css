@@ -40,6 +40,8 @@
 @import "./styles/utilities/light-effects.css";
 @import "./styles/utilities/tw-compat.css";
 
+@import "./styles/pages/reports-print.css";
+
 *,
 *::before,
 *::after {

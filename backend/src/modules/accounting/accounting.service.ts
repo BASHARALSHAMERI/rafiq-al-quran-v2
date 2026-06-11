@@ -450,15 +450,17 @@ export const ensurePeriodOpenTx = async (
 export const accountingService = {
   ensurePeriodOpenTx,
 
+  async listFiscalPeriods(scope: ScopeContext) {
+    assertAccountingRole(scope);
+    return accountingRepository.findFiscalPeriods(scope.organizationId);
+  },
+
   async closeFiscalPeriod(scope: ScopeContext, periodId: number) {
     assertAccountingAdminRole(scope);
 
     return prisma.$transaction(async (tx) => {
       const period = await tx.fiscalPeriod.findFirst({
-        where: {
-          id: periodId,
-          organizationId: scope.organizationId
-        }
+        where: { id: periodId, organizationId: scope.organizationId }
       });
 
       if (!period) {
@@ -470,10 +472,7 @@ export const accountingService = {
       }
 
       const draftEntries = await tx.journalEntry.count({
-        where: {
-          fiscalPeriodId: period.id,
-          status: JournalEntryStatus.DRAFT
-        }
+        where: { fiscalPeriodId: period.id, status: JournalEntryStatus.DRAFT }
       });
 
       if (draftEntries > 0) {
@@ -487,11 +486,126 @@ export const accountingService = {
 
       return tx.fiscalPeriod.update({
         where: { id: period.id },
-        data: {
-          status: FiscalPeriodStatus.CLOSED,
-          closedAt: new Date(),
-          closedById: scope.userId
+        data: { status: FiscalPeriodStatus.CLOSED, closedAt: new Date(), closedById: scope.userId },
+        include: {
+          fiscalYear: { select: { id: true, year: true, status: true } },
+          closedBy: { select: { id: true, fullName: true } },
+          _count: { select: { journalEntries: true } }
         }
+      });
+    });
+  },
+
+  async reopenFiscalPeriod(scope: ScopeContext, periodId: number) {
+    assertAccountingAdminRole(scope);
+
+    return prisma.$transaction(async (tx) => {
+      const period = await tx.fiscalPeriod.findFirst({
+        where: { id: periodId, organizationId: scope.organizationId }
+      });
+
+      if (!period) {
+        throw new AppError("الفترة المالية غير موجودة", 404, undefined, "FISCAL_PERIOD_NOT_FOUND");
+      }
+
+      if (period.status === FiscalPeriodStatus.OPEN) {
+        throw new AppError("الفترة المالية مفتوحة بالفعل", 409, undefined, "FISCAL_PERIOD_ALREADY_OPEN");
+      }
+
+      const fiscalYear = await tx.fiscalYear.findUnique({
+        where: { id: period.fiscalYearId }
+      });
+      if (fiscalYear && fiscalYear.status === FiscalPeriodStatus.CLOSED) {
+        throw new AppError("لا يمكن إعادة فتح فترة في سنة مالية مغلقة", 409, undefined, "FISCAL_YEAR_CLOSED");
+      }
+
+      return tx.fiscalPeriod.update({
+        where: { id: period.id },
+        data: { status: FiscalPeriodStatus.OPEN, closedAt: null, closedById: null },
+        include: {
+          fiscalYear: { select: { id: true, year: true, status: true } },
+          closedBy: { select: { id: true, fullName: true } },
+          _count: { select: { journalEntries: true } }
+        }
+      });
+    });
+  },
+
+  async listFiscalYears(scope: ScopeContext) {
+    assertAccountingRole(scope);
+    return prisma.fiscalYear.findMany({
+      where: { organizationId: scope.organizationId },
+      orderBy: { year: "desc" },
+      include: {
+        periods: {
+          orderBy: { periodNumber: "asc" },
+          include: {
+            closedBy: { select: { id: true, fullName: true } },
+            _count: { select: { journalEntries: true } }
+          }
+        },
+        closedBy: { select: { id: true, fullName: true } }
+      }
+    });
+  },
+
+  async createFiscalYear(
+    scope: ScopeContext,
+    input: { year: number; startDate: string; endDate: string; periodType: "MONTHLY" | "QUARTERLY" }
+  ) {
+    assertAccountingAdminRole(scope);
+    const start = parseDate(input.startDate, "startDate");
+    const end = parseDate(input.endDate, "endDate");
+    if (start >= end) {
+      throw new AppError("تاريخ البداية يجب أن يكون قبل تاريخ النهاية", 400, undefined, "VALIDATION_ERROR");
+    }
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.fiscalYear.findFirst({
+        where: { organizationId: scope.organizationId, year: input.year }
+      });
+      if (existing) {
+        throw new AppError("السنة المالية موجودة بالفعل", 409, { year: input.year }, "FISCAL_YEAR_EXISTS");
+      }
+      const fiscalYear = await tx.fiscalYear.create({
+        data: {
+          organizationId: scope.organizationId,
+          year: input.year,
+          startDate: start,
+          endDate: end,
+          status: FiscalPeriodStatus.OPEN
+        }
+      });
+      const arabicMonths = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+      const arabicQuarters = ["الربع الأول","الربع الثاني","الربع الثالث","الربع الرابع"];
+      const periods: Array<{
+        fiscalYearId: number; organizationId: number; periodNumber: number;
+        periodName: string; startDate: Date; endDate: Date; status: FiscalPeriodStatus;
+      }> = [];
+      if (input.periodType === "MONTHLY") {
+        for (let m = 0; m < 12; m++) {
+          const pStart = new Date(start.getFullYear(), start.getMonth() + m, 1);
+          const pEnd = new Date(start.getFullYear(), start.getMonth() + m + 1, 0);
+          if (pStart > end) break;
+          const actualEnd = pEnd > end ? end : pEnd;
+          periods.push({ fiscalYearId: fiscalYear.id, organizationId: scope.organizationId,
+            periodNumber: m + 1, periodName: arabicMonths[(start.getMonth() + m) % 12],
+            startDate: pStart, endDate: actualEnd, status: FiscalPeriodStatus.OPEN });
+        }
+      } else {
+        for (let q = 0; q < 4; q++) {
+          const qStart = new Date(start.getFullYear(), start.getMonth() + q * 3, 1);
+          const qEnd = new Date(start.getFullYear(), start.getMonth() + q * 3 + 3, 0);
+          if (qStart > end) break;
+          const actualEnd = qEnd > end ? end : qEnd;
+          periods.push({ fiscalYearId: fiscalYear.id, organizationId: scope.organizationId,
+            periodNumber: q + 1, periodName: arabicQuarters[q],
+            startDate: qStart, endDate: actualEnd, status: FiscalPeriodStatus.OPEN });
+        }
+      }
+      await tx.fiscalPeriod.createMany({ data: periods });
+      return tx.fiscalYear.findUniqueOrThrow({
+        where: { id: fiscalYear.id },
+        include: { periods: { orderBy: { periodNumber: "asc" }, include: { _count: { select: { journalEntries: true } } } } }
       });
     });
   },
