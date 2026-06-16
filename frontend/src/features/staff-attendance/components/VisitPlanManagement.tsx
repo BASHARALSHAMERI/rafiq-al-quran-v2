@@ -621,16 +621,24 @@ export function VisitPlanManagement() {
         </select>
 
         <div className="staff-ops-toolbar__period">
-          <input
-            type="number"
-            className="ctr-search-input staff-ops-toolbar__period-input"
+          <select
+            className="ctr-search-input staff-ops-toolbar__period-input !w-[100px] text-center text-xs font-semibold cursor-pointer"
             value={filterMonth}
             onChange={(e) => {
               setFilterMonth(e.target.value);
               pagination.setCurrentPage(1);
             }}
-            min="1" max="12"
-          />
+          >
+            {Array.from({ length: 12 }, (_, i) => {
+              const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+              const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+              return (
+                <option key={i + 1} value={String(i + 1)}>
+                  {ar ? arabicMonths[i] : englishMonths[i]}
+                </option>
+              );
+            })}
+          </select>
           <span className="staff-ops-toolbar__period-sep">/</span>
           <input
             type="number"

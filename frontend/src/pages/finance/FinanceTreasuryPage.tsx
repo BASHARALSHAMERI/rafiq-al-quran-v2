@@ -24,6 +24,7 @@ import { useFinanceV2AccountsQuery } from "../../features/finance-v2/finance-v2.
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
+import "../../styles/pages/vouchers-premium.css";
 import "../../styles/pages/finance-v4.css";
 
 const FinanceTreasuryTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceTreasuryTab"));

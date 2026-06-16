@@ -1,18 +1,11 @@
 /**
- * FinanceToolbar — horizontal operational bar above a DataTable.
+ * FinanceToolbar - shared finance search/filter/action bar.
  *
- * Contents (all optional slots):
- * - Search input (debounced upstream; the component does not debounce).
- * - Filters slot for chips / selects placed by the page.
- * - Density toggle ("مريح" / "مضغوط") that reports back to the parent.
- * - Actions slot for primary/secondary CTAs.
- *
- * Design rules:
- * - No explanatory text. Only operational controls.
- * - Search takes flexible width; actions pin to the end of the line.
+ * It intentionally mirrors the vouchers page structure:
+ * ctr-controls -> ctr-search-wrap -> ctr-filters-group.
  */
 import type { ReactNode } from "react";
-import { Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 
 export type FinanceDensity = "comfortable" | "dense";
@@ -25,6 +18,11 @@ export interface FinanceToolbarProps {
   };
   filters?: ReactNode;
   actions?: ReactNode;
+  reset?: {
+    visible: boolean;
+    onClick: () => void;
+    label?: string;
+  };
   density?: FinanceDensity;
   onDensityChange?: (next: FinanceDensity) => void;
   className?: string;
@@ -34,6 +32,7 @@ export function FinanceToolbar({
   search,
   filters,
   actions,
+  reset,
   density,
   onDensityChange,
   className = ""
@@ -42,21 +41,34 @@ export function FinanceToolbar({
   const ar = language === "ar";
 
   return (
-    <div className={`finance-toolbar ${className}`.trim()} role="toolbar">
+    <div className={`finance-toolbar ctr-controls ${className}`.trim()} role="toolbar">
       {search ? (
-        <label className="finance-toolbar__search">
-          <Search className="h-4 w-4 opacity-60" aria-hidden />
+        <label className="finance-toolbar__search ctr-search-wrap">
+          <Search className="finance-toolbar__search-icon ctr-search-icon" size={18} aria-hidden />
           <input
             type="search"
+            className="ctr-search-input"
             value={search.value}
-            onChange={(e) => search.onChange(e.target.value)}
+            onChange={(event) => search.onChange(event.target.value)}
             placeholder={search.placeholder ?? (ar ? "بحث..." : "Search...")}
             aria-label={ar ? "بحث" : "Search"}
           />
         </label>
       ) : null}
 
-      {filters ? <div className="finance-toolbar__filters">{filters}</div> : null}
+      <div className="finance-toolbar__filters ctr-filters-group">
+        {filters ? (
+          <div className="finance-toolbar__filter-shell">
+            <Filter size={16} className="text-slate-400 ms-2" aria-hidden />
+            {filters}
+          </div>
+        ) : null}
+        {reset?.visible ? (
+          <button type="button" className="finance-toolbar__reset" onClick={reset.onClick}>
+            {reset.label ?? (ar ? "تصفير" : "Reset")}
+          </button>
+        ) : null}
+      </div>
 
       <div className="finance-toolbar__actions">
         {density && onDensityChange ? (

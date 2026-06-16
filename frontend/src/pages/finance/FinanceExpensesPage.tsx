@@ -7,7 +7,8 @@ import {
   Plus, 
   Wallet,
   TrendingDown,
-  UserCheck
+  UserCheck,
+  Search
 } from "lucide-react";
 import { useI18n } from "../../app/i18n";
 import { useAuthStore } from "../../features/auth/auth.store";
@@ -73,6 +74,7 @@ export default function FinanceExpensesPage() {
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showExpenseInvoiceModal, setShowExpenseInvoiceModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const invoicesQ = useExpenseInvoicesQuery({});
   const suppliersQ = useSuppliersQuery();
@@ -193,8 +195,15 @@ export default function FinanceExpensesPage() {
       toolbar={
         <div className="ctr-controls">
           <div className="ctr-search-wrap">
-            <RefreshCw className="ctr-search-icon" size={18} />
-            <div className="text-sm font-medium text-slate-500 ms-2">
+            <Search className="ctr-search-icon" size={18} />
+            <input
+              className="ctr-search-input"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={ar ? "بحث في المصروفات أو الموردين أو التصنيفات..." : "Search expenses, suppliers, or categories..."}
+            />
+            <div className="hidden">
               {ar ? "عرض وإدارة سجلات الإنفاق والموردين" : "View and manage spending logs and suppliers"}
             </div>
           </div>
@@ -207,6 +216,7 @@ export default function FinanceExpensesPage() {
             <FinanceExpensesTab
               ar={ar}
               canManage={canManageExpenses}
+              searchTerm={searchTerm}
               externalShowForm={canManageExpenses && showExpenseInvoiceModal}
               onExternalFormClose={() => setShowExpenseInvoiceModal(false)}
             />
@@ -215,6 +225,7 @@ export default function FinanceExpensesPage() {
             <FinanceSuppliersTab 
               ar={ar} 
               canManage={canManageExpenses}
+              searchTerm={searchTerm}
               externalShowForm={canManageExpenses && showSupplierModal}
               onExternalFormClose={() => setShowSupplierModal(false)} 
             />
@@ -223,6 +234,7 @@ export default function FinanceExpensesPage() {
             <FinanceExpenseCategoriesTab 
               ar={ar} 
               canManage={canManageExpenses}
+              searchTerm={searchTerm}
               externalShowForm={canManageExpenses && showCategoryModal}
               onExternalFormClose={() => setShowCategoryModal(false)} 
             />

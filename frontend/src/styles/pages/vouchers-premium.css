@@ -6,7 +6,41 @@
 
 /* ─── Page & Layout ─── */
 .fin-premium-container {
-  padding: 0 !important; /* Managed by FinancePageShell gap/padding */
+  padding: 0 !important;
+}
+
+/* ─── Table Compact & Scrollable ─── */
+/* Allow page to scroll naturally, but constrain table height for large datasets */
+.app-data-table.fin-premium-table .app-data-table__scroll {
+  max-height: calc(100vh - 320px);
+  overflow: auto;
+}
+
+.app-data-table.fin-premium-table .app-data-table__scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.app-data-table.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-data-table.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+/* On mobile, remove max-height so the page scrolls naturally */
+@media (max-width: 768px) {
+  .app-data-table.fin-premium-table .app-data-table__scroll {
+    max-height: none;
+  }
+}
+
+/* Ensure horizontal scroll on small screens for wide tables */
+.app-data-table.fin-premium-table .app-data-table__table {
+  min-width: 700px;
+  table-layout: fixed;
 }
 
 /* ─── Premium Modal Redesign (Neutral Like Centers) ─── */
@@ -73,7 +107,7 @@
 
 .fin-premium-table {
   width: 100%;
-  border-spacing: 0 4px !important;
+  border-spacing: 0 6px !important;
   border-collapse: separate !important;
   margin-bottom: 0 !important;
 }
@@ -84,26 +118,11 @@
   border-radius: 12px;
   border-bottom: none !important;
   color: var(--primary-700);
-  padding: 0.5rem 1rem !important;
-}
-
-.fin-premium-table .app-data-table__scroll {
-  max-height: calc(100vh - 340px);
-  overflow: auto;
-}
-
-.fin-premium-table .app-data-table__scroll::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.fin-premium-table .app-data-table__scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 3px;
+  height: 44px !important;
+  padding: 10px 14px !important;
+  vertical-align: middle !important;
+  white-space: nowrap;
+  text-align: center !important;
 }
 
 .fin-floating-row {
@@ -117,7 +136,24 @@
 
 .fin-floating-row td {
   border-bottom: none !important;
-  padding: 0.45rem 1rem !important;
+  padding: 10px 14px !important;
+  min-height: 46px;
+  vertical-align: middle !important;
+  background: var(--bg-card, #fff) !important;
+  border-top: 1px solid var(--border-subtle, #e2e8f0) !important;
+  border-bottom: 1px solid var(--border-subtle, #e2e8f0) !important;
+  text-align: center !important;
+}
+
+/* Override 1% CSS width — give actions column a real fixed width */
+.fin-premium-table .app-data-table__header--actions,
+.fin-premium-table .app-data-table__cell--actions {
+  width: 110px;
+}
+
+/* Center flex containers inside cells (fixes icon+text columns) */
+.fin-floating-row td > div {
+  justify-content: center;
 }
 
 .fin-floating-row td:first-child {
@@ -129,6 +165,7 @@
 .fin-floating-row td:last-child {
   border-top-left-radius: 16px;
   border-bottom-left-radius: 16px;
+  border-inline-end: 1px solid var(--border-subtle, #e2e8f0) !important;
 }
 
 .fin-floating-row.receipt td:first-child {
@@ -140,8 +177,8 @@
 }
 
 .fin-floating-row:hover {
-  transform: translateY(-4px) scale(1.002);
-  box-shadow: 0 12px 30px rgba(var(--primary-rgb), 0.08) !important;
+  transform: none;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.06) !important;
   border-color: var(--primary-200) !important;
   background: #fff !important;
   z-index: 10;

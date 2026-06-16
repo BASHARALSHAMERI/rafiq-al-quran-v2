@@ -93,7 +93,7 @@ export function AccountTypeBadge({ type }: { type: AccountingAccountType }) {
 
 export function ClassificationBadge({ isMain }: { isMain: boolean }) {
   return (
-    <Badge variant={isMain ? "default" : "secondary"} size="sm" dot={isMain}>
+    <Badge variant={isMain ? "default" : "secondary"} size="sm">
       {isMain ? "تجميعي" : "قابل للترحيل"}
     </Badge>
   );

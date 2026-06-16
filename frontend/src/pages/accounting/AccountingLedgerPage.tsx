@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Printer, RefreshCw, CheckCircle, Clock, FileText, Filter } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
@@ -6,9 +6,10 @@ import {
   FinancePageShell,
   FinancePageHeader,
   FinanceEmptyState,
-  FinanceMoney
+  FinanceMoney,
+  FinanceDataTable,
+  FinanceTableFooter
 } from "../../features/finance-v2/design";
-import DataTable from "../../components/ui/DataTable";
 import {
   formatDate,
   formatMoney,
@@ -23,6 +24,7 @@ import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -34,16 +36,19 @@ type LedgerRow = LedgerResponse["rows"][number];
 const columns: Array<AccountingColumn<LedgerRow>> = [
   {
     id: "date",
+    width: "10%",
     header: "التاريخ",
     cell: (row) => <span className="opacity-70 font-medium">{formatDate(row.journalEntry.entryDate)}</span>
   },
   {
     id: "entryNo",
+    width: "10%",
     header: "رقم القيد",
     cell: (row) => <strong className="text-slate-900 dark:text-slate-100">{row.journalEntry.entryNo}</strong>
   },
   {
     id: "source",
+    width: "10%",
     header: "المصدر",
     cell: (row) => (
       <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md border border-slate-200 dark:border-slate-700">
@@ -53,15 +58,18 @@ const columns: Array<AccountingColumn<LedgerRow>> = [
   },
   {
     id: "memo",
+    width: "38%",
+    cellClassName: "!text-start",
     header: "البيان",
     cell: (row) => (
-      <span className="text-slate-600 dark:text-slate-400 font-medium block max-w-[280px] truncate" title={row.memo || undefined}>
+      <span className="text-slate-600 dark:text-slate-400 font-medium block truncate" title={row.memo || undefined}>
         {row.memo || "-"}
       </span>
     )
   },
   {
     id: "center",
+    width: "12%",
     header: "المركز",
     cell: (row) => (
       <span className="text-xs px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-md border border-slate-200 dark:border-slate-700">
@@ -71,15 +79,17 @@ const columns: Array<AccountingColumn<LedgerRow>> = [
   },
   {
     id: "debit",
+    headerClassName: "text-center",
     header: "مدين",
-    align: "end",
-    cell: (row) => <div className="font-bold text-emerald-600">{formatMoney(row.debit)}</div>
+    cellClassName: "text-center whitespace-nowrap",
+    cell: (row) => <div className="font-bold text-emerald-600 tabular-nums whitespace-nowrap">{formatMoney(row.debit)}</div>
   },
   {
     id: "credit",
+    headerClassName: "text-center",
     header: "دائن",
-    align: "end",
-    cell: (row) => <div className="font-bold text-rose-600">{formatMoney(row.credit)}</div>
+    cellClassName: "text-center whitespace-nowrap",
+    cell: (row) => <div className="font-bold text-rose-600 tabular-nums whitespace-nowrap">{formatMoney(row.credit)}</div>
   }
 ];
 
@@ -126,6 +136,7 @@ export default function AccountingLedgerPage() {
   const ledgerQ = useAccountingLedgerQuery(accountId);
   const ledger = ledgerQ.data;
   const rows = ledger?.rows ?? [];
+  const pagination = useClientPagination(rows, { initialPageSize: 10 });
 
   const selectedAccount = useMemo(() => accounts.find(a => a.id === accountId), [accounts, accountId]);
 
@@ -287,15 +298,25 @@ export default function AccountingLedgerPage() {
               description={accounts.length === 0 ? "يجب إضافة حسابات أولاً" : "لم يتم تسجيل أي قيود على هذا الحساب"}
             />
           ) : (
-            <DataTable<LedgerRow>
-              rows={rows}
+            <FinanceDataTable<LedgerRow>
+              rows={pagination.pagedRows}
               columns={columns}
               rowKey="id"
-              dense
+              density="dense"
+              rowClassName={(row) => (row.debit >= row.credit ? "receipt" : "disbursement")}
             />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
     </FinancePageShell>
   );
 }

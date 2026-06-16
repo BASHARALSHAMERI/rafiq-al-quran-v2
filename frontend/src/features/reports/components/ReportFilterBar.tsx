@@ -79,18 +79,63 @@ export function ReportFilterBar({
           </div>
         );
 
-      case 'month':
+      case 'month': {
+        const monthVal = String(value || "");
+        const [yStr, mStr] = monthVal.split("-");
+        const selectedYear = yStr ? Number(yStr) : undefined;
+        const selectedMonth = mStr ? Number(mStr) : undefined;
+
         return (
-          <div key={id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-transparent hover:bg-gray-100">
-            <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <input
-              type="month"
-              className="bg-transparent border-none focus:ring-0 text-sm p-0 w-[150px] text-gray-700 font-medium"
-              value={String(value || '')}
-              onChange={(e) => onChange(id, e.target.value || undefined)}
-            />
+          <div key={id} className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-transparent hover:bg-gray-100">
+              <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <select
+                className="bg-transparent border-none focus:ring-0 text-sm p-0 w-[110px] text-gray-700 font-medium cursor-pointer"
+                value={selectedMonth ?? ""}
+                onChange={(e) => {
+                  const newMonth = e.target.value;
+                  if (!newMonth) {
+                    onChange(id, undefined);
+                  } else {
+                    const y = selectedYear || new Date().getFullYear();
+                    onChange(id, `${y}-${String(newMonth).padStart(2, "0")}`);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                <option value="">{ar ? "اختر الشهر" : "Select Month"}</option>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                  const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                  return (
+                    <option key={i + 1} value={i + 1}>
+                      {ar ? arabicMonths[i] : englishMonths[i]}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-transparent hover:bg-gray-100">
+              <input
+                type="number"
+                className="bg-transparent border-none focus:ring-0 text-sm p-0 w-[60px] text-gray-700 font-mono text-center"
+                placeholder={ar ? "السنة" : "Year"}
+                value={selectedYear ?? ""}
+                onChange={(e) => {
+                  const newYear = e.target.value;
+                  if (!newYear) {
+                    onChange(id, undefined);
+                  } else {
+                    const m = selectedMonth || (new Date().getMonth() + 1);
+                    onChange(id, `${newYear}-${String(m).padStart(2, "0")}`);
+                  }
+                }}
+                disabled={isLoading}
+              />
+            </div>
           </div>
         );
+      }
 
       default:
         return null;

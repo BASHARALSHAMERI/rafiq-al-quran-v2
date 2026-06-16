@@ -26,7 +26,8 @@ import {
   FinancePageShell,
   FinancePageHeader,
   FinanceEmptyState,
-  FinanceMoney
+  FinanceMoney,
+  FinanceTableFooter
 } from "../../features/finance-v2/design";
 import {
   AccountTypeBadge,
@@ -43,6 +44,7 @@ import {
 import { printAccountingDocument } from "../../features/accounting/printAccounting";
 import type { AccountingAccount, AccountingAccountType } from "./accounting.api";
 import { NavLink } from "react-router-dom";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -187,6 +189,10 @@ export default function AccountingAccountsPage() {
 
     return filterNodes(fullTree);
   }, [fullTree, searchTerm, selectedType]);
+  const treePagination = useClientPagination(filteredTree, {
+    initialPageSize: 10,
+    resetKey: `${searchTerm}|${selectedType}`
+  });
 
   const toggleExpand = useCallback((id: number) => {
     setExpandedIds(prev => {
@@ -370,11 +376,6 @@ export default function AccountingAccountsPage() {
                   <FileText size={14} className="text-slate-400 flex-shrink-0" />
                 )}
                 <span className="font-medium">{node.name}</span>
-                {node.systemKey && (
-                  <span className="text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded border border-brand-200">
-                    نظامي
-                  </span>
-                )}
               </div>
             </div>
             
@@ -626,13 +627,22 @@ export default function AccountingAccountsPage() {
               
               <div className="accounting-tree__body">
                 <AnimatePresence initial={false}>
-                  {renderTree(filteredTree)}
+                  {renderTree(treePagination.pagedRows)}
                 </AnimatePresence>
               </div>
             </div>
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar
+        pageSize={treePagination.pageSize}
+        setPageSize={treePagination.setPageSize}
+        currentPage={treePagination.currentPage}
+        setPage={treePagination.setCurrentPage}
+        totalFilteredCount={treePagination.totalItems}
+        pages={treePagination.totalPages}
+      />
 
       <Modal
         isOpen={Boolean(accountModalOpen && canManageAccounts)}

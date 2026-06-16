@@ -1,4 +1,4 @@
-import { Scale, Printer, RefreshCw, CheckCircle, AlertCircle, Search } from "lucide-react";
+﻿import { Scale, Printer, RefreshCw, CheckCircle, AlertCircle, Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
@@ -6,9 +6,10 @@ import {
   FinancePageShell,
   FinancePageHeader,
   FinanceEmptyState,
-  FinanceMoney
+  FinanceMoney,
+  FinanceDataTable,
+  FinanceTableFooter
 } from "../../features/finance-v2/design";
-import DataTable from "../../components/ui/DataTable";
 import {
   accountTypeLabels,
   formatMoney,
@@ -23,6 +24,7 @@ import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -34,6 +36,7 @@ type TrialBalanceRow = TrialBalanceResponse["rows"][number];
 const columns: Array<AccountingColumn<TrialBalanceRow>> = [
   {
     id: "account",
+    width: "46%",
     header: "الحساب",
     cell: (row) => (
       <div className="flex flex-col gap-1">
@@ -48,21 +51,27 @@ const columns: Array<AccountingColumn<TrialBalanceRow>> = [
   },
   {
     id: "debit",
+    width: "18%",
     header: "مدين",
-    align: "end",
-    cell: (row) => <div className="font-bold text-emerald-600">{formatMoney(row.debit)}</div>
+    headerClassName: "text-center",
+    cellClassName: "text-center whitespace-nowrap",
+    cell: (row) => <div className="font-bold text-emerald-600 tabular-nums">{formatMoney(row.debit)}</div>
   },
   {
     id: "credit",
+    width: "18%",
     header: "دائن",
-    align: "end",
-    cell: (row) => <div className="font-bold text-rose-600">{formatMoney(row.credit)}</div>
+    headerClassName: "text-center",
+    cellClassName: "text-center whitespace-nowrap",
+    cell: (row) => <div className="font-bold text-rose-600 tabular-nums">{formatMoney(row.credit)}</div>
   },
   {
     id: "balance",
+    width: "18%",
     header: "الرصيد",
-    align: "end",
-    cell: (row) => <div className="font-bold text-brand-600">{formatMoney(row.balance)}</div>
+    headerClassName: "text-center",
+    cellClassName: "text-center whitespace-nowrap",
+    cell: (row) => <div className="font-bold text-brand-600 tabular-nums">{formatMoney(row.balance)}</div>
   }
 ];
 
@@ -111,6 +120,7 @@ export default function AccountingTrialBalancePage() {
         r.account.name.toLowerCase().includes(lower)
     );
   }, [rows, searchTerm]);
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 10, resetKey: searchTerm });
 
   const handlePrint = () => {
     if (!data) return;
@@ -270,15 +280,25 @@ export default function AccountingTrialBalancePage() {
               ) : undefined}
             />
           ) : (
-            <DataTable<TrialBalanceRow>
-              rows={filteredRows}
+            <FinanceDataTable<TrialBalanceRow>
+              rows={pagination.pagedRows}
               columns={columns}
               rowKey={(row) => row.account.id}
-              dense
+              density="dense"
+              rowClassName={(row) => (row.balance >= 0 ? "receipt" : "disbursement")}
             />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
     </FinancePageShell>
   );
 }

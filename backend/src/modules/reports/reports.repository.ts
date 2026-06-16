@@ -189,7 +189,8 @@ export const reportsRepository = {
             center: {
               select: {
                 id: true,
-                name: true
+                name: true,
+                logoUrl: true
               }
             }
           }
@@ -257,7 +258,8 @@ export const reportsRepository = {
             center: {
               select: {
                 id: true,
-                name: true
+                name: true,
+                logoUrl: true
               }
             }
           }

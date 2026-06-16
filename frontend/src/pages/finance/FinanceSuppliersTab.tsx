@@ -1,26 +1,41 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useSuppliersQuery, useCreateSupplierMutation } from "../../features/finance-v2/finance-v2.hooks";
-import { FinanceDataTable } from "../../features/finance-v2/design";
+import { FinanceDataTable, FinanceTableFooter } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifyRequiredFields, notifySuccess } from "../../shared/ui/feedback";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 export function FinanceSuppliersTab({ 
   ar,
   canManage = true,
+  searchTerm = "",
   externalShowForm,
   onExternalFormClose
 }: { 
   ar: boolean,
   canManage?: boolean;
+  searchTerm?: string;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
   const suppliersQ = useSuppliersQuery();
   const createM = useCreateSupplierMutation();
+  const suppliers = useMemo(() => suppliersQ.data ?? [], [suppliersQ.data]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredSuppliers = useMemo(() => {
+    if (!normalizedSearch) return suppliers;
+    return suppliers.filter((supplier: any) =>
+      supplier.name?.toLowerCase().includes(normalizedSearch) ||
+      supplier.phone?.toLowerCase().includes(normalizedSearch) ||
+      supplier.address?.toLowerCase().includes(normalizedSearch) ||
+      supplier.notes?.toLowerCase().includes(normalizedSearch)
+    );
+  }, [suppliers, normalizedSearch]);
+  const pagination = useClientPagination(filteredSuppliers, { initialPageSize: 10, resetKey: normalizedSearch });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -75,11 +90,22 @@ export function FinanceSuppliersTab({
           { id: "address", header: ar ? "العنوان" : "Address", render: (row: any) => row.address || "-" },
           { id: "isActive", header: ar ? "نشط" : "Active", render: (row: any) => row.isActive ? (ar ? "نعم" : "Yes") : (ar ? "لا" : "No") }
         ]}
-        rows={suppliersQ.data || []}
+        rows={pagination.pagedRows}
         rowKey="id"
         loading={suppliersQ.isLoading}
         density="dense"
+        className="fin-premium-table"
+        rowClassName={(row: any) => (row.isActive ? "receipt" : "disbursement")}
       />}
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
     </div>
 
       <Modal 

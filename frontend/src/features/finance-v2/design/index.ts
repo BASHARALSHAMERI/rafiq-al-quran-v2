@@ -18,8 +18,10 @@ export {
 } from "./FinanceKPIStrip";
 export {
   FinanceDataTable,
+  FinanceTableFooter,
   financeActionsColumn,
   type FinanceDataTableProps,
+  type FinanceTableFooterProps,
   type FinanceTableDensity,
   type FinanceDataTableColumn
 } from "./FinanceDataTable";

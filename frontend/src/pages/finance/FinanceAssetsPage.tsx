@@ -8,6 +8,7 @@ import {
   FinancePageShell, 
   FinancePageHeader,
   FinanceDataTable,
+  FinanceTableFooter,
   FinanceMoney
 } from "../../features/finance-v2/design";
 import { Badge } from "../../components/ui/Badge";
@@ -37,6 +38,7 @@ import {
   notifyRequiredFields,
   notifySuccess
 } from "../../shared/ui/feedback";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 type TabId = "categories" | "assets" | "custody";
 
@@ -243,11 +245,12 @@ function AssetCategoriesTab({
     if (!searchTerm) return list;
     return list.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [categoriesQ.data, searchTerm]);
+  const pagination = useClientPagination(filtered, { initialPageSize: 10, resetKey: searchTerm });
 
   return (
     <div className="fin-premium-panel animate-premium">
       <div className="fin-premium-panel__content p-0">
-        <div className="ctr-controls p-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="ctr-controls mb-4">
           <div className="ctr-search-wrap">
             <Tags className="ctr-search-icon" size={18} />
             <input
@@ -289,7 +292,7 @@ function AssetCategoriesTab({
               header: ar ? "العمر (أشهر)" : "Life (m)",
               align: "center",
               cell: (row: any) => row.usefulLifeMonths ? (
-                <Badge variant="secondary" size="sm" dot>
+                <Badge variant="secondary" size="sm">
                   {row.usefulLifeMonths} {ar ? "شهر" : "m"}
                 </Badge>
               ) : "-"
@@ -305,12 +308,21 @@ function AssetCategoriesTab({
               )
             }
           ]}
-          rows={filtered}
+          rows={pagination.pagedRows}
           rowKey="id"
           density="dense"
         />
         )}
       </div>
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
 
       <Modal
         isOpen={Boolean(modalOpen && canManage)}
@@ -511,12 +523,13 @@ function AssetRegisterTab({
       item.assetCode.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [assetsQ.data, searchTerm]);
+  const pagination = useClientPagination(filtered, { initialPageSize: 10, resetKey: searchTerm });
 
   return (
     <div className="space-y-4">
       <div className="fin-premium-panel animate-premium">
         <div className="fin-premium-panel__content p-0">
-          <div className="ctr-controls p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="ctr-controls mb-4">
             <div className="ctr-search-wrap">
               <Archive className="ctr-search-icon" size={18} />
               <input
@@ -614,7 +627,7 @@ function AssetRegisterTab({
                         {ar ? "قيد شراء" : "Post Acq."}
                       </Button>
                     ) : (
-                      <Badge variant="success" size="sm" dot>
+                      <Badge variant="success" size="sm">
                         {ar ? "مرحل" : "Posted"}
                       </Badge>
                     )}
@@ -632,13 +645,22 @@ function AssetRegisterTab({
                 )
               }
             ]}
-            rows={filtered}
+            rows={pagination.pagedRows}
             rowKey="id"
             density="dense"
           />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
 
       <Modal
         isOpen={Boolean(modalOpen && canRegister)}
@@ -1053,12 +1075,13 @@ function AssetCustodyTab({
       item.fromUser?.fullName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [custodyQ.data, searchTerm]);
+  const pagination = useClientPagination(filtered, { initialPageSize: 10, resetKey: searchTerm });
 
   return (
     <div className="space-y-4">
       <div className="fin-premium-panel animate-premium">
         <div className="fin-premium-panel__content p-0">
-          <div className="ctr-controls p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="ctr-controls mb-4">
             <div className="ctr-search-wrap">
               <ClipboardList className="ctr-search-icon" size={18} />
               <input
@@ -1095,7 +1118,7 @@ function AssetCustodyTab({
               )},
               { id: "to", header: ar ? "إلى" : "To", cell: (row: any) => (
                 row.toUser ? (
-                  <Badge variant="info" size="sm" dot>
+                  <Badge variant="info" size="sm">
                     {row.toUser.fullName}
                   </Badge>
                 ) : "-"
@@ -1105,13 +1128,22 @@ function AssetCustodyTab({
               { id: "returned", header: ar ? "تاريخ الإرجاع" : "Returned", cell: (row: any) => row.returnedAt ? <Badge variant="success" size="sm">{displayDate(row.returnedAt)}</Badge> : <span className="text-slate-300 italic text-[10px]">{ar ? "لم يتم" : "Not yet"}</span> },
               { id: "notes", header: ar ? "ملاحظات" : "Notes", cell: (row: any) => <span className="text-xs text-slate-400 italic line-clamp-1 max-w-[120px]">{row.notes ?? "-"}</span> }
             ]}
-            rows={filtered}
+            rows={pagination.pagedRows}
             rowKey="id"
             density="dense"
           />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
 
       <Modal
         isOpen={Boolean(modalOpen && canManage)}

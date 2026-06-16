@@ -4,6 +4,7 @@ import type { PaginationProps } from "../../components/ui/Pagination";
 type ClientPaginationOptions = {
   initialPageSize?: number;
   pageSizeOptions?: number[];
+  resetKey?: unknown;
 };
 
 export const buildPaginationLabels = (ar: boolean): PaginationProps["labels"] => ({
@@ -20,7 +21,7 @@ export const buildPaginationLabels = (ar: boolean): PaginationProps["labels"] =>
 
 export function useClientPagination<T>(
   rows: T[],
-  { initialPageSize = 10, pageSizeOptions = [10, 20, 50] }: ClientPaginationOptions = {}
+  { initialPageSize = 10, pageSizeOptions = [10, 20, 50], resetKey }: ClientPaginationOptions = {}
 ) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -31,6 +32,12 @@ export function useClientPagination<T>(
   useEffect(() => {
     setCurrentPage((previous) => Math.min(previous, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    if (resetKey !== undefined) {
+      setCurrentPage(1);
+    }
+  }, [resetKey]);
 
   const pagedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

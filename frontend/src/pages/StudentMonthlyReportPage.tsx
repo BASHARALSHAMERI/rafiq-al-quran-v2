@@ -14,7 +14,7 @@ import { Button } from "../components/ui/Button";
 import { LoadingState } from "../components/ui/LoadingState";
 import { useI18n } from "../app/i18n";
 import { useAuthStore } from "../features/auth/auth.store";
-import { useCentersQuery, useCirclesQuery } from "../features/org/org.hooks";
+import { useCentersQuery, useCirclesQuery, useOrgBrandingQuery } from "../features/org/org.hooks";
 import { canReadCenters } from "../features/org/org.permissions";
 import {
   useStudentReportQuery,
@@ -37,13 +37,14 @@ export default function StudentMonthlyReportPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const canLoadCenters = canReadCenters(user?.role);
+  const brandingQ = useOrgBrandingQuery();
 
   const [searchParams, setSearchParams] = useSearchParams();
 
   const centerId = searchParams.get("centerId") ? Number(searchParams.get("centerId")) : undefined;
   const halqahId = searchParams.get("halqahId") ? Number(searchParams.get("halqahId")) : undefined;
   const studentId = searchParams.get("studentId") ? Number(searchParams.get("studentId")) : undefined;
-  const monthValue = searchParams.get("month") || "";
+  const monthValue = searchParams.get("month") || defaultMonthValue;
 
   const [yearStr, monthStr] = monthValue.split("-");
   const month = monthStr ? Number(monthStr) : undefined;
@@ -93,6 +94,17 @@ export default function StudentMonthlyReportPage() {
     { from: "", to: "", month, year },
     reportEnabled
   );
+
+  /* ─── أسماء احتياطية من الفلاتر — عند فشل API أو بيانات فارغة ─── */
+  const filterCenterName = useMemo(() => {
+    if (!centerId) return undefined;
+    return centerOptions.find((c) => c.id === centerId)?.name;
+  }, [centerId, centerOptions]);
+
+  const filterHalqahName = useMemo(() => {
+    if (!halqahId) return undefined;
+    return circleOptions.find((c) => c.id === halqahId)?.name;
+  }, [halqahId, circleOptions]);
 
   /* ─── اسم الطالب من قائمة الفلاتر (للاستخدام عند فشل API أو بيانات فارغة) ─── */
   const selectedStudentName = useMemo(() => {
@@ -171,16 +183,18 @@ export default function StudentMonthlyReportPage() {
             </button>
           </div>
         )}
-        {/* شريط معلومات عند بيانات فارغة */}
-        {report && report.dailyRows.length === 0 && report.groupAchievements.length === 0 && !reportQ.isError && (
-          <div className="no-print rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            {ar
-              ? "لا توجد أيام مسجلة لهذا الطالب في الشهر المحدد. يُعرض التقرير فارغًا للطباعة."
-              : "No recorded days for this student in the selected month. Empty report shown for printing."}
-          </div>
-        )}
+
         {/* القالب الطباعي (دائمًا ما يُعرض) */}
-        {report && <StudentMonthlyDetailedPrintReport data={report} mode="screen" />}
+        {report && (
+          <StudentMonthlyDetailedPrintReport
+            data={report}
+            mode="screen"
+            orgLogoUrl={brandingQ.data?.logoUrl || undefined}
+            orgName={brandingQ.data?.name || undefined}
+            filterCenterName={filterCenterName}
+            filterHalqahName={filterHalqahName}
+          />
+        )}
       </div>
     );
   };
@@ -293,12 +307,39 @@ export default function StudentMonthlyReportPage() {
                 ))}
               </select>
 
+              <select
+                className="ctr-filter-select !bg-gray-50 !border-transparent hover:!bg-gray-100 !py-2 text-sm font-semibold"
+                value={month ?? ""}
+                onChange={(e) => {
+                  const newMonth = e.target.value;
+                  const currentYear = year || nowDate.getFullYear();
+                  setFilter("month", newMonth ? `${currentYear}-${String(newMonth).padStart(2, "0")}` : undefined);
+                }}
+              >
+                <option value="">{ar ? "اختر الشهر" : "Select Month"}</option>
+                {Array.from({ length: 12 }, (_, i) => {
+                  const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                  const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                  return (
+                    <option key={i + 1} value={i + 1}>
+                      {ar ? arabicMonths[i] : englishMonths[i]}
+                    </option>
+                  );
+                })}
+              </select>
+
               <input
-                type="month"
-                className="ctr-filter-select !bg-gray-50 !border-transparent hover:!bg-gray-100 !py-2"
-                value={monthValue}
-                max={defaultMonthValue}
-                onChange={(e) => setFilter("month", e.target.value || undefined)}
+                type="number"
+                className="ctr-filter-select !bg-gray-50 !border-transparent hover:!bg-gray-100 !py-2 text-sm font-semibold w-24 text-center font-mono"
+                placeholder={ar ? "السنة" : "Year"}
+                min={2000}
+                max={2100}
+                value={year ?? ""}
+                onChange={(e) => {
+                  const newYear = e.target.value;
+                  const currentMonth = month || (nowDate.getMonth() + 1);
+                  setFilter("month", newYear ? `${newYear}-${String(currentMonth).padStart(2, "0")}` : undefined);
+                }}
               />
             </div>
           </div>

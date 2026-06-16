@@ -126,7 +126,7 @@ export type StudentApiAttendanceRow = {
   circle?: {
     id: number;
     name: string;
-    center?: { id: number; name: string } | null;
+    center?: { id: number; name: string; logoUrl?: string | null } | null;
   } | null;
 };
 
@@ -153,7 +153,7 @@ export type StudentApiFollowUpRow = {
   circle?: {
     id: number;
     name: string;
-    center?: { id: number; name: string } | null;
+    center?: { id: number; name: string; logoUrl?: string | null } | null;
   } | null;
 };
 

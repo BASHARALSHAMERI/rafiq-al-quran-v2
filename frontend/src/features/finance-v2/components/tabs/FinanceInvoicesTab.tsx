@@ -409,7 +409,7 @@ export default function FinanceInvoicesTab({
                 ]}
                 rowKey="id"
                 className="fin-premium-table"
-                rowClassName={(v) => `fin-floating-row ${v.status === 'PAID' ? 'receipt' : v.status === 'PARTIAL' ? 'disbursement' : ''}`}
+                rowClassName={(v) => (v.status === 'PAID' ? 'receipt' : v.status === 'PARTIAL' ? 'disbursement' : '')}
               />
               <FinancePaginationFooter
                 ar={ar}

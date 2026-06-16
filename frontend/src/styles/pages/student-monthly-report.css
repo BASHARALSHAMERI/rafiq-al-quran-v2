@@ -1,62 +1,242 @@
 /**
  * أنماط "التقرير الشهري التفصيلي للطالب"
- * مصمّم أساسًا للطباعة A4 Landscape (RTL)، مع معاينة على الشاشة.
+ * - شاشة: جدول مبسّط (9 أعمدة).
+ * - طباعة: تصميم أنيق على نماذج السندات — كارت نظيف، زوايا مزخرفة، خط علوي.
  */
 
-/* ─── الحاوية العامة (شاشة) ─── */
-.student-monthly-print-report {
-  direction: rtl;
-  background: #fff;
-  color: #111;
-  font-family: "Tajawal", "Cairo", "Segoe UI", Tahoma, sans-serif;
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
+/* ═══════════════════════════════════════
+   عرض الشاشة — تنسيق هادئ ومنظم
+   ═══════════════════════════════════════ */
+.smr-screen { display: block; }
+.smr-print-wrap { display: none; }
 
-/* المعاينة على الشاشة تسمح بتمرير أفقي للجدول العريض */
-.student-monthly-scroll {
+.smr-table-wrap {
   overflow-x: auto;
-}
-
-/* ─── بطاقة العنوان (الهيدر) ─── */
-.student-report-title-card {
-  border: 1px solid #d1d5db;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 12px;
-  text-align: center;
-  page-break-inside: avoid;
+  background: #fff;
 }
 
-.student-report-title-card h1 {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 0 0 4px;
-  color: #2f7f7b;
+.smr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  min-width: 620px;
 }
 
-.student-report-title-card p {
-  margin: 2px 0;
-  font-size: 14px;
-}
-
-.student-report-meta-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 18px;
-  margin-top: 8px;
-  font-size: 12px;
-  color: #555;
-}
-
-.student-report-section-title {
-  font-size: 16px;
+.smr-table thead th {
+  background: #F7FAFC;
+  color: #4A5568;
   font-weight: 700;
-  margin: 18px 0 6px;
+  font-size: 0.72rem;
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 2px solid #E2E8F0;
+  white-space: nowrap;
+}
+
+.smr-table tbody td {
+  padding: 9px 8px;
+  text-align: center;
+  border-bottom: 1px solid #EDF2F7;
+  vertical-align: middle;
+  font-size: 0.8rem;
+  color: #2D3748;
+}
+
+.smr-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.smr-table tbody tr:hover td {
+  background: #FAFBFC;
+}
+
+.smr-cell-num {
+  color: #A0AEC0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.smr-table tbody td:nth-child(5),
+.smr-table tbody td:nth-child(7) {
+  font-weight: 600;
+  color: #2D3748;
+  font-size: 0.8rem;
+}
+
+.smr-table tbody td:nth-child(6),
+.smr-table tbody td:nth-child(8) {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4A5568;
+}
+
+.smr-cell-activity {
+  font-size: 0.72rem;
+  color: #718096;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ألوان حالة الحضور فقط */
+.smr-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 50px;
+  white-space: nowrap;
+}
+.smr-badge--present { background: #C6F6D5; color: #22543D; }
+.smr-badge--late { background: #FEEBC8; color: #9C4221; }
+.smr-badge--excused { background: #FEFCBF; color: #975A16; }
+.smr-badge--absent { background: #FED7D7; color: #9B2C2C; }
+.smr-badge--none { background: #EDF2F7; color: #A0AEC0; }
+
+/* ═══════════════════════════════════════════════
+   عرض الطباعة — تصميم كارت نظيف (نمط السندات)
+   ═══════════════════════════════════════════════ */
+.smr-print-wrap {
+  direction: rtl;
+  font-family: "Tajawal", "Cairo", "Segoe UI", Tahoma, sans-serif;
+  color: #2D3748;
+}
+
+.smr-print-card {
+  position: relative;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+/* الشريط العلوي المتدرج */
+.smr-print-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+  background: #2D9B7A;
+}
+
+/* الزوايا المزخرفة */
+.smr-print-corner {
+  position: absolute;
+  width: 36px; height: 36px;
+  border-color: #2D9B7A40;
+  border-style: solid;
+  pointer-events: none;
+}
+.smr-print-corner--tl { top: 12px; right: 12px; border-width: 2px 2px 0 0; border-radius: 0 6px 0 0; }
+.smr-print-corner--tr { top: 12px; left: 12px; border-width: 2px 0 0 2px; border-radius: 6px 0 0 0; }
+.smr-print-corner--bl { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; border-radius: 0 0 6px 0; }
+.smr-print-corner--br { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; border-radius: 0 0 0 6px; }
+
+.smr-print-inner {
+  padding: 28px 30px 22px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── الهيدر — ترويسة أكاديمية ─── */
+.smr-print-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #E2E8F0;
+  margin-bottom: 12px;
+}
+
+.smr-print-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.smr-print-header-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.smr-print-header-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.smr-print-org-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1A365D;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.smr-print-center-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #2D3748;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.smr-print-header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.smr-print-student-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1A365D;
+  line-height: 1.3;
+}
+
+.smr-print-circle-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4A5568;
+  margin-top: 2px;
+}
+
+.smr-print-month-year {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+  margin-top: 1px;
+}
+
+.smr-print-teacher-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #A0AEC0;
+  margin-top: 3px;
+}
+
+/* ─── الجسم ─── */
+.smr-print-body {
+  padding: 0;
+}
+
+/* ─── عناوين الأقسام ─── */
+.smr-print-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  margin: 14px 0 6px;
+  padding: 0 0 4px;
   text-align: right;
-  color: #1f2937;
+  color: #2D9B7A;
+  border-bottom: 2px solid #E4F4EE;
 }
 
 /* ─── الجداول ─── */
@@ -65,210 +245,222 @@
 .summary-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 11px;
+  font-size: 8.5px;
 }
 
-.student-monthly-table th,
-.student-monthly-table td,
-.group-achievement-table th,
-.group-achievement-table td,
-.summary-table th,
-.summary-table td {
-  border: 1px solid #555;
-  padding: 4px 5px;
+.student-monthly-table thead th {
+  padding: 5px 3px;
+  text-align: center !important;
+  vertical-align: middle;
+  border: 1px solid #CBD5E0;
+  font-weight: 700;
+  font-size: 8px;
+  white-space: nowrap;
+  background: #F7FAFC;
+  color: #2D3748;
+}
+
+.student-monthly-table thead tr:first-child th {
+  font-size: 10px;
+  padding: 6px 3px;
+  color: #2D3748;
+  font-weight: 800;
+  text-align: center !important;
+}
+
+/* خلايا البيانات */
+.student-monthly-table tbody td,
+.group-achievement-table tbody td,
+.summary-table tbody td {
+  border: 1px solid #CBD5E0;
+  padding: 3px 4px;
   text-align: center;
   vertical-align: middle;
-  word-break: break-word;
+  font-size: 8px;
+  color: #2D3748;
 }
 
-.student-monthly-table th {
-  font-weight: 700;
-  background: #f3f4f6;
+.student-monthly-table tbody tr:nth-child(even) td {
+  background: #FAFCFB;
 }
 
-.hifz-header {
-  background: #dff3f7;
+.student-monthly-table tbody td:first-child {
+  font-weight: 600;
+  color: #718096;
 }
 
-.revision-header {
-  background: #e8f4df;
-}
+.absent-excused-row td { background: #FDF6E3 !important; }
+.absent-unexcused-row td { background: #FDE8E8 !important; }
 
-.mutun-header {
-  background: #eeeeee;
-}
+.group-achievement-row.tajweed td { background: #FDF6E3 !important; }
+.group-achievement-row.tafseer td { background: #EBF4FF !important; }
 
-/* تلوين خفيف لصفوف الغياب */
-.absent-excused-row td {
-  background: #fffbe6;
-}
-
-.absent-unexcused-row td {
-  background: #fff1f2;
-}
-
-.empty-cell {
-  color: #9ca3af;
-}
+.empty-cell { color: #CBD5E0; }
 
 .attendance-chip {
   display: inline-block;
-  font-size: 9.5px;
+  font-size: 6.5px;
   font-weight: 700;
   line-height: 1.2;
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
 }
+.attendance-chip--excused { color: #92400e; background: #FEF3C7; }
+.attendance-chip--unexcused { color: #991b1b; background: #FCE4EC; }
+.attendance-chip--late { color: #9a3412; background: #FFEDD5; }
 
-.attendance-chip--excused {
-  color: #b45309;
-}
-
-.attendance-chip--unexcused {
-  color: #be123c;
-}
-
-.attendance-chip--late {
-  color: #9a3412;
-}
-
-/* تلوين صفوف الإنجاز الجماعي حسب النوع */
-.group-achievement-row.tajweed td {
-  background: #fffbe6;
-}
-
-.group-achievement-row.tafseer td {
-  background: #e8f6ff;
-}
-
-/* ─── الملخص ─── */
-.summary-section {
-  margin-top: 18px;
-  page-break-inside: avoid;
-}
-
-.summary-title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 6px;
-  text-align: right;
-}
-
-.summary-table th {
-  background: #f3f4f6;
-  font-weight: 700;
-}
-
-/* ─── الملاحظات والتوقيعات ─── */
+/* ─── الملاحظات ─── */
 .report-notes {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-  page-break-inside: avoid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .report-note-box {
-  border: 1px solid #d1d5db;
+  border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 10px;
-  min-height: 60px;
+  overflow: hidden;
 }
 
 .report-note-box h4 {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
-  margin: 0 0 6px;
-  color: #374151;
+  margin: 0;
+  padding: 5px 12px;
+  color: #fff;
+  background: #2D9B7A;
 }
 
 .report-note-box p {
   margin: 0;
-  font-size: 12px;
-  color: #4b5563;
+  padding: 6px 12px;
+  font-size: 9px;
+  color: #2D3748;
 }
 
-.print-signatures {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 24px;
-  page-break-inside: avoid;
+/* ─── التواقيع ─── */
+.smr-print-signatures {
+  display: flex;
+  justify-content: space-around;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 2px solid #E4F4EE;
+  margin-top: 16px;
 }
 
-.print-signature-box {
-  border-top: 1px solid #111;
-  padding-top: 8px;
+.smr-print-sig-box {
   text-align: center;
+  flex: 1;
+}
+
+.smr-print-sig-line {
+  width: 130px;
+  height: 1px;
+  border-top: 2px solid #CBD5E0;
+  margin: 32px auto 6px;
+}
+
+.smr-print-sig-label {
   font-size: 12px;
+  font-weight: 700;
+  color: #4A5568;
 }
 
-/* تكرار رأس الجدول عند تعدّد الصفحات */
-.student-monthly-table thead,
-.group-achievement-table thead {
-  display: table-header-group;
+/* ─── الفوتر ─── */
+.smr-print-footer {
+  text-align: center;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #E2E8F0;
 }
 
-.student-monthly-table tr,
-.group-achievement-table tr {
-  page-break-inside: avoid;
+.smr-print-footer-text {
+  font-size: 10px;
+  color: #A0AEC0;
+  font-weight: 600;
 }
 
-/* ════════════════ الطباعة ════════════════ */
+/* ═══════════════════════════════════════
+   الطباعة الفعلية
+   ═══════════════════════════════════════ */
 @media print {
   @page {
     size: A4 landscape;
     margin: 8mm;
   }
 
-  html,
-  body {
-    direction: rtl;
-    background: #fff !important;
-    color: #111 !important;
+  html, body, #root {
+    background: #F7FAFC !important;
+    color: #2D3748 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  /* إخفاء كل شيء خارج التقرير */
   .no-print,
-  .screen-actions,
-  .filters-panel,
   .back-link,
-  .pagination,
-  .sidebar,
-  .app-sidebar,
-  .app-header {
+  .filters-panel,
+  .ctr-controls,
+  .ctr-centers-shell,
+  .ctr-filters-group,
+  .screen-actions,
+  .sidebar, .app-sidebar,
+  .app-header, header,
+  nav, aside, footer,
+  .glass-btn, .btn, button,
+  .PageHeader,
+  [class*="page-header"],
+  [class*="sidebar"],
+  [class*="navbar"] {
     display: none !important;
   }
 
-  .student-monthly-print-report {
-    width: 100%;
-    background: #fff;
-    padding: 0;
-    margin: 0;
+  .fin-premium-container {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+  .fin-premium-container > .flex { gap: 0 !important; }
+
+  .smr-screen { display: none !important; }
+  .smr-print-wrap { display: block !important; }
+
+  .smr-print-card {
     box-shadow: none;
     border-radius: 0;
   }
-
-  .student-monthly-scroll {
-    overflow: visible !important;
+  .smr-print-inner {
+    padding: 16px 20px;
   }
 
-  .student-monthly-table,
-  .group-achievement-table,
-  .summary-table {
-    font-size: 10.5px;
-  }
+  .student-monthly-scroll { overflow: visible !important; }
+  .student-monthly-table thead, .group-achievement-table thead { display: table-header-group; }
+  .student-monthly-table tr, .group-achievement-table tr { page-break-inside: avoid; }
 
-  /* ضمان طباعة الألوان الخفيفة */
-  .student-monthly-table th,
-  .hifz-header,
-  .revision-header,
-  .mutun-header,
-  .absent-excused-row td,
-  .absent-unexcused-row td,
-  .group-achievement-row.tajweed td,
-  .group-achievement-row.tafseer td,
-  .summary-table th {
+  .absent-excused-row td, .absent-unexcused-row td,
+  .group-achievement-row.tajweed td, .group-achievement-row.tafseer td,
+  .smr-print-section-title, .report-note-box h4,
+  .smr-print-section-title, .report-note-box h4,
+  .smr-print-body thead tr:first-child th {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 }
+
+/* ─── Dark mode (شاشة فقط) ─── */
+[data-theme="dark"] .smr-table-wrap { background: #1A202C; border-color: #2D3748; }
+[data-theme="dark"] .smr-table thead th { background: #2D3748; color: #CBD5E0; border-bottom-color: #4A5568; }
+[data-theme="dark"] .smr-table tbody td { border-bottom-color: #2D3748; color: #E2E8F0; }
+[data-theme="dark"] .smr-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+[data-theme="dark"] .smr-table tbody td:nth-child(5),
+[data-theme="dark"] .smr-table tbody td:nth-child(7) { color: #E2E8F0; }
+[data-theme="dark"] .smr-table tbody td:nth-child(6),
+[data-theme="dark"] .smr-table tbody td:nth-child(8) { color: #CBD5E0; }
+[data-theme="dark"] .smr-badge--present { background: #22543D; color: #C6F6D5; }
+[data-theme="dark"] .smr-badge--late { background: #7B341E; color: #FEEBC8; }
+[data-theme="dark"] .smr-badge--excused { background: #744210; color: #FEFCBF; }
+[data-theme="dark"] .smr-badge--absent { background: #742A2A; color: #FED7D7; }
+[data-theme="dark"] .smr-badge--none { background: #2D3748; color: #A0AEC0; }
+[data-theme="dark"] .smr-cell-num { color: #4A5568; }

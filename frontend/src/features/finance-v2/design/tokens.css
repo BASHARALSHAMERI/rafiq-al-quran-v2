@@ -131,6 +131,39 @@
   flex: 1 1 auto;
 }
 
+.finance-toolbar__filter-shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-subtle, #f8fafc);
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.finance-toolbar__filter-shell select,
+.finance-toolbar__filter-shell input {
+  min-width: 140px;
+  height: 32px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+}
+
+.finance-toolbar__reset {
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: #e11d48;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .finance-toolbar__actions {
   display: flex;
   align-items: center;
@@ -163,6 +196,25 @@
   background: var(--color-bg-surface, #fff);
   color: var(--color-text-primary, #0f172a);
   box-shadow: var(--fin-shadow-card);
+}
+
+.app-data-table.fin-premium-table + .app-data-table__pagination,
+.app-data-table.fin-premium-table .app-data-table__pagination {
+  margin-top: 0;
+}
+
+.app-data-table.fin-premium-table .app-pagination,
+.app-data-table__pagination .app-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fin-space-3);
+  margin-top: var(--fin-space-3);
+  padding: var(--fin-space-3) var(--fin-space-4);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
 /* ─── KPI Strip ─────────────────────────────────────────────── */
@@ -248,12 +300,7 @@
 }
 
 .finance-status-badge::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  flex-shrink: 0;
+  display: none;
 }
 
 .finance-status-badge--neutral  { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }

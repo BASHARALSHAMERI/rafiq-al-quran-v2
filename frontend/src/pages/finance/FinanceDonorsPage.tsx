@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Gift, Plus, RefreshCw, AlertTriangle, FileText } from "lucide-react";
+import { Gift, Plus, RefreshCw, AlertTriangle, Search, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "../../app/i18n";
 import { useAuthStore } from "../../features/auth/auth.store";
@@ -33,6 +33,8 @@ import DonorsToolbar from "../../features/finance-v2/components/DonorsToolbar";
 import DonorCard from "../../features/finance-v2/components/DonorCard";
 import DonorFormModal from "../../features/finance-v2/components/DonorFormModal";
 import DonationFormModal from "../../features/finance-v2/components/DonationFormModal";
+import { FinanceDataTable, FinanceTableFooter, type FinanceDataTableColumn } from "../../features/finance-v2/design";
+import useClientPagination from "../../shared/ui/useClientPagination";
 import Modal from "../../components/ui/Modal"; // For simple Receive Pledge modal
 
 type TabId = "donors" | "donations" | "pledges";
@@ -127,6 +129,19 @@ const statusClass = (status: DonationStatusV2) => {
   return "fin-status-pill fin-status--muted";
 };
 
+const pledgeDueClass = (pledgeDueDate?: string | null): "overdue" | "soon" | null => {
+  if (!pledgeDueDate) return null;
+  const due = new Date(pledgeDueDate);
+  if (Number.isNaN(due.getTime())) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays < 0) return "overdue";
+  if (diffDays <= 7) return "soon";
+  return null;
+};
+
 export default function FinanceDonorsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -138,6 +153,10 @@ export default function FinanceDonorsPage() {
   const [q, setQ] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<TabId>("donors");
+  const [donationSearch, setDonationSearch] = useState("");
+  const [donationStatusFilter, setDonationStatusFilter] = useState<DonationStatusV2 | "all">("all");
+  const [pledgeSearch, setPledgeSearch] = useState("");
+  const [pledgeUrgencyFilter, setPledgeUrgencyFilter] = useState<"all" | "overdue" | "soon">("all");
   const [donorModalOpen, setDonorModalOpen] = useState(false);
   const [donationModalOpen, setDonationModalOpen] = useState(false);
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
@@ -166,6 +185,32 @@ export default function FinanceDonorsPage() {
   const donors = useMemo(() => donorsQ.data?.rows ?? [], [donorsQ.data?.rows]);
   const donations = useMemo(() => donationsQ.data?.rows ?? [], [donationsQ.data?.rows]);
   const pledges = useMemo(() => donations.filter((donation) => donation.status === "PLEDGED"), [donations]);
+
+  const filteredDonations = useMemo(() => {
+    let result = donations;
+    if (donationStatusFilter !== "all") result = result.filter((d) => d.status === donationStatusFilter);
+    if (donationSearch.trim()) {
+      const low = donationSearch.toLowerCase();
+      result = result.filter((d) =>
+        (d.donor?.name ?? "").toLowerCase().includes(low) ||
+        (d.purpose ?? "").toLowerCase().includes(low)
+      );
+    }
+    return result;
+  }, [donations, donationSearch, donationStatusFilter]);
+
+  const filteredPledges = useMemo(() => {
+    let result = pledges;
+    if (pledgeUrgencyFilter !== "all") result = result.filter((p) => pledgeDueClass(p.pledgeDueDate) === pledgeUrgencyFilter);
+    if (pledgeSearch.trim()) {
+      const low = pledgeSearch.toLowerCase();
+      result = result.filter((p) => (p.donor?.name ?? "").toLowerCase().includes(low));
+    }
+    return result;
+  }, [pledges, pledgeSearch, pledgeUrgencyFilter]);
+
+  const donationsPagination = useClientPagination(filteredDonations, { initialPageSize: 10, resetKey: `${donationSearch}|${donationStatusFilter}` });
+  const pledgesPagination = useClientPagination(filteredPledges, { initialPageSize: 10, resetKey: `${pledgeSearch}|${pledgeUrgencyFilter}` });
 
   const createDonorM = useCreateFinanceV2DonorMutation();
   const updateDonorM = useUpdateFinanceV2DonorMutation();
@@ -207,19 +252,6 @@ export default function FinanceDonorsPage() {
     [donations]
   );
 
-  // FA-UX-2: classify a pledge by its due date for overdue / soon-due badges.
-  const pledgeDueClass = (pledgeDueDate?: string | null): "overdue" | "soon" | null => {
-    if (!pledgeDueDate) return null;
-    const due = new Date(pledgeDueDate);
-    if (Number.isNaN(due.getTime())) return null;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-    const diffDays = Math.round((dueDay.getTime() - today.getTime()) / 86_400_000);
-    if (diffDays < 0) return "overdue";
-    if (diffDays <= 7) return "soon";
-    return null;
-  };
 
   const openCreateDonor = () => {
     setFormError("");
@@ -428,6 +460,167 @@ export default function FinanceDonorsPage() {
     }
   };
 
+  const renderVoucherCell = (donation: FinanceDonationV2): React.ReactNode => {
+    const voucher = donation.voucher;
+    if (voucher) {
+      const no = voucher.voucherNo;
+      if (voucher.status === "DRAFT") {
+        return (
+          <span className="fin-status-pill fin-status--warning" title={ar ? "السند لم يرحل بعد" : "Voucher not yet posted"}>
+            {ar ? `${no} - مسودة` : `${no} - Draft`}
+          </span>
+        );
+      }
+      if (voucher.status === "POSTED") {
+        return <span className="fin-status-pill fin-status--success">{ar ? `${no} - مرحل` : `${no} - Posted`}</span>;
+      }
+      return (
+        <span className="fin-status-pill fin-status--muted">
+          {ar ? `${no} - راجع صفحة السندات` : `${no} - See Vouchers page`}
+        </span>
+      );
+    }
+    if (donation.status === "PLEDGED") {
+      return <span className="fin-status-pill fin-status--muted">{ar ? "لم يتم الاستلام بعد" : "Not yet received"}</span>;
+    }
+    if (donation.status === "CANCELLED") {
+      return <span className="fin-status-pill fin-status--muted">{ar ? "ملغي" : "Cancelled"}</span>;
+    }
+    return "-";
+  };
+
+  const donationColumns: FinanceDataTableColumn<FinanceDonationV2>[] = [
+    {
+      id: "donor",
+      header: ar ? "المتبرع" : "Donor",
+      width: "22%",
+      render: (donation) => <span className="font-bold">{donation.donor?.name ?? donation.donorId}</span>
+    },
+    {
+      id: "amount",
+      header: ar ? "المبلغ" : "Amount",
+      width: "16%",
+      align: "end",
+      render: (donation) => (
+        <div className="font-bold text-emerald-600 tabular-nums">
+          {money(donation.amount, ar)}
+          {donation.originalCurrencyCode &&
+          donation.originalCurrencyCode.toUpperCase() !== "YER" &&
+          donation.originalAmount &&
+          donation.exchangeRateToBase ? (
+            <div className="text-[10px] font-normal opacity-70">
+              {Number(donation.originalAmount).toLocaleString(ar ? "ar-YE-u-nu-latn" : "en-US")}{" "}
+              {donation.originalCurrencyCode} ×{" "}
+              {Number(donation.exchangeRateToBase).toLocaleString(ar ? "ar-YE-u-nu-latn" : "en-US")}
+            </div>
+          ) : null}
+        </div>
+      )
+    },
+    {
+      id: "method",
+      header: ar ? "طريقة الدفع" : "Method",
+      width: "13%",
+      align: "center",
+      render: (donation) => (donation.paymentMethod === "CASH" ? (ar ? "نقدي" : "Cash") : (ar ? "تحويل" : "Transfer"))
+    },
+    {
+      id: "purpose",
+      header: ar ? "الغرض" : "Purpose",
+      width: "17%",
+      render: (donation) => donation.purpose || "-"
+    },
+    {
+      id: "date",
+      header: ar ? "التاريخ" : "Date",
+      width: "13%",
+      align: "center",
+      render: (donation) => new Date(donation.donationDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")
+    },
+    {
+      id: "status",
+      header: ar ? "الحالة" : "Status",
+      width: "10%",
+      align: "center",
+      render: (donation) => (
+        <span className={statusClass(donation.status)}>
+          {statusLabels[donation.status][ar ? "ar" : "en"]}
+        </span>
+      )
+    },
+    {
+      id: "voucher",
+      header: ar ? "حالة السند" : "Voucher",
+      width: "16%",
+      align: "center",
+      render: renderVoucherCell
+    }
+  ];
+
+  const pledgeColumns: FinanceDataTableColumn<FinanceDonationV2>[] = [
+    {
+      id: "donor",
+      header: ar ? "المتبرع" : "Donor",
+      width: "24%",
+      render: (donation) => <span className="font-bold">{donation.donor?.name ?? donation.donorId}</span>
+    },
+    {
+      id: "amount",
+      header: ar ? "المبلغ" : "Amount",
+      width: "17%",
+      align: "end",
+      render: (donation) => <span className="font-bold text-amber-600 tabular-nums">{money(donation.amount, ar)}</span>
+    },
+    {
+      id: "pledgeDate",
+      header: ar ? "تاريخ التعهد" : "Pledge Date",
+      width: "15%",
+      align: "center",
+      render: (donation) => new Date(donation.donationDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")
+    },
+    {
+      id: "dueDate",
+      header: ar ? "تاريخ الاستحقاق" : "Due Date",
+      width: "18%",
+      align: "center",
+      render: (donation) => {
+        const dueClass = pledgeDueClass(donation.pledgeDueDate);
+        if (!donation.pledgeDueDate) return "-";
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span>{new Date(donation.pledgeDueDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")}</span>
+            {dueClass === "overdue" ? <span className="fin-status-pill fin-status--danger">{ar ? "متأخر" : "Overdue"}</span> : null}
+            {dueClass === "soon" ? <span className="fin-status-pill fin-status--warning">{ar ? "قريب" : "Due soon"}</span> : null}
+          </div>
+        );
+      }
+    },
+    {
+      id: "status",
+      header: ar ? "الحالة" : "Status",
+      width: "13%",
+      align: "center",
+      render: (donation) => (
+        <span className={statusClass(donation.status)}>
+          {statusLabels[donation.status][ar ? "ar" : "en"]}
+        </span>
+      )
+    },
+    {
+      id: "actions",
+      header: ar ? "إجراءات" : "Actions",
+      width: "13%",
+      align: "center",
+      isActions: true,
+      render: (donation) =>
+        canManageDonors && donation.status === "PLEDGED" ? (
+          <Button size="sm" variant="primary" onClick={() => openReceivePledge(donation)}>
+            {ar ? "استلام" : "Receive"}
+          </Button>
+        ) : null
+    }
+  ];
+
   const isLoading = donorsQ.isLoading || donationsQ.isLoading;
 
   return (
@@ -479,43 +672,112 @@ export default function FinanceDonorsPage() {
           />
         </motion.div>
 
-        {/* Real-state alert: only show when there are draft vouchers awaiting posting. */}
-        {draftVoucherCount > 0 ? (
-          <motion.div variants={fadeUp}>
-            <div
-              className="flex items-start gap-3 rounded-2xl border border-amber-300/60 bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100"
-              role="status"
-            >
-              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" aria-hidden />
-              <div className="flex-1 leading-relaxed">
-                <div className="font-semibold mb-1">
-                  {ar
-                    ? `تبرعات بانتظار ترحيل السند: ${draftVoucherCount}`
-                    : `Donations awaiting voucher posting: ${draftVoucherCount}`}
-                </div>
-              </div>
-              <Link
-                to="/finance/vouchers"
-                className="hidden md:inline-flex shrink-0 items-center gap-1 rounded-lg border border-current/30 bg-white/70 px-3 py-1.5 text-xs font-semibold transition hover:bg-white dark:bg-white/10 dark:hover:bg-white/20"
-              >
-                <FileText className="h-3.5 w-3.5" aria-hidden />
-                {ar ? "صفحة السندات" : "Vouchers page"}
-              </Link>
-            </div>
-          </motion.div>
-        ) : null}
-
         <motion.div variants={fadeUp} className="ctr-centers-shell">
-          <DonorsToolbar
-            ar={ar}
-            q={q}
-            setQ={setQ}
-            view={view}
-            setView={setView}
-            selectedCenterId={centerId}
-            centerOpts={centers.map(c => ({ id: c.id, label: c.name }))}
-            setCenterId={(v) => setCenterId(v ? Number(v) : undefined)}
-          />
+          {activeTab === "donors" && (
+            <DonorsToolbar
+              ar={ar}
+              q={q}
+              setQ={setQ}
+              view={view}
+              setView={setView}
+              selectedCenterId={centerId}
+              centerOpts={centers.map(c => ({ id: c.id, label: c.name }))}
+              setCenterId={(v) => setCenterId(v ? Number(v) : undefined)}
+            />
+          )}
+
+          {activeTab === "donations" && (
+            <div className="ctr-centers-toolbar">
+              <div className="ctr-centers-toolbar__left">
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                  <Filter size={14} className="text-slate-400 flex-shrink-0" />
+                  <select
+                    className="ctr-filter-select border-none bg-transparent h-7 min-w-[120px] focus:ring-0 outline-none text-sm"
+                    value={donationStatusFilter}
+                    onChange={(e) => setDonationStatusFilter(e.target.value as DonationStatusV2 | "all")}
+                  >
+                    <option value="all">{ar ? "كل الحالات" : "All Statuses"}</option>
+                    <option value="RECEIVED">{ar ? "مستلم" : "Received"}</option>
+                    <option value="PLEDGED">{ar ? "تعهد" : "Pledged"}</option>
+                    <option value="CANCELLED">{ar ? "ملغي" : "Cancelled"}</option>
+                  </select>
+                </div>
+                <select
+                  className="ctr-centers-toolbar__select"
+                  value={centerId ?? ""}
+                  onChange={(e) => setCenterId(e.target.value ? Number(e.target.value) : undefined)}
+                >
+                  <option value="">{ar ? "كل المراكز" : "All Centers"}</option>
+                  {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {(donationSearch || donationStatusFilter !== "all") && (
+                  <button
+                    type="button"
+                    className="text-xs font-bold text-rose-500 hover:text-rose-700 underline px-2"
+                    onClick={() => { setDonationSearch(""); setDonationStatusFilter("all"); }}
+                  >
+                    {ar ? "تصفير" : "Reset"}
+                  </button>
+                )}
+              </div>
+              <div className="ctr-centers-toolbar__search">
+                <Search className="ctr-centers-toolbar__search-icon" size={16} />
+                <input
+                  type="text"
+                  className="ctr-centers-toolbar__search-input"
+                  placeholder={ar ? "بحث بالاسم أو الغرض..." : "Search by name or purpose..."}
+                  value={donationSearch}
+                  onChange={(e) => setDonationSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === "pledges" && (
+            <div className="ctr-centers-toolbar">
+              <div className="ctr-centers-toolbar__left">
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/50 shadow-sm">
+                  <Filter size={14} className="text-slate-400 flex-shrink-0" />
+                  <select
+                    className="ctr-filter-select border-none bg-transparent h-7 min-w-[140px] focus:ring-0 outline-none text-sm"
+                    value={pledgeUrgencyFilter}
+                    onChange={(e) => setPledgeUrgencyFilter(e.target.value as "all" | "overdue" | "soon")}
+                  >
+                    <option value="all">{ar ? "كل التعهدات" : "All Pledges"}</option>
+                    <option value="overdue">{ar ? "متأخرة الاستحقاق" : "Overdue"}</option>
+                    <option value="soon">{ar ? "قريبة الاستحقاق (أسبوع)" : "Due Soon (week)"}</option>
+                  </select>
+                </div>
+                <select
+                  className="ctr-centers-toolbar__select"
+                  value={centerId ?? ""}
+                  onChange={(e) => setCenterId(e.target.value ? Number(e.target.value) : undefined)}
+                >
+                  <option value="">{ar ? "كل المراكز" : "All Centers"}</option>
+                  {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {(pledgeSearch || pledgeUrgencyFilter !== "all") && (
+                  <button
+                    type="button"
+                    className="text-xs font-bold text-rose-500 hover:text-rose-700 underline px-2"
+                    onClick={() => { setPledgeSearch(""); setPledgeUrgencyFilter("all"); }}
+                  >
+                    {ar ? "تصفير" : "Reset"}
+                  </button>
+                )}
+              </div>
+              <div className="ctr-centers-toolbar__search">
+                <Search className="ctr-centers-toolbar__search-icon" size={16} />
+                <input
+                  type="text"
+                  className="ctr-centers-toolbar__search-input"
+                  placeholder={ar ? "بحث باسم المتبرع..." : "Search by donor name..."}
+                  value={pledgeSearch}
+                  onChange={(e) => setPledgeSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="fin-tabs mt-2">
             {tabs.map((tab) => (
@@ -559,96 +821,37 @@ export default function FinanceDonorsPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="overflow-hidden border border-border-subtle rounded-2xl bg-bg-surface"
+                  className="flex flex-col gap-2"
                 >
-                  <table className="fin-premium-table">
-                    <thead>
-                      <tr>
-                        <th>{ar ? "المتبرع" : "Donor"}</th>
-                        <th>{ar ? "المبلغ" : "Amount"}</th>
-                        <th>{ar ? "طريقة الدفع" : "Method"}</th>
-                        <th>{ar ? "الغرض" : "Purpose"}</th>
-                        <th>{ar ? "التاريخ" : "Date"}</th>
-                        <th>{ar ? "الحالة" : "Status"}</th>
-                        <th>{ar ? "حالة السند" : "Voucher"}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {donations.map((donation) => {
-                        // FA-UX-2: voucher-state cell — never claim "posted" if status unknown.
-                        let voucherCell: React.ReactNode;
-                        const voucher = donation.voucher;
-                        if (voucher) {
-                          const no = voucher.voucherNo;
-                          if (voucher.status === "DRAFT") {
-                            voucherCell = (
-                              <span
-                                className="fin-status-pill fin-status--warning"
-                                title={ar ? "السند لم يُرحّل بعد" : "Voucher not yet posted"}
-                              >
-                                {ar ? `${no} — مسودة` : `${no} — Draft`}
-                              </span>
-                            );
-                          } else if (voucher.status === "POSTED") {
-                            voucherCell = (
-                              <span className="fin-status-pill fin-status--success">
-                                {ar ? `${no} — مرحّل` : `${no} — Posted`}
-                              </span>
-                            );
-                          } else {
-                            // APPROVED / VOIDED / VOID_REQUESTED / REJECTED — show neutral with voucherNo
-                            voucherCell = (
-                              <span className="fin-status-pill fin-status--muted">
-                                {ar ? `${no} — راجع صفحة السندات` : `${no} — See Vouchers page`}
-                              </span>
-                            );
-                          }
-                        } else if (donation.status === "PLEDGED") {
-                          voucherCell = (
-                            <span className="fin-status-pill fin-status--muted">
-                              {ar ? "لم يتم الاستلام بعد" : "Not yet received"}
-                            </span>
-                          );
-                        } else if (donation.status === "CANCELLED") {
-                          voucherCell = (
-                            <span className="fin-status-pill fin-status--muted">
-                              {ar ? "ملغي" : "Cancelled"}
-                            </span>
-                          );
-                        } else {
-                          voucherCell = "-";
-                        }
-                        return (
-                          <tr key={donation.id}>
-                            <td className="font-bold">{donation.donor?.name ?? donation.donorId}</td>
-                            <td className="text-emerald-600 font-bold">
-                              {money(donation.amount, ar)}
-                              {/* FA-UX-4B: foreign-currency origination summary line */}
-                              {donation.originalCurrencyCode &&
-                              donation.originalCurrencyCode.toUpperCase() !== "YER" &&
-                              donation.originalAmount &&
-                              donation.exchangeRateToBase ? (
-                                <div className="text-[10px] font-normal opacity-70">
-                                  {Number(donation.originalAmount).toLocaleString(ar ? "ar-YE-u-nu-latn" : "en-US")}{" "}
-                                  {donation.originalCurrencyCode} ×{" "}
-                                  {Number(donation.exchangeRateToBase).toLocaleString(ar ? "ar-YE-u-nu-latn" : "en-US")}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td>{donation.paymentMethod === "CASH" ? (ar ? "نقدي" : "Cash") : (ar ? "تحويل" : "Transfer")}</td>
-                            <td>{donation.purpose || "-"}</td>
-                            <td>{new Date(donation.donationDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")}</td>
-                            <td>
-                              <span className={statusClass(donation.status)}>
-                                {statusLabels[donation.status][ar ? "ar" : "en"]}
-                              </span>
-                            </td>
-                            <td>{voucherCell}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {draftVoucherCount > 0 && (
+                    <div className="flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50/80 px-3 py-2 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" aria-hidden />
+                      <span className="flex-1 font-semibold">
+                        {ar ? `تبرعات بانتظار ترحيل السند: ${draftVoucherCount}` : `Donations awaiting voucher posting: ${draftVoucherCount}`}
+                      </span>
+                      <Link to="/finance/vouchers" className="shrink-0 rounded-lg border border-current/30 bg-white/70 px-2 py-1 font-semibold transition hover:bg-white dark:bg-white/10">
+                        {ar ? "السندات" : "Vouchers"}
+                      </Link>
+                    </div>
+                  )}
+                  <div className="overflow-hidden border border-border-subtle rounded-2xl bg-bg-surface">
+                  <FinanceDataTable<FinanceDonationV2>
+                    rows={donationsPagination.pagedRows}
+                    columns={donationColumns}
+                    rowKey="id"
+                    density="comfortable"
+                    rowClassName={() => "receipt"}
+                  />
+                  <FinanceTableFooter
+                    ar={ar}
+                    pageSize={donationsPagination.pageSize}
+                    setPageSize={donationsPagination.setPageSize}
+                    currentPage={donationsPagination.currentPage}
+                    setPage={donationsPagination.setCurrentPage}
+                    totalFilteredCount={donationsPagination.totalItems}
+                    pages={donationsPagination.totalPages}
+                  />
+                  </div>
                 </motion.div>
               )}
 
@@ -660,61 +863,22 @@ export default function FinanceDonorsPage() {
                   exit={{ opacity: 0, y: -10 }}
                   className="overflow-hidden border border-border-subtle rounded-2xl bg-bg-surface"
                 >
-                   <table className="fin-premium-table">
-                    <thead>
-                      <tr>
-                        <th>{ar ? "المتبرع" : "Donor"}</th>
-                        <th>{ar ? "المبلغ" : "Amount"}</th>
-                        <th>{ar ? "تاريخ التعهد" : "Pledge Date"}</th>
-                        <th>{ar ? "تاريخ الاستحقاق" : "Due Date"}</th>
-                        <th>{ar ? "الحالة" : "Status"}</th>
-                        <th>{ar ? "إجراءات" : "Actions"}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pledges.map((donation) => {
-                        const dueClass = pledgeDueClass(donation.pledgeDueDate);
-                        return (
-                          <tr key={donation.id}>
-                            <td className="font-bold">{donation.donor?.name ?? donation.donorId}</td>
-                            <td className="text-amber-600 font-bold">{money(donation.amount, ar)}</td>
-                            <td>{new Date(donation.donationDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")}</td>
-                            <td>
-                              {donation.pledgeDueDate ? (
-                                <div className="flex items-center gap-2">
-                                  <span>{new Date(donation.pledgeDueDate).toLocaleDateString(ar ? "ar-YE-u-nu-latn" : "en-US")}</span>
-                                  {dueClass === "overdue" && (
-                                    <span className="fin-status-pill fin-status--danger">
-                                      {ar ? "متأخر" : "Overdue"}
-                                    </span>
-                                  )}
-                                  {dueClass === "soon" && (
-                                    <span className="fin-status-pill fin-status--warning">
-                                      {ar ? "قريب" : "Due soon"}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                            <td>
-                              <span className={statusClass(donation.status)}>
-                                {statusLabels[donation.status][ar ? "ar" : "en"]}
-                              </span>
-                            </td>
-                            <td>
-                              {canManageDonors && donation.status === "PLEDGED" && (
-                                <Button size="sm" variant="primary" onClick={() => openReceivePledge(donation)}>
-                                  {ar ? "استلام" : "Receive"}
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  <FinanceDataTable<FinanceDonationV2>
+                    rows={pledgesPagination.pagedRows}
+                    columns={pledgeColumns}
+                    rowKey="id"
+                    density="comfortable"
+                    rowClassName={() => "receipt"}
+                  />
+                  <FinanceTableFooter
+                    ar={ar}
+                    pageSize={pledgesPagination.pageSize}
+                    setPageSize={pledgesPagination.setPageSize}
+                    currentPage={pledgesPagination.currentPage}
+                    setPage={pledgesPagination.setCurrentPage}
+                    totalFilteredCount={pledgesPagination.totalItems}
+                    pages={pledgesPagination.totalPages}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

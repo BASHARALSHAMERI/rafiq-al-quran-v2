@@ -52,16 +52,23 @@ export function FinancePageFilters({
         </div>
 
         {/* Month Filter */}
-        <div className="fin-filter-item w-24">
+        <div className="fin-filter-item min-w-[140px]">
           <CalendarDays className="fin-filter-icon" />
-          <input
-            type="number"
-            min={1}
-            max={12}
+          <select
             value={month}
-            onChange={(event) => onMonthChange(Math.min(12, Math.max(1, Number(event.target.value))))}
-            placeholder={ar ? "الشهر" : "Month"}
-          />
+            onChange={(event) => onMonthChange(Number(event.target.value))}
+            className="w-full bg-transparent border-none focus:outline-none cursor-pointer"
+          >
+            {Array.from({ length: 12 }, (_, i) => {
+              const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+              const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+              return (
+                <option key={i + 1} value={i + 1}>
+                  {ar ? arabicMonths[i] : englishMonths[i]}
+                </option>
+              );
+            })}
+          </select>
         </div>
 
         {/* Year Filter */}

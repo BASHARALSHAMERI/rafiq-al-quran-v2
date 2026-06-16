@@ -1,27 +1,42 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { useExpenseCategoriesQuery, useCreateExpenseCategoryMutation } from "../../features/finance-v2/finance-v2.hooks";
-import { FinanceDataTable } from "../../features/finance-v2/design";
+import { FinanceDataTable, FinanceTableFooter } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { useAccountingAccountsQuery } from "../accounting/accounting.hooks";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifyRequiredFields, notifySuccess } from "../../shared/ui/feedback";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 export function FinanceExpenseCategoriesTab({ 
   ar,
   canManage = true,
+  searchTerm = "",
   externalShowForm,
   onExternalFormClose
 }: { 
   ar: boolean,
   canManage?: boolean;
+  searchTerm?: string;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
   const categoriesQ = useExpenseCategoriesQuery();
   const createM = useCreateExpenseCategoryMutation();
+  const categories = useMemo(() => categoriesQ.data ?? [], [categoriesQ.data]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredCategories = useMemo(() => {
+    if (!normalizedSearch) return categories;
+    return categories.filter((category: any) =>
+      category.name?.toLowerCase().includes(normalizedSearch) ||
+      category.type?.toLowerCase().includes(normalizedSearch) ||
+      category.accountingAccount?.code?.toLowerCase().includes(normalizedSearch) ||
+      category.accountingAccount?.name?.toLowerCase().includes(normalizedSearch)
+    );
+  }, [categories, normalizedSearch]);
+  const pagination = useClientPagination(filteredCategories, { initialPageSize: 10, resetKey: normalizedSearch });
   const accountingAccountsQ = useAccountingAccountsQuery();
   const accountingAccounts = accountingAccountsQ.data ?? [];
   const parentAccountIds = new Set(accountingAccounts.map((acc: any) => acc.parentId).filter(Boolean));
@@ -80,11 +95,22 @@ export function FinanceExpenseCategoriesTab({
           { id: "type", header: ar ? "النوع" : "Type", render: (row: any) => row.type || "-" },
           { id: "account", header: ar ? "رقم الحساب المحاسبي" : "Account ID", render: (row: any) => row.accountingAccount ? `${row.accountingAccount.code} - ${row.accountingAccount.name}` : "-" }
         ]}
-        rows={categoriesQ.data || []}
+        rows={pagination.pagedRows}
         rowKey="id"
         loading={categoriesQ.isLoading}
         density="dense"
+        className="fin-premium-table"
+        rowClassName={() => "receipt"}
       />}
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
     </div>
 
       <Modal 

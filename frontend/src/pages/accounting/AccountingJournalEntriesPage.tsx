@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { FileText, Plus, Trash2, Printer, Search, Filter, RefreshCw, CheckCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
@@ -11,7 +11,8 @@ import {
   FinancePageHeader,
   FinanceEmptyState,
   FinanceMoney,
-  FinanceDataTable
+  FinanceDataTable,
+  FinanceTableFooter
 } from "../../features/finance-v2/design";
 import { Badge } from "../../components/ui/Badge";
 import { useI18n } from "../../app/i18n";
@@ -33,6 +34,7 @@ import type { AccountingAccount, JournalEntry, JournalSourceType } from "./accou
 import { printAccountingDocument } from "../../features/accounting/printAccounting";
 import { useOrgBrandingQuery } from "../../features/org/org.hooks";
 import { NavLink } from "react-router-dom";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -105,7 +107,8 @@ const createColumns = (ar: boolean): Array<AccountingColumn<JournalEntry>> => [
   {
     id: "debit",
     header: ar ? "إجمالي مدين" : "Total Debit",
-    align: "end",
+    headerClassName: "text-center",
+    cellClassName: "text-center whitespace-nowrap",
     cell: (row) => (
       <div className="font-bold text-emerald-600">
         <FinanceMoney amount={entryDebitTotal(row)} baseCurrency="YER" />
@@ -115,7 +118,8 @@ const createColumns = (ar: boolean): Array<AccountingColumn<JournalEntry>> => [
   {
     id: "credit",
     header: ar ? "إجمالي دائن" : "Total Credit",
-    align: "end",
+    headerClassName: "text-center",
+    cellClassName: "text-center whitespace-nowrap",
     cell: (row) => (
       <div className="font-bold text-rose-600">
         <FinanceMoney amount={entryCreditTotal(row)} baseCurrency="YER" />
@@ -127,7 +131,7 @@ const createColumns = (ar: boolean): Array<AccountingColumn<JournalEntry>> => [
     header: ar ? "الأسطر" : "Lines",
     align: "center",
     cell: (row) => (
-      <Badge variant="secondary" size="sm" dot>
+      <Badge variant="secondary" size="sm">
         {row.lines.length}
       </Badge>
     )
@@ -222,6 +226,10 @@ export default function AccountingJournalEntriesPage() {
       return matchesSearch && matchesStatus && matchesSource;
     });
   }, [allEntries, searchTerm, statusFilter, sourceFilter]);
+  const pagination = useClientPagination(filteredEntries, {
+    initialPageSize: 10,
+    resetKey: `${searchTerm}|${statusFilter}|${sourceFilter}`
+  });
 
   const stats = useMemo(() => {
     return {
@@ -505,14 +513,24 @@ export default function AccountingJournalEntriesPage() {
             />
           ) : (
             <FinanceDataTable<JournalEntry>
-              rows={filteredEntries}
+              rows={pagination.pagedRows}
               columns={columns}
               rowKey="id"
               density="dense"
+              rowClassName={(entry) => (entry.status === "POSTED" ? "receipt" : "disbursement")}
             />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
 
       <Modal
         isOpen={journalModalOpen}

@@ -12,7 +12,10 @@ const reportsFiltersKey = (filters: ReportsFilters) => [
   filters.actorRole ?? null,
   filters.examStatus ?? null,
   filters.status ?? null,
-  filters.search ?? null
+  filters.search ?? null,
+  filters.month ?? null,
+  filters.year ?? null,
+  filters.studentId ?? null
 ] as const;
 
 export const REPORTS_QUERY_KEYS = {

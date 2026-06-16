@@ -188,11 +188,11 @@ const resolveHalqah = (
 
 const resolveCenter = (
   api: StudentMonthlyApiResponse
-): { id: string; name: string } | undefined => {
+): { id: string; name: string; logoUrl?: string } | undefined => {
   const src =
     api.attendance.find((r) => r.circle?.center?.name)?.circle?.center ??
     api.followUps.find((r) => r.circle?.center?.name)?.circle?.center;
-  return src ? { id: String(src.id), name: src.name } : undefined;
+  return src ? { id: String(src.id), name: src.name, logoUrl: src.logoUrl ?? undefined } : undefined;
 };
 
 const resolveTeacher = (

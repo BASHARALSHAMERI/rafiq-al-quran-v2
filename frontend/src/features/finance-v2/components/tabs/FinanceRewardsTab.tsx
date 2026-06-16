@@ -319,9 +319,15 @@ export default function FinanceRewardsTab({
                     value={batchForm.periodMonth}
                     onChange={(e) => setBatchForm(prev => ({ ...prev, periodMonth: parseInt(e.target.value) }))}
                   >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>{i + 1}</option>
-                    ))}
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                      const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                      return (
+                        <option key={i + 1} value={i + 1}>
+                          {ar ? arabicMonths[i] : englishMonths[i]}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               ) : batchForm.cycle === "QUARTERLY" ? (

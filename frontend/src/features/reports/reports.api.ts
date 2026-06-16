@@ -10,18 +10,26 @@ import type {
   StudentReportPayload
 } from "./types";
 
-const toParams = (filters: ReportsFilters) => ({
-  from: filters.from,
-  to: filters.to,
-  centerId: filters.centerId,
-  circleId: filters.circleId,
-  actorRole: filters.actorRole,
-  examStatus: filters.examStatus,
-  status: filters.status,
-  month: filters.month,
-  year: filters.year,
-  studentId: filters.studentId
-});
+const toParams = (filters: ReportsFilters) => {
+  const params: Record<string, unknown> = {
+    from: filters.from,
+    to: filters.to,
+    centerId: filters.centerId,
+    circleId: filters.circleId,
+    actorRole: filters.actorRole,
+    examStatus: filters.examStatus,
+    status: filters.status,
+    month: filters.month,
+    year: filters.year,
+    studentId: filters.studentId
+  };
+  Object.keys(params).forEach((key) => {
+    if (params[key] === undefined || params[key] === "") {
+      delete params[key];
+    }
+  });
+  return params;
+};
 
 export const reportsApi = {
   async getCatalog(): Promise<ReportsCatalogItem[]> {

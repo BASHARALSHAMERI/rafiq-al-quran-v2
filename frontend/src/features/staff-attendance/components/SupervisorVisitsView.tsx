@@ -51,15 +51,16 @@ export function SupervisorVisitsView() {
   const [search, setSearch] = useState("");
   const [monthStr, setMonthStr] = useState(DEFAULT_MONTH);
   const [selectedVisitId, setSelectedVisitId] = useState<number | null>(null);
+  const year = Number(monthStr.split("-")[0]);
+  const month = Number(monthStr.split("-")[1]);
 
   const queryFilters = useMemo(() => {
     if (!monthStr) return undefined;
-    const [year, month] = monthStr.split("-").map(Number);
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
     return { startDate, endDate };
-  }, [monthStr]);
+  }, [monthStr, year, month]);
 
   const visitsQuery = useSupervisorVisitLogs(queryFilters);
   const visits = visitsQuery.data ?? [];
@@ -181,14 +182,33 @@ export function SupervisorVisitsView() {
             />
           </div>
 
-          <div className="ctr-search-wrap max-w-[240px] w-full">
-            <CalendarDays className="ctr-search-icon" size={16} />
-            <input
-              type="month"
-              className="ctr-search-input !px-10"
-              value={monthStr}
+          <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-xl border border-slate-200 max-w-[280px] w-full">
+            <CalendarDays className="text-slate-400 ms-2" size={16} />
+            <select
+              className="ctr-search-input !h-8 !w-28 !bg-transparent !border-none !p-0 text-center text-sm font-semibold cursor-pointer"
+              value={month}
               onChange={(e) => {
-                setMonthStr(e.target.value);
+                setMonthStr(`${year}-${String(e.target.value).padStart(2, "0")}`);
+                pagination.setCurrentPage(1);
+              }}
+            >
+              {Array.from({ length: 12 }, (_, i) => {
+                const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                return (
+                  <option key={i + 1} value={i + 1}>
+                    {ar ? arabicMonths[i] : englishMonths[i]}
+                  </option>
+                );
+              })}
+            </select>
+            <span className="text-slate-300">/</span>
+            <input
+              type="number"
+              className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-sm font-semibold font-mono"
+              value={year}
+              onChange={(e) => {
+                setMonthStr(`${e.target.value}-${String(month).padStart(2, "0")}`);
                 pagination.setCurrentPage(1);
               }}
             />

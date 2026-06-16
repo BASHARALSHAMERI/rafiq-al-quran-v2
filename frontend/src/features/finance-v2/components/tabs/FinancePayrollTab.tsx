@@ -432,9 +432,15 @@ export default function FinancePayrollTab({
                   value={batchForm.month}
                   onChange={(e) => setBatchForm(p => ({ ...p, month: parseInt(e.target.value) }))}
                 >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>{i + 1}</option>
-                  ))}
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                    const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    return (
+                      <option key={i + 1} value={i + 1}>
+                        {ar ? arabicMonths[i] : englishMonths[i]}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
@@ -476,7 +482,7 @@ export default function FinancePayrollTab({
         onClose={() => setSelectedBatch(null)}
         title={ar ? "فحص تفاصيل الرواتب" : "Payroll Inspection"}
         description={ar ? `كشف تفصيلي للدفعة #${selectedBatch?.id} - ${selectedBatch?.periodMonth}/${selectedBatch?.periodYear}` : `Detailed breakdown for batch #${selectedBatch?.id}`}
-        size="xl"
+        size="lg"
         footer={
           <div className="flex w-full flex-wrap justify-end gap-2">
             {selectedBatch ? (

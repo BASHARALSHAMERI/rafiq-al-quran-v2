@@ -773,7 +773,7 @@ export default function FinanceVouchersPage() {
               columns={columns}
               rowKey="id"
               className="fin-premium-table"
-              rowClassName={(v) => `fin-floating-row ${v.voucherType === "RECEIPT" ? "receipt" : "disbursement"}`}
+              rowClassName={(v) => (v.voucherType === "RECEIPT" ? "receipt" : "disbursement")}
             />
           )}
         </div>

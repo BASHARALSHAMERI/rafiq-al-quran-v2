@@ -29,6 +29,7 @@ import {
   FinanceConfirmModal,
   FinanceMoney,
   FinanceDataTable,
+  FinanceTableFooter,
   financeActionsColumn,
   type FinanceDataTableColumn
 } from "../../features/finance-v2/design";
@@ -41,6 +42,7 @@ import {
   useReopenFiscalPeriodMutation
 } from "./accounting.hooks";
 import type { FiscalPeriod, CreateFiscalYearPayload } from "./accounting.api";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -101,6 +103,10 @@ export default function AccountingFiscalPeriodsPage() {
       return matchesYear && matchesStatus && matchesSearch;
     });
   }, [allPeriods, selectedYearFilter, statusFilter, searchTerm]);
+  const pagination = useClientPagination(filteredPeriods, {
+    initialPageSize: 10,
+    resetKey: `${selectedYearFilter}|${statusFilter}|${searchTerm}`
+  });
 
   const stats = useMemo(() => {
     const total = allPeriods.length;
@@ -581,15 +587,24 @@ export default function AccountingFiscalPeriodsPage() {
             />
           ) : (
             <FinanceDataTable<FiscalPeriod>
-              rows={filteredPeriods}
+              rows={pagination.pagedRows}
               columns={columns}
               rowKey="id"
               className="fin-premium-table"
-              rowClassName={() => "fin-floating-row"}
+              rowClassName={(period) => (period.status === "OPEN" ? "receipt" : "disbursement")}
             />
           )}
         </div>
       </div>
+      <FinanceTableFooter
+        ar
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
 
       {/* مودال إنشاء سنة مالية */}
       <Modal

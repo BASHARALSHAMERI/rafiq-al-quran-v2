@@ -302,17 +302,25 @@ export function FinanceDeductionReview() {
 
             <div className="ctr-filters-group">
               <div className="flex gap-2 items-center bg-slate-50 p-1 rounded-lg border border-slate-100">
-                <input
-                  type="number"
-                  className="ctr-search-input !h-8 !w-16 !bg-transparent !border-none !p-0 text-center text-[12px]"
+                <select
+                  className="ctr-search-input !h-8 !w-24 !bg-transparent !border-none !p-0 text-center text-[12px] font-semibold cursor-pointer"
                   value={filterMonth}
                   onChange={(e) => setFilterMonth(e.target.value)}
-                  min="1" max="12"
-                />
+                >
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                    const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    return (
+                      <option key={i + 1} value={String(i + 1)}>
+                        {ar ? arabicMonths[i] : englishMonths[i]}
+                      </option>
+                    );
+                  })}
+                </select>
                 <span className="text-slate-300">/</span>
                 <input
                   type="number"
-                  className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-[12px]"
+                  className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-[12px] font-mono"
                   value={filterYear}
                   onChange={(e) => setFilterYear(e.target.value)}
                 />

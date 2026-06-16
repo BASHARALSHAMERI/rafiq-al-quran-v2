@@ -1,7 +1,8 @@
-import { CheckCircle, Clock, AlertTriangle, Banknote, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, Banknote, CreditCard } from "lucide-react";
 import type { ElementType } from "react";
 import type { InvoiceStatusV2, PaymentMethodV2 } from "../types";
 import { FINANCE_YEMEN_MODE } from "../config";
+import { FinanceTableFooter } from "../design";
 
 export const posInt = (v: string): number | undefined => {
   const n = Number(v);
@@ -154,68 +155,15 @@ export function FinancePaginationFooter({
   totalFilteredCount: number;
   pages: number;
 }) {
-  if (totalFilteredCount === 0) return null;
-
   return (
-    <div className="ctr-footer">
-      <div className="ctr-page-size">
-        <span>{ar ? "الصفوف:" : "Rows:"}</span>
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            setPageSize(Number(e.target.value));
-            setPage(1);
-          }}
-        >
-          <option value={5}>5</option>
-          <option value={10}>10</option>
-          <option value={20}>20</option>
-          <option value={50}>50</option>
-        </select>
-      </div>
-
-      <div className="ctr-page-info">
-        {ar ? (
-          <>
-            عرض {Math.min(totalFilteredCount, (currentPage - 1) * pageSize + 1)} -{" "}
-            {Math.min(totalFilteredCount, currentPage * pageSize)} من {totalFilteredCount}
-          </>
-        ) : (
-          <>
-            Showing {Math.min(totalFilteredCount, (currentPage - 1) * pageSize + 1)} -{" "}
-            {Math.min(totalFilteredCount, currentPage * pageSize)} of {totalFilteredCount}
-          </>
-        )}
-      </div>
-
-      <div className="ctr-page-controls">
-        <button className="ctr-page-btn" disabled={currentPage === 1} onClick={() => setPage((prev) => prev - 1)}>
-          {ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
-
-        {Array.from({ length: Math.min(5, pages) }, (_, i) => {
-          let p = currentPage;
-          if (currentPage <= 3) p = i + 1;
-          else if (currentPage >= pages - 2) p = pages - 4 + i;
-          else p = currentPage - 2 + i;
-
-          if (p <= 0 || p > pages) return null;
-
-          return (
-            <button
-              key={p}
-              className={`ctr-page-btn ${currentPage === p ? "active" : ""}`}
-              onClick={() => setPage(p)}
-            >
-              {p}
-            </button>
-          );
-        })}
-
-        <button className="ctr-page-btn" disabled={currentPage === pages} onClick={() => setPage((prev) => prev + 1)}>
-          {ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </button>
-      </div>
-    </div>
+    <FinanceTableFooter
+      ar={ar}
+      pageSize={pageSize}
+      setPageSize={setPageSize}
+      currentPage={currentPage}
+      setPage={setPage}
+      totalFilteredCount={totalFilteredCount}
+      pages={pages}
+    />
   );
 }

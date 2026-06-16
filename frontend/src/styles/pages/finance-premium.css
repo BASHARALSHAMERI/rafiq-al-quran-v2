@@ -9,7 +9,7 @@
 .fin-premium-container {
   position: relative;
   min-height: 100%;
-  padding-bottom: var(--space-10);
+  padding-bottom: var(--space-4);
   background: radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
               radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
 }
@@ -148,7 +148,7 @@
 .fin-premium-panel__content {
   flex: 1;
   padding: var(--space-6);
-  min-height: 400px;
+  min-height: auto;
 }
 
 /* Pagination Footer */
@@ -260,16 +260,11 @@
   transition: all 0.2s ease;
 }
 
-.fin-status-pill::before {
-  content: "";
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  box-shadow: 0 0 10px currentColor;
-}
-
 .fin-status--success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .fin-status--warning { background: rgba(245, 158, 11, 0.1);  color: #f59e0b; }
 .fin-status--error   { background: rgba(239, 68, 68, 0.1);   color: #ef4444; }
+.fin-status--danger  { background: rgba(239, 68, 68, 0.1);   color: #ef4444; }
+.fin-status--muted   { background: rgba(100, 116, 139, 0.1); color: #64748b; }
 .fin-status--info    { background: rgba(59, 130, 246, 0.1);  color: #3b82f6; }
 
 /* Advanced Data Tables */
@@ -298,6 +293,11 @@
   transition: background 0.2s ease;
 }
 
+.fin-premium-table .tabular-nums,
+.app-data-table.fin-premium-table .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
 .fin-premium-table tr:last-child td { border-bottom: none; }
 .fin-premium-table tr:hover td { background: var(--bg-surface-hover); }
 
@@ -311,7 +311,6 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-radius: 12px;
-  margin-bottom: var(--space-4);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
 }
 

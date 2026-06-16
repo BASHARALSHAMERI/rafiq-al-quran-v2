@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Check, CreditCard, FileText } from "lucide-react";
 import { useExpenseInvoicesQuery, useApproveExpenseInvoiceMutation, usePayExpenseInvoiceMutation, useFinanceV2AccountsQuery, useCreateExpenseInvoiceMutation, useSuppliersQuery, useExpenseCategoriesQuery } from "../../features/finance-v2/finance-v2.hooks";
-import { FinanceDataTable } from "../../features/finance-v2/design";
+import { FinanceDataTable, FinanceTableFooter } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { ErrorState } from "../../components/ui/ErrorState";
@@ -12,13 +12,28 @@ import {
   notifyRequiredFields,
   notifySuccess
 } from "../../shared/ui/feedback";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
-export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onExternalFormClose }: { ar: boolean; canManage?: boolean; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
+export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", externalShowForm, onExternalFormClose }: { ar: boolean; canManage?: boolean; searchTerm?: string; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
   const [centerId] = useState<number>();
   const [supplierId] = useState<number>();
   const [status] = useState<string>();
 
   const invoicesQ = useExpenseInvoicesQuery({ centerId, supplierId, status });
+  const invoices = useMemo(() => invoicesQ.data ?? [], [invoicesQ.data]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredInvoices = useMemo(() => {
+    if (!normalizedSearch) return invoices;
+    return invoices.filter((invoice: any) =>
+      String(invoice.id).includes(normalizedSearch) ||
+      invoice.invoiceNo?.toLowerCase().includes(normalizedSearch) ||
+      invoice.description?.toLowerCase().includes(normalizedSearch) ||
+      invoice.supplier?.name?.toLowerCase().includes(normalizedSearch) ||
+      invoice.category?.name?.toLowerCase().includes(normalizedSearch) ||
+      invoice.status?.toLowerCase().includes(normalizedSearch)
+    );
+  }, [invoices, normalizedSearch]);
+  const pagination = useClientPagination(filteredInvoices, { initialPageSize: 10, resetKey: normalizedSearch });
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const approveM = useApproveExpenseInvoiceMutation();
   const payM = usePayExpenseInvoiceMutation();
@@ -182,11 +197,22 @@ export function FinanceExpensesTab({ ar, canManage = true, externalShowForm, onE
             )
           }
         ]}
-        rows={invoicesQ.data || []}
+        rows={pagination.pagedRows}
         rowKey="id"
         loading={invoicesQ.isLoading}
         density="dense"
+        className="fin-premium-table"
+        rowClassName={(row: any) => (row.status === "PAID" ? "receipt" : "disbursement")}
       />}
+      <FinanceTableFooter
+        ar={ar}
+        pageSize={pagination.pageSize}
+        setPageSize={pagination.setPageSize}
+        currentPage={pagination.currentPage}
+        setPage={pagination.setCurrentPage}
+        totalFilteredCount={pagination.totalItems}
+        pages={pagination.totalPages}
+      />
     </div>
 
       {/* Create Expense Invoice Modal */}

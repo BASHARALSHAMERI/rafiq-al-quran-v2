@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { 
   AlertCircle, 
   CircleDollarSign, 
@@ -23,12 +23,14 @@ import {
 import { 
   FinancePageShell, 
   FinancePageHeader,
-  FinanceEmptyState
+  FinanceDataTable,
+  FinanceEmptyState,
+  FinanceTableFooter
 } from "../../features/finance-v2/design";
-import DataTable from "../../components/ui/DataTable";
 import type { CurrencyV2, ExchangeRateV2 } from "../../features/finance-v2/types";
 import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 import { notifyError, notifyInfo, notifySuccess } from "../../shared/ui/feedback";
+import useClientPagination from "../../shared/ui/useClientPagination";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -136,6 +138,9 @@ export default function FinanceCurrenciesPage() {
       r.source?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [latestRates, searchTerm]);
+  const currenciesPagination = useClientPagination(filteredCurrencies, { initialPageSize: 10, resetKey: searchTerm });
+  const ratesPagination = useClientPagination(filteredRates, { initialPageSize: 10, resetKey: searchTerm });
+  const activePagination = activeTab === "currencies" ? currenciesPagination : ratesPagination;
 
   const isLoading = currenciesQ.isLoading || predefinedQ.isLoading || exchangeRatesQ.isLoading;
   const isError = currenciesQ.isError || predefinedQ.isError || exchangeRatesQ.isError;
@@ -208,6 +213,7 @@ export default function FinanceCurrenciesPage() {
     {
       id: "currency",
       header: ar ? "العملة" : "Currency",
+      width: "42%",
       cell: (currency: CurrencyV2) => (
         <div className="flex items-center gap-3">
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-base font-bold text-brand-700">
@@ -223,12 +229,14 @@ export default function FinanceCurrenciesPage() {
     {
       id: "decimalPlaces",
       header: ar ? "الخانات" : "Decimals",
+      width: 110,
       align: "center" as const,
       cell: (currency: CurrencyV2) => <span className="tabular-nums font-medium text-slate-700">{currency.decimalPlaces}</span>
     },
     {
       id: "type",
       header: ar ? "النوع" : "Type",
+      width: 150,
       align: "center" as const,
       cell: (currency: CurrencyV2) => currency.isBase
         ? <span className="acc-chip acc-chip--success px-3">{ar ? "أساسية" : "Base"}</span>
@@ -237,6 +245,7 @@ export default function FinanceCurrenciesPage() {
     {
       id: "status",
       header: ar ? "الحالة" : "Status",
+      width: 150,
       align: "center" as const,
       cell: (currency: CurrencyV2) => (
         <span className={`acc-chip ${currency.isActive ? 'acc-chip--success' : 'acc-chip--muted'} px-3`}>
@@ -250,6 +259,7 @@ export default function FinanceCurrenciesPage() {
     {
       id: "currency",
       header: ar ? "العملة" : "Currency",
+      width: "34%",
       cell: (rate: ExchangeRateV2) => {
         const currency = currencies.find((item) => item.code === rate.currencyCode);
         return (
@@ -268,9 +278,10 @@ export default function FinanceCurrenciesPage() {
     {
       id: "rateToBase",
       header: ar ? "سعر الصرف" : "Exchange Rate",
+      width: 210,
       align: "end" as const,
       cell: (rate: ExchangeRateV2) => (
-        <span className="font-bold tabular-nums text-brand-700 bg-brand-50 px-3 py-1 rounded-md border border-brand-100">
+        <span className="font-bold tabular-nums text-brand-700 bg-brand-50 px-2 py-1 rounded-md border border-brand-100 whitespace-nowrap">
           {rate.rateToBase.toLocaleString(numberLocale)} <small className="text-[10px] text-slate-500 uppercase ms-1">YER</small>
         </span>
       )
@@ -278,11 +289,14 @@ export default function FinanceCurrenciesPage() {
     {
       id: "effectiveDate",
       header: ar ? "تاريخ السريان" : "Effective Date",
+      width: 160,
+      align: "center" as const,
       cell: (rate: ExchangeRateV2) => <span className="text-slate-600 font-medium">{rate.effectiveDate.slice(0, 10)}</span>
     },
     {
       id: "source",
       header: ar ? "المصدر" : "Source",
+      width: "28%",
       cell: (rate: ExchangeRateV2) => rate.source || <span className="text-slate-400">-</span>
     }
   ], [ar, currencies, numberLocale]);
@@ -432,24 +446,37 @@ export default function FinanceCurrenciesPage() {
           <div className="fin-premium-panel">
             <div className="fin-premium-panel__content p-0">
               {activeTab === "currencies" ? (
-                <DataTable
-                  rows={filteredCurrencies}
+                <FinanceDataTable<CurrencyV2>
+                  rows={currenciesPagination.pagedRows}
                   columns={currencyColumns}
                   rowKey="id"
                   loading={isLoading}
-                  dense
+                  density="dense"
+                  className="fin-premium-table"
+                  rowClassName={() => "receipt"}
                 />
               ) : (
-                <DataTable
-                  rows={filteredRates}
+                <FinanceDataTable<ExchangeRateV2>
+                  rows={ratesPagination.pagedRows}
                   columns={rateColumns}
                   rowKey="id"
                   loading={isLoading}
-                  dense
+                  density="dense"
+                  className="fin-premium-table"
+                  rowClassName={() => "receipt"}
                 />
               )}
             </div>
           </div>
+          <FinanceTableFooter
+            ar={ar}
+            pageSize={activePagination.pageSize}
+            setPageSize={activePagination.setPageSize}
+            currentPage={activePagination.currentPage}
+            setPage={activePagination.setCurrentPage}
+            totalFilteredCount={activePagination.totalItems}
+            pages={activePagination.totalPages}
+          />
         </div>
       )}
 

@@ -208,14 +208,33 @@ export function MonthlyStaffReportView() {
       {/* ── Controls ── */}
       <div className="ctr-controls mb-6">
         <div className="flex gap-4 items-center flex-1">
-          <div className="ctr-search-wrap max-w-[240px]">
-            <CalendarDays className="ctr-search-icon" size={16} />
-            <input
-              type="month"
-              className="ctr-search-input !px-10"
-              value={monthStr}
+          <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+            <CalendarDays className="text-slate-400 ms-2" size={16} />
+            <select
+              className="ctr-search-input !h-8 !w-28 !bg-transparent !border-none !p-0 text-center text-sm font-semibold cursor-pointer"
+              value={month}
               onChange={(e) => {
-                setMonthStr(e.target.value);
+                setMonthStr(`${year}-${String(e.target.value).padStart(2, "0")}`);
+                pagination.setCurrentPage(1);
+              }}
+            >
+              {Array.from({ length: 12 }, (_, i) => {
+                const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                return (
+                  <option key={i + 1} value={i + 1}>
+                    {ar ? arabicMonths[i] : englishMonths[i]}
+                  </option>
+                );
+              })}
+            </select>
+            <span className="text-slate-300">/</span>
+            <input
+              type="number"
+              className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-sm font-semibold font-mono"
+              value={year}
+              onChange={(e) => {
+                setMonthStr(`${e.target.value}-${String(month).padStart(2, "0")}`);
                 pagination.setCurrentPage(1);
               }}
             />
