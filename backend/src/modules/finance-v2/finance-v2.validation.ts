@@ -559,6 +559,20 @@ export const vouchersReportQuerySchema = z
   })
   .strict();
 
+export const receiptsReportQuerySchema = z
+  .object({
+    dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD").optional(),
+    dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD").optional(),
+    centerId: optionalPositiveInt,
+    accountId: optionalPositiveInt,
+    status: z.nativeEnum(VoucherStatus).optional(),
+    sourceType: z.nativeEnum(VoucherSourceType).optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    search: z.string().trim().max(100).optional(),
+    voucherNo: z.string().trim().max(80).optional(),
+  })
+  .strict();
+
 export const invoiceAgingReportQuerySchema = z
   .object({
     asOf: z.string().trim().min(1).optional(),
@@ -641,5 +655,20 @@ export const updateSalaryGradeBodySchema = z
     currencyCode: currencyCodeSchema.optional(),
     isActive: z.boolean().optional(),
     notes: z.string().trim().max(500).optional()
+  })
+  .strict();
+
+// ─── Donation Report Query (getAll-style, no pagination) ───
+const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD");
+export const donationReportQuerySchema = z
+  .object({
+    dateFrom: dateStringSchema.optional(),
+    dateTo: dateStringSchema.optional(),
+    centerId: optionalPositiveInt,
+    donorId: optionalPositiveInt,
+    status: z.nativeEnum(DonationStatus).optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    currencyCode: currencyCodeSchema.optional(),
+    search: z.string().trim().max(100).optional()
   })
   .strict();

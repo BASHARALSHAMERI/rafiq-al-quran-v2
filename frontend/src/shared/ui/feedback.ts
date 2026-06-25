@@ -46,7 +46,12 @@ const getToastDirection = () => {
   return document.documentElement.dir === "ltr" ? "ltr" : "rtl";
 };
 
-const dismissibleMessage = (message: string) => (toastInstance: Toast) =>
+type DismissibleToastProps = {
+  message: string;
+  toastInstance: Toast;
+};
+
+const DismissibleToast = ({ message, toastInstance }: DismissibleToastProps) =>
   createElement(
     "div",
     { className: "app-toast__content" },
@@ -62,6 +67,14 @@ const dismissibleMessage = (message: string) => (toastInstance: Toast) =>
       "\u00d7"
     )
   );
+
+DismissibleToast.displayName = "DismissibleToast";
+
+function dismissibleMessage(message: string) {
+  return function renderDismissibleMessage(toastInstance: Toast) {
+    return createElement(DismissibleToast, { message, toastInstance });
+  };
+}
 
 const toastClassName = (variant: string, customClassName?: string) =>
   [

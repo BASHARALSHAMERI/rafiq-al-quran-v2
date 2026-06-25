@@ -125,7 +125,33 @@ const makeSequencer = () => {
   };
 };
 
-const nextPeriod = (used: Set<string>, startYear = 2030) => {
+type FiscalYearData = { id: number; year: number; status: string };
+
+const ensureFiscalYear = async (token: string): Promise<FiscalYearData> => {
+  const year = new Date().getFullYear();
+  // Try to create
+  const created = await jsonAuthRequest(token, "/accounting/fiscal-years", "POST", {
+    year,
+    startDate: `${year}-01-01`,
+    endDate: `${year}-12-31`,
+    periodType: "MONTHLY"
+  });
+  if (created.status === 201) return created.body.data as FiscalYearData;
+  if (created.status === 409) {
+    // Already exists — fetch it
+    const list = await authRequest(token, `/accounting/fiscal-years?year=${year}`);
+    if (list.status === 200) {
+      const rows = list.body.data as FiscalYearData[];
+      const found = rows.find((r) => r.year === year);
+      if (found) return found;
+    }
+  }
+  throw new Error(
+    `Cannot ensure fiscal year ${year}: POST=${created.status} ${JSON.stringify(created.body)}`
+  );
+};
+
+const nextPeriod = (used: Set<string>, startYear = new Date().getFullYear()) => {
   for (let year = startYear; year <= 2100; year += 1) {
     for (let month = 1; month <= 12; month += 1) {
       const key = `${year}-${month}`;
@@ -156,6 +182,14 @@ const createInvoiceWithRetry = async (args: {
       amount: args.amount,
       invoiceType: "TUITION_MONTHLY"
     });
+
+    if (attempt < 5) {
+      console.error(
+        "[SMOKE_DEBUG] attempt=%d month=%d year=%d status=%d code=%s",
+        attempt, period.month, period.year, result.status,
+        result.body?.error?.code ?? "none"
+      );
+    }
 
     if (result.status === 201) {
       return result;
@@ -290,7 +324,6 @@ const ensureTeacherForCenter = async (args: {
     fullName: `Finance Smoke ${args.label} Teacher`,
     email: teacherEmail,
     role: "TEACHER",
-    password: DEFAULT_PASSWORD,
     links: {
       centerIds: [args.centerId]
     }
@@ -326,8 +359,11 @@ const main = async () => {
     checks.push({ name: "server_ready", ok: true, status: 200 });
 
     const superAuth = await login("superadmin@rafiq.local", "web");
+    const financeAuth = superAuth; // Finance operations use SUPER_ADMIN (CENTER_ADMIN lacks finance RBAC)
     const centerAdminAuth = await login("center.admin@rafiq.local", "web");
     const supervisorAuth = await login("supervisor@rafiq.local");
+
+    await ensureFiscalYear(superAuth.token);
 
     const centers = await authRequest(superAuth.token, "/org/centers");
     checkStatus(checks, "super_list_centers_200", centers.status, 200);
@@ -413,24 +449,23 @@ const main = async () => {
 
     // 1) transfer attachment validation + idempotency
     const invoiceForTransfer = await createInvoiceWithRetry({
-      token: centerAdminAuth.token,
+      token: financeAuth.token,
       studentId: northStudentId,
       centerId: centerPrimaryId,
-      amount: 1200,
+      amount: 5000,
       usedPeriods: usedNorthInvoicePeriods
     });
     checkStatus(checks, "create_invoice_for_transfer_201", invoiceForTransfer.status, 201);
     const invoiceForTransferId = invoiceForTransfer.body.data.id as number;
 
-    const transferWithoutAttachment = await jsonAuthRequest(
-      centerAdminAuth.token,
+const transferWithoutAttachment = await jsonAuthRequest(
+      financeAuth.token,
       "/finance/v2/payments",
       "POST",
       {
         invoiceId: invoiceForTransferId,
-        amount: 1200,
-        method: "TRANSFER",
-        voucherNo: nextId("RCPT-TFR-MISS")
+        amount: 5000,
+        method: "TRANSFER"
       }
     );
     checkStatus(
@@ -449,15 +484,14 @@ const main = async () => {
     const paymentIdempotencyKey = `fin-v2-pay-${nextId("idem")}`;
     const transferWithAttachmentPayload = {
       invoiceId: invoiceForTransferId,
-      amount: 1200,
+      amount: 5000,
       method: "TRANSFER",
-      voucherNo: nextId("RCPT-TFR"),
       attachmentStorageKey: `finance/transfers/smoke/${nextId("att")}.pdf`,
       externalTransferRef: nextId("trx")
     };
 
     const transferPaymentFirst = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/payments",
       "POST",
       transferWithAttachmentPayload,
@@ -467,7 +501,7 @@ const main = async () => {
     const firstPaymentId = transferPaymentFirst.body.data.payment.id as number;
 
     const transferPaymentSecond = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/payments",
       "POST",
       transferWithAttachmentPayload,
@@ -491,10 +525,10 @@ const main = async () => {
 
     // 2) concurrent payments race condition
     const raceInvoice = await createInvoiceWithRetry({
-      token: centerAdminAuth.token,
+      token: financeAuth.token,
       studentId: northStudentId,
       centerId: centerPrimaryId,
-      amount: 1000,
+      amount: 5000,
       usedPeriods: usedNorthInvoicePeriods
     });
     checkStatus(checks, "create_invoice_for_race_201", raceInvoice.status, 201);
@@ -502,22 +536,20 @@ const main = async () => {
 
     const racePayloadA = {
       invoiceId: raceInvoiceId,
-      amount: 700,
-      method: "CASH",
-      voucherNo: nextId("RCPT-RACE-A")
+      amount: 3500,
+      method: "CASH"
     };
     const racePayloadB = {
       invoiceId: raceInvoiceId,
-      amount: 700,
-      method: "CASH",
-      voucherNo: nextId("RCPT-RACE-B")
+      amount: 3500,
+      method: "CASH"
     };
 
     const [raceA, raceB] = await Promise.all([
-      jsonAuthRequest(centerAdminAuth.token, "/finance/v2/payments", "POST", racePayloadA, {
+      jsonAuthRequest(financeAuth.token, "/finance/v2/payments", "POST", racePayloadA, {
         "X-Idempotency-Key": `race-a-${nextId("idem")}`
       }),
-      jsonAuthRequest(centerAdminAuth.token, "/finance/v2/payments", "POST", racePayloadB, {
+      jsonAuthRequest(financeAuth.token, "/finance/v2/payments", "POST", racePayloadB, {
         "X-Idempotency-Key": `race-b-${nextId("idem")}`
       })
     ]);
@@ -537,7 +569,7 @@ const main = async () => {
     );
 
     const racePayments = await authRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       `/finance/v2/invoices/${raceInvoiceId}/payments`
     );
     checkStatus(checks, "race_invoice_payments_200", racePayments.status, 200);
@@ -545,7 +577,7 @@ const main = async () => {
       (sum, item) => sum + Number(item.amount),
       0
     );
-    checkBool(checks, "race_paid_total_not_exceed_invoice", racePaidTotal <= 1000, { racePaidTotal });
+    checkBool(checks, "race_paid_total_not_exceed_invoice", racePaidTotal <= 5000, { racePaidTotal });
 
     // 3) locate accounts after payment operations
     const northAccounts = await authRequest(
@@ -561,7 +593,7 @@ const main = async () => {
       token: superAuth.token,
       studentId: southStudentId,
       centerId: centerSecondaryId,
-      amount: 1000,
+      amount: 5000,
       usedPeriods: usedSouthInvoicePeriods
     });
     checkStatus(checks, "create_south_invoice_for_account_201", southInvoiceForAccount.status, 201);
@@ -569,9 +601,8 @@ const main = async () => {
 
     const southPayment = await jsonAuthRequest(superAuth.token, "/finance/v2/payments", "POST", {
       invoiceId: southInvoiceForAccountId,
-      amount: 1000,
-      method: "CASH",
-      voucherNo: nextId("RCPT-SOUTH")
+      amount: 5000,
+      method: "CASH"
     });
     checkStatus(checks, "create_south_payment_201", southPayment.status, 201);
 
@@ -584,14 +615,14 @@ const main = async () => {
     checkBool(checks, "south_account_exists", Boolean(southAccount));
 
     // 4) voucher workflow + void workflow
-    const topUpVoucherCreate = await jsonAuthRequest(centerAdminAuth.token, "/finance/v2/vouchers", "POST", {
+    const topUpVoucherCreate = await jsonAuthRequest(financeAuth.token, "/finance/v2/vouchers", "POST", {
       centerId: centerPrimaryId,
       accountId: northAccount.id,
       voucherType: "RECEIPT",
-      voucherNo: nextId("VOC-TOPUP"),
       sourceType: "MANUAL",
       paymentMethod: "CASH",
-      amount: 25000
+      amount: 25000,
+      accountingCategory: "DONATION"
     });
     checkStatus(checks, "voucher_topup_create_201", topUpVoucherCreate.status, 201);
     const topUpVoucherId = topUpVoucherCreate.body.data.id as number;
@@ -601,7 +632,7 @@ const main = async () => {
       "voucher_topup_submit_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/vouchers/${topUpVoucherId}/submit`,
           "POST",
           { comment: "submit topup" }
@@ -626,7 +657,7 @@ const main = async () => {
       "voucher_topup_post_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/vouchers/${topUpVoucherId}/post`,
           "POST",
           { comment: "post topup" }
@@ -636,17 +667,17 @@ const main = async () => {
     );
 
     const disbVoucherCreate = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/vouchers",
       "POST",
       {
         centerId: centerPrimaryId,
         accountId: northAccount.id,
         voucherType: "DISBURSEMENT",
-        voucherNo: nextId("VOC-DISB"),
         sourceType: "MANUAL",
         paymentMethod: "CASH",
-        amount: 500
+        amount: 500,
+        accountingCategory: "OPERATING_EXPENSE"
       }
     );
     checkStatus(checks, "voucher_disb_create_201", disbVoucherCreate.status, 201);
@@ -657,7 +688,7 @@ const main = async () => {
       "voucher_disb_submit_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/vouchers/${disbVoucherId}/submit`,
           "POST",
           { comment: "submit disb" }
@@ -682,7 +713,7 @@ const main = async () => {
       "voucher_disb_post_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/vouchers/${disbVoucherId}/post`,
           "POST",
           { comment: "post disb" }
@@ -696,7 +727,7 @@ const main = async () => {
       "voucher_disb_void_request_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/vouchers/${disbVoucherId}/void-request`,
           "POST",
           { reason: "test reverse" }
@@ -780,8 +811,24 @@ const main = async () => {
       label: "north"
     });
 
+    // Deactivate any existing payroll profile for this teacher to avoid unique constraint conflict
+    const existingProfiles = await authRequest(
+      financeAuth.token,
+      `/finance/v2/payroll/profiles?centerId=${centerPrimaryId}&userId=${teacherId}`
+    );
+    if (existingProfiles.status === 200 && (existingProfiles.body.data.rows as Array<{ id: number }>).length > 0) {
+      for (const profile of existingProfiles.body.data.rows as Array<{ id: number; isActive: boolean }>) {
+        if (profile.isActive) {
+          await jsonAuthRequest(financeAuth.token, `/finance/v2/payroll/profiles/${profile.id}`, "PATCH", {
+            isActive: false,
+            effectiveTo: "2025-12-31"
+          });
+        }
+      }
+    }
+
     const payrollProfile = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/payroll/profiles",
       "POST",
       {
@@ -795,7 +842,7 @@ const main = async () => {
     checkStatus(checks, "payroll_profile_create_201", payrollProfile.status, 201);
 
     const payrollBatches = await authRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       `/finance/v2/payroll/batches?centerId=${centerPrimaryId}&pageSize=100`
     );
     checkStatus(checks, "payroll_batches_list_200", payrollBatches.status, 200);
@@ -806,7 +853,7 @@ const main = async () => {
     );
 
     const payrollBatch = await createPayrollBatchWithRetry({
-      token: centerAdminAuth.token,
+      token: financeAuth.token,
       centerId: centerPrimaryId,
       usedPeriods: usedPayrollPeriods
     });
@@ -818,7 +865,7 @@ const main = async () => {
       "payroll_batch_submit_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/payroll/batches/${payrollBatchId}/submit`,
           "POST",
           { comment: "submit payroll" }
@@ -838,13 +885,13 @@ const main = async () => {
     checkBool(checks, "payroll_batch_has_items", payrollItems.length > 0);
 
     const payrollPay = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       `/finance/v2/payroll/batches/${payrollBatchId}/pay`,
       "POST",
       {
         payments: payrollItems.map((item) => ({
           itemId: item.id,
-          voucherNo: nextId("PAYROLL"),
+          manualReferenceNo: nextId("PAYROLL"),
           method: "CASH"
         }))
       }
@@ -857,14 +904,24 @@ const main = async () => {
       payrollPay.body.data
     );
 
-    // 7) reward flow
+    // 7) reward flow — use a fresh teacher to avoid unique constraint conflict on re-run
+    const rewardTeacherEmail = `reward.teacher.${Date.now()}@rafiq.local`;
+    const rewardTeacherCreate = await jsonAuthRequest(superAuth.token, "/users", "POST", {
+      fullName: `Reward Smoke Teacher ${Date.now()}`,
+      email: rewardTeacherEmail,
+      role: "TEACHER",
+      links: { centerIds: [centerPrimaryId] }
+    });
+    checkStatus(checks, "reward_teacher_create_201", rewardTeacherCreate.status, 201);
+    const rewardBeneficiaryId = rewardTeacherCreate.body.data.id as number;
+
     const rewardProfile = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/reward/profiles",
       "POST",
       {
         centerId: centerPrimaryId,
-        beneficiaryUserId: teacherId,
+        beneficiaryUserId: rewardBeneficiaryId,
         beneficiaryRole: "TEACHER",
         cycle: "MONTHLY",
         defaultAmount: 250,
@@ -875,7 +932,7 @@ const main = async () => {
 
     const now = new Date();
     const rewardCreate = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       "/finance/v2/reward/batches",
       "POST",
       {
@@ -893,7 +950,7 @@ const main = async () => {
       "reward_batch_submit_200",
       (
         await jsonAuthRequest(
-          centerAdminAuth.token,
+          financeAuth.token,
           `/finance/v2/reward/batches/${rewardBatchId}/submit`,
           "POST",
           { comment: "submit reward" }
@@ -913,13 +970,13 @@ const main = async () => {
     checkBool(checks, "reward_batch_has_items", rewardItems.length > 0);
 
     const rewardPay = await jsonAuthRequest(
-      centerAdminAuth.token,
+      financeAuth.token,
       `/finance/v2/reward/batches/${rewardBatchId}/pay`,
       "POST",
       {
         payments: rewardItems.map((item) => ({
           itemId: item.id,
-          voucherNo: nextId("REWARD"),
+          manualReferenceNo: nextId("REWARD"),
           method: "CASH"
         }))
       }
@@ -944,7 +1001,6 @@ const main = async () => {
         centerId: centerPrimaryId,
         accountId: northAccount.id,
         voucherType: "RECEIPT",
-        voucherNo: nextId("VOC-SUP-BLOCK"),
         amount: 10
       }
     );

@@ -38,6 +38,8 @@ const FinanceCurrenciesPage = React.lazy(() => import("../pages/finance/FinanceC
 const FinanceExpensesPage = React.lazy(() => import("../pages/finance/FinanceExpensesPage"));
 const FinanceAssetsPage = React.lazy(() => import("../pages/finance/FinanceAssetsPage"));
 const FinanceCenterFundingPage = React.lazy(() => import("../pages/finance/FinanceCenterFundingPage"));
+const FinanceDonationsReportPage = React.lazy(() => import("../pages/finance/FinanceDonationsReportPage"));
+const FinanceReceiptsReportPage = React.lazy(() => import("../pages/finance/FinanceReceiptsReportPage"));
 const FinanceStatementOfFinancialPositionPage = React.lazy(() => import("../pages/finance/FinanceStatementOfFinancialPositionPage"));
 const FinanceStatementOfActivitiesPage = React.lazy(() => import("../pages/finance/FinanceStatementOfActivitiesPage"));
 const AccountingAccountsPage = React.lazy(() => import("../pages/accounting/AccountingAccountsPage"));
@@ -99,6 +101,8 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   finance_expenses: <FinanceExpensesPage />,
   finance_assets: <FinanceAssetsPage />,
   finance_center_funding: <FinanceCenterFundingPage />,
+  finance_donations_report: <FinanceDonationsReportPage />,
+  finance_receipts_report: <FinanceReceiptsReportPage />,
   finance_financial_position: <FinanceStatementOfFinancialPositionPage />,
   finance_statement_of_activities: <FinanceStatementOfActivitiesPage />,
   accounting_accounts: <AccountingAccountsPage />,

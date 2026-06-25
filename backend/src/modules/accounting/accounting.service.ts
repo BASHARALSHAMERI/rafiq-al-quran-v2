@@ -427,6 +427,22 @@ export const ensurePeriodOpenTx = async (
   });
 
   if (!period) {
+    const all = await tx.fiscalPeriod.findMany({
+      where: { organizationId },
+      select: { id: true, periodNumber: true, startDate: true, endDate: true, status: true }
+    });
+    console.error(
+      "[FISCAL_DEBUG] org=%d date=%s dateLocal=%s",
+      organizationId,
+      date.toISOString(),
+      date.toString()
+    );
+    for (const p of all) {
+      console.error(
+        "[FISCAL_DEBUG] period=%d num=%d start=%s end=%s status=%s",
+        p.id, p.periodNumber, p.startDate.toISOString(), p.endDate.toISOString(), p.status
+      );
+    }
     throw new AppError(
       "لا توجد فترة مالية مفتوحة تغطي تاريخ العملية",
       409,

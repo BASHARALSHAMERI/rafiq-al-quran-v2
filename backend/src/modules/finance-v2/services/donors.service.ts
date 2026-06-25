@@ -336,6 +336,80 @@ export const donorsService = {
     return normalize({ rows, total, page: pagination.page, pageSize: pagination.pageSize });
   },
 
+  async getDonationReport(
+    scope: ScopeContext,
+    query: {
+      dateFrom?: string;
+      dateTo?: string;
+      centerId?: number;
+      donorId?: number;
+      status?: DonationStatus;
+      paymentMethod?: PaymentMethod;
+      currencyCode?: string;
+      search?: string;
+    }
+  ) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
+
+    const where: Prisma.DonationWhereInput = {
+      organizationId: scope.organizationId,
+      ...donationCenterScopeWhere(scope, query.centerId),
+      ...(query.donorId ? { donorId: query.donorId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
+      ...(query.dateFrom || query.dateTo ? {
+        donationDate: {
+          ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+          ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
+        }
+      } : {}),
+      ...(query.currencyCode ? { originalCurrencyCode: query.currencyCode.toUpperCase() } : {}),
+      ...(query.search ? {
+        OR: [
+          { notes: { contains: query.search, mode: "insensitive" } },
+          { purpose: { contains: query.search, mode: "insensitive" } },
+          { donor: { name: { contains: query.search, mode: "insensitive" } } },
+        ]
+      } : {}),
+    };
+
+    const [rows, summaryResult] = await Promise.all([
+      prisma.donation.findMany({
+        where,
+        orderBy: [{ donationDate: "desc" }, { id: "desc" }],
+        select: donationSelect
+      }),
+      prisma.donation.aggregate({
+        where,
+        _sum: { amount: true },
+        _count: true,
+      }),
+    ]);
+
+    const totalAmount = Number(summaryResult._sum.amount ?? 0);
+    const totalCount = summaryResult._count;
+    const receivedRows = rows.filter(r => r.status === DonationStatus.RECEIVED);
+    const receivedTotal = receivedRows.reduce((sum, r) => sum + Number(r.amount), 0);
+    const receivedCount = receivedRows.length;
+
+    // Last donation date
+    const lastDonation = rows.length > 0 ? rows[0].donationDate : null;
+
+    return normalize({
+      rows,
+      total: totalCount,
+      summary: {
+        totalAmount,
+        totalCount,
+        receivedAmount: receivedTotal,
+        receivedCount,
+        pledgedCount: totalCount - receivedCount,
+        lastDonationDate: lastDonation,
+      }
+    });
+  },
+
   async createDonation(scope: ScopeContext, input: DonationInput) {
     financeV2Domain.assertWriteEnabled();
     financeV2Domain.assertCanWrite(scope);

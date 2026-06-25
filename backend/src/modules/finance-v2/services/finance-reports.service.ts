@@ -311,6 +311,119 @@ export const financeReportsService = {
     });
   },
 
+  async reportReceipts(
+    scope: ScopeContext,
+    query: {
+      dateFrom?: string;
+      dateTo?: string;
+      centerId?: number;
+      accountId?: number;
+      status?: VoucherStatus;
+      sourceType?: VoucherSourceType;
+      paymentMethod?: PaymentMethod;
+      search?: string;
+      voucherNo?: string;
+    }
+  ) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
+    financeV2Domain.ensureCenterAllowed(scope, query.centerId);
+
+    const centerScope = financeV2Domain.resolveCenterScope(scope, query.centerId);
+
+    const where: Prisma.FinanceVoucherWhereInput = {
+      organizationId: scope.organizationId,
+      voucherType: VoucherType.RECEIPT,
+      ...(centerScope?.length ? { centerId: { in: centerScope } } : {}),
+      ...(query.accountId ? { accountId: query.accountId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.sourceType ? { sourceType: query.sourceType } : {}),
+      ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
+      ...(query.voucherNo ? { voucherNo: { contains: query.voucherNo, mode: "insensitive" } } : {}),
+      ...(query.dateFrom || query.dateTo ? {
+        voucherDate: {
+          ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+          ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
+        }
+      } : {}),
+      ...(query.search ? {
+        OR: [
+          { notes: { contains: query.search, mode: "insensitive" } },
+          { voucherNo: { contains: query.search, mode: "insensitive" } },
+          { externalTransferRef: { contains: query.search, mode: "insensitive" } },
+          { manualReferenceNo: { contains: query.search, mode: "insensitive" } },
+        ]
+      } : {}),
+    };
+
+    const rows = await prisma.financeVoucher.findMany({
+      where,
+      orderBy: [{ voucherDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true, organizationId: true, centerId: true, accountId: true,
+        voucherType: true, voucherNo: true, sourceType: true, sourceId: true,
+        paymentMethod: true, amount: true, originalAmount: true,
+        originalCurrencyCode: true, exchangeRateToBase: true,
+        status: true, accountingCategory: true, attachmentStorageKey: true,
+        externalTransferRef: true, manualReferenceNo: true, notes: true,
+        createdById: true, approvedById: true, postedById: true,
+        submittedAt: true, approvedAt: true, rejectedAt: true, rejectionReason: true,
+        postedAt: true, voidRequestedAt: true, voidedAt: true,
+        voucherDate: true, cancelledAt: true, createdAt: true, updatedAt: true,
+        account: {
+          select: { id: true, accountType: true, centerId: true, accountingAccountId: true, currentBalance: true, currencyCode: true, accountingAccount: { select: { id: true, code: true, name: true, type: true } } }
+        },
+        center: { select: { id: true, name: true, code: true } },
+        createdBy: { select: { id: true, fullName: true, role: true } },
+        approvedBy: { select: { id: true, fullName: true, role: true } },
+        postedBy: { select: { id: true, fullName: true, role: true } },
+        movement: { select: { id: true, movementType: true, direction: true, amount: true, balanceBefore: true, balanceAfter: true, postedAt: true, reversalOfMovementId: true } },
+        donation: {
+          select: {
+            id: true,
+            donor: { select: { id: true, name: true, donorType: true } },
+            purpose: true,
+          }
+        },
+        payment: {
+          select: {
+            id: true,
+            invoice: {
+              select: { id: true, month: true, year: true, student: { select: { id: true, fullName: true } } }
+            }
+          }
+        },
+      }
+    });
+
+    const totalAmount = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+    const postedRows = rows.filter(r => r.status === VoucherStatus.POSTED);
+    const cancelledRows = rows.filter(r => r.status === VoucherStatus.CANCELLED || r.status === VoucherStatus.VOIDED);
+    const postedAmount = postedRows.reduce((sum, r) => sum + Number(r.amount), 0);
+    const lastReceipt = rows.length > 0 ? (rows[0].voucherDate ?? rows[0].createdAt) : null;
+
+    const bySource: Record<string, { count: number; amount: number }> = {};
+    for (const r of rows) {
+      const key = r.sourceType;
+      if (!bySource[key]) bySource[key] = { count: 0, amount: 0 };
+      bySource[key].count++;
+      bySource[key].amount += Number(r.amount);
+    }
+
+    return normalize({
+      rows,
+      summary: {
+        totalCount: rows.length,
+        totalAmount: Number(totalAmount.toFixed(2)),
+        postedCount: postedRows.length,
+        postedAmount: Number(postedAmount.toFixed(2)),
+        cancelledCount: cancelledRows.length,
+        lastReceiptDate: lastReceipt,
+        bySource,
+      }
+    });
+  },
+
   async reportInvoiceAging(
     scope: ScopeContext,
     query: {

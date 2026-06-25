@@ -10,6 +10,50 @@ type PrintSignature = {
   label: string;
 };
 
+export type FinanceReportColumn<T> = {
+  label: string;
+  render: (row: T, index: number) => string | number | null | undefined;
+  align?: "right" | "center" | "left";
+};
+
+export type FinanceReportKpi = {
+  label: string;
+  value: string | number;
+  color?: string;
+};
+
+export type FinanceReportSection<T> = {
+  title: string;
+  subtitle?: string;
+  rows: T[];
+  columns: FinanceReportColumn<T>[];
+  totalLabel?: string;
+  totalValue?: string | number;
+};
+
+export type PrintFinanceReportOptions<T> = {
+  title: string;
+  subtitle?: string;
+  periodLabel?: string;
+  rows?: T[];
+  columns?: FinanceReportColumn<T>[];
+  sections?: FinanceReportSection<T>[];
+  kpis?: FinanceReportKpi[];
+  signatures?: PrintSignature[];
+  footerNote?: string;
+  logoUrl?: string;
+  orgName?: string;
+  ar?: boolean;
+  orientation?: "portrait" | "landscape";
+};
+
+export type ExportFinanceCsvOptions<T> = {
+  filename: string;
+  rows: T[];
+  columns: FinanceReportColumn<T>[];
+  extraRows?: Array<Array<string | number | null | undefined>>;
+};
+
 type PrintAccountingDocumentOptions<T> = {
   title: string;
   subtitle?: string;
@@ -48,6 +92,214 @@ export const formatArabicDate = (date?: string | Date | null): string => {
     day: "numeric",
   });
 };
+
+const csvCell = (value: unknown): string => {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+export function exportFinanceCsv<T>({
+  filename,
+  rows,
+  columns,
+  extraRows = [],
+}: ExportFinanceCsvOptions<T>) {
+  const csvRows: string[] = [];
+  csvRows.push(columns.map((column) => csvCell(column.label)).join(","));
+  rows.forEach((row, index) => {
+    csvRows.push(columns.map((column) => csvCell(column.render(row, index))).join(","));
+  });
+  extraRows.forEach((row) => {
+    csvRows.push(row.map(csvCell).join(","));
+  });
+
+  const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export function printFinanceReport<T>({
+  title,
+  subtitle,
+  periodLabel,
+  rows = [],
+  columns = [],
+  sections = [],
+  kpis = [],
+  signatures,
+  footerNote,
+  logoUrl,
+  orgName,
+  ar = true,
+  orientation = "portrait",
+}: PrintFinanceReportOptions<T>) {
+  const printWindow = window.open("", "_blank", "width=1100,height=800");
+  if (!printWindow) {
+    notifyError(ar
+      ? "تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة."
+      : "Unable to open the print window. Please allow pop-ups.");
+    return;
+  }
+
+  const accentColor = "#2D9B7A";
+  const accentLight = "#E4F4EE";
+  const accentBg = "#F2FAF6";
+  const resolvedLogoUrl = logoUrl || "/brand/rafiq-logo.svg";
+  const resolvedOrgName = orgName || (ar ? "جمعية رفقاء القرآن" : "Rafiq Al-Quran Association");
+  const resolvedFooter = footerNote || (ar
+    ? "نظام رفقاء القرآن - تقرير مالي صادر آليًا"
+    : "Rafiq Al-Quran System - Automatically generated financial report");
+  const resolvedSignatures = signatures || [
+    { label: ar ? "المحاسب" : "Accountant" },
+    { label: ar ? "أمين الصندوق" : "Treasurer" },
+    { label: ar ? "المدير" : "Director" },
+  ];
+  const emptyLabel = ar ? "لا توجد بيانات" : "No data";
+
+  const renderTable = (tableRows: T[], tableColumns: FinanceReportColumn<T>[]) => {
+    if (!tableColumns.length) return "";
+    const tableHead = tableColumns
+      .map((column) => `<th class="text-${column.align ?? "right"}">${escapeHtml(column.label)}</th>`)
+      .join("");
+    const tableBody = tableRows.length
+      ? tableRows
+          .map((row, rowIndex) => {
+            const cells = tableColumns
+              .map((column) => `<td class="text-${column.align ?? "right"}">${escapeHtml(column.render(row, rowIndex))}</td>`)
+              .join("");
+            return `<tr>${cells}</tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="${tableColumns.length}" class="empty-cell">${emptyLabel}</td></tr>`;
+    return `<table><thead><tr>${tableHead}</tr></thead><tbody>${tableBody}</tbody></table>`;
+  };
+
+  const kpiHtml = kpis.length
+    ? `<section class="kpi-bar">${kpis.map((kpi) => {
+        const color = kpi.color || accentColor;
+        return `
+          <div class="kpi-card" style="border-color:${color}33;background:${color}10;">
+            <div class="kpi-value" style="color:${color};">${escapeHtml(kpi.value)}</div>
+            <div class="kpi-label">${escapeHtml(kpi.label)}</div>
+          </div>`;
+      }).join("")}</section>`
+    : "";
+
+  const mainTableHtml = columns.length ? renderTable(rows, columns) : "";
+  const sectionsHtml = sections
+    .map((section) => `
+      <section class="report-section">
+        <div class="section-head">
+          <div>
+            <h2>${escapeHtml(section.title)}</h2>
+            ${section.subtitle ? `<p>${escapeHtml(section.subtitle)}</p>` : ""}
+          </div>
+          ${section.totalLabel || section.totalValue != null
+            ? `<div class="section-total"><span>${escapeHtml(section.totalLabel ?? "")}</span><strong>${escapeHtml(section.totalValue ?? "")}</strong></div>`
+            : ""}
+        </div>
+        ${renderTable(section.rows, section.columns)}
+      </section>`)
+    .join("");
+
+  const signaturesHtml = resolvedSignatures
+    .map((signature) => `
+      <div class="sig">
+        <div class="sig-line"></div>
+        <div class="sig-label">${escapeHtml(signature.label)}</div>
+      </div>`)
+    .join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="${ar ? "rtl" : "ltr"}" lang="${ar ? "ar" : "en"}">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; padding: 34px; color: #253246; background: #F7FAFC; }
+          .wrap { max-width: ${orientation === "landscape" ? "1180px" : "960px"}; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); overflow: hidden; position: relative; }
+          .wrap::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 6px; background: linear-gradient(90deg, ${accentColor}, ${accentColor}99, ${accentColor}); }
+          .inner { padding: 32px 36px 28px; }
+          .header { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: 2px solid ${accentLight}; margin-bottom: 22px; }
+          .header-logo { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; }
+          .header-center { flex: 1; }
+          .header-org-name { font-size: 17px; font-weight: 900; color: #173B33; line-height: 1.3; }
+          .header-sub { font-size: 11px; color: ${accentColor}; font-weight: 700; }
+          .header-left { text-align: ${ar ? "left" : "right"}; font-size: 11px; color: #718096; font-weight: 700; flex-shrink: 0; }
+          .title-section { text-align: center; margin-bottom: 22px; }
+          .title-section h1 { font-size: 22px; font-weight: 900; color: #173B33; display: inline-block; position: relative; }
+          .title-section h1::after { content: ""; display: block; width: 50%; height: 4px; background: linear-gradient(90deg, transparent, ${accentColor}, transparent); margin: 8px auto 0; border-radius: 2px; }
+          .title-sub, .period { font-size: 12px; color: #718096; font-weight: 700; margin-top: 6px; }
+          .kpi-bar { display: grid; grid-template-columns: repeat(${Math.min(Math.max(kpis.length, 1), 4)}, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+          .kpi-card { border: 1px solid ${accentLight}; border-radius: 10px; padding: 12px 14px; text-align: center; }
+          .kpi-value { font-size: 18px; font-weight: 900; line-height: 1.2; direction: ltr; }
+          .kpi-label { font-size: 10px; font-weight: 800; color: #718096; margin-top: 4px; }
+          .report-section { margin-top: 18px; break-inside: avoid; }
+          .section-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; border-bottom: 2px solid ${accentLight}; padding-bottom: 8px; margin-bottom: 8px; }
+          .section-head h2 { font-size: 15px; color: #173B33; font-weight: 900; }
+          .section-head p, .section-total span { font-size: 10px; color: #718096; font-weight: 700; }
+          .section-total { text-align: ${ar ? "left" : "right"}; }
+          .section-total strong { display: block; color: ${accentColor}; font-size: 15px; font-weight: 900; direction: ltr; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th { background: ${accentBg}; color: ${accentColor}; font-size: 10px; font-weight: 900; border: 1px solid ${accentLight}; padding: 9px 8px; }
+          td { border: 1px solid #E2E8F0; padding: 7px 8px; font-size: 11px; vertical-align: middle; color: #2D3748; }
+          tr:nth-child(even) td { background: #FAFBFC; }
+          .text-right { text-align: right; } .text-center { text-align: center; } .text-left { text-align: left; }
+          .empty-cell { text-align: center; padding: 24px; color: #A0AEC0; font-weight: 700; }
+          .signatures { display: grid; grid-template-columns: repeat(${resolvedSignatures.length}, minmax(0, 1fr)); gap: 18px; padding-top: 24px; border-top: 2px solid ${accentLight}; margin-top: 28px; }
+          .sig { text-align: center; }
+          .sig-line { width: 130px; border-top: 2px solid #CBD5E0; margin: 30px auto 8px; }
+          .sig-label { font-size: 12px; font-weight: 800; color: #4A5568; }
+          .footer { text-align: center; margin-top: 18px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 9px; color: #A0AEC0; font-weight: 700; }
+          @media print {
+            body { background: #FFFFFF; padding: 0; }
+            .wrap { max-width: none; box-shadow: none; border-radius: 0; }
+            .inner { padding: 18px 22px; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            @page { margin: 12mm 10mm; size: A4 ${orientation}; }
+          }
+        </style>
+      </head>
+      <body>
+        <main class="wrap">
+          <div class="inner">
+            <header class="header">
+              <img class="header-logo" src="${escapeHtml(resolvedLogoUrl)}" alt="Logo" />
+              <div class="header-center">
+                <div class="header-org-name">${escapeHtml(resolvedOrgName)}</div>
+                <div class="header-sub">${escapeHtml(title)}</div>
+              </div>
+              <div class="header-left">${escapeHtml(formatArabicDate(new Date()))}</div>
+            </header>
+            <section class="title-section">
+              <h1>${escapeHtml(title)}</h1>
+              ${subtitle ? `<div class="title-sub">${escapeHtml(subtitle)}</div>` : ""}
+              ${periodLabel ? `<div class="period">${escapeHtml(periodLabel)}</div>` : ""}
+            </section>
+            ${kpiHtml}
+            ${mainTableHtml}
+            ${sectionsHtml}
+            <section class="signatures">${signaturesHtml}</section>
+            <footer class="footer">${escapeHtml(resolvedFooter)}</footer>
+          </div>
+        </main>
+        <script>window.onload = function () { window.focus(); setTimeout(function () { window.print(); }, 300); };</script>
+      </body>
+    </html>`;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
 
 export function printAccountingDocument<T>({
   title,

@@ -1,5 +1,5 @@
 // HR-PAYROLL-UX-COMPLETE: FinanceSalaryGradesTab with CreatableCombobox for jobTitle & gradeLevel
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { Edit, Award } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
@@ -60,13 +60,6 @@ export default function FinanceSalaryGradesTab({
   const [formOpen, setFormOpen] = useState(false);
   const [editingGrade, setEditingGrade] = useState<SalaryGradeV2 | null>(null);
 
-  // Sync with parent's trigger
-  useEffect(() => {
-    if (externalShowForm && canManage) {
-      openNew();
-    }
-  }, [externalShowForm, canManage]);
-
   const gradesQ = useFinanceV2SalaryGradesQuery(centerId);
   const grades = useMemo(() => gradesQ.data ?? [], [gradesQ.data]);
   const pagination = useClientPagination(grades, { initialPageSize: 10 });
@@ -99,12 +92,19 @@ export default function FinanceSalaryGradesTab({
     return Array.from(new Set([...DEFAULT_GRADE_LEVELS, ...fromDb]));
   }, [grades]);
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     if (!canManage) return;
     setFormState({ jobTitle: "", gradeLevel: "", baseSalary: 0, currencyCode: "", isActive: true, notes: "" });
     setEditingGrade(null);
     setFormOpen(true);
-  };
+  }, [canManage]);
+
+  // Sync with parent's trigger
+  useEffect(() => {
+    if (externalShowForm && canManage) {
+      openNew();
+    }
+  }, [externalShowForm, canManage, openNew]);
 
   const openEdit = (g: SalaryGradeV2) => {
     if (!canManage) return;

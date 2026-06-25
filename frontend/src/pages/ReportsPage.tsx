@@ -48,6 +48,7 @@ import type { ReportsFilters, ReportType } from "../features/reports/types";
 import { ReportsSummaryCards } from "../features/reports/components/ReportsSummaryCards";
 import { MonthlyStaffReportView } from "../features/staff-attendance/components/MonthlyStaffReportView";
 
+import { UNIFIED_CATALOG } from "../features/reports/reports-catalog.unified";
 import "../styles/pages/centers-modern.css";
 import "../styles/pages/finance-premium.css";
 import "../styles/pages/finance-v4.css";
@@ -72,7 +73,7 @@ const defaultFrom = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.
 /* ─── Types ─── */
 type ReportStatus = "ready" | "needs-data" | "coming-soon";
 type ViewLevel = "CATALOG" | "UNIFIED" | "STAFF";
-type SectionFilter = "all" | "admin" | "educational" | "attendance" | "exams" | "golden" | "finance" | "official";
+type SectionFilter = "all" | "admin" | "educational" | "attendance" | "exams" | "golden" | "finance" | "official" | "financial-reports" | "audit-reports" | "operational-sheets" | "donors-reports" | "receipts-reports";
 type StatusFilter = "all" | "ready" | "coming-soon" | "needs-data";
 type OutputFilter = "all" | "screen" | "print" | "pdf" | "excel";
 type OutputTag = "screen" | "print" | "pdf" | "excel";
@@ -87,6 +88,7 @@ type ReportCardDef = {
   descEn: string;
   icon: ComponentType<{ className?: string; size?: number | string }>;
   status: ReportStatus;
+  kind?: "report" | "inline-report" | "summary-report" | "external-route" | "operational-list" | "coming-soon";
   reportType?: ReportType;
   summaryKey?: "centers" | "circles" | "students" | "golden-records";
   href?: string;
@@ -138,8 +140,10 @@ const REPORT_GROUPS: ReportGroupDef[] = [
   },
 ];
 
+/* ─── Active Catalog (unified source, fallback to legacy REPORT_GROUPS) ─── */
+const ACTIVE_CATALOG: ReportGroupDef[] = UNIFIED_CATALOG.length > 0 ? (UNIFIED_CATALOG as unknown as ReportGroupDef[]) : REPORT_GROUPS;
 /* ─── Helpers ─── */
-const ALL_CARDS = REPORT_GROUPS.flatMap((g) => g.cards);
+const ALL_CARDS = ACTIVE_CATALOG.flatMap((g) => g.cards);
 const toDisplay = (value: unknown): string => {
   if (value == null) return "-";
   if (typeof value === "object") return JSON.stringify(value);
@@ -158,16 +162,18 @@ const statusBadge = (value: string): "default" | "success" | "warning" | "error"
 const statusLabelAr: Record<ReportStatus, string> = { ready: "جاهز", "needs-data": "يحتاج بيانات", "coming-soon": "قريبًا" };
 const statusLabelEn: Record<ReportStatus, string> = { ready: "Ready", "needs-data": "Needs Data", "coming-soon": "Coming Soon" };
 
-const sectionLabelAr: Record<SectionFilter, string> = { all: "الكل", admin: "إداري", educational: "تعليمي", attendance: "حضور", exams: "اختبارات", golden: "سجل ذهبي", finance: "مالي", official: "رسمي" };
-const sectionLabelEn: Record<SectionFilter, string> = { all: "All", admin: "Admin", educational: "Education", attendance: "Attendance", exams: "Exams", golden: "Golden", finance: "Finance", official: "Official" };
+const sectionLabelAr: Record<SectionFilter, string> = { all: "الكل", admin: "إداري", educational: "التعليمية والتربوية", attendance: "حضور", exams: "اختبارات", golden: "سجل ذهبي", finance: "مالي", official: "رسمي", "financial-reports": "التقارير المالية", "audit-reports": "الرقابة والمراجعة", "operational-sheets": "الكشوف التشغيلية", "donors-reports": "التبرعات والداعمين", "receipts-reports": "الإيصالات والسندات" };
+const sectionLabelEn: Record<SectionFilter, string> = { all: "All", admin: "Admin", educational: "Educational", attendance: "Attendance", exams: "Exams", golden: "Golden", finance: "Finance", official: "Official", "financial-reports": "Financial", "audit-reports": "Audit", "operational-sheets": "Operational", "donors-reports": "Donors", "receipts-reports": "Receipts" };
 const statusFilterAr: Record<StatusFilter, string> = { all: "الكل", ready: "جاهز", "coming-soon": "قريبًا", "needs-data": "يحتاج ربط" };
 const statusFilterEn: Record<StatusFilter, string> = { all: "All", ready: "Ready", "coming-soon": "Soon", "needs-data": "Needs Data" };
 const outputFilterAr: Record<OutputFilter, string> = { all: "الكل", screen: "شاشة", print: "طباعة", pdf: "PDF", excel: "Excel" };
 const outputFilterEn: Record<OutputFilter, string> = { all: "All", screen: "Screen", print: "Print", pdf: "PDF", excel: "Excel" };
 const scopeLabelAr: Record<ScopeTag, string> = { org: "جمعية", center: "مركز", circle: "حلقة", student: "طالب", finance: "مالي" };
 
+const financeSections = ["finance", "financial-reports", "audit-reports", "operational-sheets", "donors-reports", "receipts-reports"];
+
 const canSeeCard = (card: ReportCardDef, role: string | undefined): boolean => {
-  if (role === "ACCOUNTANT") return card.section === "finance";
+  if (role === "ACCOUNTANT") return financeSections.includes(card.section);
   if (card.visibility === "all") return true;
   if (card.visibility === "super" && role === "SUPER_ADMIN") return true;
   if (card.visibility === "center" && role === "CENTER_ADMIN") return true;
@@ -226,7 +232,7 @@ export default function ReportsPage() {
   /* filtered catalog */
   const filteredGroups = useMemo(() => {
     const lq = searchQ.toLowerCase();
-    return REPORT_GROUPS.map((g) => {
+    return ACTIVE_CATALOG.map((g) => {
       const cards = g.cards.filter((c) => {
         if (!canSeeCard(c, role)) return false;
         if (secFilter !== "all" && c.section !== secFilter) return false;
@@ -243,7 +249,7 @@ export default function ReportsPage() {
   const stats = useMemo(() => {
     const total = visibleCards.length;
     const ready = visibleCards.filter((c) => c.status === "ready").length;
-    const finance = visibleCards.filter((c) => c.section === "finance").length;
+    const finance = visibleCards.filter((c) => financeSections.includes(c.section)).length;
     const printable = visibleCards.filter((c) => c.outputs.some((o) => o === "print" || o === "pdf")).length;
     const soon = visibleCards.filter((c) => c.status !== "ready").length;
     return { total, ready, finance, printable, soon };

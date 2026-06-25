@@ -320,6 +320,18 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  getDonationReport: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const data = await donorsService.getDonationReport(req.scope, res.locals.validatedQuery);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   createDonation: (async (req, res, next) => {
     try {
       if (!req.scope) {
@@ -759,6 +771,18 @@ export const financeV2Controller = {
         throw new AppError("Scope not resolved", 500);
       }
       const data = await financeReportsService.reportVouchers(req.scope, res.locals.validatedQuery);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  reportReceipts: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const data = await financeReportsService.reportReceipts(req.scope, res.locals.validatedQuery);
       res.json({ ok: true, data });
     } catch (error) {
       next(error);

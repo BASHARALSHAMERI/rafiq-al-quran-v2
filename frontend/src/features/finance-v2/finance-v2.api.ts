@@ -28,6 +28,10 @@ import type {
   FinanceReportVouchersV2,
   FinanceReportCenterFundingV2,
   FinanceVoucherV2,
+  DonationReportQuery,
+  DonationReportResponse,
+  ReceiptReportQuery,
+  ReceiptReportResponse,
   PaginatedRows,
   PayrollItemV2,
   PayrollBatchV2,
@@ -684,6 +688,17 @@ export const financeV2Api = {
     };
   },
 
+  async getDonationReport(params: DonationReportQuery = {}): Promise<DonationReportResponse> {
+    const response = await apiClient.get<ApiResponse<DonationReportResponse>>(
+      "/finance/v2/reports/donations",
+      { params }
+    );
+    return {
+      ...response.data.data,
+      rows: response.data.data.rows.map((row) => normalizeDonation(row))
+    };
+  },
+
   async createDonation(payload: CreateFinanceDonationV2Payload): Promise<FinanceDonationV2> {
     const response = await apiClient.post<ApiResponse<FinanceDonationV2>>("/finance/donations", payload);
     return normalizeDonation(response.data.data);
@@ -1140,6 +1155,22 @@ export const financeV2Api = {
       { params }
     );
     return normalizeVouchersReport(response.data.data);
+  },
+
+  async getReceiptReport(params: ReceiptReportQuery = {}): Promise<ReceiptReportResponse> {
+    const response = await apiClient.get<ApiResponse<ReceiptReportResponse>>(
+      "/finance/v2/reports/receipts",
+      { params }
+    );
+    return {
+      ...response.data.data,
+      rows: (response.data.data.rows ?? []).map((row) => normalizeVoucher(row) as any),
+      summary: {
+        ...response.data.data.summary,
+        totalAmount: toNumber(response.data.data.summary.totalAmount),
+        postedAmount: toNumber(response.data.data.summary.postedAmount),
+      }
+    };
   },
 
   async getReportInvoiceAging(params: { centerId?: number } = {}): Promise<FinanceReportInvoiceAgingV2> {

@@ -653,7 +653,7 @@ export function CenterFormModal({
                         handleChange("latitude", position.coords.latitude.toFixed(6));
                         handleChange("longitude", position.coords.longitude.toFixed(6));
                       },
-                      (_) => {
+                      () => {
                         notifyError(ar ? "تعذر تحديد الموقع الجغرافي. تأكد من تفعيل GPS ومنح الصلاحية للمتصفح." : "Unable to retrieve location. Make sure GPS is enabled and browser permissions are granted.");
                       }
                     );

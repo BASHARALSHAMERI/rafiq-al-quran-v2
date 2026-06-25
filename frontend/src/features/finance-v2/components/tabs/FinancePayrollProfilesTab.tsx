@@ -1,5 +1,5 @@
 // HR-PAYROLL-UX-COMPLETE: FinancePayrollProfilesTab with employee search & override UX
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { User, Calculator, AlertCircle, Check } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
@@ -83,13 +83,6 @@ export default function FinancePayrollProfilesTab({
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
 
-  // Sync with parent's trigger
-  useEffect(() => {
-    if (externalShowForm && canManage) {
-      openNew();
-    }
-  }, [externalShowForm, canManage]);
-
   const handleClose = () => {
     setFormOpen(false);
     onExternalFormClose?.();
@@ -115,7 +108,7 @@ export default function FinancePayrollProfilesTab({
     }
   }, [selectedGrade, isOverride]);
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     if (!canManage) return;
     setFormState(emptyForm());
     setIsOverride(false);
@@ -124,7 +117,14 @@ export default function FinancePayrollProfilesTab({
     setFormMode("create");
     setEditingId(null);
     setFormOpen(true);
-  };
+  }, [canManage]);
+
+  // Sync with parent's trigger
+  useEffect(() => {
+    if (externalShowForm && canManage) {
+      openNew();
+    }
+  }, [externalShowForm, canManage, openNew]);
 
   const openEdit = (p: PayrollProfileV2) => {
     if (!canManage) return;

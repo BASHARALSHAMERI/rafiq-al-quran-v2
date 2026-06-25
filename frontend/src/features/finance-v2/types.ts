@@ -999,3 +999,98 @@ export type FinanceReportStatementOfActivitiesV2 = {
   };
   surplusOrDeficit: number;
 };
+
+// ─── Donation Report ───
+export type DonationReportQuery = {
+  dateFrom?: string;
+  dateTo?: string;
+  centerId?: number;
+  donorId?: number;
+  status?: DonationStatusV2;
+  paymentMethod?: PaymentMethodV2;
+  currencyCode?: string;
+  search?: string;
+};
+
+export type DonationReportSummary = {
+  totalAmount: number;
+  totalCount: number;
+  receivedAmount: number;
+  receivedCount: number;
+  pledgedCount: number;
+  lastDonationDate: string | null;
+};
+
+export type DonationReportResponse = {
+  rows: FinanceDonationV2[];
+  total: number;
+  summary: DonationReportSummary;
+};
+
+export type ReceiptReportQuery = {
+  dateFrom?: string;
+  dateTo?: string;
+  centerId?: number;
+  accountId?: number;
+  status?: VoucherStatusV2;
+  sourceType?: string;
+  paymentMethod?: PaymentMethodV2;
+  search?: string;
+  voucherNo?: string;
+};
+
+export type ReceiptReportSummary = {
+  totalCount: number;
+  totalAmount: number;
+  postedCount: number;
+  postedAmount: number;
+  cancelledCount: number;
+  lastReceiptDate: string | null;
+  bySource: Record<string, { count: number; amount: number }>;
+};
+
+export type ReceiptReportResponse = {
+  rows: ReceiptReportVoucher[];
+  summary: ReceiptReportSummary;
+};
+
+export type ReceiptReportVoucher = FinanceVoucherV2 & {
+  account?: {
+    id: number;
+    accountType: string;
+    centerId?: number | null;
+    accountingAccountId?: number | null;
+    currentBalance: number;
+    currencyCode: string;
+    accountingAccount?: { id: number; code: string; name: string; type: string } | null;
+  } | null;
+  createdBy?: { id: number; fullName: string; role: string } | null;
+  approvedBy?: { id: number; fullName: string; role: string } | null;
+  postedBy?: { id: number; fullName: string; role: string } | null;
+  movement?: {
+    id: number;
+    movementType: string;
+    direction: string;
+    amount: number;
+    balanceBefore: number;
+    balanceAfter: number;
+    postedAt: string | null;
+    reversalOfMovementId?: number | null;
+  } | null;
+  donation?: {
+    id: number;
+    donor?: { id: number; name: string; donorType: string } | null;
+    purpose?: string | null;
+  } | null;
+  payment?: {
+    id: number;
+    invoice?: {
+      id: number;
+      month: number;
+      year: number;
+      student?: { id: number; fullName: string } | null;
+    } | null;
+  } | null;
+  manualReferenceNo?: string | null;
+  accountingCategory?: string | null;
+};

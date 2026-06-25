@@ -12,6 +12,8 @@ import {
   ExamStatus,
   ExamQuestionSource,
   ExamType,
+  FiscalPeriodStatus,
+  FeeMode,
   EnrollmentStatus,
   Gender,
   LibraryItemStatus,
@@ -155,8 +157,25 @@ async function cleanup() {
     prisma.reportRun.deleteMany(),
     prisma.reportFile.deleteMany(),
     prisma.activityLog.deleteMany(),
+    prisma.payrollItem.deleteMany(),
+    prisma.rewardItem.deleteMany(),
+    prisma.payrollBatch.deleteMany(),
+    prisma.rewardBatch.deleteMany(),
+    prisma.payrollProfile.deleteMany(),
+    prisma.rewardProfile.deleteMany(),
+    prisma.expensePayment.deleteMany(),
+    prisma.financeAccountMovement.deleteMany(),
+    prisma.financeVoucher.deleteMany(),
+    prisma.financeFundTransfer.deleteMany(),
     prisma.payment.deleteMany(),
     prisma.invoice.deleteMany(),
+    prisma.studentFeeProfile.deleteMany(),
+    prisma.financePolicyProfile.deleteMany(),
+    prisma.financeAccount.deleteMany(),
+    prisma.journalEntryLine.deleteMany(),
+    prisma.journalEntry.deleteMany(),
+    prisma.fiscalPeriod.deleteMany(),
+    prisma.fiscalYear.deleteMany(),
     prisma.studentTuitionAssignment.deleteMany(),
     prisma.tuitionPlan.deleteMany(),
     prisma.libraryItem.deleteMany(),
@@ -205,6 +224,33 @@ async function seed() {
     }
   });
   await seedAccountingChart(prisma, organization.id);
+
+  await prisma.currency.upsert({
+    where: { organizationId_code: { organizationId: organization.id, code: "YER" } },
+    update: {},
+    create: {
+      organizationId: organization.id,
+      code: "YER",
+      nameAr: "ريال يمني",
+      nameEn: "Yemeni Rial",
+      symbol: "﷼",
+      decimalPlaces: 2,
+      isBase: true
+    }
+  });
+
+  await prisma.financePolicyProfile.create({
+    data: {
+      organizationId: organization.id,
+      feesEnabled: true,
+      requireTransferAttachment: true,
+      requireApprovalDisbursement: true,
+      requireApprovalReceipt: false,
+      allowFreeStudents: true,
+      allowSymbolicOneTimeFee: true,
+      allowOverdraft: false
+    }
+  });
 
   const superAdmin = await prisma.user.create({
     data: {
@@ -497,6 +543,7 @@ async function seed() {
   const previousMonthDate = new Date(currentYear, currentMonth - 2, 1);
   const previousMonth = previousMonthDate.getMonth() + 1;
   const previousYear = previousMonthDate.getFullYear();
+  const fiscalYearStart = new Date(currentYear, 0, 1);
   const currentIssuedAt = new Date(currentYear, currentMonth - 1, 1);
   const previousIssuedAt = new Date(previousYear, previousMonth - 1, 1);
 
@@ -538,6 +585,68 @@ async function seed() {
     ],
     skipDuplicates: true
   });
+
+  await prisma.studentFeeProfile.createMany({
+    data: [
+      {
+        organizationId: organization.id,
+        centerId: centerNorth.id,
+        studentId: studentNorth.id,
+        feeMode: FeeMode.PLAN_MONTHLY,
+        tuitionPlanId: northTuitionPlan.id,
+        isActive: true,
+        startDate: fiscalYearStart
+      },
+      {
+        organizationId: organization.id,
+        centerId: centerSouth.id,
+        studentId: studentSouth.id,
+        feeMode: FeeMode.PLAN_MONTHLY,
+        tuitionPlanId: southTuitionPlan.id,
+        isActive: true,
+        startDate: fiscalYearStart
+      }
+    ],
+    skipDuplicates: true
+  });
+
+  // Seed fiscal years and periods (2025-2030) to support smoke test retries across years
+  const arabicMonths = [
+    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+  ];
+  for (let year = 2025; year <= 2030; year++) {
+    const fy = await prisma.fiscalYear.upsert({
+      where: { organizationId_year: { organizationId: organization.id, year } },
+      update: { startDate: new Date(year, 0, 1), endDate: new Date(year, 11, 31), status: FiscalPeriodStatus.OPEN },
+      create: {
+        organizationId: organization.id,
+        year,
+        startDate: new Date(year, 0, 1),
+        endDate: new Date(year, 11, 31),
+        status: FiscalPeriodStatus.OPEN
+      }
+    });
+    for (let m = 0; m < 12; m++) {
+      const pStart = new Date(year, m, 1);
+      const pEnd = new Date(year, m + 1, 0);
+      await prisma.fiscalPeriod.upsert({
+        where: {
+          fiscalYearId_periodNumber: { fiscalYearId: fy.id, periodNumber: m + 1 }
+        },
+        update: { startDate: pStart, endDate: pEnd, status: FiscalPeriodStatus.OPEN },
+        create: {
+          fiscalYearId: fy.id,
+          organizationId: organization.id,
+          periodNumber: m + 1,
+          periodName: arabicMonths[m],
+          startDate: pStart,
+          endDate: pEnd,
+          status: FiscalPeriodStatus.OPEN
+        }
+      });
+    }
+  }
 
   const upsertInvoice = (input: {
     studentId: number;

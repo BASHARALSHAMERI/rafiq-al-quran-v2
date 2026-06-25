@@ -31,6 +31,7 @@ import {
   listAccountMovementsQuerySchema,
   listAccountsQuerySchema,
   listDonationsQuerySchema,
+  donationReportQuerySchema,
   listDonorsQuerySchema,
   listFundTransfersQuerySchema,
   listInvoicesV2QuerySchema,
@@ -56,6 +57,7 @@ import {
   updateDonorBodySchema,
   updateStudentFeeProfileBodySchema,
   vouchersReportQuerySchema,
+  receiptsReportQuerySchema,
   listSalaryGradesQuerySchema,
   createSalaryGradeBodySchema,
   updateSalaryGradeBodySchema,
@@ -548,6 +550,13 @@ financeV2Router.get(
 );
 
 financeV2Router.get(
+  "/finance/v2/reports/receipts",
+  requireRoles(financeReadRoles),
+  validateQuery(receiptsReportQuerySchema),
+  financeV2Controller.reportReceipts
+);
+
+financeV2Router.get(
   "/finance/v2/reports/invoice-aging",
   requireRoles(financeReadRoles),
   validateQuery(invoiceAgingReportQuerySchema),
@@ -575,6 +584,20 @@ financeV2Router.get(
   disableConditionalCache,
   validateQuery(reportsDashboardQuerySchema),
   financeV2Controller.reportCenterFundingSummary
+);
+
+// ─── Donation Report ───
+const donationReportRoles: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ACCOUNTANT,
+  Role.FINANCE_MANAGER,
+  Role.AUDITOR
+];
+financeV2Router.get(
+  "/finance/v2/reports/donations",
+  requireRoles(donationReportRoles),
+  validateQuery(donationReportQuerySchema),
+  financeV2Controller.getDonationReport
 );
 
 // FA-UX-4: Currencies

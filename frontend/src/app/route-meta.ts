@@ -92,6 +92,8 @@ export type AdminRouteId =
   | "accounting_trial_balance"
   | "accounting_fiscal_periods"
   | "reports"
+  | "finance_donations_report"
+  | "finance_receipts_report"
   | "reports_student_monthly"
   | "audit"
   | "settings"
@@ -509,6 +511,24 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     path: "/finance/reports/center-funding",
     get label() { return document.documentElement.lang === "ar" ? "تمويل وتكلفة المراكز" : "Center Funding & Cost"; },
     routeIcon: Building2,
+    section: "financeReports",
+    allowedRoles: FINANCE_WEB_ROLES,
+    sidebar: false,
+  },
+  {
+    id: "finance_donations_report",
+    path: "/finance/reports/donations",
+    get label() { return document.documentElement.lang === "ar" ? "تقرير التبرعات العامة" : "Donations Report"; },
+    routeIcon: HandHeart,
+    section: "financeReports",
+    allowedRoles: FINANCE_WEB_ROLES,
+    sidebar: false,
+  },
+  {
+    id: "finance_receipts_report",
+    path: "/finance/reports/receipts",
+    get label() { return document.documentElement.lang === "ar" ? "تقرير الإيصالات وسندات القبض" : "Receipts Report"; },
+    routeIcon: FileText,
     section: "financeReports",
     allowedRoles: FINANCE_WEB_ROLES,
     sidebar: false,

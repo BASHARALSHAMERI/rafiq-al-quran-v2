@@ -596,3 +596,36 @@ div.aud-modal {
   inset-inline-end: 0;
   border-radius: 4px 0 0 4px;
 }
+
+/* Statement of Activities reuse of Audit table logic */
+.soa-audit-report .aud-table.soa-table--compact td {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.soa-audit-report .aud-panel__body .aud-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg-canvas);
+}
+
+.soa-audit-report .soa-row--group td {
+  background: var(--bg-canvas);
+  font-weight: 800;
+}
+
+.soa-audit-report .soa-row--group:hover td {
+  background: var(--bg-canvas) !important;
+}
+
+.soa-audit-report .soa-row--subtotal td {
+  background: var(--bg-surface);
+  border-top: 2px solid var(--border-default);
+  border-bottom: 2px solid var(--border-default);
+  font-weight: 900;
+}
+
+.soa-audit-report .soa-row--subtotal:hover td {
+  background: var(--bg-surface) !important;
+}

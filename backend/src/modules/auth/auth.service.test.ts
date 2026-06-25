@@ -1,7 +1,6 @@
 import { Role } from "@prisma/client";
 import { authService } from "./auth.service";
 import { authRepository } from "./auth.repository";
-import { AppError } from "../../shared/errors/app-error";
 
 // ─── Mocks ───
 jest.mock("./auth.repository", () => ({
@@ -57,6 +56,13 @@ jest.mock("../../shared/logger/logger", () => ({
   },
 }));
 
+const expectAppError = async (
+  action: Promise<unknown>,
+  expected: { statusCode: number; code?: string }
+) => {
+  await expect(action).rejects.toMatchObject(expected);
+};
+
 describe("authService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -80,17 +86,19 @@ describe("authService", () => {
     it("should throw 401 when user not found", async () => {
       (authRepository.findByIdentifier as jest.Mock).mockResolvedValue(null);
 
-      await expect(
-        authService.login({ identifier: "unknown", password: "pass" }, clientInfo)
-      ).rejects.toThrow(new AppError("Invalid login credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS"));
+      await expectAppError(
+        authService.login({ identifier: "unknown", password: "pass" }, clientInfo),
+        { statusCode: 401, code: "AUTH_INVALID_CREDENTIALS" }
+      );
     });
 
     it("should throw 401 when user is inactive", async () => {
       (authRepository.findByIdentifier as jest.Mock).mockResolvedValue({ ...mockUser, isActive: false });
 
-      await expect(
-        authService.login({ identifier: "test", password: "pass" }, clientInfo)
-      ).rejects.toThrow(new AppError("Invalid login credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS"));
+      await expectAppError(
+        authService.login({ identifier: "test", password: "pass" }, clientInfo),
+        { statusCode: 401, code: "AUTH_INVALID_CREDENTIALS" }
+      );
     });
 
     it("should throw 403 when web user tries mobile-only role", async () => {
@@ -99,9 +107,10 @@ describe("authService", () => {
         role: Role.TEACHER,
       });
 
-      await expect(
-        authService.login({ identifier: "teacher", password: "pass" }, { ...clientInfo, platform: "web" })
-      ).rejects.toThrow(new AppError("Web access is restricted to administrators only", 403, undefined, "AUTH_FORBIDDEN_PLATFORM"));
+      await expectAppError(
+        authService.login({ identifier: "teacher", password: "pass" }, { ...clientInfo, platform: "web" }),
+        { statusCode: 403, code: "AUTH_FORBIDDEN_PLATFORM" }
+      );
     });
 
     it("should throw 401 when password is not set", async () => {
@@ -110,17 +119,19 @@ describe("authService", () => {
         passwordHash: null,
       });
 
-      await expect(
-        authService.login({ identifier: "test", password: "pass" }, clientInfo)
-      ).rejects.toThrow(new AppError("Account requires password setup", 401, undefined, "AUTH_PASSWORD_NOT_SET"));
+      await expectAppError(
+        authService.login({ identifier: "test", password: "pass" }, clientInfo),
+        { statusCode: 401, code: "AUTH_PASSWORD_NOT_SET" }
+      );
     });
 
     it("should throw 401 when password is incorrect", async () => {
       (authRepository.findByIdentifier as jest.Mock).mockResolvedValue(mockUser);
 
-      await expect(
-        authService.login({ identifier: "test", password: "wrongpassword" }, clientInfo)
-      ).rejects.toThrow(new AppError("Invalid login credentials", 401, undefined, "AUTH_INVALID_CREDENTIALS"));
+      await expectAppError(
+        authService.login({ identifier: "test", password: "wrongpassword" }, clientInfo),
+        { statusCode: 401, code: "AUTH_INVALID_CREDENTIALS" }
+      );
     });
 
     it("should return tokens and user on successful login", async () => {
@@ -188,13 +199,13 @@ describe("authService", () => {
     it("should throw 404 when user not found", async () => {
       (authRepository.findById as jest.Mock).mockResolvedValue(null);
 
-      await expect(authService.me(999)).rejects.toThrow(new AppError("User not found", 404));
+      await expectAppError(authService.me(999), { statusCode: 404 });
     });
 
     it("should throw 404 when user is inactive", async () => {
       (authRepository.findById as jest.Mock).mockResolvedValue({ ...mockUser, isActive: false });
 
-      await expect(authService.me(1)).rejects.toThrow(new AppError("User not found", 404));
+      await expectAppError(authService.me(1), { statusCode: 404 });
     });
 
     it("should return user data for active user", async () => {

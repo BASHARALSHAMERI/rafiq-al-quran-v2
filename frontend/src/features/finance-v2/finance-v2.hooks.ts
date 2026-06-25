@@ -21,7 +21,9 @@ import type {
   AssignAssetCustodyV2Payload,
   FinanceDonationsV2Query,
   FinanceDonorsV2Query,
-  FinanceInvoicesV2Query
+  FinanceInvoicesV2Query,
+  DonationReportQuery,
+  ReceiptReportQuery
 } from "./types";
 
 const invoicesKey = (filters: FinanceInvoicesV2Query) =>
@@ -77,6 +79,8 @@ export const FINANCE_V2_QUERY_KEYS = {
     [...FINANCE_V2_QUERY_KEYS.all, "reports-rewards", centerId ?? null] as const,
   reportsVouchers: (centerId?: number) =>
     [...FINANCE_V2_QUERY_KEYS.all, "reports-vouchers", centerId ?? null] as const,
+  reportsReceipts: () =>
+    [...FINANCE_V2_QUERY_KEYS.all, "reports-receipts"] as const,
   reportsInvoiceAging: (centerId?: number) =>
     [...FINANCE_V2_QUERY_KEYS.all, "reports-invoice-aging", centerId ?? null] as const,
   reportsFinancialPosition: (centerId?: number) =>
@@ -276,6 +280,14 @@ export const useFinanceV2DonationsQuery = (filters: FinanceDonationsV2Query = {}
     queryFn: () => financeV2Api.getDonations({ page: 1, pageSize: 100, ...filters }),
     staleTime: 20_000,
     placeholderData: keepPreviousData
+  });
+
+export const useFinanceV2DonationReportQuery = (filters: DonationReportQuery, enabled = true) =>
+  useQuery({
+    queryKey: [...FINANCE_V2_QUERY_KEYS.all, "reports", "donations", filters],
+    queryFn: () => financeV2Api.getDonationReport(filters),
+    enabled,
+    staleTime: 30_000,
   });
 
 export const useCreateFinanceV2DonationMutation = () => {
@@ -747,6 +759,14 @@ export const useFinanceV2ReportVouchersQuery = (centerId?: number) =>
     queryFn: () => financeV2Api.getReportVouchers({ centerId }),
     staleTime: 20_000,
     placeholderData: keepPreviousData
+  });
+
+export const useFinanceV2ReceiptReportQuery = (filters: ReceiptReportQuery = {}, enabled = true) =>
+  useQuery({
+    queryKey: [...FINANCE_V2_QUERY_KEYS.reportsReceipts(), filters],
+    queryFn: () => financeV2Api.getReceiptReport(filters),
+    staleTime: 20_000,
+    enabled,
   });
 
 export const useFinanceV2ReportInvoiceAgingQuery = (centerId?: number) =>
