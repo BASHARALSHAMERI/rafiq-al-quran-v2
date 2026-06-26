@@ -1,5 +1,7 @@
 import {
   AccountingAccountType,
+  AuditAction,
+  AuditEntityType,
   ExpenseInvoiceStatus,
   JournalEntryStatus,
   JournalSourceType,
@@ -15,7 +17,7 @@ import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { accountingService, ensurePeriodOpenTx } from "../../accounting/accounting.service";
 import { financeV2Domain } from "../finance-v2.domain";
-import { nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
+import { addAudit, nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
   return tx.accountingAccount.findFirst({
@@ -215,7 +217,14 @@ export const expensesService = {
         }
       });
 
-      // TODO: Add audit log for EXPENSE_INVOICE approval (AUDIT-TRAIL-FINANCE-1)
+      await addAudit({
+        scope,
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.EXPENSE_INVOICE,
+        entityId: approvedInvoice.id,
+        centerId: approvedInvoice.centerId,
+        summary: "تم اعتماد فاتورة مصروف"
+      });
 
       // Post AP Journal Entry if accounting category exists
       if (invoice.category.accountingAccountId) {
@@ -414,7 +423,14 @@ export const expensesService = {
         data: { status: newStatus }
       });
 
-      // TODO: Add audit log for EXPENSE_INVOICE payment (AUDIT-TRAIL-FINANCE-1)
+      await addAudit({
+        scope,
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.EXPENSE_INVOICE,
+        entityId: invoice.id,
+        centerId: invoice.centerId,
+        summary: "تم دفع فاتورة مصروف"
+      });
 
       await accountingService.postExpensePaymentSettlementJournalEntryTx(tx, scope, {
         expensePaymentId: payment.id,

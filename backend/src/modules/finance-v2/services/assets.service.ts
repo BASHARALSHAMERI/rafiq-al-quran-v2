@@ -1,5 +1,7 @@
 import {
   AccountingAccountType,
+  AuditAction,
+  AuditEntityType,
   FinanceMovementType,
   FixedAssetStatus,
   JournalSourceType,
@@ -15,6 +17,7 @@ import { AppError } from "../../../shared/errors/app-error";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { financeV2Domain } from "../finance-v2.domain";
 import {
+  addAudit,
   getEffectivePolicyTx,
   nextVoucherNoTx,
   postVoucherTx
@@ -346,7 +349,14 @@ export const assetsService = {
       // This register intentionally does not post a fixed-asset acquisition entry yet,
       // so an expense invoice link cannot double-post the same amount as both expense and asset.
       
-      // TODO: Add audit log for FIXED_ASSET creation (AUDIT-TRAIL-FINANCE-1)
+      await addAudit({
+        scope,
+        action: AuditAction.CREATE,
+        entityType: AuditEntityType.FIXED_ASSET,
+        entityId: asset.id,
+        centerId: asset.centerId,
+        summary: "تم إنشاء أصل ثابت"
+      });
       
       return asset;
     });
@@ -537,7 +547,14 @@ export const assetsService = {
         data: { acquisitionJournalEntryId: entry.id }
       });
 
-      // TODO: Add audit log for FIXED_ASSET acquisition (AUDIT-TRAIL-FINANCE-1)
+      await addAudit({
+        scope,
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.FIXED_ASSET,
+        entityId: asset.id,
+        centerId: asset.centerId,
+        summary: "تم ترحيل اكتساب أصل ثابت"
+      });
 
       return tx.fixedAsset.findUnique({
         where: { id: asset.id },
@@ -663,7 +680,14 @@ export const assetsService = {
         ]
       });
 
-      // TODO: Add audit log for FIXED_ASSET depreciation (AUDIT-TRAIL-FINANCE-1)
+      await addAudit({
+        scope,
+        action: AuditAction.UPDATE,
+        entityType: AuditEntityType.FIXED_ASSET,
+        entityId: asset.id,
+        centerId: asset.centerId,
+        summary: "تم ترحيل إهلاك أصل ثابت"
+      });
 
       return tx.fixedAsset.findUnique({
         where: { id: asset.id },
