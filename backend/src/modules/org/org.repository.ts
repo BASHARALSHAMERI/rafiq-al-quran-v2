@@ -165,6 +165,28 @@ const centerSelect = {
     select: {
       circles: true
     }
+  },
+  staffSchedules: {
+    where: {
+      staffRole: "CENTER_ADMIN",
+      isActive: true
+    },
+    select: {
+      id: true,
+      userId: true,
+      isActive: true,
+      slots: {
+        select: {
+          id: true,
+          dayOfWeek: true,
+          mode: true,
+          fromTime: true,
+          toTime: true,
+          fromPrayer: true,
+          toPrayer: true
+        }
+      }
+    }
   }
 } satisfies Prisma.CenterSelect;
 
@@ -260,6 +282,17 @@ const circleListSelect = {
   _count: {
     select: {
       enrollments: true
+    }
+  },
+  weeklyScheduleSlots: {
+    select: {
+      id: true,
+      dayOfWeek: true,
+      mode: true,
+      fromTime: true,
+      toTime: true,
+      fromPrayer: true,
+      toPrayer: true
     }
   }
 } satisfies Prisma.CircleSelect;

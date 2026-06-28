@@ -1,4 +1,4 @@
-﻿import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   BadgeCheck,
   BookOpen,
@@ -154,35 +154,17 @@ const formatCenterScheduleSummary = (center: Center, ar: boolean, hour12 = true,
   const rows = getCenterScheduleRows(center, fallbackRows);
   if (!rows.length) return null;
 
-  type Group = { from: CircleScheduleDay; to: CircleScheduleDay; key: string; label: string };
-  const groups: Group[] = [];
+  const firstRow = rows[0];
+  const firstLabel = formatSlotRange(firstRow, ar, hour12);
+  const dayLabelStr = dayLabel(firstRow.day, ar);
 
-  for (const row of rows) {
-    const key = `${row.mode}:${formatSlotRange(row, ar, hour12)}`;
-    const dayPos = DAY_INDEX.get(row.day) ?? -1;
-    const current = groups[groups.length - 1];
+  const mainPart = `${dayLabelStr} ${firstLabel}`;
 
-    if (!current) {
-      groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
-      continue;
-    }
-
-    const currentPos = DAY_INDEX.get(current.to) ?? -1;
-    if (current.key === key && dayPos === currentPos + 1) {
-      current.to = row.day;
-      continue;
-    }
-
-    groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
+  if (rows.length > 1) {
+    return `${mainPart} +${rows.length - 1}`;
   }
 
-  const main = groups[0];
-  const dayPart =
-    main.from === main.to ? dayLabel(main.from, ar) : `${dayLabel(main.from, ar)} - ${dayLabel(main.to, ar)}`;
-
-  return groups.length > 1
-    ? `${dayPart} ${main.label} ${ar ? `+${groups.length - 1}` : `+${groups.length - 1}`}`
-    : `${dayPart} ${main.label}`;
+  return mainPart;
 };
 
 export function CenterCard({

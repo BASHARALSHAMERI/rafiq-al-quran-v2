@@ -100,33 +100,19 @@ const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | nul
   }
   const compactRows = Array.from(firstPerDay.values());
 
-  type Group = { from: CircleScheduleDay; to: CircleScheduleDay; key: string; label: string };
-  const groups: Group[] = [];
-  for (const row of compactRows) {
-    const key = `${row.mode}:${formatSlotRange(row, ar, hour12)}`;
-    const dayPos = DAY_INDEX.get(row.day) ?? -1;
-    const current = groups[groups.length - 1];
+  if (!compactRows.length) return null;
 
-    if (!current) {
-      groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
-      continue;
-    }
+  const firstRow = compactRows[0];
+  const firstLabel = formatSlotRange(firstRow, ar, hour12);
+  const dayLabelStr = dayLabel(firstRow.day, ar);
 
-    const currentPos = DAY_INDEX.get(current.to) ?? -1;
-    if (current.key === key && dayPos === currentPos + 1) {
-      current.to = row.day;
-      continue;
-    }
+  const mainPart = `${dayLabelStr} ${firstLabel}`;
 
-    groups.push({ from: row.day, to: row.day, key, label: formatSlotRange(row, ar, hour12) });
+  if (compactRows.length > 1) {
+    return `${mainPart} +${compactRows.length - 1}`;
   }
 
-  const main = groups[0];
-  const dayPart =
-    main.from === main.to ? dayLabel(main.from, ar) : `${dayLabel(main.from, ar)} - ${dayLabel(main.to, ar)}`;
-  return groups.length > 1
-    ? `${dayPart} ${main.label} +${groups.length - 1}`
-    : `${dayPart} ${main.label}`;
+  return mainPart;
 };
 
 export default function CircleCard({

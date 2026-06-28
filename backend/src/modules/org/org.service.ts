@@ -382,6 +382,22 @@ const toCircleResponse = <TCircle extends object>(
   };
 };
 
+const toCenterResponse = <TCenter extends { centerAdminUserId?: number | null; staffSchedules?: any[] }>(
+  center: TCenter
+) => {
+  const activeAssignment = center.staffSchedules?.find(
+    (s: any) => s.isActive && s.userId === center.centerAdminUserId
+  );
+  const slots = activeAssignment?.slots ?? [];
+  const centerAdminSchedule = serializeWeeklySchedule(slots);
+
+  const { staffSchedules, ...rest } = center;
+  return {
+    ...rest,
+    centerAdminSchedule
+  };
+};
+
 const validateCenterAssignments = async (
   scope: ScopeContext,
   input: { centerAdminUserId: number; supervisorUserIds: number[] }
@@ -463,10 +479,11 @@ export const orgService = {
   async listCenters(scope: ScopeContext, query: { centerId?: number }) {
     const centerIds = orgDomain.resolveCenterScope(scope, query.centerId);
 
-    return orgRepository.listCenters({
+    const centers = await orgRepository.listCenters({
       organizationId: scope.organizationId,
       centerIds
     });
+    return centers.map((center) => toCenterResponse(center));
   },
 
   async listCircles(scope: ScopeContext, query: { centerId?: number; circleId?: number }) {

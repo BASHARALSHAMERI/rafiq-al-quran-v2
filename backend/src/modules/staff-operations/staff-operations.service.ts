@@ -1974,18 +1974,56 @@ async function resolveTeacherCircle(scope: ScopeContext, circleId?: number) {
         teacherId: scope.userId,
         isActive: true
       },
-      select: { id: true, centerId: true, latitude: true, longitude: true, allowedRadiusMeters: true, name: true, locationText: true }
+      select: { 
+        id: true, 
+        centerId: true, 
+        latitude: true, 
+        longitude: true, 
+        allowedRadiusMeters: true, 
+        name: true, 
+        locationText: true,
+        center: {
+          select: {
+            latitude: true,
+            longitude: true,
+            allowedRadiusMeters: true,
+            locationText: true
+          }
+        }
+      }
     });
 
     if (!firstCircle) {
       throw new AppError("لم يتم العثور على حلقات مسندة إليك", 404, undefined, "NOT_FOUND");
     }
-    return firstCircle;
+    return {
+      ...firstCircle,
+      latitude: firstCircle.latitude ?? firstCircle.center?.latitude,
+      longitude: firstCircle.longitude ?? firstCircle.center?.longitude,
+      allowedRadiusMeters: firstCircle.allowedRadiusMeters ?? firstCircle.center?.allowedRadiusMeters,
+      locationText: firstCircle.locationText ?? firstCircle.center?.locationText ?? firstCircle.name
+    };
   }
 
   const circle = await prisma.circle.findUnique({
     where: { id: circleId },
-    select: { id: true, centerId: true, latitude: true, longitude: true, allowedRadiusMeters: true, name: true, locationText: true }
+    select: { 
+      id: true, 
+      centerId: true, 
+      latitude: true, 
+      longitude: true, 
+      allowedRadiusMeters: true, 
+      name: true, 
+      locationText: true,
+      center: {
+        select: {
+          latitude: true,
+          longitude: true,
+          allowedRadiusMeters: true,
+          locationText: true
+        }
+      }
+    }
   });
 
   if (!circle) {
@@ -2002,7 +2040,13 @@ async function resolveTeacherCircle(scope: ScopeContext, circleId?: number) {
     }
   }
 
-  return circle;
+  return {
+    ...circle,
+    latitude: circle.latitude ?? circle.center?.latitude,
+    longitude: circle.longitude ?? circle.center?.longitude,
+    allowedRadiusMeters: circle.allowedRadiusMeters ?? circle.center?.allowedRadiusMeters,
+    locationText: circle.locationText ?? circle.center?.locationText ?? circle.name
+  };
 }
 
 async function resolveCenterByScope(
