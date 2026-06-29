@@ -121,7 +121,7 @@ export default function CentersPage() {
 
   const [q, setQ] = useState("");
   const [gFilter, setGFilter] = useState<GenderFilter>("ALL");
-  const [sFilter, setSFilter] = useState<StatusFilter>("ALL");
+  const [sFilter, setSFilter] = useState<StatusFilter>("ACTIVE");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[0]);
@@ -226,7 +226,7 @@ export default function CentersPage() {
   const resetFilters = () => {
     setQ("");
     setGFilter("ALL");
-    setSFilter("ALL");
+    setSFilter("ACTIVE");
     setPage(1);
   };
 

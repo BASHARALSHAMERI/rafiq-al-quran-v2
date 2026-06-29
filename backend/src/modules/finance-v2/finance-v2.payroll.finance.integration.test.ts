@@ -39,7 +39,7 @@ describe("payroll workflow integration", () => {
       data: {
         organizationId: context.organization.id,
         triggerType: DeductionTriggerType.UNEXCUSED_ABSENCE,
-        deductionAmountSAR: 100,
+        amount: 100,
         description: "غياب اختباري"
       }
     });
@@ -52,7 +52,7 @@ describe("payroll workflow integration", () => {
         month: 1,
         year: 2031,
         triggerType: DeductionTriggerType.UNEXCUSED_ABSENCE,
-        calculatedAmountSAR: 100,
+        calculatedAmount: 100,
         status: DeductionEventStatus.DEDUCTION_APPROVED,
         reviewedById: context.users.financeManager.id,
         reviewedAt: new Date()

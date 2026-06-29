@@ -25,6 +25,7 @@ interface CircleFormModalProps {
   centerOpts: { id: number; label: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null }[];
   teacherOpts: { id: number; label: string }[];
   selectedDraftCenter: { gender?: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null } | undefined;
+  canChooseCenter: boolean;
   submitCircle: () => void;
 }
 
@@ -101,6 +102,7 @@ export function CircleFormModal({
   centerOpts,
   teacherOpts,
   selectedDraftCenter,
+  canChooseCenter,
   submitCircle,
 }: CircleFormModalProps) {
   const isOpen = Boolean(modal);
@@ -168,7 +170,7 @@ export function CircleFormModal({
                 id="cir-center"
                 className="circlemod-select"
                 value={draft.centerId === "" ? "" : String(draft.centerId)}
-                disabled={mode === "edit"}
+                disabled={mode === "edit" || !canChooseCenter}
                 onChange={(e) => {
                   const val = e.target.value ? Number(e.target.value) : "";
                   const center = centerOpts.find((c) => c.id === val);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { 
   Plus, 
   Receipt, 
@@ -33,14 +33,16 @@ import { FinanceDataTable } from "../../design/FinanceDataTable";
 import useClientPagination from "../../../../shared/ui/useClientPagination";
 import { notifySuccess, notifyError, entityFeedback } from "../../../../shared/ui/feedback";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
-import type { PaymentMethodV2, FinanceInvoiceV2 } from "../../types";
+import type { PaymentMethodV2, FinanceInvoiceV2, FinancePaymentV2 } from "../../types";
 import { Button } from "../../../../components/ui/Button";
+import { printFinanceReport, formatYemeniCurrency } from "../../../accounting/printAccounting";
 
 type Props = {
   centerId: number | undefined;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   ar: boolean;
+  initialInvoiceId?: number | null;
   externalShowPaymentForm?: boolean;
   onExternalPaymentFormClose?: () => void;
 };
@@ -51,6 +53,7 @@ export default function FinancePaymentsTab({
   centerId, 
   isAdmin,
   ar,
+  initialInvoiceId,
   externalShowPaymentForm,
   onExternalPaymentFormClose
 }: Props) {
@@ -70,6 +73,12 @@ export default function FinancePaymentsTab({
       setShowPaymentForm(true);
     }
   }, [externalShowPaymentForm]);
+
+  useEffect(() => {
+    if (initialInvoiceId != null) {
+      setPaymentForm(p => ({ ...p, invoiceId: String(initialInvoiceId) }));
+    }
+  }, [initialInvoiceId]);
 
   const invoicesQ = useFinanceV2InvoicesQuery({
     centerId,
@@ -95,6 +104,26 @@ export default function FinancePaymentsTab({
     setPaymentError("");
     onExternalPaymentFormClose?.();
   };
+
+  const handlePrintPayment = useCallback((p: FinancePaymentV2) => {
+    printFinanceReport({
+      title: ar ? "إيصال دفع" : "Payment Receipt",
+      subtitle: ar ? `رقم: #${p.id}` : `Receipt #${p.id}`,
+      rows: [p],
+      columns: [
+        { label: ar ? "الفاتورة" : "Invoice", render: (r) => `#${r.invoiceId}` },
+        { label: ar ? "المبلغ" : "Amount", render: (r) => formatYemeniCurrency(r.amount) },
+        { label: ar ? "الوسيلة" : "Method", render: (r) => methodLabels[r.method as PaymentMethodV2] || r.method },
+        { label: ar ? "التاريخ" : "Date", render: (r) => shortDate(r.receivedAt, ar) },
+        { label: ar ? "سند القبض" : "Voucher", render: (r) => r.voucher?.voucherNo || "-" },
+      ],
+      kpis: [
+        { label: ar ? "المبلغ" : "Amount", value: formatYemeniCurrency(p.amount) },
+      ],
+      ar,
+      orientation: "portrait",
+    });
+  }, [ar]);
 
   const handleCreatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -331,7 +360,7 @@ export default function FinancePaymentsTab({
                             {ar ? "سداد" : "Pay"}
                           </Button>
                         )}
-                        <button className="fin-action-btn view group" onClick={() => {}}>
+                        <button className="fin-action-btn view group" onClick={() => setPaymentForm(p => ({ ...p, invoiceId: inv.id.toString() }))}>
                           <History size={16} />
                         </button>
                       </div>
@@ -400,9 +429,13 @@ export default function FinancePaymentsTab({
                   },
                   {
                     header: ar ? "الإجراءات" : "Actions",
-                    render: () => (
+                    render: (p) => (
                       <div className="flex items-center gap-2">
-                        <button className="fin-action-btn view" title={ar ? "طباعة الإيصال" : "Print Receipt"}>
+                        <button
+                          className="fin-action-btn view"
+                          title={ar ? "طباعة الإيصال" : "Print Receipt"}
+                          onClick={() => handlePrintPayment(p as FinancePaymentV2)}
+                        >
                           <Printer size={16} />
                         </button>
                       </div>

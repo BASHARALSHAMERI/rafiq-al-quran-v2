@@ -133,6 +133,22 @@ class _StudentExamsPremiumViewState extends State<StudentExamsPremiumView> {
             const SizedBox(height: 16),
             ...upcomingExams.map((exam) => _UpcomingExamCard(attempt: exam)),
             const SizedBox(height: 28),
+          ] else ...[
+            const _SectionHeader(title: 'الاختبارات القادمة'),
+            const SizedBox(height: 16),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'لا توجد اختبارات قادمة مجدولة حالياً',
+                  style: TextStyle(
+                    color: AppColors.textSecondaryLight,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
           ],
 
           // 4. Previous Results Section
@@ -216,7 +232,7 @@ class _FilterChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : const Color(0xFFF1F3F1),
+          color: isSelected ? AppColors.primaryLight : AppColors.background,
           borderRadius: BorderRadius.circular(14),
           border: isSelected ? null : Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
         ),
@@ -275,7 +291,7 @@ class _UpcomingExamCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEDF4F1),
+        color: AppColors.primaryLight.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.1)),
       ),
@@ -285,9 +301,9 @@ class _UpcomingExamCard extends StatelessWidget {
           // Badges (Right/Start)
           Column(
             children: [
-              const _MiniBadge(label: 'قادم', color: AppColors.primaryLight, bgColor: Color(0xFFDCE8E2)),
+              _MiniBadge(label: 'قادم', color: AppColors.primaryLight, bgColor: AppColors.primaryLight.withValues(alpha: 0.12)),
               const SizedBox(height: 6),
-              _MiniBadge(label: typeLabel, color: AppColors.textSecondaryLight, bgColor: const Color(0xFFE2E8E4)),
+              _MiniBadge(label: typeLabel, color: AppColors.textSecondaryLight, bgColor: AppColors.borderLight),
             ],
           ),
           const SizedBox(width: 16),
@@ -348,8 +364,8 @@ class _UpcomingExamCard extends StatelessWidget {
           Container(
             width: 50,
             height: 50,
-            decoration: const BoxDecoration(
-              color: Color(0xFFDCE8E2),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.access_time_filled_rounded, color: AppColors.primaryLight, size: 26),
@@ -408,27 +424,12 @@ class _PastResultCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  attempt.gradeLabel ?? 'ممتاز',
+                  attempt.gradeLabel ?? '-',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: AppColors.successLight,
                   ),
-                ),
-                const SizedBox(height: 4),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '4+', // Mock trend, can be updated with real data when available
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.successLight,
-                      ),
-                    ),
-                    Icon(Icons.trending_up_rounded, size: 12, color: AppColors.successLight),
-                  ],
                 ),
               ],
             ),
@@ -539,7 +540,7 @@ class _EmptyResults extends StatelessWidget {
             Icon(Icons.assignment_turned_in_outlined, size: 64, color: AppColors.textSecondaryLight.withValues(alpha: 0.2)),
             const SizedBox(height: 16),
             const Text(
-              'لا توجد نتائج مطابقة لفلترك حالياً',
+              'لا توجد نتائج مطابقة لبحثك حالياً',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,

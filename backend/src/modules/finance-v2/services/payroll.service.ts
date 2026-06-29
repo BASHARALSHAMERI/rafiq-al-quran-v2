@@ -486,7 +486,7 @@ export const payrollService = {
                 status: DeductionEventStatus.DEDUCTION_APPROVED,
                 ...(input.centerId ? { centerId: input.centerId } : {})
               },
-              select: { id: true, userId: true, calculatedAmountSAR: true }
+              select: { id: true, userId: true, calculatedAmount: true }
             })
           : [];
 
@@ -494,7 +494,7 @@ export const payrollService = {
         for (const event of approvedDeductionEvents) {
           if (usedDeductionEventIds.has(event.id)) continue;
           const current = deductionsByUser.get(event.userId) ?? { amount: new Prisma.Decimal(0), eventIds: [] };
-          current.amount = current.amount.plus(event.calculatedAmountSAR);
+          current.amount = current.amount.plus(event.calculatedAmount);
           current.eventIds.push(event.id);
           deductionsByUser.set(event.userId, current);
         }

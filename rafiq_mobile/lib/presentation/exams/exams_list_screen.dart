@@ -211,7 +211,7 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                       AppSpacing.md,
                       AppSpacing.md,
                       AppSpacing.md,
-                      32,
+                      AppSpacing.md,
                     ),
                     children: [
                       if (!isStudentOrParent) ...[

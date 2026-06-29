@@ -292,6 +292,34 @@ export const examsController = {
     }
   }) as RequestHandler,
 
+  postponeAttempt: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+
+      const params = res.locals.validatedParams as { id: number };
+      const attempt = await examsService.postponeAttempt(req.scope, params.id, req.body);
+      res.json({ ok: true, data: attempt });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  markAttemptAsAbsent: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+
+      const params = res.locals.validatedParams as { id: number };
+      const attempt = await examsService.markAttemptAsAbsent(req.scope, params.id);
+      res.json({ ok: true, data: attempt });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   generateAttemptQuestions: (async (req, res, next) => {
     try {
       if (!req.scope) {

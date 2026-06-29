@@ -1,4 +1,4 @@
-﻿export type CenterGender = "MALE" | "FEMALE";
+export type CenterGender = "MALE" | "FEMALE";
 export type CircleType = "HIFZ" | "REVIEW" | "HIFZ_REVIEW";
 export type CircleScheduleDay =
   | "FRIDAY"
@@ -52,8 +52,10 @@ export type Center = {
   gender?: CenterGender;
   logoUrl?: string | null;
   mosqueName?: string | null;
+  locationText?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   timezone?: string;
   centerAdminUserId?: number | null;
   organizationId: number | null;
@@ -96,6 +98,10 @@ export type Circle = {
   circleType?: CircleType;
   teacherId: number | null;
   mosqueName?: string | null;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   isActive?: boolean;
   createdAt: string | null;
   updatedAt?: string | null;
@@ -105,6 +111,7 @@ export type Circle = {
     name?: string;
     code?: string;
     gender?: CenterGender;
+    isActive?: boolean;
     [key: string]: unknown;
   } | null;
   teacher?: {
@@ -149,6 +156,10 @@ export type OrganizationBranding = {
   name: string;
   code: string;
   logoUrl?: string | null;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -156,6 +167,10 @@ export type OrganizationBranding = {
 export type UpdateOrganizationBrandingPayload = {
   name?: string;
   logoUrl?: string | null;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
 };
 
 export type CreateCirclePayload = {
@@ -164,6 +179,10 @@ export type CreateCirclePayload = {
   circleType: CircleType;
   primaryTeacherUserId: number;
   mosqueName?: string;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   weeklySchedule?: CircleScheduleRow[];
 };
 
@@ -172,6 +191,10 @@ export type UpdateCirclePayload = {
   circleType?: CircleType;
   primaryTeacherUserId?: number;
   mosqueName?: string;
+  locationText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
   weeklySchedule?: CircleScheduleRow[];
 };
 

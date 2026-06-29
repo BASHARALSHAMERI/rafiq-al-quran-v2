@@ -146,7 +146,7 @@ export const createTaizFinanceContext = async () => {
       ["1293", "مجمع إهلاك الأجهزة", AccountingAccountType.ASSET, AccountingNormalBalance.CREDIT, "ACCUMULATED_DEPRECIATION_EQUIPMENT"],
       ["2130", "ذمم الموردين", AccountingAccountType.LIABILITY, AccountingNormalBalance.CREDIT, "ACCOUNTS_PAYABLE"],
       ["3100", "صافي أصول غير مقيدة", AccountingAccountType.NET_ASSET, AccountingNormalBalance.CREDIT, "UNRESTRICTED_NET_ASSETS"],
-      ["4100", "مساهمات الطلاب", AccountingAccountType.REVENUE, AccountingNormalBalance.CREDIT, "STUDENT_CONTRIBUTIONS_REVENUE"],
+      ["4100", "اشتراكات الطلاب", AccountingAccountType.REVENUE, AccountingNormalBalance.CREDIT, "STUDENT_CONTRIBUTIONS_REVENUE"],
       ["4200", "إيرادات التبرعات", AccountingAccountType.REVENUE, AccountingNormalBalance.CREDIT, "DONATIONS_REVENUE"],
       ["4300", "إيرادات أخرى", AccountingAccountType.REVENUE, AccountingNormalBalance.CREDIT, "OTHER_REVENUE"],
       ["5100", "الرواتب والمكافآت", AccountingAccountType.EXPENSE, AccountingNormalBalance.DEBIT, "PAYROLL_REWARDS_EXPENSE"],

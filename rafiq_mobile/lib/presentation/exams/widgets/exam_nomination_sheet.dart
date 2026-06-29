@@ -146,7 +146,7 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
 
     return ExamSheetScaffold(
       title: 'ترشيح طالب',
-      subtitle: 'المعلم يرسل الطلب لمدير المركز للمراجعة والاعتماد',
+      subtitle: 'المعلم يرسل الطلب للمشرف للمراجعة والاعتماد',
       bottom: FilledButton.icon(
         onPressed: examState.isSubmitting ? null : _submit,
         style: FilledButton.styleFrom(

@@ -401,7 +401,14 @@ export const examsWorkflowRepository = {
       where: {
         examId: input.examId,
         studentId: input.studentId,
-        status: { in: ["PENDING", "APPROVED"] }
+        status: {
+          in: [
+            NominationRequestStatus.SUBMITTED,
+            NominationRequestStatus.RETURNED,
+            NominationRequestStatus.SUPERVISOR_APPROVED,
+            NominationRequestStatus.CENTER_APPROVED
+          ]
+        }
       },
       select: nominationSelect
     });

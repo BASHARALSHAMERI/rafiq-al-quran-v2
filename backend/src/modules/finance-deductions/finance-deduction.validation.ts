@@ -33,7 +33,7 @@ export const upsertRuleSchema = z
   .object({
     triggerType: z.nativeEnum(DeductionTriggerType),
     thresholdCount: z.number().int().min(1).optional().nullable(),
-    deductionAmountSAR: z.number().min(0),
+    amount: z.number().min(0),
     deductionType: deductionCalcTypeInputSchema,
     isActive: z.boolean().default(true),
     description: z.string().max(500).optional().nullable()

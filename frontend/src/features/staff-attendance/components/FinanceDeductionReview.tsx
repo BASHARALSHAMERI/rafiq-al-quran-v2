@@ -149,6 +149,11 @@ export function FinanceDeductionReview() {
   const handleReview = (action: "APPROVED" | "REJECTED" | "WAIVED") => {
     if (!reviewModal) return;
 
+    if ((action === "REJECTED" || action === "WAIVED") && !reviewNote.trim()) {
+      notifyError(ar ? "ملاحظة المراجعة مطلوبة عند الرفض أو الإعفاء." : "Review note is required when rejecting or waiving.");
+      return;
+    }
+
     reviewMutation.mutate(
       { id: reviewModal.id, action, reviewNote: reviewNote || undefined },
       {
@@ -466,7 +471,7 @@ export function FinanceDeductionReview() {
                   </div>
                   <div className="staff-ops-modal__summary-row staff-ops-modal__summary-row--total">
                     <span>{ar ? "المبلغ المستحق" : "Amount Due"}</span>
-                    <span>{reviewModal.amount.toFixed(2)}</span>
+                    <span className="text-brand-600 font-black">{reviewModal.amount.toFixed(2)} {ar ? "ريال يمني" : "YER"}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -474,6 +479,7 @@ export function FinanceDeductionReview() {
                   <textarea 
                     value={reviewNote} 
                     onChange={e => setReviewNote(e.target.value)} 
+                    maxLength={500}
                     className="staff-ops-modal__textarea staff-ops-modal__textarea--review" 
                     placeholder={ar ? "أدخل سببا للاعتماد أو الإعفاء..." : "Enter reason for approval or waiver..."}
                   />

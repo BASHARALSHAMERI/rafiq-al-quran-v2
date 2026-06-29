@@ -1,8 +1,8 @@
 export type ExamStatus = "DRAFT" | "PUBLISHED" | "COMPLETED" | "CANCELLED";
 
-export type ExamType = "JUZ" | "FULL_QURAN" | "SURAH_RANGE" | "OTHER";
+export type ExamType = "JUZ" | "FULL_QURAN" | "SURAH_RANGE" | "OTHER" | "JUZ_RANGE";
 
-export type SupportedExamTemplateType = "JUZ" | "FULL_QURAN";
+export type SupportedExamTemplateType = "JUZ" | "FULL_QURAN" | "JUZ_RANGE";
 
 export type ExamPurpose = "NORMAL" | "MONTHLY" | "LEVEL" | "GOLDEN_RECORD_MUSHAF";
 
@@ -12,7 +12,8 @@ export type AttemptStatus =
   | "EVALUATED"
   | "APPROVED"
   | "PUBLISHED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "ABSENT";
 
 export type NominationRequestStatus =
   | "SUBMITTED"

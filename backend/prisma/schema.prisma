@@ -899,7 +899,7 @@ model FinanceDeductionRule {
   organizationId     Int                     @map("organization_id")
   triggerType        DeductionTriggerType    @map("trigger_type")
   thresholdCount     Int?                    @map("threshold_count")
-  deductionAmountSAR Decimal                 @map("deduction_amount_sar") @db.Decimal(10, 2)
+  amount             Decimal                 @map("amount") @db.Decimal(10, 2)
   deductionType      DeductionCalcType       @default(FIXED) @map("deduction_type")
   isActive           Boolean                 @default(true) @map("is_active")
   description        String?                 @db.VarChar(500)
@@ -922,7 +922,7 @@ model FinanceDeductionEvent {
   year                Int
   triggerType         DeductionTriggerType @map("trigger_type")
   occurrenceCount     Int                  @default(1) @map("occurrence_count")
-  calculatedAmountSAR Decimal              @map("calculated_amount_sar") @db.Decimal(10, 2)
+  calculatedAmount    Decimal              @map("calculated_amount") @db.Decimal(10, 2)
   status              DeductionEventStatus @default(DEDUCTION_PENDING)
   payrollBatchId      Int?                 @map("payroll_batch_id")
   reviewedById        Int?                 @map("reviewed_by_id")
@@ -2782,6 +2782,7 @@ enum ExamType {
   FULL_QURAN
   SURAH_RANGE
   OTHER
+  JUZ_RANGE
 }
 
 enum ExamPurpose {
@@ -2817,6 +2818,7 @@ enum AttemptStatus {
   APPROVED
   PUBLISHED
   CANCELLED
+  ABSENT
 }
 
 enum LibraryVisibility {

@@ -525,13 +525,15 @@ export function TopbarPremium() {
                       <span>{language === "ar" ? labels.common.english : labels.common.arabic}</span>
                     </button>
 
-                    <button
-                      className="user-dropdown-item"
-                      onClick={() => { navigate("/settings"); setUserMenuOpen(false); }}
-                    >
-                      <Settings className="user-dropdown-item__icon" />
-                      <span>{labels.nav.settings}</span>
-                    </button>
+                    {user?.role === "SUPER_ADMIN" && (
+                      <button
+                        className="user-dropdown-item"
+                        onClick={() => { navigate("/settings"); setUserMenuOpen(false); }}
+                      >
+                        <Settings className="user-dropdown-item__icon" />
+                        <span>{labels.nav.settings}</span>
+                      </button>
+                    )}
                   </div>
 
                   <div className="user-dropdown-divider" />

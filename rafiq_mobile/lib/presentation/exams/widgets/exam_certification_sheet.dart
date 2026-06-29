@@ -4,54 +4,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/exam_dtos.dart';
 import 'exam_shared_widgets.dart';
 
-// ─── Surah helper (duplicated to keep widget self-contained) ─────────────────
-const _surahNames = <String>[
-  'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة',
-  'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس',
-  'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر',
-  'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
-  'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان',
-  'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
-  'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر',
-  'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
-  'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية',
-  'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
-  'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن',
-  'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
-  'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق',
-  'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج',
-  'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة',
-  'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس',
-  'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج',
-  'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
-  'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين',
-  'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات',
-  'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل',
-  'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
-  'المسد', 'الإخلاص', 'الفلق', 'الناس',
-];
-
-String _surahName(int n) {
-  if (n < 1 || n > 114) return 'سورة $n';
-  return 'سورة ${_surahNames[n - 1]}';
-}
-
-const _strengthOptions = <String>[
-  'جمال الصوت',
-  'حسن الأداء',
-  'قوة الحفظ',
-  'إتقان التجويد',
-  'وضوح المخارج',
-];
-
-const _weaknessOptions = <String>[
-  'سرعة القراءة',
-  'ضعف التجويد',
-  'ضعف الحفظ',
-  'كثرة التأتأة',
-  'اضطراب الترتيل',
-];
-
 // ─── Model used by parent ────────────────────────────────────────────────────
 class QuestionDraftResult {
   final int id;
@@ -124,8 +76,7 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
   @override
   void initState() {
     super.initState();
-    _committeeController =
-        TextEditingController(text: widget.committeeNotes);
+    _committeeController = TextEditingController(text: widget.committeeNotes);
   }
 
   @override
@@ -133,13 +84,6 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
     _committeeController.dispose();
     super.dispose();
   }
-
-  List<String> _parseNotes(String v) => v
-      .split(RegExp(r'[،,;]+'))
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-
 
   @override
   Widget build(BuildContext context) {
@@ -260,8 +204,8 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
           // جوانب التميز
           _SearchableMultiSelect(
             label: 'جوانب التميز',
-            options: _strengthOptions,
-            selected: _parseNotes(widget.strengthNotes),
+            options: examStrengthSuggestions,
+            selected: splitListText(widget.strengthNotes),
             color: AppColors.successLight,
             onChanged: (list) => widget.onStrengthNotesChanged(list.join('، ')),
           ),
@@ -269,8 +213,8 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
           // جوانب القصور
           _SearchableMultiSelect(
             label: 'جوانب القصور',
-            options: _weaknessOptions,
-            selected: _parseNotes(widget.weaknessNotes),
+            options: examWeaknessSuggestions,
+            selected: splitListText(widget.weaknessNotes),
             color: AppColors.warningLight,
             onChanged: (list) => widget.onWeaknessNotesChanged(list.join('، ')),
           ),
@@ -363,9 +307,10 @@ class _SearchableMultiSelect extends StatelessWidget {
                   child: selected.isEmpty
                       ? Text(
                           'اختر من القائمة...',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondaryLight,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondaryLight,
+                                  ),
                         )
                       : Wrap(
                           spacing: 6,
@@ -417,7 +362,8 @@ class _MultiSelectSearchSheet extends StatefulWidget {
   });
 
   @override
-  State<_MultiSelectSearchSheet> createState() => _MultiSelectSearchSheetState();
+  State<_MultiSelectSearchSheet> createState() =>
+      _MultiSelectSearchSheetState();
 }
 
 class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
@@ -432,9 +378,8 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = widget.options
-        .where((opt) => opt.contains(_query))
-        .toList();
+    final filtered =
+        widget.options.where((opt) => opt.contains(_query)).toList();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -643,11 +588,18 @@ class _QuestionsTable extends StatelessWidget {
               children: [
                 _Cell(child: Text('#', style: headerStyle)),
                 _Cell(child: Text('النطاق', style: headerStyle)),
-                _Cell(child: Text('تلقين', style: headerStyle, textAlign: TextAlign.center)),
-                _Cell(child: Text('تنبيه', style: headerStyle, textAlign: TextAlign.center)),
-                _Cell(child: Text('تجويد', style: headerStyle, textAlign: TextAlign.center)),
                 _Cell(
-                  child: Text('إجمالي', style: headerStyle, textAlign: TextAlign.center),
+                    child: Text('تلقين',
+                        style: headerStyle, textAlign: TextAlign.center)),
+                _Cell(
+                    child: Text('تنبيه',
+                        style: headerStyle, textAlign: TextAlign.center)),
+                _Cell(
+                    child: Text('تجويد',
+                        style: headerStyle, textAlign: TextAlign.center)),
+                _Cell(
+                  child: Text('إجمالي',
+                      style: headerStyle, textAlign: TextAlign.center),
                 ),
               ],
             ),
@@ -663,12 +615,12 @@ class _QuestionsTable extends StatelessWidget {
                 children: [
                   _Cell(
                     child: Text('${q.orderIndex}',
-                        style: cellStyle?.copyWith(
-                            fontWeight: FontWeight.w700)),
+                        style:
+                            cellStyle?.copyWith(fontWeight: FontWeight.w700)),
                   ),
                   _Cell(
                     child: Text(
-                      '${_surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${_surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
+                      '${surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
                       style: cellStyle?.copyWith(fontSize: 10),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -705,8 +657,7 @@ class _QuestionsTable extends StatelessWidget {
                       total == 0 ? '—' : _fmt(total),
                       style: cellStyle?.copyWith(
                         color: total > 0 ? AppColors.errorLight : null,
-                        fontWeight:
-                            total > 0 ? FontWeight.w700 : null,
+                        fontWeight: total > 0 ? FontWeight.w700 : null,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -735,4 +686,3 @@ class _Cell extends StatelessWidget {
     );
   }
 }
-

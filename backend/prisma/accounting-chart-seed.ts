@@ -256,7 +256,7 @@ export const defaultAccountingAccounts: AccountingSeedAccount[] = [
   },
   {
     code: "4100",
-    name: "اشتراكات ومساهمات الطلاب",
+    name: "اشتراكات الطلاب",
     type: AccountingAccountType.REVENUE,
     normalBalance: AccountingNormalBalance.CREDIT,
     systemKey: "STUDENT_CONTRIBUTIONS_REVENUE",

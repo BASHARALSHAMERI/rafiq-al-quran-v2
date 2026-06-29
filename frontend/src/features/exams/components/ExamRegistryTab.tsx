@@ -35,9 +35,28 @@ const dateFormatter = new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
 });
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "?";
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "—" : dateFormatter.format(parsed);
+  return Number.isNaN(parsed.getTime())
+    ? "?"
+    : new Intl.DateTimeFormat("ar-EG", {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      }).format(parsed);
+};
+
+const isAttemptOverdue = (attempt: ExamAttempt) => {
+  if (attempt.status !== "SCHEDULED") return false;
+  if (!attempt.examDate) return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const examDate = new Date(attempt.examDate);
+  examDate.setHours(0, 0, 0, 0);
+  
+  return examDate.getTime() < today.getTime();
 };
 
 const toTimestamp = (value?: string | null) => {
@@ -266,8 +285,12 @@ export function ExamRegistryTab({
                     </div>
 
                     <div style={{ minWidth: '100px', display: 'flex', justifyContent: 'center' }}>
-                      <Badge variant={ATTEMPT_STATUS_VARIANTS[attempt.status]} size="sm" className="text-[0.62rem]">
-                        {ATTEMPT_STATUS_LABELS[attempt.status]}
+                      <Badge 
+                        variant={isAttemptOverdue(attempt) ? "error" : ATTEMPT_STATUS_VARIANTS[attempt.status]} 
+                        size="sm" 
+                        className="text-[0.62rem]"
+                      >
+                        {isAttemptOverdue(attempt) ? "مجدول (فات الموعد)" : ATTEMPT_STATUS_LABELS[attempt.status]}
                       </Badge>
                     </div>
 

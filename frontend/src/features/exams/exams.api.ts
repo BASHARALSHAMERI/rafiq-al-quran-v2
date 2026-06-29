@@ -116,6 +116,16 @@ export const examsApi = {
     return response.data.data;
   },
 
+  async postponeAttempt(attemptId: number, examDate: string) {
+    const response = await apiClient.post<ApiResponse<ExamAttempt>>(`/attempts/${attemptId}/postpone`, { examDate });
+    return response.data.data;
+  },
+
+  async markAttemptAsAbsent(attemptId: number) {
+    const response = await apiClient.post<ApiResponse<ExamAttempt>>(`/attempts/${attemptId}/absent`);
+    return response.data.data;
+  },
+
   async generateAttemptQuestions(attemptId: number, payload: GenerateAttemptQuestionsPayload) {
     const response = await apiClient.post<ApiResponse<ExamAttempt>>(
       `/attempts/${attemptId}/questions/generate`,

@@ -179,7 +179,7 @@ export const staffLeaveService = {
           throw new AppError("لا يوجد قاعدة خصم مالي معرفة للإجازات بدون راتب", 400);
         }
 
-        const amount = Number(rule.deductionAmountSAR) * appliedDaysCount;
+        const amount = Number(rule.amount) * appliedDaysCount;
 
         await tx.financeDeductionEvent.create({
           data: {
@@ -191,7 +191,7 @@ export const staffLeaveService = {
             year: leave.startDate.getUTCFullYear(),
             triggerType: DeductionTriggerType.UNPAID_LEAVE,
             occurrenceCount: appliedDaysCount,
-            calculatedAmountSAR: amount,
+            calculatedAmount: amount,
             status: DeductionEventStatus.DEDUCTION_PENDING,
             details: { leaveId: leave.id }
           }

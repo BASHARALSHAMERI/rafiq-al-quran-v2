@@ -14,8 +14,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import type { Center, CircleScheduleDay, CircleScheduleRow, PrayerName } from "../../../org/types";
 import { genderLabel } from "./centers.types";
-import { PrayerTimesWidget } from "../../../staff-attendance/components/PrayerTimesWidget";
 import { useTimeFormat, fmtClockTime } from "../../../../shared/utils/time-format";
+import { usePrayerTimes, type PrayerTimes } from "../../../staff-attendance/staff-attendance.api";
 
 interface CenterCardProps {
   c: Center;
@@ -86,6 +86,11 @@ const prayerLabel = (prayer: PrayerName, ar: boolean) => {
   return (ar ? arMap : enMap)[prayer];
 };
 
+const resolvePrayerTime = (prayer: PrayerName, prayerTimes?: PrayerTimes | null): string | null => {
+  if (!prayerTimes) return null;
+  return prayerTimes[prayer.toLowerCase() as keyof PrayerTimes] ?? null;
+};
+
 const isScheduleDay = (value: unknown): value is CircleScheduleDay =>
   typeof value === "string" && DAY_INDEX.has(value as CircleScheduleDay);
 
@@ -145,17 +150,42 @@ const getCenterScheduleRows = (center: Center, fallbackRows?: CircleScheduleRow[
   return Array.from(firstPerDay.values());
 };
 
-const formatSlotRange = (row: CircleScheduleRow, ar: boolean, hour12 = true) =>
-  row.mode === "CLOCK"
-    ? `${fmtClockTime(row.fromTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)} - ${fmtClockTime(row.toTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}`
-    : `${prayerLabel(row.fromPrayer, ar)} - ${prayerLabel(row.toPrayer, ar)}`;
+const formatSlotRange = (
+  row: CircleScheduleRow,
+  ar: boolean,
+  hour12 = true,
+  prayerTimes?: PrayerTimes | null
+) => {
+  const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
 
-const formatCenterScheduleSummary = (center: Center, ar: boolean, hour12 = true, fallbackRows?: CircleScheduleRow[]): string | null => {
+  if (row.mode === "CLOCK") {
+    return `${fmtClockTime(row.fromTime, locale, hour12)} - ${fmtClockTime(row.toTime, locale, hour12)}`;
+  }
+
+  // PRAYER mode — try to resolve actual clock times
+  const fromTime = resolvePrayerTime(row.fromPrayer, prayerTimes);
+  const toTime = resolvePrayerTime(row.toPrayer, prayerTimes);
+
+  if (fromTime && toTime) {
+    return `${fmtClockTime(fromTime, locale, hour12)} - ${fmtClockTime(toTime, locale, hour12)}`;
+  }
+
+  // Fallback: no GPS / no prayer cache yet — show prayer names
+  return `${prayerLabel(row.fromPrayer, ar)} - ${prayerLabel(row.toPrayer, ar)}`;
+};
+
+const formatCenterScheduleSummary = (
+  center: Center,
+  ar: boolean,
+  hour12 = true,
+  fallbackRows?: CircleScheduleRow[],
+  prayerTimes?: PrayerTimes | null
+): string | null => {
   const rows = getCenterScheduleRows(center, fallbackRows);
   if (!rows.length) return null;
 
   const firstRow = rows[0];
-  const firstLabel = formatSlotRange(firstRow, ar, hour12);
+  const firstLabel = formatSlotRange(firstRow, ar, hour12, prayerTimes);
   const dayLabelStr = dayLabel(firstRow.day, ar);
 
   const mainPart = `${dayLabelStr} ${firstLabel}`;
@@ -186,8 +216,12 @@ export function CenterCard({
   const managerName = c.centerAdmin?.fullName?.trim() || (ar ? "غير محدد" : "Unassigned");
   const locationName = c.mosqueName?.trim() || (ar ? "بدون موقع" : "No location");
   const { hour12 } = useTimeFormat();
-  const scheduleSummary = formatCenterScheduleSummary(c, ar, hour12, scheduleRows);
+
+  // Detect if schedule uses PRAYER mode to conditionally fetch prayer times
   const hasPrayerSchedule = (scheduleRows ?? getCenterScheduleRows(c)).some((row) => row.mode === "PRAYER");
+  const { data: prayerTimes } = usePrayerTimes(Number(c.id), undefined, hasPrayerSchedule);
+
+  const scheduleSummary = formatCenterScheduleSummary(c, ar, hour12, scheduleRows, prayerTimes);
 
   return (
     <motion.article
@@ -255,12 +289,6 @@ export function CenterCard({
         </div>
       </div>
 
-      {c.id && hasPrayerSchedule && (
-        <div className="ctr-center-card__prayer-times">
-          <PrayerTimesWidget centerId={Number(c.id)} ar={ar} />
-        </div>
-      )}
-
       <div className="ctr-center-card__manager">
         <span className="ctr-center-card__manager-label">{ar ? "مدير المركز" : "Center Manager"}</span>
         <div className="ctr-center-card__manager-value">
@@ -270,11 +298,6 @@ export function CenterCard({
         <div className="ctr-center-card__manager-schedule" title={scheduleSummary ?? undefined}>
           <Clock3 size={14} />
           <span>{scheduleSummary ?? (ar ? "بدون مواعيد" : "No schedule")}</span>
-          {scheduleSummary && (
-            <span style={{ marginRight: ar ? "0" : "6px", marginLeft: ar ? "6px" : "0", fontSize: "11px", padding: "1px 5px", borderRadius: "4px", background: hasPrayerSchedule ? "#ede9fe" : "#ecfdf5", color: hasPrayerSchedule ? "#5b21b6" : "#065f46" }}>
-              {hasPrayerSchedule ? (ar ? "🕌 صلوات" : "🕌 Prayer") : (ar ? "🕒 ساعات" : "🕒 Clock")}
-            </span>
-          )}
         </div>
       </div>
 

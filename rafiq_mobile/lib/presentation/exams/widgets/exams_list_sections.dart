@@ -26,7 +26,7 @@ class ExamsContextSummaryCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.md,
+        boxShadow: AppShadows.xs,
       ),
       child: Wrap(
         spacing: 8,
@@ -96,7 +96,7 @@ class ExamsStatsGrid extends StatelessWidget {
           icon: Icons.play_circle_outline_rounded,
         ),
         _ExamStatCard(
-          label: 'مؤرشفة',
+          label: 'مكتملة',
           value: reviewedCount.toString(),
           color: AppColors.successLight,
           icon: Icons.verified_rounded,
@@ -231,7 +231,7 @@ class ExamAttemptCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.md,
+        boxShadow: AppShadows.xs,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

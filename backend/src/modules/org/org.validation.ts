@@ -96,6 +96,46 @@ const centerWriteShape = {
   code: z.string().trim().min(1).max(60).optional() // accepted for backward compatibility, ignored
 } satisfies z.ZodRawShape;
 
+const validateGeoFields = (
+  value: { latitude?: number | null; longitude?: number | null; allowedRadiusMeters?: number | null },
+  ctx: z.RefinementCtx,
+  options?: { allowExistingRadius?: boolean }
+) => {
+  const hasLatitude = value.latitude !== undefined && value.latitude !== null;
+  const hasLongitude = value.longitude !== undefined && value.longitude !== null;
+  const clearsLatitude = value.latitude === null;
+  const clearsLongitude = value.longitude === null;
+  const hasRadius = value.allowedRadiusMeters !== undefined && value.allowedRadiusMeters !== null;
+
+  if (hasLatitude !== hasLongitude) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [hasLatitude ? "longitude" : "latitude"],
+      message: "?? ????? ??? ????? ??? ???????? ????"
+    });
+  }
+
+  if (clearsLatitude !== clearsLongitude) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [clearsLatitude ? "longitude" : "latitude"],
+      message: "??? ?????? ????"
+    });
+  }
+
+  if (
+    (hasLatitude || hasLongitude) &&
+    !hasRadius &&
+    (value.allowedRadiusMeters !== undefined || !options?.allowExistingRadius)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["allowedRadiusMeters"],
+      message: "???? ?????? (????????) ????? ??? ????? ?? ?????/?????"
+    });
+  }
+};
+
 export const createCenterBodySchema = z
   .object(centerWriteShape)
   .strict()
@@ -119,6 +159,10 @@ export const updateCenterBodySchema = z
       value.gender !== undefined ||
       value.logoUrl !== undefined ||
       value.mosqueName !== undefined ||
+      value.locationText !== undefined ||
+      value.latitude !== undefined ||
+      value.longitude !== undefined ||
+      value.allowedRadiusMeters !== undefined ||
       value.timezone !== undefined ||
       value.centerAdminUserId !== undefined ||
       value.supervisorUserIds !== undefined ||
@@ -127,7 +171,8 @@ export const updateCenterBodySchema = z
     {
       message: "حقل واحد على الأقل مطلوب"
     }
-  );
+  )
+  .superRefine((value, ctx) => validateGeoFields(value, ctx, { allowExistingRadius: true }));
 
 export const centerStatusBodySchema = z
   .object({
@@ -245,12 +290,25 @@ export const circleStatusBodySchema = centerStatusBodySchema;
 export const orgBrandingUpdateBodySchema = z
   .object({
     name: nonEmptyNameSchema.optional(),
-    logoUrl: optionalMediaUrlSchema
+    logoUrl: optionalMediaUrlSchema,
+    description: z.string().trim().max(500).optional().nullable(),
+    address: z.string().trim().max(255).optional().nullable(),
+    phone: z.string().trim().max(32).optional().nullable(),
+    email: z.union([z.string().trim().email("البريد الإلكتروني غير صالح"), z.literal("")]).optional().nullable()
   })
   .strict()
-  .refine((value) => value.name !== undefined || value.logoUrl !== undefined, {
-    message: "حقل واحد على الأقل مطلوب"
-  });
+  .refine(
+    (value) =>
+      value.name !== undefined ||
+      value.logoUrl !== undefined ||
+      value.description !== undefined ||
+      value.address !== undefined ||
+      value.phone !== undefined ||
+      value.email !== undefined,
+    {
+      message: "حقل واحد على الأقل مطلوب"
+    }
+  );
 
 // ==========================================
 // DTO Types inferred from Zod Schemas

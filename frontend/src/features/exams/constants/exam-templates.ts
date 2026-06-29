@@ -35,8 +35,9 @@ export const JUZ_BRANCH_OPTIONS = [
 
 export const JUZ_CATEGORIES_OPTIONS = [...JUZ_BRANCH_OPTIONS];
 
-export const EXAM_TYPE_OPTIONS: Array<{ value: "JUZ" | "FULL_QURAN"; label: string }> = [
+export const EXAM_TYPE_OPTIONS: Array<{ value: "JUZ" | "FULL_QURAN" | "JUZ_RANGE"; label: string }> = [
   { value: "JUZ", label: "اختبار جزء" },
+  { value: "JUZ_RANGE", label: "فئات أجزاء (من - إلى)" },
   { value: "FULL_QURAN", label: "اختبار القرآن كاملًا" }
 ];
 
@@ -44,7 +45,8 @@ export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
   JUZ: "جزء",
   FULL_QURAN: "القرآن كاملًا",
   SURAH_RANGE: "نطاق سور",
-  OTHER: "اختبار آخر"
+  OTHER: "اختبار آخر",
+  JUZ_RANGE: "فئات أجزاء"
 };
 
 export const EXAM_STATUS_LABELS: Record<string, string> = {
@@ -56,11 +58,12 @@ export const EXAM_STATUS_LABELS: Record<string, string> = {
 
 export const ATTEMPT_STATUS_LABELS: Record<AttemptStatus, string> = {
   SCHEDULED: "مجدول",
-  IN_PROGRESS: "قيد التنفيذ",
+  IN_PROGRESS: "قيد التقييم",
   EVALUATED: "تم التقييم",
   APPROVED: "معتمد",
   PUBLISHED: "منشور",
-  CANCELLED: "ملغي"
+  CANCELLED: "ملغى",
+  ABSENT: "غائب"
 };
 
 export const ATTEMPT_STATUS_VARIANTS: Record<
@@ -72,7 +75,8 @@ export const ATTEMPT_STATUS_VARIANTS: Record<
   EVALUATED: "secondary",
   APPROVED: "default",
   PUBLISHED: "success",
-  CANCELLED: "error"
+  CANCELLED: "error",
+  ABSENT: "error"
 };
 
 export const NOMINATION_STATUS_LABELS: Record<string, string> = {

@@ -58,33 +58,32 @@ const mapDeductionStatusToDb = (
 };
 
 const toRuleResponse = (rule: {
-  deductionAmountSAR: { toString(): string } | number;
+  amount: { toString(): string } | number;
   deductionType: DeductionCalcType;
   [key: string]: unknown;
 }) => {
   const deductionType = mapDeductionTypeToApi(rule.deductionType);
-  const deductionAmountSAR = Number(rule.deductionAmountSAR);
+  const amount = Number(rule.amount);
 
   return {
     ...rule,
-    deductionAmountSAR,
-    amount: deductionAmountSAR,
+    amount,
     deductionType,
     calcType: deductionType
   };
 };
 
 const toEventResponse = (event: {
-  calculatedAmountSAR: { toString(): string } | number;
+  calculatedAmount: { toString(): string } | number;
   occurrenceCount: number;
   status: DeductionEventStatus;
   [key: string]: unknown;
 }) => ({
   ...event,
   status: mapDeductionStatusToApi(event.status),
-  amount: Number(event.calculatedAmountSAR),
+  amount: Number(event.calculatedAmount),
   occurrences: event.occurrenceCount,
-  calculatedAmountSAR: Number(event.calculatedAmountSAR)
+  calculatedAmount: Number(event.calculatedAmount)
 });
 
 const getMonthRange = (month: number, year: number) => {
@@ -151,7 +150,7 @@ export const financeDeductionService = {
     input: {
       triggerType: DeductionTriggerType;
       thresholdCount?: number | null;
-      deductionAmountSAR: number;
+      amount: number;
       deductionType: DeductionCalcType | "PER_HOUR" | "PER_OCCURRENCE";
       isActive: boolean;
       description?: string | null;
@@ -172,7 +171,7 @@ export const financeDeductionService = {
       },
       update: {
         thresholdCount: input.thresholdCount,
-        deductionAmountSAR: input.deductionAmountSAR,
+        amount: input.amount,
         deductionType,
         isActive: input.isActive,
         description: input.description
@@ -181,7 +180,7 @@ export const financeDeductionService = {
         organizationId: scope.organizationId,
         triggerType: input.triggerType,
         thresholdCount: input.thresholdCount,
-        deductionAmountSAR: input.deductionAmountSAR,
+        amount: input.amount,
         deductionType,
         isActive: input.isActive,
         description: input.description
@@ -339,7 +338,7 @@ export const financeDeductionService = {
 
     if (applicableCount <= 0) return 0;
 
-    const amount = rule.deductionType === DeductionCalcType.FIXED ? Number(rule.deductionAmountSAR) : Number(rule.deductionAmountSAR) * applicableCount;
+    const amount = rule.deductionType === DeductionCalcType.FIXED ? Number(rule.amount) : Number(rule.amount) * applicableCount;
 
     // Check existing — skip if already locked in payroll
     const existing = await prisma.financeDeductionEvent.findFirst({
@@ -351,10 +350,10 @@ export const financeDeductionService = {
       if (existing.status === DeductionEventStatus.DEDUCTION_INCLUDED_IN_PAYROLL) {
         return 0;
       }
-      if (existing.status === DeductionEventStatus.DEDUCTION_PENDING && (existing.occurrenceCount !== rawCount || Number(existing.calculatedAmountSAR) !== amount)) {
+      if (existing.status === DeductionEventStatus.DEDUCTION_PENDING && (existing.occurrenceCount !== rawCount || Number(existing.calculatedAmount) !== amount)) {
         await prisma.financeDeductionEvent.update({
           where: { id: existing.id },
-          data: { occurrenceCount: rawCount, calculatedAmountSAR: amount }
+          data: { occurrenceCount: rawCount, calculatedAmount: amount }
         });
         return 1;
       }
@@ -371,7 +370,7 @@ export const financeDeductionService = {
         year,
         triggerType: type,
         occurrenceCount: rawCount,
-        calculatedAmountSAR: amount,
+        calculatedAmount: amount,
         status: DeductionEventStatus.DEDUCTION_PENDING
       }
     });

@@ -157,19 +157,19 @@ export function ExamCertificationScreen({
               </div>
               <div className="cert-ded cert-ded--red">
                 <span className="cert-ded__name">التلقين</span>
-                <span className="cert-ded__val cert-ded__val--red">-{deductions.prompting}</span>
+                <span className="cert-ded__val cert-ded__val--red">{deductions.prompting}</span>
               </div>
               <div className="cert-ded cert-ded--amber">
                 <span className="cert-ded__name">التنبيه</span>
-                <span className="cert-ded__val cert-ded__val--amber">-{deductions.reminding}</span>
+                <span className="cert-ded__val cert-ded__val--amber">{deductions.reminding}</span>
               </div>
               <div className="cert-ded cert-ded--red">
                 <span className="cert-ded__name">أخطاء التجويد</span>
-                <span className="cert-ded__val cert-ded__val--red">-{deductions.tajweed}</span>
+                <span className="cert-ded__val cert-ded__val--red">{deductions.tajweed}</span>
               </div>
               <div className="cert-ded-total">
                 <span>إجمالي الخصومات</span>
-                <span>-{round2(deductionTotal).toFixed(2)}</span>
+                <span>{round2(deductionTotal).toFixed(2)}</span>
               </div>
             </section>
 

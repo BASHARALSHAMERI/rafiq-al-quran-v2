@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Edit3, Save, Settings } from "lucide-react";
+import { Edit3, Info, Save, Settings } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
@@ -50,9 +50,33 @@ const getCalcTypeLabel = (type: DeductionCalcType, ar: boolean) => {
   }
 };
 
+// ---------- Tooltip + FieldLabel (same pattern as AttendancePolicySettings) ----------
+function DeductionTooltip({ text }: { text: string }) {
+  return (
+    <span className="staff-ops-policy-tooltip">
+      <button type="button" className="staff-ops-policy-tooltip__trigger" aria-label={text}>
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      <span className="staff-ops-policy-tooltip__bubble" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
+function DeductionFieldLabel({ label, hint }: { label: string; hint: string }) {
+  return (
+    <div className="staff-ops-policy-field__label">
+      <span>
+        {label}
+        <DeductionTooltip text={hint} />
+      </span>
+    </div>
+  );
+}
+// -------------------------------------------------------------------------------------
+
 type RuleEditorState = {
   thresholdCount: string;
-  deductionAmountSAR: string;
+  amount: string;
   deductionType: DeductionCalcType;
   isActive: boolean;
   description: string;
@@ -60,7 +84,7 @@ type RuleEditorState = {
 
 const toEditorState = (rule?: DeductionRule): RuleEditorState => ({
   thresholdCount: rule?.thresholdCount != null ? String(rule.thresholdCount) : "",
-  deductionAmountSAR: rule ? String(rule.deductionAmountSAR) : "",
+  amount: rule ? String(rule.amount) : "",
   deductionType: rule?.deductionType ?? "FIXED",
   isActive: rule?.isActive ?? true,
   description: rule?.description ?? ""
@@ -105,16 +129,17 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
   };
 
   const saveRule = (triggerType: DeductionTrigger) => {
-    if (!editor.deductionAmountSAR) {
-      notifyError(ar ? "قيمة الخصم مطلوبة." : "Deduction amount is required.");
+    if (!editor.amount || Number(editor.amount) < 0) {
+      notifyError(ar ? "قيمة الخصم مطلوبة ويجب أن تكون موجبة." : "Deduction amount is required and must be positive.");
       return;
     }
+
 
     upsertRule.mutate(
       {
         triggerType,
         thresholdCount: editor.thresholdCount ? Number(editor.thresholdCount) : null,
-        deductionAmountSAR: Number(editor.deductionAmountSAR),
+        amount: Number(editor.amount),
         deductionType: editor.deductionType,
         isActive: editor.isActive,
         description: editor.description.trim() || null
@@ -190,7 +215,7 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
                   <div className="staff-ops-rule-card__detail">
                     <div className="staff-ops-rule-card__field">
                       <span className="staff-ops-person__sub">{ar ? "المبلغ" : "Amount"}</span>
-                      <strong className="text-rose-600">{rule.deductionAmountSAR.toFixed(2)} SAR</strong>
+                      <strong className="text-rose-600">{rule.amount.toFixed(2)} YER</strong>
                     </div>
                     <div className="staff-ops-rule-card__field">
                       <span className="staff-ops-person__sub">{ar ? "الحد الأدنى" : "Threshold"}</span>
@@ -285,54 +310,93 @@ function RuleEditor({
 }) {
   return (
     <div className={compact ? "staff-ops-rule-card__form staff-ops-rule-card__form--compact" : "staff-ops-rule-card__form"}>
-      <Input
-        type="number"
-        value={editor.deductionAmountSAR}
-        onChange={(event) =>
-          setEditor((current) => ({ ...current, deductionAmountSAR: event.target.value }))
-        }
-        label={ar ? "قيمة الخصم" : "Deduction Amount"}
-        helperText={ar ? "بالريال السعودي" : "Amount in SAR"}
-      />
-      <Input
-        type="number"
-        value={editor.thresholdCount}
-        onChange={(event) =>
-          setEditor((current) => ({ ...current, thresholdCount: event.target.value }))
-        }
-        label={ar ? "الحد الأدنى للتفعيل" : "Threshold Count"}
-        helperText={
-          ar
-            ? "اتركه فارغاً إذا كان الخصم يبدأ من أول حالة."
-            : "Leave empty to apply from the first occurrence."
-        }
-      />
-      <Select
-        value={editor.deductionType}
-        onChange={(event) =>
-          setEditor((current) => ({
-            ...current,
-            deductionType: event.target.value as DeductionCalcType
-          }))
-        }
-        label={ar ? "طريقة الاحتساب" : "Calculation Method"}
-        options={CALC_TYPES.map((type) => ({
-          value: type,
-          label: getCalcTypeLabel(type, ar)
-        }))}
-      />
-      <Input
-        value={editor.description}
-        onChange={(event) =>
-          setEditor((current) => ({ ...current, description: event.target.value }))
-        }
-        label={ar ? "وصف توضيحي" : "Description"}
-        helperText={
-          ar
-            ? "يظهر للمراجع المالي عند دراسة الحدث."
-            : "Shown to reviewers during deduction review."
-        }
-      />
+
+      {/* قيمة الخصم */}
+      <div className="staff-ops-policy-field">
+        <DeductionFieldLabel
+          label={ar ? "قيمة الخصم" : "Deduction Amount"}
+          hint={
+            ar
+              ? "المبلغ بالريال اليمني (YER). عند طريقة الاحتساب ‘لكل يوم’ أو ‘لكل تكرار’ يضرب هذا المبلغ في عدد الحالات. عند ‘مبلغ ثابت’ يُخصم هذا المبلغ مرة واحدة بغض النظر عن عدد الحالات."
+              : "Amount in Yemeni Rial (YER). For 'Per Day'/'Per Occurrence', this is multiplied by the count. For 'Fixed', this is deducted once regardless of count."
+          }
+        />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={editor.amount}
+          onChange={(event) =>
+            setEditor((current) => ({ ...current, amount: event.target.value }))
+          }
+        />
+      </div>
+
+      {/* الحد الأدنى للتفعيل */}
+      <div className="staff-ops-policy-field">
+        <DeductionFieldLabel
+          label={ar ? "الحد الأدنى للتفعيل" : "Threshold Count"}
+          hint={
+            ar
+              ? "عدد الحالات المسموح بها مجاناً قبل تفعيل الخصم. مثال: إذا كان الحد = 2 وغاب الموظف 3 أيام، يُخصم 3−2 = يوم واحد فقط. اتركه فارغاً لتطبيق الخصم من أول حالة."
+              : "Number of free occurrences before deduction starts. Example: threshold=2, absences=3 → only 1 day deducted. Leave empty to deduct from the first occurrence."
+          }
+        />
+        <Input
+          type="number"
+          min={1}
+          step={1}
+          value={editor.thresholdCount}
+          onChange={(event) =>
+            setEditor((current) => ({ ...current, thresholdCount: event.target.value }))
+          }
+        />
+      </div>
+
+      {/* طريقة الاحتساب */}
+      <div className="staff-ops-policy-field">
+        <DeductionFieldLabel
+          label={ar ? "طريقة الاحتساب" : "Calculation Method"}
+          hint={
+            ar
+              ? "‘مبلغ ثابت’: يُخصم المبلغ مرة واحدة بغض النظر عن عدد الحالات. ‘لكل يوم’: مناسب للإجازات غير المدفوعة. ‘لكل تكرار’: مناسب للغياب والتأخر والزيارات الفائتة."
+              : "'Fixed': deduct once regardless of count. 'Per Day': multiplied by days (ideal for unpaid leave). 'Per Occurrence': multiplied by events (ideal for absences, lates, missed visits)."
+          }
+        />
+        <Select
+          value={editor.deductionType}
+          onChange={(event) =>
+            setEditor((current) => ({
+              ...current,
+              deductionType: event.target.value as DeductionCalcType
+            }))
+          }
+          options={CALC_TYPES.map((type) => ({
+            value: type,
+            label: getCalcTypeLabel(type, ar)
+          }))}
+        />
+      </div>
+
+      {/* وصف توضيحي */}
+      <div className="staff-ops-policy-field">
+        <DeductionFieldLabel
+          label={ar ? "وصف توضيحي" : "Description"}
+          hint={
+            ar
+              ? "اختياري. يظهر للمراجع المالي عند دراسة حدث الخصم لتسهيل اتخاذ قرار الاعتماد أو الإعفاء."
+              : "Optional. Shown to the finance reviewer when studying the deduction event to help decide approval or waiver."
+          }
+        />
+        <Input
+          maxLength={255}
+          value={editor.description}
+          onChange={(event) =>
+            setEditor((current) => ({ ...current, description: event.target.value }))
+          }
+        />
+      </div>
+
       <label className="staff-ops-weekend-checkbox">
         <input
           type="checkbox"

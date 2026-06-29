@@ -4,6 +4,7 @@ import { EmptyState } from "../../../../components/ui/EmptyState";
 import { ErrorState } from "../../../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import { entityFeedback, notifyError, notifyRequiredFields, notifySuccess, type LocalizedLabel } from "../../../../shared/ui/feedback";
+import { printFinanceReport, formatYemeniCurrency } from "../../../accounting/printAccounting";
 import { useUsersQuery } from "../../../users/users.hooks";
 import {
   useCreateFinanceV2InvoiceMutation,
@@ -150,6 +151,30 @@ export default function FinanceInvoicesTab({
       setInvoiceError(message);
       notifyError(message);
     }
+  };
+
+  const handlePrintInvoice = (v: FinanceInvoiceV2) => {
+    printFinanceReport({
+      title: ar ? "فاتورة مساهمة طالب" : "Student Contribution Invoice",
+      subtitle: ar ? `رقم: #${v.id}` : `Invoice #${v.id}`,
+      rows: [v],
+      columns: [
+        { label: ar ? "الطالب" : "Student", render: (row) => row.student?.fullName ?? String(row.studentId) },
+        { label: ar ? "المركز" : "Center", render: (row) => row.center?.name ?? "-" },
+        { label: ar ? "المبلغ" : "Amount", render: (row) => formatYemeniCurrency(row.amount) },
+        { label: ar ? "المدفوع" : "Paid", render: (row) => formatYemeniCurrency(row.totalPaid) },
+        { label: ar ? "المتبقي" : "Remaining", render: (row) => formatYemeniCurrency(row.remainingAmount) },
+        { label: ar ? "الحالة" : "Status", render: (row) => statusLabels[row.status as InvoiceStatusV2] || row.status },
+        { label: ar ? "ملاحظات" : "Notes", render: (row) => row.notes || "-" },
+      ],
+      kpis: [
+        { label: ar ? "إجمالي الفاتورة" : "Total", value: formatYemeniCurrency(v.amount) },
+        { label: ar ? "المدفوع" : "Paid", value: formatYemeniCurrency(v.totalPaid) },
+        { label: ar ? "المتبقي" : "Remaining", value: formatYemeniCurrency(v.remainingAmount) },
+      ],
+      ar,
+      orientation: "portrait",
+    });
   };
 
   if (invoicesQ.isError) {
@@ -386,7 +411,7 @@ export default function FinanceInvoicesTab({
                       <div className="flex items-center gap-2">
                         <button 
                           className="fin-action-btn view" 
-                          onClick={() => window.print()} 
+                          onClick={() => handlePrintInvoice(v)} 
                           title={ar ? "طباعة الفاتورة" : "Print Invoice"}
                         >
                           <Printer size={16} />

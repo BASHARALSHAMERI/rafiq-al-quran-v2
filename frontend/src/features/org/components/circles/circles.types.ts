@@ -12,6 +12,11 @@ export type CircleDraft = {
   circleType: CircleType | "";
   primaryTeacherUserId: number | "";
   mosqueName: string;
+  useCenterLocation: boolean;
+  locationText: string;
+  latitude: string;
+  longitude: string;
+  allowedRadiusMeters: string;
   scheduleRows: CircleScheduleDraftRow[];
 };
 

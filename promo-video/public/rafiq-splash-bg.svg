@@ -1,0 +1,55 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="112" y1="58" x2="1465" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#254540"/>
+      <stop offset="0.55" stop-color="#1E3B37"/>
+      <stop offset="1" stop-color="#16312E"/>
+    </linearGradient>
+    <radialGradient id="focus" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 384) rotate(90) scale(360 560)">
+      <stop stop-color="#D9EEE6" stop-opacity="0.16"/>
+      <stop offset="0.46" stop-color="#D9EEE6" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#D9EEE6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="floor" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(800 888) rotate(90) scale(170 520)">
+      <stop stop-color="#D1EFE1" stop-opacity="0.14"/>
+      <stop offset="0.5" stop-color="#D1EFE1" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#D1EFE1" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="ornament" width="384" height="384" patternUnits="userSpaceOnUse">
+      <g stroke="#E6F4EE" stroke-opacity="0.2" stroke-width="1.25">
+        <circle cx="96" cy="96" r="44"/>
+        <circle cx="288" cy="96" r="44"/>
+        <circle cx="96" cy="288" r="44"/>
+        <circle cx="288" cy="288" r="44"/>
+        <path d="M96 0V384"/>
+        <path d="M288 0V384"/>
+        <path d="M0 96H384"/>
+        <path d="M0 288H384"/>
+        <path d="M96 0L192 96L96 192L0 96L96 0Z"/>
+        <path d="M288 0L384 96L288 192L192 96L288 0Z"/>
+        <path d="M96 192L192 288L96 384L0 288L96 192Z"/>
+        <path d="M288 192L384 288L288 384L192 288L288 192Z"/>
+        <path d="M0 96L192 0L384 96"/>
+        <path d="M0 288L192 192L384 288"/>
+        <path d="M96 192L192 96L288 192"/>
+        <path d="M96 192L192 288L288 192"/>
+      </g>
+      <g fill="#F2FBF7" fill-opacity="0.14">
+        <circle cx="48" cy="96" r="10"/>
+        <circle cx="192" cy="96" r="10"/>
+        <circle cx="336" cy="96" r="10"/>
+        <circle cx="48" cy="288" r="10"/>
+        <circle cx="192" cy="288" r="10"/>
+        <circle cx="336" cy="288" r="10"/>
+      </g>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#ornament)"/>
+  <rect width="1600" height="900" fill="url(#focus)"/>
+  <ellipse cx="800" cy="868" rx="430" ry="126" fill="url(#floor)"/>
+
+  <path d="M564 824C649.018 782.406 727.684 761.609 800 761.609C872.316 761.609 950.982 782.406 1036 824" stroke="#EEF8F4" stroke-opacity="0.12" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M620 858C685.697 826.089 745.697 810.133 800 810.133C854.303 810.133 914.303 826.089 980 858" stroke="#EEF8F4" stroke-opacity="0.1" stroke-width="2" stroke-linecap="round"/>
+</svg>

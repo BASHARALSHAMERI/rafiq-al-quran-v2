@@ -309,6 +309,12 @@ export const updateAttemptCommitteeBodySchema = z
     message: "حقل واحد على الأقل مطلوب"
   });
 
+export const postponeAttemptBodySchema = z
+  .object({
+    examDate: z.string().trim().min(1)
+  })
+  .strict();
+
 export const generateAttemptQuestionsBodySchema = z
   .object({
     count: z.coerce.number().int().min(1).max(20).optional()

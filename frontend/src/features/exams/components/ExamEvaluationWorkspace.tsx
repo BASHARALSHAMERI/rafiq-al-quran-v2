@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -20,6 +20,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
+import { notifyError, notifySuccess } from "../../../shared/ui/feedback";
 import { useAuthStore } from "../../auth/auth.store";
 import { certificatesApi } from "../../certificates/certificates.api";
 import { openCertificatePrintWindow, writeCertificateToWindow } from "../../certificates/certificate-print";
@@ -30,7 +31,9 @@ import {
   useFinalizeAttemptEvaluationMutation,
   useGenerateAttemptQuestionsMutation,
   usePublishAttemptMutation,
-  useReopenAttemptForQuestionAdjustmentMutation
+  useReopenAttemptForQuestionAdjustmentMutation,
+  usePostponeAttemptMutation,
+  useMarkAttemptAsAbsentMutation
 } from "../exams.hooks";
 import {
   ATTEMPT_STATUS_LABELS,
@@ -218,17 +221,28 @@ const splitSelectedNotes = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) {
+const isAttemptOverdue = (attempt: ExamAttempt) => {
+  if (attempt.status !== "SCHEDULED") return false;
+  if (!attempt.examDate) return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const examDate = new Date(attempt.examDate);
+  examDate.setHours(0, 0, 0, 0);
+  
+  return examDate.getTime() < today.getTime();
+};
+
+export function ExamEvaluationWorkspace({ attempt: initialAttempt, onClose, onUpdated }: Props) {
   const user = useAuthStore((state) => state.user);
 
-  const [currentAttempt, setCurrentAttempt] = useState<ExamAttempt>(attempt);
+  const [currentAttempt, setCurrentAttempt] = useState<ExamAttempt>(initialAttempt);
   const [viewStep, setViewStep] = useState<ViewStep>("workspace");
-  const [questions, setQuestions] = useState<EvaluationQuestion[]>(toEvaluationQuestions(attempt));
+  const [questions, setQuestions] = useState<EvaluationQuestion[]>(toEvaluationQuestions(initialAttempt));
   const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
   const [isQuestionEvaluationOpen, setIsQuestionEvaluationOpen] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isPrintingCertificate, setIsPrintingCertificate] = useState(false);
 
   const defaults = useMemo(() => resolveDefaultScores(), []);
@@ -260,6 +274,8 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
   const finalizeMutation = useFinalizeAttemptEvaluationMutation();
   const publishMutation = usePublishAttemptMutation();
   const reopenMutation = useReopenAttemptForQuestionAdjustmentMutation();
+  const postponeMutation = usePostponeAttemptMutation();
+  const markAbsentMutation = useMarkAttemptAsAbsentMutation();
 
   useEffect(() => {
     setCurrentAttempt(attempt);
@@ -360,6 +376,14 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
     currentAttempt.totalScore !== null &&
     currentAttempt.totalScore >= passScore;
 
+  const canPostpone =
+    currentAttempt.status === "SCHEDULED" &&
+    ["CENTER_ADMIN", "SUPERVISOR", "TEACHER"].includes(user?.role ?? "");
+    
+  const canMarkAbsent =
+    currentAttempt.status === "SCHEDULED" &&
+    ["CENTER_ADMIN", "SUPERVISOR", "TEACHER"].includes(user?.role ?? "");
+
   const isReadOnlyView = !(
     canGenerateQuestions ||
     canEditQuestionPool ||
@@ -424,18 +448,16 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
   };
 
   const withMutation = async (action: () => Promise<ExamAttempt>, successMessage: string) => {
-    setError("");
-    setSuccess("");
-
     try {
       const nextAttempt = await action();
       syncAttempt(nextAttempt);
-      setSuccess(successMessage);
+      notifySuccess(successMessage);
     } catch (mutationError) {
-      setError(
-        mutationError instanceof Error && mutationError.message
-          ? mutationError.message
-          : "تعذر تنفيذ الإجراء المطلوب. حاول مرة أخرى."
+      notifyError(
+        getLocalizedApiErrorMessage(mutationError, {
+          ar: true,
+          fallback: "تعذر تنفيذ الإجراء المطلوب. حاول مرة أخرى."
+        })
       );
     }
   };
@@ -523,24 +545,55 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
     );
   };
 
-  const handlePrintCertificate = async () => {
-    if (!canPrintCertificate) {
-      setError("لا تتاح الشهادة إلا بعد نجاح المحاولة واعتمادها أو نشرها.");
+  const handlePostpone = () => {
+    const newDate = window.prompt("أدخل التاريخ الجديد للتأجيل (مثال: 2026-06-30)");
+    if (!newDate?.trim()) {
+      return;
+    }
+    
+    // basic validation
+    if (Number.isNaN(new Date(newDate).getTime())) {
+      notifyError("صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD.");
       return;
     }
 
-    setError("");
-    setSuccess("");
+    void withMutation(
+      () =>
+        postponeMutation.mutateAsync({
+          attemptId: currentAttempt.id,
+          examDate: new Date(newDate).toISOString()
+        }),
+      "تم تأجيل الاختبار بنجاح."
+    );
+  };
+
+  const handleMarkAbsent = () => {
+    if (!window.confirm("هل أنت متأكد من تسجيل الطالب كغائب في هذا الاختبار؟")) {
+      return;
+    }
+
+    void withMutation(
+      () => markAbsentMutation.mutateAsync(currentAttempt.id),
+      "تم تسجيل غياب الطالب بنجاح."
+    );
+  };
+
+  const handlePrintCertificate = async () => {
+    if (!canPrintCertificate) {
+      notifyError("لا تتاح الشهادة إلا بعد نجاح المحاولة واعتمادها أو نشرها.");
+      return;
+    }
+
     setIsPrintingCertificate(true);
     let printWindow: Window | null = null;
     try {
       printWindow = openCertificatePrintWindow();
       const certificate = await certificatesApi.getExamAttemptCertificate(currentAttempt.id);
       writeCertificateToWindow(printWindow, certificate);
-      setSuccess("تم تجهيز شهادة الاختبار للطباعة.");
+      notifySuccess("تم تجهيز شهادة الاختبار للطباعة.");
     } catch (printError) {
       printWindow?.close();
-      setError(
+      notifyError(
         getLocalizedApiErrorMessage(printError, {
           ar: true,
           fallback: "تعذر تجهيز شهادة الاختبار للطباعة."
@@ -561,9 +614,6 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
       panelClassName={`ew-modal ${isReadOnlyView ? "ew-modal--compact" : "ew-modal--workspace"}`}
     >
       <div className="exam-evaluation" dir="rtl">
-        {error && <div className="modal-error"><AlertCircle size={16} /><span>{error}</span></div>}
-        {success && <div className="exam-evaluation__success"><CheckCircle2 size={16} /><span>{success}</span></div>}
-
         {/* Unified Compact Header */}
         <div className="ew-header-compact">
           <div className="ew-header-left">
@@ -576,8 +626,8 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
                 <BookOpen size={13} />
                 <span>{currentAttempt.exam?.title ?? "—"}</span>
                 <span style={{ margin: '0 0.35rem', opacity: 0.4 }}>•</span>
-                <Badge variant={ATTEMPT_STATUS_VARIANTS[currentAttempt.status]} size="sm" className="text-[0.62rem]">
-                  {ATTEMPT_STATUS_LABELS[currentAttempt.status]}
+                <Badge variant={isAttemptOverdue(currentAttempt) ? "error" : ATTEMPT_STATUS_VARIANTS[currentAttempt.status]} size="sm" className="text-[0.62rem]">
+                  {isAttemptOverdue(currentAttempt) ? "مجدول (فات الموعد)" : ATTEMPT_STATUS_LABELS[currentAttempt.status]}
                 </Badge>
               </p>
             </div>
@@ -967,13 +1017,19 @@ export function ExamEvaluationWorkspace({ attempt, onClose, onUpdated }: Props) 
 
             {/* ④ شريط الحالة والأزرار */}
             <div className="ew-status-bar">
-              <span><ShieldCheck size={13} /> {ATTEMPT_STATUS_LABELS[currentAttempt.status]}</span>
+              <span><ShieldCheck size={13} /> {isAttemptOverdue(currentAttempt) ? "مجدول (فات الموعد)" : ATTEMPT_STATUS_LABELS[currentAttempt.status]}</span>
               <span><Eye size={13} /> الأسئلة: {questions.length}</span>
               <span><FileCheck2 size={13} /> المقيّم: {evaluatedQuestionsCount}</span>
             </div>
 
             <div className="ew-footer-actions">
               <div className="spacer" />
+              {canPostpone ? (
+                <Button variant="ghost" onClick={handlePostpone} isLoading={postponeMutation.isPending}>تأجيل</Button>
+              ) : null}
+              {canMarkAbsent ? (
+                <Button variant="ghost" onClick={handleMarkAbsent} isLoading={markAbsentMutation.isPending} style={{ color: 'var(--error)' }}>تسجيل كغائب</Button>
+              ) : null}
               {canReopen ? (
                 <Button variant="ghost" onClick={handleReopen} isLoading={reopenMutation.isPending}>إعادة فتح</Button>
               ) : null}

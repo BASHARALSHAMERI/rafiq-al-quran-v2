@@ -32,6 +32,7 @@ import {
   questionBankIdParamSchema,
   reopenAttemptForQuestionAdjustmentBodySchema,
   supervisorReviewNominationBodySchema,
+  postponeAttemptBodySchema,
   updateAttemptCommitteeBodySchema,
   updateExamBodySchema,
   updateQuestionBankItemBodySchema
@@ -248,6 +249,21 @@ examsRouter.post(
   validateParams(attemptIdParamSchema),
   validateBody(reopenAttemptForQuestionAdjustmentBodySchema),
   examsController.reopenAttemptForQuestionAdjustment
+);
+
+examsRouter.post(
+  "/attempts/:id/postpone",
+  requireRoles([Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
+  validateParams(attemptIdParamSchema),
+  validateBody(postponeAttemptBodySchema),
+  examsController.postponeAttempt
+);
+
+examsRouter.post(
+  "/attempts/:id/absent",
+  requireRoles([Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER]),
+  validateParams(attemptIdParamSchema),
+  examsController.markAttemptAsAbsent
 );
 
 export default examsRouter;

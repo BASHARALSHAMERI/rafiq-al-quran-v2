@@ -306,7 +306,7 @@ export function QuestionEvaluationModal({
                 <article key={item.id} className={`eval-deduction-card-v2 eval-deduction-card-v2--${item.color}`}>
                   <div className="eval-deduction-card-v2__info">
                     <h5>{item.label}</h5>
-                    <small>لكل مرة: -{item.penalty}</small>
+                    <small>لكل مرة: {item.penalty}</small>
                   </div>
                   <div className="eval-deduction-card-v2__counter">
                     <button
@@ -337,7 +337,7 @@ export function QuestionEvaluationModal({
                 <small>سيتم خصمه من الدرجة النهائية</small>
               </div>
               <div className="eval-total-summary__value">
-                -{totalDeductions}
+                {totalDeductions}
               </div>
             </div>
           </section>

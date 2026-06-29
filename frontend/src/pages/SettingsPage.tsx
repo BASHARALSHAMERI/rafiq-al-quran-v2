@@ -2,28 +2,36 @@ import { useState } from "react";
 import {
   Building2,
   Info,
-  Moon,
-  Palette,
-  PanelsTopLeft,
   Save,
-  Settings,
-  ShieldCheck,
-  Sun
+  Phone,
+  Mail,
+  MapPin,
+  Sparkles,
+  X,
+  Settings
 } from "lucide-react";
 import { useI18n } from "../app/i18n";
-import { useUiStore } from "../app/ui.store";
 import { Card, CardContent, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import Input from "../components/ui/Input";
 import ImageUploadField from "../components/ui/ImageUploadField";
 import { PageHeader } from "../components/ui/PageHeader";
 import { useAuthStore } from "../features/auth/auth.store";
 import { useOrgBrandingQuery, useUpdateOrgBrandingMutation } from "../features/org/org.hooks";
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
 import { notifyError, notifySuccess } from "../shared/ui/feedback";
+import ForbiddenPage from "./ForbiddenPage";
 import "../styles/pages/settings-v2.css";
 
 const APP_VERSION = "v2.0.0";
+
+type SettingsDraft = {
+  name: string;
+  logoUrl: string;
+  description: string;
+  address: string;
+  phone: string;
+  email: string;
+};
 
 const formatDateTime = (value: string | null | undefined, locale: "ar-SA-u-nu-latn" | "en-US"): string => {
   if (!value) return "-";
@@ -43,67 +51,97 @@ function SettingsPage() {
   const ar = language === "ar";
   const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
 
-  const theme = useUiStore((state) => state.theme);
-  const toggleTheme = useUiStore((state) => state.toggleTheme);
-  const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
-
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
-  const canEditBranding = authUser?.role === "SUPER_ADMIN";
+
+  // Authorization: General Manager (SUPER_ADMIN) only
+  if (authUser?.role !== "SUPER_ADMIN") {
+    return <ForbiddenPage />;
+  }
 
   const brandingQ = useOrgBrandingQuery();
   const updateBrandingM = useUpdateOrgBrandingMutation();
 
-  const [brandingDraft, setBrandingDraft] = useState<{ name: string; logoUrl: string } | null>(null);
-  const [savedBranding, setSavedBranding] = useState<{ name: string; logoUrl: string } | null>(null);
-  const [brandingError, setBrandingError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<SettingsDraft | null>(null);
+  const [savedSettings, setSavedSettings] = useState<SettingsDraft | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const baselineBranding = savedBranding ?? {
+  // Initialize baseline settings from fetched data
+  const baseline = savedSettings ?? {
     name: brandingQ.data?.name ?? "",
-    logoUrl: brandingQ.data?.logoUrl ?? ""
+    logoUrl: brandingQ.data?.logoUrl ?? "",
+    description: brandingQ.data?.description ?? "",
+    address: brandingQ.data?.address ?? "",
+    phone: brandingQ.data?.phone ?? "",
+    email: brandingQ.data?.email ?? ""
   };
-  const currentBranding = brandingDraft ?? baselineBranding;
-  const brandName = currentBranding.name;
-  const brandLogoUrl = currentBranding.logoUrl;
-  const initialName = baselineBranding.name;
-  const initialLogo = baselineBranding.logoUrl;
-  const hasBrandingChanges =
-    brandName.trim() !== initialName.trim() || brandLogoUrl.trim() !== initialLogo.trim();
 
-  const organizationName =
-    brandingQ.data?.name ??
-    authUser?.organizationName ??
-    (ar ? "جمعية رفيق القرآن" : "Rafiq Al-Quran Society");
-  const organizationCode = brandingQ.data?.code ?? "-";
-  const themeLabel = theme === "light" ? (ar ? "فاتح" : "Light") : (ar ? "داكن" : "Dark");
-  const sidebarLabel = sidebarCollapsed
-    ? ar
-      ? "مطوي"
-      : "Collapsed"
-    : ar
-      ? "موسع"
-      : "Expanded";
+  const current = draft ?? baseline;
 
-  const submitBranding = async () => {
-    const trimmedName = brandName.trim();
-    if (!trimmedName) {
-      setBrandingError(ar ? "اسم الجمعية مطلوب." : "Organization name is required.");
-      return;
+  // Check if any actual edits are present
+  const hasChanges =
+    current.name.trim() !== baseline.name.trim() ||
+    current.logoUrl.trim() !== baseline.logoUrl.trim() ||
+    current.description.trim() !== baseline.description.trim() ||
+    current.address.trim() !== baseline.address.trim() ||
+    current.phone.trim() !== baseline.phone.trim() ||
+    current.email.trim() !== baseline.email.trim();
+
+  const handleFieldChange = (key: keyof SettingsDraft, val: string) => {
+    setDraft({
+      ...current,
+      [key]: val
+    });
+  };
+
+  // Form Validations
+  const validateForm = (): boolean => {
+    if (!current.name.trim()) {
+      setValidationError(ar ? "اسم الجمعية حقل إلزامي." : "Organization name is required.");
+      return false;
     }
+    if (current.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(current.email.trim())) {
+        setValidationError(ar ? "صيغة البريد الإلكتروني غير صالحة." : "Invalid email format.");
+        return false;
+      }
+    }
+    if (current.phone.trim()) {
+      const phoneRegex = /^[+0-9\s()-.]{3,32}$/;
+      if (!phoneRegex.test(current.phone.trim())) {
+        setValidationError(ar ? "رقم الهاتف غير صالح." : "Invalid phone number.");
+        return false;
+      }
+    }
+    setValidationError(null);
+    return true;
+  };
 
+  const handleSave = async () => {
+    if (!validateForm()) return;
     try {
-      setBrandingError(null);
+      setValidationError(null);
       const updated = await updateBrandingM.mutateAsync({
-        name: trimmedName,
-        logoUrl: brandLogoUrl.trim() ? brandLogoUrl.trim() : null
+        name: current.name.trim(),
+        logoUrl: current.logoUrl.trim() ? current.logoUrl.trim() : null,
+        description: current.description.trim() ? current.description.trim() : null,
+        address: current.address.trim() ? current.address.trim() : null,
+        phone: current.phone.trim() ? current.phone.trim() : null,
+        email: current.email.trim() ? current.email.trim() : null
       });
 
-      setSavedBranding({
+      const nextSettings = {
         name: updated.name ?? "",
-        logoUrl: updated.logoUrl ?? ""
-      });
-      setBrandingDraft(null);
+        logoUrl: updated.logoUrl ?? "",
+        description: updated.description ?? "",
+        address: updated.address ?? "",
+        phone: updated.phone ?? "",
+        email: updated.email ?? ""
+      };
+
+      setSavedSettings(nextSettings);
+      setDraft(null);
 
       if (authUser) {
         setAuthUser({
@@ -112,298 +150,360 @@ function SettingsPage() {
           organizationLogoUrl: updated.logoUrl ?? null
         });
       }
-      notifySuccess(ar ? "تم حفظ الهوية المؤسسية بنجاح" : "Organization branding saved successfully");
+      notifySuccess(ar ? "تم حفظ إعدادات الجمعية بنجاح" : "Organization settings saved successfully");
     } catch (error) {
       const message = getLocalizedApiErrorMessage(error, {
         ar,
-        fallback: ar ? "تعذر حفظ بيانات الجمعية. يرجى المحاولة مرة أخرى." : "Unable to save organization branding. Please try again."
+        fallback: ar ? "تعذر حفظ الإعدادات. يرجى المحاولة مرة أخرى." : "Unable to save settings. Please try again."
       });
-      setBrandingError(message);
+      setValidationError(message);
       notifyError(message);
-      return;
     }
   };
 
+  const handleCancel = () => {
+    setDraft(null);
+    setValidationError(null);
+  };
+
+  const lastUpdated = brandingQ.data?.updatedAt ? formatDateTime(brandingQ.data.updatedAt, locale) : "-";
+
   return (
-    <div className="page settings-page settings-modern-page">
-      <PageHeader
-        title={ar ? "إعدادات النظام" : "System Settings"}
-        description={ar ? "هوية الجمعية وتفضيلات العرض" : "Organization branding and display preferences"}
-        icon={<Settings className="w-6 h-6" />}
-        actions={
-          <div className={`stg-access-badge ${canEditBranding ? "is-open" : "is-readonly"}`}>
-            <ShieldCheck className="w-4 h-4" />
-            <span>
-              {canEditBranding
-                ? ar
-                  ? "صلاحية تعديل كاملة"
-                  : "Full edit access"
-                : ar
-                  ? "عرض فقط"
-                  : "Read only"}
+    <>
+      {/* Scoped styling implementing center creation modal (circlemod) layouts locally */}
+      <style>{`
+        /* Row & Field container alignment */
+        .circlemod-row {
+          display: flex;
+          gap: 1.25rem;
+          flex-wrap: wrap;
+          margin-bottom: 1.2rem;
+          width: 100%;
+        }
+        .circlemod-field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          min-width: 0;
+          flex: 1;
+        }
+        .circlemod-field--full {
+          width: 100%;
+          flex-basis: 100%;
+        }
+        
+        /* Label spacing matching center creation form */
+        .circlemod-field label {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #64748b;
+          margin-inline-start: 0.15rem;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+        [data-theme="dark"] .circlemod-field label {
+          color: #94a3b8;
+        }
+        
+        /* Inputs styling matching CenterFormModal */
+        .circlemod-input {
+          height: 42px;
+          padding: 0 0.9rem;
+          border-radius: 10px;
+          border: 1.5px solid rgba(226, 232, 240, 0.8);
+          background: rgba(255, 255, 255, 0.5) !important;
+          backdrop-filter: blur(8px);
+          color: var(--text-primary, #1e293b);
+          font-size: 0.85rem;
+          font-weight: 500;
+          outline: none;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 100%;
+        }
+        [data-theme="dark"] .circlemod-input {
+          border-color: rgba(255, 255, 255, 0.1);
+          background: rgba(15, 23, 42, 0.6) !important;
+        }
+        .circlemod-input:focus {
+          border-color: var(--primary, #0f766e);
+          background: rgba(255, 255, 255, 0.8) !important;
+          box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+        }
+        [data-theme="dark"] .circlemod-input:focus {
+          background: rgba(15, 23, 42, 0.8) !important;
+          border-color: var(--primary, #14b8a6);
+          box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15);
+        }
+        .circlemod-input::placeholder {
+          color: #94a3b8;
+          font-size: 0.8rem;
+        }
+        
+        /* Textarea styled identically to inputs but multiline */
+        .circlemod-textarea {
+          min-height: 104px;
+          padding: 0.7rem 0.9rem;
+          resize: none;
+          line-height: 1.5;
+        }
+      `}</style>
+
+      {/* Background aurora blobs */}
+      <div className="ctr-aurora-bg">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="blob blob-3"></div>
+      </div>
+
+      <div className="page settings-page settings-modern-page relative z-10" dir="rtl">
+        {/* Page Header (No GM action badge) */}
+        <PageHeader
+          title={ar ? "إعدادات النظام" : "System Settings"}
+          description={ar ? "إدارة البيانات الأساسية للجمعية" : "Management of the basic organization data"}
+          icon={<Settings className="w-6 h-6" />}
+        />
+
+        {brandingQ.isLoading ? (
+          <div className="flex items-center justify-center min-h-[300px] glass-panel rounded-xl">
+            <span className="text-sm text-secondary animate-pulse">
+              {ar ? "جارٍ تحميل إعدادات النظام..." : "Loading system settings..."}
             </span>
           </div>
-        }
-      />
-
-      <section className="stg-hero-panel">
-        <div className="stg-hero-main">
-          <span className="stg-hero-eyebrow">{ar ? "هوية الجمعية" : "Organization Identity"}</span>
-          <h2 className="stg-hero-title">{organizationName}</h2>
-          <p className="stg-hero-description">
-            {ar
-              ? "واجهة إعدادات حديثة تساعدك على ضبط الشكل العام للنظام والبيانات المؤسسية بسرعة."
-              : "A modern settings workspace to control visual identity and core organization data quickly."}
-          </p>
-        </div>
-        <div className="stg-hero-chips">
-          <span className="stg-chip">
-            <Building2 className="w-4 h-4" />
-            {ar ? "رمز الجمعية:" : "Code:"} <strong>{organizationCode}</strong>
-          </span>
-          <span className="stg-chip">
-            <Palette className="w-4 h-4" />
-            {ar ? "النمط:" : "Theme:"} <strong>{themeLabel}</strong>
-          </span>
-          <span className="stg-chip">
-            <PanelsTopLeft className="w-4 h-4" />
-            {ar ? "القائمة:" : "Sidebar:"} <strong>{sidebarLabel}</strong>
-          </span>
-        </div>
-      </section>
-
-      <section className="stg-quick-grid">
-        <article className="stg-quick-card">
-          <div className="stg-quick-icon stg-quick-icon--theme">
-            <Palette className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="stg-quick-label">{ar ? "وضع الواجهة" : "Interface Mode"}</p>
-            <p className="stg-quick-value">{themeLabel}</p>
-          </div>
-        </article>
-
-        <article className="stg-quick-card">
-          <div className="stg-quick-icon stg-quick-icon--layout">
-            <PanelsTopLeft className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="stg-quick-label">{ar ? "حالة الشريط الجانبي" : "Sidebar State"}</p>
-            <p className="stg-quick-value">{sidebarLabel}</p>
-          </div>
-        </article>
-
-        <article className="stg-quick-card">
-          <div className="stg-quick-icon stg-quick-icon--role">
-            <ShieldCheck className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="stg-quick-label">{ar ? "مستوى الصلاحية" : "Permission Level"}</p>
-            <p className="stg-quick-value">
-              {canEditBranding
-                ? ar
-                  ? "مدير النظام"
-                  : "Super Admin"
-                : ar
-                  ? "مستخدم إداري"
-                  : "Administrative user"}
-            </p>
-          </div>
-        </article>
-      </section>
-
-      <div className="stg-grid">
-        <Card className="stg-card stg-card--branding">
-          <CardHeader
-            title={ar ? "الهوية المؤسسية" : "Organization Branding"}
-            subtitle={
-              ar
-                ? "حدّث اسم الجمعية والشعار ليظهر في جميع الصفحات والتقارير."
-                : "Update organization name and logo for all pages and reports."
-            }
-            icon={Building2}
-            action={
-              <span className={`stg-role-pill ${canEditBranding ? "is-editable" : "is-locked"}`}>
-                {canEditBranding ? (ar ? "قابل للتعديل" : "Editable") : ar ? "مقفل" : "Locked"}
-              </span>
-            }
-          />
-          <CardContent>
-            <div className="stg-form-stack">
-              <Input
-                label={ar ? "اسم الجمعية" : "Organization Name"}
-                value={brandName}
-                onChange={(event) =>
-                  setBrandingDraft({
-                    ...currentBranding,
-                    name: event.target.value
-                  })
-                }
-                placeholder={ar ? "مثال: جمعية رفيق القرآن" : "Example: Rafiq Al-Quran Society"}
-                disabled={!canEditBranding}
-              />
-
-              <ImageUploadField
-                label={ar ? "شعار الجمعية" : "Organization Logo"}
-                value={brandLogoUrl}
-                onChange={(next) =>
-                  setBrandingDraft({
-                    ...currentBranding,
-                    logoUrl: next
-                  })
-                }
-                kind="ORG_LOGO"
-                ar={ar}
-                disabled={!canEditBranding}
-                helperText={
-                  ar
-                    ? "اختر صورة من الجهاز وسيتم رفعها مباشرة."
-                    : "Choose an image from your device and it will upload instantly."
-                }
-                previewAlt={brandName || organizationName}
-              />
-
-              {brandLogoUrl.trim() ? (
-                <div className="stg-logo-preview">
-                  <div className="stg-logo-preview__image">
-                    <img
-                      src={brandLogoUrl}
-                      alt={brandName || organizationName}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(event) => {
-                        (event.currentTarget as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  </div>
-                  <div className="stg-logo-preview__meta">
-                    <span className="stg-logo-preview__title">{brandName || organizationName}</span>
-                    <span className="stg-logo-preview__sub">{organizationCode}</span>
-                  </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            
+            {/* Beautiful restored stg-hero-panel displaying active settings (without Code chip) */}
+            <section className="stg-hero-panel glass-panel flex flex-col lg:flex-row items-center justify-between gap-6 p-6">
+              <div className="flex items-center gap-5 w-full lg:w-auto">
+                {/* Logo Frame */}
+                <div className="w-16 h-16 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md flex items-center justify-center p-1.5 overflow-hidden flex-shrink-0">
+                  {current.logoUrl ? (
+                    <img src={current.logoUrl} alt={current.name} className="w-full h-full object-contain" />
+                  ) : (
+                    <Building2 className="w-8 h-8 text-teal-400" />
+                  )}
                 </div>
-              ) : null}
+                {/* Text main details */}
+                <div className="stg-hero-main text-right">
+                  <span className="stg-hero-eyebrow">{ar ? "هوية الجمعية" : "Organization Identity"}</span>
+                  <h2 className="stg-hero-title">{current.name || (ar ? "جمعية رفيق القرآن" : "Rafiq Al-Quran Society")}</h2>
+                  <p className="stg-hero-description max-w-[550px] leading-relaxed">
+                    {current.description || (ar ? "واجهة إعدادات البيانات الأساسية للجمعية وتفاصيل الهوية والتواصل." : "Settings workspace for basic organization profile and contact info.")}
+                  </p>
+                </div>
+              </div>
 
-              {brandingError ? <div className="stg-inline-error">{brandingError}</div> : null}
+              {/* Status Chips aligned on the left (No Code chip) */}
+              <div className="stg-hero-chips flex flex-wrap gap-2 lg:flex-col lg:items-end flex-shrink-0 w-full lg:w-auto">
+                {current.phone.trim() && (
+                  <span className="stg-chip glass-btn">
+                    <Phone className="w-4 h-4 text-teal-400" />
+                    {ar ? "الهاتف:" : "Phone:"} <strong>{current.phone}</strong>
+                  </span>
+                )}
+                {current.email.trim() && (
+                  <span className="stg-chip glass-btn">
+                    <Mail className="w-4 h-4 text-teal-400" />
+                    {ar ? "البريد:" : "Email:"} <strong>{current.email}</strong>
+                  </span>
+                )}
+                {current.address.trim() && (
+                  <span className="stg-chip glass-btn">
+                    <MapPin className="w-4 h-4 text-teal-400" />
+                    {ar ? "العنوان:" : "Address:"} <strong>{current.address}</strong>
+                  </span>
+                )}
+              </div>
+            </section>
 
-              <div className="stg-form-footer">
-                <p className="stg-form-note">
-                  {brandingQ.isLoading
-                    ? ar
-                      ? "جار تحميل بيانات الجمعية..."
-                      : "Loading organization branding..."
-                    : canEditBranding
-                      ? ar
-                        ? "يمكنك تعديل الاسم أو الشعار ثم حفظ التغييرات."
-                        : "You can update the name or logo, then save changes."
-                      : ar
-                        ? "هذه البيانات للعرض فقط. يلزم صلاحية مدير النظام للتعديل."
-                        : "Read-only data. Super Admin permission is required for editing."}
-                </p>
+            {/* Structured Grid Layout using system stylesheet */}
+            <div className="stg-grid">
+              
+              {/* Card 1: بيانات الجمعية الأساسية */}
+              <Card className="stg-card glass-panel">
+                <CardHeader
+                  title={ar ? "بيانات الجمعية الأساسية" : "Basic Organization Data"}
+                  subtitle={ar ? "الاسم التعريفي ووصف الجمعية" : "Organization profile and name details"}
+                  icon={Building2}
+                />
+                <CardContent>
+                  <div className="circlemod-row">
+                    <div className="circlemod-field circlemod-field--full">
+                      <label htmlFor="org-name">{ar ? "اسم الجمعية" : "Organization Name"}</label>
+                      <input
+                        id="org-name"
+                        type="text"
+                        className="circlemod-input"
+                        value={current.name}
+                        onChange={(e) => handleFieldChange("name", e.target.value)}
+                        placeholder={ar ? "أدخل اسم الجمعية" : "Enter organization name"}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="circlemod-row">
+                    <div className="circlemod-field circlemod-field--full">
+                      <label htmlFor="org-desc">{ar ? "وصف مختصر للجمعية" : "Short Description"}</label>
+                      <textarea
+                        id="org-desc"
+                        className="circlemod-input circlemod-textarea"
+                        placeholder={ar ? "أدخل وصفاً مختصراً للجمعية" : "Enter short description of the organization"}
+                        value={current.description}
+                        onChange={(e) => handleFieldChange("description", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 2: شعار الجمعية (Swapped position: Basic visual elements grouped together in Row 1) */}
+              <Card className="stg-card glass-panel">
+                <CardHeader
+                  title={ar ? "شعار الجمعية" : "Organization Logo"}
+                  subtitle={ar ? "إدارة الشعار المعتمد للتقارير والواجهة" : "Logo settings for visual branding"}
+                  icon={Sparkles}
+                />
+                <CardContent>
+                  <div className="circlemod-row">
+                    <div className="circlemod-field circlemod-field--full">
+                      <ImageUploadField
+                        label={ar ? "شعار الجمعية" : "Organization Logo"}
+                        value={current.logoUrl}
+                        onChange={(next) => handleFieldChange("logoUrl", next)}
+                        kind="ORG_LOGO"
+                        ar={ar}
+                        maxSize={2 * 1024 * 1024}
+                        allowedTypes={["image/png", "image/jpeg", "image/jpg", "image/webp"]}
+                        helperText={
+                          ar
+                            ? "الأنواع المسموحة: png, jpg, jpeg, webp. الحد الأقصى للحجم: 2MB"
+                            : "Allowed formats: png, jpg, jpeg, webp. Max size: 2MB"
+                        }
+                        previewAlt={current.name}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 3: بيانات التواصل (Swapped position: Technical/Contact grouped together in Row 2) */}
+              <Card className="stg-card glass-panel">
+                <CardHeader
+                  title={ar ? "بيانات التواصل" : "Contact Information"}
+                  subtitle={ar ? "العنوان الرسمي للجمعية ووسائل التواصل" : "Official address and communication coordinates"}
+                  icon={Phone}
+                />
+                <CardContent>
+                  <div className="circlemod-row">
+                    <div className="circlemod-field">
+                      <label htmlFor="org-phone">{ar ? "رقم الهاتف" : "Phone Number"}</label>
+                      <input
+                        id="org-phone"
+                        type="text"
+                        className="circlemod-input"
+                        value={current.phone}
+                        onChange={(e) => handleFieldChange("phone", e.target.value)}
+                        placeholder={ar ? "أدخل رقم الهاتف" : "Enter phone number"}
+                      />
+                    </div>
+
+                    <div className="circlemod-field">
+                      <label htmlFor="org-email">{ar ? "البريد الإلكتروني" : "Email Address"}</label>
+                      <input
+                        id="org-email"
+                        type="email"
+                        className="circlemod-input"
+                        value={current.email}
+                        onChange={(e) => handleFieldChange("email", e.target.value)}
+                        placeholder={ar ? "أدخل البريد الإلكتروني" : "Enter email address"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="circlemod-row">
+                    <div className="circlemod-field circlemod-field--full">
+                      <label htmlFor="org-address">{ar ? "العنوان" : "Address"}</label>
+                      <input
+                        id="org-address"
+                        type="text"
+                        className="circlemod-input"
+                        value={current.address}
+                        onChange={(e) => handleFieldChange("address", e.target.value)}
+                        placeholder={ar ? "أدخل العنوان" : "Enter address"}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 4: معلومات النظام (Without Organization Code row) */}
+              <Card className="stg-card glass-panel">
+                <CardHeader
+                  title={ar ? "معلومات النظام" : "System Information"}
+                  subtitle={ar ? "تفاصيل تقنية وعامة عن بيئة تشغيل رفقاء القرآن" : "Technical diagnostics and application meta"}
+                  icon={Info}
+                />
+                <CardContent>
+                  <div className="stg-meta-list">
+                    <div className="stg-meta-row">
+                      <span>{ar ? "اسم النظام" : "System Name"}</span>
+                      <strong>{ar ? "رفيق القرآن" : "Rafiq Al-Quran"}</strong>
+                    </div>
+                    <div className="stg-meta-row">
+                      <span>{ar ? "الإصدار الحالي" : "Current Version"}</span>
+                      <strong className="stg-version-badge">{APP_VERSION}</strong>
+                    </div>
+                    <div className="stg-meta-row">
+                      <span>{ar ? "آخر تحديث للبيانات" : "Last Updated"}</span>
+                      <strong>{lastUpdated}</strong>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
+
+            {/* Error alerts if any */}
+            {validationError && (
+              <div className="stg-inline-error flex items-center justify-between gap-3 animate-fade-in">
+                <span>{validationError}</span>
+                <button
+                  type="button"
+                  onClick={() => setValidationError(null)}
+                  className="p-1 hover:bg-black/10 rounded-full transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Action Bar */}
+            {hasChanges && (
+              <div className="flex justify-end items-center gap-3 p-4 glass-panel rounded-xl animate-fade-in mt-4">
+                <Button
+                  variant="secondary"
+                  onClick={handleCancel}
+                  disabled={updateBrandingM.isPending}
+                >
+                  {ar ? "إلغاء التغييرات" : "Cancel Changes"}
+                </Button>
                 <Button
                   variant="primary"
                   leftIcon={<Save className="w-4 h-4" />}
-                  onClick={() => void submitBranding()}
+                  onClick={() => void handleSave()}
                   isLoading={updateBrandingM.isPending}
-                  disabled={
-                    brandingQ.isLoading ||
-                    !canEditBranding ||
-                    !hasBrandingChanges ||
-                    updateBrandingM.isPending
-                  }
                 >
                   {ar ? "حفظ التغييرات" : "Save Changes"}
                 </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
 
-        <Card className="stg-card">
-          <CardHeader
-            title={ar ? "تفضيلات الواجهة" : "Interface Preferences"}
-            subtitle={
-              ar ? "تحكم سريع في نمط العرض وسلوك القائمة الجانبية." : "Quick controls for theme and sidebar."
-            }
-            icon={Settings}
-          />
-          <CardContent>
-            <div className="stg-switch-list">
-              <div className="stg-switch-item">
-                <div className="stg-switch-copy">
-                  <p className="stg-switch-title">{ar ? "نمط الألوان" : "Color Theme"}</p>
-                  <p className="stg-switch-description">
-                    {ar
-                      ? "بدّل بين النمط الفاتح والداكن حسب بيئة العمل."
-                      : "Switch between light and dark mode based on your workspace."}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  leftIcon={theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                  onClick={toggleTheme}
-                >
-                  {theme === "light"
-                    ? ar
-                      ? "تفعيل الداكن"
-                      : "Enable Dark"
-                    : ar
-                      ? "تفعيل الفاتح"
-                      : "Enable Light"}
-                </Button>
-              </div>
-
-              <div className="stg-switch-item">
-                <div className="stg-switch-copy">
-                  <p className="stg-switch-title">{ar ? "القائمة الجانبية" : "Sidebar Density"}</p>
-                  <p className="stg-switch-description">
-                    {ar
-                      ? "وسّع أو اطوِ القائمة الجانبية لزيادة مساحة المحتوى."
-                      : "Expand or collapse the sidebar to increase content space."}
-                  </p>
-                </div>
-                <Button variant="secondary" onClick={toggleSidebar}>
-                  {sidebarCollapsed ? (ar ? "توسيع" : "Expand") : ar ? "طي" : "Collapse"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="stg-card">
-          <CardHeader
-            title={ar ? "معلومات النظام" : "System Information"}
-            subtitle={
-              ar ? "بيانات مرجعية عن النسخة الحالية وهوية الجمعية." : "Reference data about app version and branding."
-            }
-            icon={Info}
-          />
-          <CardContent>
-            <div className="stg-meta-list">
-              <div className="stg-meta-row">
-                <span>{ar ? "الإصدار" : "Version"}</span>
-                <strong>{APP_VERSION}</strong>
-              </div>
-              <div className="stg-meta-row">
-                <span>{ar ? "اسم النظام" : "System Name"}</span>
-                <strong>{ar ? "رفيق القرآن" : "Rafiq Al-Quran"}</strong>
-              </div>
-              <div className="stg-meta-row">
-                <span>{ar ? "اسم الجمعية" : "Organization"}</span>
-                <strong>{organizationName}</strong>
-              </div>
-              <div className="stg-meta-row">
-                <span>{ar ? "رمز الجمعية" : "Organization Code"}</span>
-                <strong>{organizationCode}</strong>
-              </div>
-              <div className="stg-meta-row">
-                <span>{ar ? "آخر تحديث" : "Last Updated"}</span>
-                <strong>{formatDateTime(brandingQ.data?.updatedAt, locale)}</strong>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 

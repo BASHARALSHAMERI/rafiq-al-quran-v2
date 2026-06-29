@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import type { Circle, CircleScheduleDay, CircleScheduleRow, PrayerName } from "../../types";
 import { circleGenderLabel, circleTypeLabel } from "./circles.types";
 import { useTimeFormat, fmtClockTime } from "../../../../shared/utils/time-format";
+import { usePrayerTimes, type PrayerTimes } from "../../../staff-attendance/staff-attendance.api";
 
 interface CircleCardProps {
   circle: Circle;
@@ -81,12 +82,41 @@ const prayerLabel = (prayer: PrayerName, ar: boolean) => {
   return (ar ? arMap : enMap)[prayer];
 };
 
-const formatSlotRange = (row: CircleScheduleRow, ar: boolean, hour12 = true) =>
-  row.mode === "CLOCK"
-    ? `${fmtClockTime(row.fromTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)} - ${fmtClockTime(row.toTime, ar ? "ar-SA-u-nu-latn" : "en-US", hour12)}`
-    : `${prayerLabel(row.fromPrayer, ar)} - ${prayerLabel(row.toPrayer, ar)}`;
+const resolvePrayerTime = (prayer: PrayerName, prayerTimes?: PrayerTimes | null): string | null => {
+  if (!prayerTimes) return null;
+  return prayerTimes[prayer.toLowerCase() as keyof PrayerTimes] ?? null;
+};
 
-const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | null, ar: boolean, hour12 = true): string | null => {
+const formatSlotRange = (
+  row: CircleScheduleRow,
+  ar: boolean,
+  hour12 = true,
+  prayerTimes?: PrayerTimes | null
+) => {
+  const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
+
+  if (row.mode === "CLOCK") {
+    return `${fmtClockTime(row.fromTime, locale, hour12)} - ${fmtClockTime(row.toTime, locale, hour12)}`;
+  }
+
+  // PRAYER mode — try to resolve actual clock times
+  const fromTime = resolvePrayerTime(row.fromPrayer, prayerTimes);
+  const toTime = resolvePrayerTime(row.toPrayer, prayerTimes);
+
+  if (fromTime && toTime) {
+    return `${fmtClockTime(fromTime, locale, hour12)} - ${fmtClockTime(toTime, locale, hour12)}`;
+  }
+
+  // Fallback: no GPS / no prayer cache yet — show prayer names
+  return `${prayerLabel(row.fromPrayer, ar)} - ${prayerLabel(row.toPrayer, ar)}`;
+};
+
+const formatCircleScheduleSummary = (
+  rows: CircleScheduleRow[] | undefined | null,
+  ar: boolean,
+  hour12 = true,
+  prayerTimes?: PrayerTimes | null
+): string | null => {
   if (!rows?.length) return null;
 
   const sorted = [...rows].sort(
@@ -103,7 +133,7 @@ const formatCircleScheduleSummary = (rows: CircleScheduleRow[] | undefined | nul
   if (!compactRows.length) return null;
 
   const firstRow = compactRows[0];
-  const firstLabel = formatSlotRange(firstRow, ar, hour12);
+  const firstLabel = formatSlotRange(firstRow, ar, hour12, prayerTimes);
   const dayLabelStr = dayLabel(firstRow.day, ar);
 
   const mainPart = `${dayLabelStr} ${firstLabel}`;
@@ -125,15 +155,21 @@ export default function CircleCard({
   toggleStatus
 }: CircleCardProps) {
   const navigate = useNavigate();
-  const isActive = circle.isActive ?? true;
+  const circleIsActive = circle.isActive ?? true;
+  const centerIsActive = circle.center?.isActive ?? true;
+  const isActive = circleIsActive && centerIsActive;
   const students = Number(circle._count?.enrollments ?? circle._count?.students ?? 0);
   const teacherName = circle.teacher?.fullName?.trim() || (ar ? "غير مضاف" : "Not assigned");
   const hasTeacher = Boolean(circle.teacher?.fullName?.trim());
   const centerName = circle.center?.name?.trim() || (ar ? "بدون مركز" : "No center");
   const locationName = circle.mosqueName?.trim() || (ar ? "بدون موقع" : "No location");
   const { hour12 } = useTimeFormat();
-  const scheduleSummary = formatCircleScheduleSummary(circle.weeklySchedule, ar, hour12);
+
+  // Detect if schedule uses PRAYER mode to conditionally fetch prayer times
   const hasPrayerSchedule = (circle.weeklySchedule ?? []).some((row: any) => row.mode === "PRAYER");
+  const { data: prayerTimes } = usePrayerTimes(circle.centerId, undefined, hasPrayerSchedule);
+
+  const scheduleSummary = formatCircleScheduleSummary(circle.weeklySchedule, ar, hour12, prayerTimes);
 
   return (
     <motion.article
@@ -161,7 +197,7 @@ export default function CircleCard({
           <span
             className={`ctr-center-card__chip ${isActive ? "ctr-center-card__chip--active" : "ctr-center-card__chip--inactive"}`}
           >
-            {isActive ? (ar ? "نشطة" : "Active") : ar ? "معطلة" : "Inactive"}
+            {isActive ? (ar ? "نشطة" : "Active") : !centerIsActive ? (ar ? "معطلة بسبب المركز" : "Center inactive") : ar ? "معطلة" : "Inactive"}
           </span>
           {circle.gender ? (
             <span
@@ -208,11 +244,6 @@ export default function CircleCard({
         <div className="ctr-center-card__manager-schedule" title={scheduleSummary ?? undefined}>
           <Clock3 size={14} />
           <span>{scheduleSummary ?? (ar ? "بدون مواعيد" : "No schedule")}</span>
-          {scheduleSummary && (
-            <span style={{ marginRight: ar ? "0" : "6px", marginLeft: ar ? "6px" : "0", fontSize: "11px", padding: "1px 5px", borderRadius: "4px", background: hasPrayerSchedule ? "#ede9fe" : "#ecfdf5", color: hasPrayerSchedule ? "#5b21b6" : "#065f46" }}>
-              {hasPrayerSchedule ? (ar ? "🕌 صلوات" : "🕌 Prayer") : (ar ? "🕒 ساعات" : "🕒 Clock")}
-            </span>
-          )}
         </div>
       </div>
 
@@ -222,8 +253,8 @@ export default function CircleCard({
             type="button"
             className="ctr-center-card__icon-btn"
             onClick={() => void toggleStatus(circle)}
-            disabled={pending}
-            title={isActive ? (ar ? "تعطيل" : "Deactivate") : ar ? "تفعيل" : "Activate"}
+            disabled={pending || !centerIsActive}
+            title={!centerIsActive ? (ar ? "فعّل المركز أولاً" : "Activate the center first") : circleIsActive ? (ar ? "تعطيل" : "Deactivate") : ar ? "تفعيل" : "Activate"}
           >
             <Power size={16} />
           </button>

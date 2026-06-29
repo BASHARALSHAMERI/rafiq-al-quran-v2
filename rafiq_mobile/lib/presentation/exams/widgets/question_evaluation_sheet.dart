@@ -6,38 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/exam_dtos.dart';
 import 'exam_shared_widgets.dart';
 
-// ─── Surah name helpers ────────────────────────────────────────────────────
-
-const _surahNames = <String>[
-  'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة',
-  'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس',
-  'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر',
-  'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
-  'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان',
-  'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
-  'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر',
-  'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
-  'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية',
-  'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
-  'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن',
-  'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
-  'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق',
-  'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج',
-  'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة',
-  'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس',
-  'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج',
-  'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
-  'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين',
-  'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات',
-  'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل',
-  'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
-  'المسد', 'الإخلاص', 'الفلق', 'الناس',
-];
-
-String _surahName(int surahNumber) {
-  if (surahNumber < 1 || surahNumber > 114) return 'سورة $surahNumber';
-  return 'سورة ${_surahNames[surahNumber - 1]}';
-}
+// ponytail: surahName shared in exam_shared_widgets.dart
 
 double _clampHalf(double v) => (v * 2).round() / 2;
 
@@ -122,7 +91,7 @@ class _QuestionEvaluationSheetState
     return ExamSheetScaffold(
       title: 'تقييم إجابة السؤال',
       subtitle:
-          'سؤال رقم ${q.orderIndex} • من ${_surahName(q.fromSurah)} إلى ${_surahName(q.toSurah)}',
+          'سؤال رقم ${q.orderIndex} • من ${surahName(q.fromSurah)} إلى ${surahName(q.toSurah)}',
       bottom: Row(
         children: [
           Expanded(
@@ -472,7 +441,7 @@ class _AyahCard extends StatelessWidget {
             ),
           const SizedBox(height: 6),
           Text(
-            'سورة ${_surahName(surah).replaceFirst('سورة ', '')} • آية $ayahNum',
+            'سورة ${surahName(surah).replaceFirst('سورة ', '')} • آية $ayahNum',
             style: Theme.of(context)
                 .textTheme
                 .labelSmall
@@ -511,7 +480,7 @@ class _MushafView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      _surahName(s.surahNumber),
+                      surahName(s.surahNumber),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: AppColors.primaryLight,
                             fontWeight: FontWeight.w700,

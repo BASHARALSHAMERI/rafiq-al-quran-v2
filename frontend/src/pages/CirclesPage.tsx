@@ -73,7 +73,7 @@ export default function CirclesPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
+  const showCenterFilter = user?.role === "SUPER_ADMIN";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCenterId = parseNumber(searchParams.get("centerId"));
@@ -81,7 +81,12 @@ export default function CirclesPage() {
   const centersQ = useCentersQuery();
   const centersData = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
   const allowedCenterIds = useMemo(() => new Set(centersData.map((center) => center.id)), [centersData]);
-  const selectedCenterId = requestedCenterId && allowedCenterIds.has(requestedCenterId) ? requestedCenterId : undefined;
+  const selectedCenterId =
+    requestedCenterId && allowedCenterIds.has(requestedCenterId)
+      ? requestedCenterId
+      : user?.role === "CENTER_ADMIN" && centersData.length === 1
+        ? centersData[0].id
+        : undefined;
 
   const circlesQ = useCirclesQuery(selectedCenterId);
   const createM = useCreateCircleMutation();
@@ -90,7 +95,7 @@ export default function CirclesPage() {
 
   const [q, setQ] = useState("");
   const [tFilter, setTFilter] = useState<CircleTypeFilter>("ALL");
-  const [sFilter, setSFilter] = useState<StatusFilter>("ALL");
+  const [sFilter, setSFilter] = useState<StatusFilter>("ACTIVE");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(PAGE_SIZES[1]);
@@ -137,14 +142,14 @@ export default function CirclesPage() {
     }
 
     if (tFilter !== "ALL") result = result.filter((circle) => circle.circleType === tFilter);
-    if (sFilter === "ACTIVE") result = result.filter((circle) => circle.isActive ?? true);
-    if (sFilter === "INACTIVE") result = result.filter((circle) => !(circle.isActive ?? true));
+    if (sFilter === "ACTIVE") result = result.filter((circle) => (circle.isActive ?? true) && (circle.center?.isActive ?? true));
+    if (sFilter === "INACTIVE") result = result.filter((circle) => !(circle.isActive ?? true) || !(circle.center?.isActive ?? true));
 
     return result;
   }, [circlesData, q, sFilter, tFilter]);
 
   const totalCircles = circlesData.length;
-  const activeCircles = circlesData.filter((circle) => circle.isActive ?? true).length;
+  const activeCircles = circlesData.filter((circle) => (circle.isActive ?? true) && (circle.center?.isActive ?? true)).length;
   const totalStudents = circlesData.reduce((sum, circle) => sum + Number(circle._count?.enrollments ?? circle._count?.students ?? 0), 0);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const curPage = Math.min(page, totalPages);
@@ -152,7 +157,10 @@ export default function CirclesPage() {
   const rangeFrom = filtered.length === 0 ? 0 : (curPage - 1) * pageSize + 1;
   const rangeTo = Math.min(filtered.length, curPage * pageSize);
 
-  const centerOpts = centersData.map((center) => ({ id: center.id, label: center.name, mosqueName: center.mosqueName, latitude: center.latitude, longitude: center.longitude }));
+  const centerOpts = centersData
+    .filter((center) => center.isActive ?? true)
+    .map((center) => ({ id: center.id, label: center.name, mosqueName: center.mosqueName, latitude: center.latitude, longitude: center.longitude }));
+  const canChooseCircleCenter = user?.role === "SUPER_ADMIN";
   const teacherOpts = teachers.map((teacher) => ({ id: teacher.id, label: teacher.fullName }));
   const selectedDraftCenter = typeof draft.centerId === "number" ? centersData.find((center) => center.id === draft.centerId) : undefined;
   const pending = createM.isPending || updateM.isPending || statusM.isPending;
@@ -160,7 +168,7 @@ export default function CirclesPage() {
   const refreshAll = async () => {
     setQ("");
     setTFilter("ALL");
-    setSFilter("ALL");
+    setSFilter("ACTIVE");
     setPage(1);
     setScopeMsg(null);
 
@@ -500,6 +508,7 @@ export default function CirclesPage() {
         centerOpts={centerOpts}
         teacherOpts={teacherOpts}
         selectedDraftCenter={selectedDraftCenter}
+        canChooseCenter={canChooseCircleCenter}
         submitCircle={submitCircle}
       />
 

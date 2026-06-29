@@ -1811,6 +1811,83 @@ export const examsService = {
     return serializeAttempt(updatedAttempt);
   },
 
+  async postponeAttempt(
+    scope: ScopeContext,
+    attemptId: number,
+    input: { examDate: string }
+  ) {
+    examsDomain.assertCanScheduleAttempt(scope);
+
+    const attempt = await getAttemptInScope(scope, attemptId);
+
+    if (attempt.status !== "SCHEDULED") {
+      throw new AppError("لا يمكن تأجيل الاختبار لأن حالته ليست مجدولة", 400);
+    }
+
+    const newDate = examsDomain.resolveRequiredDate(input.examDate, "examDate");
+
+    const updatedAttempt = await examsRepository.updateAttemptSchedule({
+      attemptId,
+      examDate: newDate,
+      committeeMembers: attempt.committeeMembers.map(m => m.userId)
+    });
+
+    await auditLogger.log({
+      organizationId: scope.organizationId,
+      centerId: attempt.circle.centerId,
+      circleId: attempt.circle.id,
+      actorUserId: scope.userId,
+      actorRole: scope.role,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.EXAM_ATTEMPT,
+      entityId: attempt.id,
+      summary: "تم تأجيل موعد الاختبار",
+      metadata: {
+        examId: attempt.examId,
+        studentId: attempt.studentId,
+        oldExamDate: attempt.examDate.toISOString().slice(0, 10),
+        newExamDate: updatedAttempt.examDate.toISOString().slice(0, 10)
+      }
+    });
+
+    return serializeAttempt(updatedAttempt);
+  },
+
+  async markAttemptAsAbsent(scope: ScopeContext, attemptId: number) {
+    examsDomain.assertCanScoreAttempt(scope);
+
+    const attempt = await getAttemptInScope(scope, attemptId);
+
+    if (attempt.status !== "SCHEDULED") {
+      throw new AppError("لا يمكن تسجيل الغياب إلا للاختبارات المجدولة", 400);
+    }
+
+    // @ts-ignore - Prisma type definition will match AttemptStatus.ABSENT since it is generated
+    const updatedAttempt = await examsRepository.updateAttemptStatus({
+      attemptId,
+      status: "ABSENT"
+    });
+
+    await auditLogger.log({
+      organizationId: scope.organizationId,
+      centerId: attempt.circle.centerId,
+      circleId: attempt.circle.id,
+      actorUserId: scope.userId,
+      actorRole: scope.role,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.EXAM_ATTEMPT,
+      entityId: attempt.id,
+      summary: "تم تسجيل غياب الطالب عن الاختبار",
+      metadata: {
+        examId: attempt.examId,
+        studentId: attempt.studentId,
+        status: "ABSENT"
+      }
+    });
+
+    return serializeAttempt(updatedAttempt);
+  },
+
   async generateAttemptQuestions(
     scope: ScopeContext,
     attemptId: number,

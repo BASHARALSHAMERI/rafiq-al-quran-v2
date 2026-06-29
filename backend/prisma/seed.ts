@@ -25,6 +25,7 @@ import {
   ReportRunStatus,
   ReportType,
   RiwayaType,
+  Prisma,
   PrismaClient,
   Role,
   StudentLevel,
@@ -999,27 +1000,44 @@ async function seed() {
     ]
   });
 
-  const examNorth = await prisma.exam.create({
-    data: {
-      organizationId: organization.id,
-      centerId: null,
-      circleId: null,
-      title: "اختبار الجزء الثلاثون - تجريبي",
-      type: ExamType.JUZ,
-      examBranch: "الجزء الثلاثون",
-      maxScore: 100,
-      passScore: 70,
-      status: ExamStatus.PUBLISHED,
-      createdById: superAdmin.id
-    }
-  });
+  const juzLabels = [
+    "الجزء الأول", "الجزء الثاني", "الجزء الثالث", "الجزء الرابع", "الجزء الخامس",
+    "الجزء السادس", "الجزء السابع", "الجزء الثامن", "الجزء التاسع", "الجزء العاشر",
+    "الجزء الحادي عشر", "الجزء الثاني عشر", "الجزء الثالث عشر", "الجزء الرابع عشر",
+    "الجزء الخامس عشر", "الجزء السادس عشر", "الجزء السابع عشر", "الجزء الثامن عشر",
+    "الجزء التاسع عشر", "الجزء العشرون", "الجزء الحادي والعشرون", "الجزء الثاني والعشرون",
+    "الجزء الثالث والعشرون", "الجزء الرابع والعشرون", "الجزء الخامس والعشرون",
+    "الجزء السادس والعشرون", "الجزء السابع والعشرون", "الجزء الثامن والعشرون",
+    "الجزء التاسع والعشرون", "الجزء الثلاثون"
+  ] as const;
+
+  const juzExams = await Promise.all(
+    juzLabels.map((label) =>
+      prisma.exam.create({
+        data: {
+          organizationId: organization.id,
+          centerId: null,
+          circleId: null,
+          title: `اختبار ${label}`,
+          type: ExamType.JUZ,
+          examBranch: label,
+          maxScore: 100,
+          passScore: 70,
+          status: ExamStatus.PUBLISHED,
+          createdById: superAdmin.id
+        }
+      })
+    )
+  );
+
+  const examNorth = juzExams[29];
 
   const examSouth = await prisma.exam.create({
     data: {
       organizationId: organization.id,
       centerId: null,
       circleId: null,
-      title: "اختبار المصحف كاملاً - تجريبي",
+      title: "اختبار المصحف كاملاً",
       type: ExamType.FULL_QURAN,
       examBranch: null,
       maxScore: 100,
@@ -1029,25 +1047,10 @@ async function seed() {
     }
   });
 
-  await prisma.exam.create({
-    data: {
-      organizationId: organization.id,
-      centerId: null,
-      circleId: null,
-      title: "اختبار الجزء الأول - مسودة",
-      type: ExamType.JUZ,
-      examBranch: "الجزء الأول",
-      maxScore: 100,
-      passScore: 70,
-      status: ExamStatus.DRAFT,
-      createdById: superAdmin.id
-    }
-  });
-
   await prisma.examCriteria.createMany({
     data: [
-      {
-        examId: examNorth.id,
+      ...juzExams.map((exam) => ({
+        examId: exam.id,
         memorizationScore: 60,
         tajweedScore: 20,
         theoreticalTajweedScore: 10,
@@ -1055,7 +1058,7 @@ async function seed() {
         promptingPenalty: 1,
         remindingPenalty: 1,
         tajweedPenalty: 1
-      },
+      })),
       {
         examId: examSouth.id,
         memorizationScore: 65,
@@ -1470,7 +1473,7 @@ async function seed() {
     type: NotificationType;
     title: string;
     body: string;
-    payload: Record<string, unknown>;
+    payload: Prisma.InputJsonValue;
     recipientUserId: number;
     isRead: boolean;
     createdById?: number | null;
@@ -1751,7 +1754,7 @@ async function seed() {
     entityType: AuditEntityType;
     entityId: number;
     summary: string;
-    metadata: Record<string, unknown>;
+    metadata: Prisma.InputJsonValue;
     createdAt: Date;
   }> = [
     {

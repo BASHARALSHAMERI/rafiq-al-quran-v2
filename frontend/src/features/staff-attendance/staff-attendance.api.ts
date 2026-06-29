@@ -351,12 +351,12 @@ export type UpdatePlanItemPayload = Partial<AddPlanItemPayload>;
 export interface DeductionRule {
   id: number;
   triggerType: DeductionTrigger;
-  calcType: DeductionCalcType;
+  deductionType: DeductionCalcType;
   amount: number;
   threshold?: number | null;
   thresholdCount?: number | null;
-  deductionAmountSAR: number;
-  deductionType: DeductionCalcType;
+  
+  
   description?: string | null;
   isActive: boolean;
 }

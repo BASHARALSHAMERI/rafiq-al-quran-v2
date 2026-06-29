@@ -126,8 +126,10 @@ type CircleScheduleSlotLike = {
   toPrayer: PrayerName | null;
 };
 
+const normalizeEntityName = (value: string) => value.replace(/�/g, "").replace(/\s+/g, " ").trim();
+
 const normalizeRequiredName = (input: { name?: string; nameAr?: string }) => {
-  const resolved = (input.nameAr ?? input.name ?? "").trim();
+  const resolved = normalizeEntityName(input.nameAr ?? input.name ?? "");
   if (!resolved) {
     throw new AppError("الاسم العربي للمركز/الحلقة مطلوب", 400);
   }

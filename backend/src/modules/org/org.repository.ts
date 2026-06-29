@@ -79,6 +79,10 @@ type UpdateOrganizationBrandingInput = {
   organizationId: number;
   name?: string;
   logoUrl?: string | null;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
 };
 
 type CreateCircleInput = {
@@ -126,8 +130,10 @@ const centerSelect = {
   gender: true,
   logoUrl: true,
   mosqueName: true,
+  locationText: true,
   latitude: true,
   longitude: true,
+  allowedRadiusMeters: true,
   timezone: true,
   centerAdminUserId: true,
   code: true,
@@ -195,6 +201,10 @@ const organizationBrandingSelect = {
   name: true,
   code: true,
   logoUrl: true,
+  description: true,
+  address: true,
+  phone: true,
+  email: true,
   createdAt: true,
   updatedAt: true
 } satisfies Prisma.OrganizationSelect;
@@ -219,7 +229,8 @@ const circleSelect = {
       id: true,
       name: true,
       gender: true,
-      code: true
+      code: true,
+      isActive: true
     }
   },
   teacher: {
@@ -268,7 +279,8 @@ const circleListSelect = {
       id: true,
       name: true,
       gender: true,
-      code: true
+      code: true,
+      isActive: true
     }
   },
   teacher: {
@@ -983,7 +995,11 @@ export const orgRepository = {
       where: { id: input.organizationId },
       data: {
         ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl ?? null } : {})
+        ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl ?? null } : {}),
+        ...(input.description !== undefined ? { description: input.description ?? null } : {}),
+        ...(input.address !== undefined ? { address: input.address ?? null } : {}),
+        ...(input.phone !== undefined ? { phone: input.phone ?? null } : {}),
+        ...(input.email !== undefined ? { email: input.email ?? null } : {})
       },
       select: organizationBrandingSelect
     });

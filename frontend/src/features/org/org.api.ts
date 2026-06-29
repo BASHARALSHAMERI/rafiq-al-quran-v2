@@ -72,6 +72,10 @@ const normalizeBranding = (value: OrganizationBranding): OrganizationBranding =>
   name: String(value.name ?? ""),
   code: String(value.code ?? ""),
   logoUrl: typeof value.logoUrl === "string" ? value.logoUrl : null,
+  description: typeof value.description === "string" ? value.description : null,
+  address: typeof value.address === "string" ? value.address : null,
+  phone: typeof value.phone === "string" ? value.phone : null,
+  email: typeof value.email === "string" ? value.email : null,
   createdAt: typeof value.createdAt === "string" ? value.createdAt : null,
   updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null
 });

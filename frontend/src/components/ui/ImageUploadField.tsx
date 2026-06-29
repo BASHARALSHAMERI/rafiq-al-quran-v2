@@ -15,6 +15,8 @@ type Props = {
   disabled?: boolean;
   helperText?: string;
   previewAlt?: string;
+  maxSize?: number; // in bytes
+  allowedTypes?: string[]; // e.g. ["image/png", "image/jpeg"]
 };
 
 export default function ImageUploadField({
@@ -25,7 +27,9 @@ export default function ImageUploadField({
   ar = true,
   disabled = false,
   helperText,
-  previewAlt
+  previewAlt,
+  maxSize,
+  allowedTypes
 }: Props) {
   const inputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -43,6 +47,27 @@ export default function ImageUploadField({
   const onFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Validate local type and size before upload if provided
+    if (allowedTypes && !allowedTypes.includes(file.type)) {
+      const extensions = allowedTypes.map((t) => t.split("/")[1] || t).join(", ");
+      setUploadError(
+        ar
+          ? `صيغة الملف غير مدعومة. الصيغ المسموحة هي: ${extensions}`
+          : `Unsupported file format. Allowed formats are: ${extensions}`
+      );
+      return;
+    }
+
+    if (maxSize && file.size > maxSize) {
+      const sizeInMB = (maxSize / (1024 * 1024)).toFixed(0);
+      setUploadError(
+        ar
+          ? `حجم الملف كبير جداً. الحد الأقصى المسموح به هو ${sizeInMB} ميجابايت.`
+          : `File size is too large. The maximum allowed limit is ${sizeInMB}MB.`
+      );
+      return;
+    }
 
     try {
       setUploadError(null);

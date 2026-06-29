@@ -389,7 +389,7 @@ export const examsWorkflowService = {
     }
 
     const circle = await ensureCircleExistsAndVisible(scope, input.circleId);
-    if (circle.teacherId !== scope.userId) {
+    if (scope.role === Role.TEACHER && circle.teacherId !== scope.userId) {
       throw new AppError("المعلمون يمكنهم ترشيح الطلاب من حلقاتهم فقط", 403);
     }
 

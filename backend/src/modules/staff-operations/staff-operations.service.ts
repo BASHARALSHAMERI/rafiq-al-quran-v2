@@ -1951,13 +1951,13 @@ export const staffOperationsService = {
         status: DeductionEventStatus.DEDUCTION_PENDING,
         ...centerFilter
       },
-      _sum: { calculatedAmountSAR: true }
+      _sum: { calculatedAmount: true }
     });
 
     deductionSums.forEach((row) => {
       const stats = reportByStaff.get(row.userId);
       if (stats) {
-        stats.pendingDeductions = Number(row._sum.calculatedAmountSAR ?? 0);
+        stats.pendingDeductions = Number(row._sum.calculatedAmount ?? 0);
       }
     });
 

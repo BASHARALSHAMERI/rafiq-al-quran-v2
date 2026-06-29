@@ -14,52 +14,7 @@ import 'exam_shared_widgets.dart';
 import 'manual_question_sheet.dart';
 import 'question_evaluation_sheet.dart';
 
-const _surahNames = <String>[
-  'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة',
-  'الأنعام', 'الأعراف', 'الأنفال', 'التوبة', 'يونس',
-  'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر',
-  'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
-  'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان',
-  'الشعراء', 'النمل', 'القصص', 'العنكبوت', 'الروم',
-  'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر',
-  'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
-  'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية',
-  'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
-  'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن',
-  'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة',
-  'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق',
-  'التحريم', 'الملك', 'القلم', 'الحاقة', 'المعارج',
-  'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة',
-  'الإنسان', 'المرسلات', 'النبأ', 'النازعات', 'عبس',
-  'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج',
-  'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد',
-  'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين',
-  'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات',
-  'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل',
-  'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
-  'المسد', 'الإخلاص', 'الفلق', 'الناس',
-];
-
-String _surahName(int n) {
-  if (n < 1 || n > 114) return 'سورة $n';
-  return 'سورة ${_surahNames[n - 1]}';
-}
-
-const _strengthOptions = <String>[
-  'جمال الصوت',
-  'حسن الأداء',
-  'قوة الحفظ',
-  'إتقان التجويد',
-  'وضوح المخارج',
-];
-
-const _weaknessOptions = <String>[
-  'سرعة القراءة',
-  'ضعف التجويد',
-  'ضعف الحفظ',
-  'كثرة التأتأة',
-  'اضطراب الترتيل',
-];
+// ponytail: shared surahNames and strength/weakness options in exam_shared_widgets.dart
 
 class ExamAttemptWorkspaceSheet extends ConsumerStatefulWidget {
   final ExamAttemptDto attempt;
@@ -129,13 +84,6 @@ class _ExamAttemptWorkspaceSheetState
     _performanceController.dispose();
     super.dispose();
   }
-
-  List<String> _parseNotes(String v) => v
-      .split(RegExp(r'[،,;]+'))
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-
 
   UserRole? get _currentRole => ref.read(currentUserRoleProvider);
   int? get _currentUserId =>
@@ -207,15 +155,6 @@ class _ExamAttemptWorkspaceSheetState
 
   double _readDouble(TextEditingController controller) {
     return double.tryParse(controller.text) ?? 0.0;
-  }
-
-  String? trimOrNull(String? v) {
-    if (v == null || v.trim().isEmpty) return null;
-    return v.trim();
-  }
-
-  String normalizeListText(String v) {
-    return v.split(RegExp(r'[،,;]+')).map((s) => s.trim()).where((s) => s.isNotEmpty).join('، ');
   }
 
   void _handleError(dynamic e) {
@@ -834,7 +773,7 @@ class _ExamAttemptWorkspaceSheetState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '${_surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${_surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
+                                    '${surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
@@ -881,7 +820,6 @@ class _ExamAttemptWorkspaceSheetState
             subtitle: 'وفق معايير القالب المعتمد',
           ),
           const SizedBox(height: AppSpacing.sm),
-          const SizedBox(height: AppSpacing.sm),
           _ScoreStepper(
             controller: _theoreticalController,
             enabled: _canEvaluate,
@@ -908,8 +846,8 @@ class _ExamAttemptWorkspaceSheetState
           if (_canEvaluate) ...[
             _SearchableMultiSelect(
               label: 'جوانب التميز',
-              options: _strengthOptions,
-              selected: _parseNotes(_strengthNotes),
+              options: examStrengthSuggestions,
+              selected: splitListText(_strengthNotes),
               color: AppColors.successLight,
               onChanged: (list) {
                 setState(() {
@@ -920,8 +858,8 @@ class _ExamAttemptWorkspaceSheetState
             const SizedBox(height: AppSpacing.sm),
             _SearchableMultiSelect(
               label: 'جوانب القصور',
-              options: _weaknessOptions,
-              selected: _parseNotes(_weaknessNotes),
+              options: examWeaknessSuggestions,
+              selected: splitListText(_weaknessNotes),
               color: AppColors.warningLight,
               onChanged: (list) {
                 setState(() {
@@ -1034,7 +972,7 @@ class _PremiumHeader extends StatelessWidget {
                 _HeaderInfoItem(
                   icon: Icons.menu_book_rounded,
                   label: 'النطاق',
-                  value: '${_surahName(examRange!.fromSurah).replaceFirst('سورة ', '')} ${examRange!.fromAyah} - ${_surahName(examRange!.toSurah).replaceFirst('سورة ', '')} ${examRange!.toAyah}',
+                  value: '${surahName(examRange!.fromSurah).replaceFirst('سورة ', '')} ${examRange!.fromAyah} - ${surahName(examRange!.toSurah).replaceFirst('سورة ', '')} ${examRange!.toAyah}',
                 ),
             ],
           ),

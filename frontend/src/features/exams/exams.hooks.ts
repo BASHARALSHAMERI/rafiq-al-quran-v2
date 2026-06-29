@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { examsApi } from "./exams.api";
 import type {
   AttemptFilters,
@@ -209,6 +209,29 @@ export const useUpdateAttemptCommitteeMutation = () => {
   return useMutation({
     mutationFn: (input: { attemptId: number; payload: UpdateAttemptCommitteePayload }) =>
       examsApi.updateAttemptCommittee(input.attemptId, input.payload),
+    onSuccess: async () => {
+      await invalidateExamState(queryClient);
+    }
+  });
+};
+
+export const usePostponeAttemptMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { attemptId: number; examDate: string }) =>
+      examsApi.postponeAttempt(input.attemptId, input.examDate),
+    onSuccess: async () => {
+      await invalidateExamState(queryClient);
+    }
+  });
+};
+
+export const useMarkAttemptAsAbsentMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (attemptId: number) => examsApi.markAttemptAsAbsent(attemptId),
     onSuccess: async () => {
       await invalidateExamState(queryClient);
     }
