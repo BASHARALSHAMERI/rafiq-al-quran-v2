@@ -52,6 +52,11 @@ const emptyDraft: CircleDraft = {
   circleType: "",
   primaryTeacherUserId: "",
   mosqueName: "",
+  useCenterLocation: true,
+  locationText: "",
+  latitude: "",
+  longitude: "",
+  allowedRadiusMeters: "500",
   scheduleRows: createEmptyScheduleDraftRows()
 };
 
@@ -61,6 +66,15 @@ const validateCircle = (draft: CircleDraft, ar: boolean) => {
   if (!draft.circleType) return ar ? "نوع الحلقة مطلوب" : "Type is required";
   if (!draft.primaryTeacherUserId) return ar ? "المعلم مطلوب" : "Teacher is required";
 
+  if (!draft.useCenterLocation) {
+    const latitude = Number(draft.latitude);
+    const longitude = Number(draft.longitude);
+    const radius = Number(draft.allowedRadiusMeters);
+    if (!draft.latitude || !draft.longitude) return ar ? "\u0625\u062d\u062f\u0627\u062b\u064a\u0627\u062a \u0645\u0648\u0642\u0639 \u0627\u0644\u062d\u0644\u0642\u0629 \u0645\u0637\u0644\u0648\u0628\u0629" : "Circle coordinates are required";
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return ar ? "\u062e\u0637 \u0627\u0644\u0639\u0631\u0636 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d" : "Invalid latitude";
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return ar ? "\u062e\u0637 \u0627\u0644\u0637\u0648\u0644 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d" : "Invalid longitude";
+    if (!Number.isInteger(radius) || radius <= 0) return ar ? "\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u0648\u0642\u0639 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0639\u062f\u062f\u0627 \u0635\u062d\u064a\u062d\u0627 \u0645\u0648\u062c\u0628\u0627" : "Location radius must be a positive integer";
+  }
   const scheduleError = validateScheduleDraftRows(draft.scheduleRows, ar);
   if (scheduleError) return scheduleError;
 
@@ -200,6 +214,11 @@ export default function CirclesPage() {
       circleType: (circle.circleType ?? "") as CircleType | "",
       primaryTeacherUserId: typeof circle.teacherId === "number" ? circle.teacherId : "",
       mosqueName: String(circle.mosqueName ?? ""),
+      useCenterLocation: circle.latitude == null || circle.longitude == null,
+      locationText: String(circle.locationText ?? ""),
+      latitude: circle.latitude == null ? "" : String(circle.latitude),
+      longitude: circle.longitude == null ? "" : String(circle.longitude),
+      allowedRadiusMeters: circle.allowedRadiusMeters == null ? "500" : String(circle.allowedRadiusMeters),
       scheduleRows: hydrateScheduleDraftRows(circle.weeklySchedule)
     });
   };
@@ -219,6 +238,10 @@ export default function CirclesPage() {
       circleType: draft.circleType as CircleType,
       primaryTeacherUserId: Number(draft.primaryTeacherUserId),
       mosqueName: draft.mosqueName.trim() || undefined,
+      locationText: draft.useCenterLocation ? null : draft.locationText.trim() || null,
+      latitude: draft.useCenterLocation ? null : Number(draft.latitude),
+      longitude: draft.useCenterLocation ? null : Number(draft.longitude),
+      allowedRadiusMeters: draft.useCenterLocation ? null : Number(draft.allowedRadiusMeters),
       weeklySchedule: serializeScheduleDraftRows(draft.scheduleRows)
     };
 

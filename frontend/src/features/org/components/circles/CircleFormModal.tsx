@@ -117,7 +117,7 @@ export function CircleFormModal({
   }, [pending, setModal, setFormErr]);
 
   const handleChange = useCallback(
-    (field: keyof CircleDraft, value: string | number | import("../../circleSchedule").CircleScheduleDraftRow[]) => {
+    (field: keyof CircleDraft, value: string | number | boolean | import("../../circleSchedule").CircleScheduleDraftRow[]) => {
       setDraft((prev) => ({ ...prev, [field]: value }));
     },
     [setDraft]
@@ -178,7 +178,12 @@ export function CircleFormModal({
                     ...p,
                     centerId: val,
                     primaryTeacherUserId: "",
-                    mosqueName: center?.mosqueName ?? ""
+                    mosqueName: center?.mosqueName ?? "",
+                    useCenterLocation: true,
+                    locationText: "",
+                    latitude: "",
+                    longitude: "",
+                    allowedRadiusMeters: "500"
                   }));
                 }}
               >
@@ -276,7 +281,7 @@ export function CircleFormModal({
                 placeholder={t.locationPh}
                 disabled={pending}
               />
-              {selectedDraftCenter && (
+              {draft.useCenterLocation && selectedDraftCenter && (
                 <div style={{ marginTop: "6px", padding: "6px 10px", borderRadius: "6px", background: (selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? "#ecfdf5" : "#fef2f2", border: `1px solid ${(selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? "#a7f3d0" : "#fecaca"}`, fontSize: "12px" }}>
                   {(selectedDraftCenter.latitude != null && selectedDraftCenter.longitude != null) ? (
                     <span style={{ color: "#065f46" }}>
@@ -289,6 +294,56 @@ export function CircleFormModal({
                   )}
                 </div>
               )}
+              <label className="flex items-center gap-2 mt-3 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={draft.useCenterLocation}
+                  onChange={(e) => handleChange("useCenterLocation", e.target.checked)}
+                  disabled={pending}
+                />
+                <span>{ar ? "\u0627\u0633\u062a\u062e\u062f\u0627\u0645 \u0645\u0648\u0642\u0639 \u0627\u0644\u0645\u0631\u0643\u0632" : "Use center location"}</span>
+              </label>
+
+              {!draft.useCenterLocation ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  <input
+                    className="circlemod-input"
+                    value={draft.locationText}
+                    onChange={(e) => handleChange("locationText", e.target.value)}
+                    placeholder={ar ? "\u0648\u0635\u0641 \u0645\u0648\u0642\u0639 \u0627\u0644\u062d\u0644\u0642\u0629" : "Circle location description"}
+                    disabled={pending}
+                  />
+                  <div className="circlemod-row">
+                    <input
+                      type="number"
+                      step="any"
+                      className="circlemod-input"
+                      value={draft.latitude}
+                      onChange={(e) => handleChange("latitude", e.target.value)}
+                      placeholder={ar ? "\u062e\u0637 \u0627\u0644\u0639\u0631\u0636" : "Latitude"}
+                      disabled={pending}
+                    />
+                    <input
+                      type="number"
+                      step="any"
+                      className="circlemod-input"
+                      value={draft.longitude}
+                      onChange={(e) => handleChange("longitude", e.target.value)}
+                      placeholder={ar ? "\u062e\u0637 \u0627\u0644\u0637\u0648\u0644" : "Longitude"}
+                      disabled={pending}
+                    />
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    className="circlemod-input"
+                    value={draft.allowedRadiusMeters}
+                    onChange={(e) => handleChange("allowedRadiusMeters", e.target.value)}
+                    placeholder={ar ? "\u0646\u0637\u0627\u0642 \u0627\u0644\u0633\u0645\u0627\u062d \u0628\u0627\u0644\u0645\u062a\u0631" : "Allowed radius in meters"}
+                    disabled={pending}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

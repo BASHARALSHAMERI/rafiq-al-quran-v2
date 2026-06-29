@@ -111,7 +111,7 @@ const validateGeoFields = (
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: [hasLatitude ? "longitude" : "latitude"],
-      message: "?? ????? ??? ????? ??? ???????? ????"
+      message: "\u062e\u0637 \u0627\u0644\u0639\u0631\u0636 \u0648\u062e\u0637 \u0627\u0644\u0637\u0648\u0644 \u064a\u062c\u0628 \u0625\u062f\u062e\u0627\u0644\u0647\u0645\u0627 \u0645\u0639\u0627"
     });
   }
 
@@ -119,7 +119,7 @@ const validateGeoFields = (
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: [clearsLatitude ? "longitude" : "latitude"],
-      message: "??? ?????? ????"
+      message: "\u064a\u062c\u0628 \u0645\u0633\u062d\u0647\u0645\u0627 \u0645\u0639\u0627"
     });
   }
 
@@ -131,7 +131,7 @@ const validateGeoFields = (
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["allowedRadiusMeters"],
-      message: "???? ?????? (????????) ????? ??? ????? ?? ?????/?????"
+      message: "\u0646\u0637\u0627\u0642 \u0627\u0644\u0633\u0645\u0627\u062d \u0628\u0627\u0644\u0623\u0645\u062a\u0627\u0631 \u0645\u0637\u0644\u0648\u0628 \u0639\u0646\u062f \u0625\u062f\u062e\u0627\u0644 \u0627\u0644\u0625\u062d\u062f\u0627\u062b\u064a\u0627\u062a"
     });
   }
 };
@@ -147,7 +147,8 @@ export const createCenterBodySchema = z
   })
   .refine((value) => value.centerAdminUserId !== undefined, {
     message: "معرف مدير المركز مطلوب"
-  });
+  })
+  .superRefine((value, ctx) => validateGeoFields(value, ctx));
 
 export const updateCenterBodySchema = z
   .object(centerWriteShape)

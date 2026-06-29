@@ -22,6 +22,12 @@ export const usersQuerySchema = z
 
 const positiveId = z.coerce.number().int().positive();
 const nonEmptyString = (max: number) => z.string().trim().min(1).max(max);
+const fullNameString = (max: number) => z.string().trim().min(1).max(max).refine((val) => {
+  const parts = val.split(/\s+/);
+  if (parts.length < 3) return false;
+  if (parts.some(p => p.length < 2)) return false;
+  return true;
+}, { message: "الاسم الرباعي يجب أن يتكون من 3 أسماء على الأقل، وكل اسم حرفين على الأقل" });
 const optionalTrimmedString = (max: number) => z.string().trim().max(max).optional().nullable();
 const optionalDate = z.coerce.date().optional().nullable();
 const khatmTypeInputSchema = z
@@ -40,7 +46,7 @@ const khatmTypeInputSchema = z
 
 const commonProfileCreateSchema = z
   .object({
-    fullName: nonEmptyString(160).optional(),
+    fullName: fullNameString(160).optional(),
     gender: z.nativeEnum(Gender).optional().nullable(),
     birthDate: optionalDate,
     phone: optionalTrimmedString(32),
@@ -168,7 +174,7 @@ export const userIdParamSchema = z
 
 export const createUserBodySchema = z
   .object({
-    fullName: nonEmptyString(120).optional(), // legacy compatibility
+    fullName: fullNameString(120).optional(), // legacy compatibility
     email: z.string().trim().email().max(191),
     username: optionalTrimmedString(80),
     role: z.nativeEnum(Role),
@@ -188,7 +194,7 @@ export const createUserBodySchema = z
 
 export const updateUserBodySchema = z
   .object({
-    fullName: nonEmptyString(120).optional(), // legacy compatibility
+    fullName: fullNameString(120).optional(), // legacy compatibility
     email: z.string().trim().email().max(191).optional(),
     username: optionalTrimmedString(80),
     profile: commonProfileUpdateSchema.optional(),

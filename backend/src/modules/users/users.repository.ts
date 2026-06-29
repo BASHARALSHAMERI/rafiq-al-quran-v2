@@ -1775,5 +1775,17 @@ export const usersRepository = {
       ),
       select: baseUserSelect
     }).then(users => users.map(syncLegacyNameMirrors));
+  },
+
+  async findUserByExactName(organizationId: number, fullName: string, excludeUserId?: number) {
+    const user = await prisma.user.findFirst({
+      where: activeUserWhere({
+        organizationId,
+        fullName,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {})
+      }),
+      select: { id: true, fullName: true }
+    });
+    return user;
   }
 };

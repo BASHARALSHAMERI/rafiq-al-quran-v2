@@ -3,6 +3,7 @@ import { AlertCircle, User, Briefcase, Link as LinkIcon, Building2, CheckCircle2
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import ImageUploadField from "../../../components/ui/ImageUploadField";
+import { notifyError } from "../../../shared/ui/feedback";
 import type { Role } from "../../auth/types";
 import type {
   KhatmType,
@@ -35,17 +36,7 @@ import {
   buildRoleAwareInitialState
 } from "../users.helpers";
 
-/* ═══════════════════════════════════════════════════════════════
-   ErrorBox — Inline error display
-   ═══════════════════════════════════════════════════════════════ */
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="ue-error-box">
-      <AlertCircle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-      <span>{message}</span>
-    </div>
-  );
-}
+
 
 /* ═══════════════════════════════════════════════════════════════
    RoleAwareUserFormModal — Multi-step user create/edit wizard
@@ -84,12 +75,11 @@ export function RoleAwareUserFormModal({
     if (state.links.centerIds.length > 0) return state.links.centerIds[0];
     return null;
   });
-  const [localError, setLocalError] = useState<string | null>(null);
+
 
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => {
-      setLocalError(null);
       setState(buildRoleAwareInitialState(role, mode, initialUser));
     }, 0);
     return () => clearTimeout(t);
@@ -101,13 +91,36 @@ export function RoleAwareUserFormModal({
   const supportsEnrollments = role === "STUDENT";
 
   const validateStep = useCallback(() => {
+    if (!state.account.fullName.trim()) return ar ? "الاسم الرباعي مطلوب" : "Full Name is required";
+    
+    const nameParts = state.account.fullName.trim().split(/\s+/);
+    if (nameParts.length < 3) {
+      return ar ? "الاسم الرباعي يجب أن يتكون من 3 أسماء على الأقل" : "Full Name must contain at least 3 names";
+    }
+    for (const part of nameParts) {
+      if (part.length < 2) {
+        return ar ? "يجب ألا يقل كل اسم عن حرفين (حرف واحد غير مقبول)" : "Each name must be at least 2 characters long (1 char is not acceptable)";
+      }
+    }
+
+    if (!state.account.email.trim()) return ar ? "البريد الإلكتروني مطلوب" : "Email is required";
+    if (!state.profile.gender) return ar ? "النوع مطلوب" : "Gender is required";
+
+    if (role !== "STUDENT" && !state.profile.phone.trim()) {
+      return ar ? "رقم الهاتف مطلوب" : "Phone number is required";
+    }
+
+    if (state.profile.phone.trim() && !/^7[0-9]{8}$/.test(state.profile.phone.trim())) {
+      return ar ? "رقم الهاتف يجب أن يكون 9 أرقام ويبدأ بـ 7" : "Phone number must be 9 digits and start with 7";
+    }
+
     return null;
-  }, [state.account, state.profile.phone, ar]);
+  }, [state.account, state.profile, ar, role]);
 
   const submit = useCallback(async () => {
     const ve = validateStep();
     if (ve) {
-      setLocalError(ve);
+      notifyError(ve);
       return;
     }
 
@@ -204,10 +217,9 @@ export function RoleAwareUserFormModal({
     }
 
     try {
-      setLocalError(null);
       await onSubmit(payload);
     } catch (e) {
-      setLocalError((e as Error).message || "An error occurred");
+      notifyError((e as Error).message || "An error occurred");
     }
   }, [onSubmit, state, mode, role, validateStep, supportsCenterLinks, supportsCircleLinks, supportsParentLinks, supportsEnrollments]);
 
@@ -302,7 +314,7 @@ export function RoleAwareUserFormModal({
 
             <div className="ctr-fg-row">
               <div className="ctr-fg flex-1">
-                <label>{ar ? "رقم الهاتف" : "Phone Number"}</label>
+                <label>{ar ? `رقم الهاتف ${role !== "STUDENT" ? "*" : ""}` : `Phone Number ${role !== "STUDENT" ? "*" : ""}`}</label>
                 <input
                   className="ctr-form-input glass-input"
                   value={state.profile.phone}
@@ -715,8 +727,6 @@ export function RoleAwareUserFormModal({
           </div>
         )}
 
-        {localError && <ErrorBox message={localError} />}
-        {error && <ErrorBox message={error} />}
       </div>
     </Modal>
   );

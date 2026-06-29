@@ -748,6 +748,15 @@ export const usersService = {
 
     const normalized = normalizeCreateUserPayload(input);
 
+    if (input.role !== Role.STUDENT && !normalized.profile?.phone) {
+      throw new AppError("رقم الهاتف مطلوب لهذا الدور.", 400);
+    }
+
+    const duplicateName = await usersRepository.findUserByExactName(scope.organizationId, normalized.fullName);
+    if (duplicateName) {
+      throw new AppError("الاسم الرباعي مسجل مسبقاً لمستخدم آخر. يرجى التحقق من الاسم.", 409);
+    }
+
     // Enforce center binding for CENTER_ADMIN-created STUDENT/PARENT users
     if (
       scope.role === Role.CENTER_ADMIN &&
@@ -850,6 +859,18 @@ export const usersService = {
     assertRoleSpecificPayloadMatchesRole(existingUser.role, input);
 
     const normalized = normalizeUpdateUserPayload(input);
+
+    if (existingUser.role !== Role.STUDENT && normalized.profile && normalized.profile.phone === null) {
+      throw new AppError("رقم الهاتف مطلوب لهذا الدور.", 400);
+    }
+
+    if (normalized.fullName && normalized.fullName !== existingUser.fullName) {
+      const duplicateName = await usersRepository.findUserByExactName(scope.organizationId, normalized.fullName, existingUser.id);
+      if (duplicateName) {
+        throw new AppError("الاسم الرباعي مسجل مسبقاً لمستخدم آخر. يرجى التحقق من الاسم.", 409);
+      }
+    }
+
     await validateLinksWithinScope(scope, existingUser.role, normalized.links);
 
     try {
