@@ -396,6 +396,17 @@ export const examsWorkflowRepository = {
     });
   },
 
+  async findActiveNomination(input: { examId: number; studentId: number }) {
+    return prisma.examNominationRequest.findFirst({
+      where: {
+        examId: input.examId,
+        studentId: input.studentId,
+        status: { in: ["PENDING", "APPROVED"] }
+      },
+      select: nominationSelect
+    });
+  },
+
   async createNominationRequest(input: {
     organizationId: number;
     centerId: number;

@@ -1,3 +1,4 @@
+import { AppError } from "../../shared/errors/app-error";
 import type { PrismaClient } from "@prisma/client";
 import { createGradeScalesRepository, type GradeScaleRow } from "./grade-scales.repository";
 import type { GradeScaleBody } from "./grade-scales.validation";
@@ -46,11 +47,55 @@ export function createGradeScalesService(prisma: PrismaClient) {
     },
 
     async create(organizationId: number, body: GradeScaleBody): Promise<GradeScaleItem> {
+      const existingRows = await repo.findAll(organizationId);
+      if (existingRows.some(r => r.label.trim() === body.label.trim())) {
+        throw new AppError(`يوجد تقدير مضاف مسبقاً باسم "${body.label.trim()}"`, 400);
+      }
+      
+      if (body.isActive !== false) {
+        const overlap = existingRows.find(r => 
+          r.isActive && 
+          body.minPercentage <= r.maxPercentage && 
+          body.maxPercentage >= r.minPercentage
+        );
+        if (overlap) {
+          throw new AppError(`يتقاطع هذا النطاق مع تقدير آخر فعال: "${overlap.label}"`, 400);
+        }
+      }
+
       const row = await repo.create(organizationId, body);
       return toItem(row);
     },
 
     async update(id: number, organizationId: number, body: Partial<GradeScaleBody>): Promise<GradeScaleItem | null> {
+      const existingRows = await repo.findAll(organizationId);
+      const currentRow = existingRows.find(r => r.id === id);
+      
+      if (!currentRow) return null;
+
+      if (body.label !== undefined) {
+        const duplicate = existingRows.find(r => r.label.trim() === body.label!.trim() && r.id !== id);
+        if (duplicate) {
+          throw new AppError(`يوجد تقدير مضاف مسبقاً باسم "${body.label.trim()}"`, 400);
+        }
+      }
+
+      const minP = body.minPercentage ?? currentRow.minPercentage;
+      const maxP = body.maxPercentage ?? currentRow.maxPercentage;
+      const isActive = body.isActive ?? currentRow.isActive;
+
+      if (isActive) {
+        const overlap = existingRows.find(r => 
+          r.isActive && 
+          r.id !== id &&
+          minP <= r.maxPercentage && 
+          maxP >= r.minPercentage
+        );
+        if (overlap) {
+          throw new AppError(`يتقاطع هذا النطاق مع تقدير آخر فعال: "${overlap.label}"`, 400);
+        }
+      }
+
       const row = await repo.update(id, organizationId, body);
       if (!row) return null;
       return toItem(row);

@@ -9,7 +9,7 @@ import {
 import { z } from "zod";
 
 const questionBankSourceSchema = z.nativeEnum(ExamQuestionSource);
-const examTemplateTypeSchema = z.enum(["JUZ", "FULL_QURAN"]);
+const examTemplateTypeSchema = z.enum(["JUZ", "FULL_QURAN", "JUZ_RANGE"]);
 const scoreNumberSchema = z.coerce.number().min(0).max(1000);
 const committeeRoleSchema = z.nativeEnum(CommitteeRole);
 
@@ -167,6 +167,38 @@ export const createExamBodySchema = z
         message: "فرع الاختبار يجب أن يكون فارغاً لاختبارات المصحف كاملاً",
         path: ["examBranch"]
       });
+    }
+
+    if (value.type === "JUZ_RANGE" && !hasBranch) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "يجب تحديد نطاق الأجزاء لاختبارات الفئات (مثال: من الجزء 1 إلى الجزء 5)",
+        path: ["examBranch"]
+      });
+    }
+
+    if (value.type === "JUZ_RANGE" && hasBranch) {
+      // Validate JUZ_RANGE format: "من الجزء X إلى الجزء Y"
+      const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+      const westernized = value.examBranch!.replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)));
+      const match = westernized.match(/من\s+الجزء\s+(\d+)\s+إلى\s+الجزء\s+(\d+)/);
+      if (!match) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "صيغة نطاق الأجزاء غير صحيحة. يجب أن تكون: من الجزء X إلى الجزء Y",
+          path: ["examBranch"]
+        });
+      } else {
+        const from = Number(match[1]);
+        const to = Number(match[2]);
+        if (from < 1 || from > 30 || to < 1 || to > 30 || from > to) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "نطاق الأجزاء غير صحيح (يجب أن يكون من 1 إلى 30 والبداية قبل النهاية)",
+            path: ["examBranch"]
+          });
+        }
+      }
     }
   });
 

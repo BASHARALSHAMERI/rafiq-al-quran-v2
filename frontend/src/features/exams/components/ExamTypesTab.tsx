@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { AlertCircle, BookOpen, Edit2, Plus, Rocket, Trash2, FileText, Layout, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, BookOpen, Edit2, Plus, Rocket, Trash2, FileText, Layout, Search, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import toast from "react-hot-toast";
+import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
@@ -28,6 +30,8 @@ type FormState = {
   title: string;
   type: SupportedExamTemplateType;
   examBranch: string;
+  fromJuz: number;
+  toJuz: number;
   maxScore: number;
   passScore: number;
   memorizationScore: number;
@@ -42,10 +46,14 @@ type FormState = {
   maxQuestionCount: number;
 };
 
+const JUZ_NUMBERS = Array.from({ length: 30 }, (_, i) => i + 1);
+
 const emptyForm = (): FormState => ({
   title: "",
   type: "JUZ",
   examBranch: JUZ_BRANCH_OPTIONS[0],
+  fromJuz: 1,
+  toJuz: 5,
   maxScore: 100,
   passScore: 70,
   memorizationScore: 60,
@@ -60,26 +68,49 @@ const emptyForm = (): FormState => ({
   maxQuestionCount: 10
 });
 
-const toFormState = (exam: ExamListItem): FormState => ({
-  title: exam.title,
-  type: exam.type === "FULL_QURAN" ? "FULL_QURAN" : "JUZ",
-  examBranch:
-    exam.type === "JUZ"
-      ? exam.examBranch?.trim() || JUZ_BRANCH_OPTIONS[0]
-      : JUZ_BRANCH_OPTIONS[0],
-  maxScore: exam.maxScore,
-  passScore: exam.passScore,
-  memorizationScore: exam.criteria?.memorizationScore ?? 60,
-  tajweedScore: exam.criteria?.tajweedScore ?? 20,
-  theoreticalTajweedScore: exam.criteria?.theoreticalTajweedScore ?? 10,
-  performanceScore: exam.criteria?.performanceScore ?? 10,
-  promptingPenalty: exam.criteria?.promptingPenalty ?? 1,
-  remindingPenalty: exam.criteria?.remindingPenalty ?? 1,
-  tajweedPenalty: exam.criteria?.tajweedPenalty ?? 1,
-  minQuestionCount: exam.criteria?.minQuestionCount ?? 1,
-  defaultQuestionCount: exam.criteria?.defaultQuestionCount ?? 5,
-  maxQuestionCount: exam.criteria?.maxQuestionCount ?? 10
-});
+const parseJuzRangeBranch = (branch: string | null | undefined): { from: number; to: number } | null => {
+  const normalized = branch?.trim();
+  if (!normalized) return null;
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  const w = normalized.replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)));
+  const m = w.match(/من\s+الجزء\s+(\d+)\s+إلى\s+الجزء\s+(\d+)/);
+  if (!m) return null;
+  const from = Number(m[1]);
+  const to = Number(m[2]);
+  if (from < 1 || from > 30 || to < 1 || to > 30 || from > to) return null;
+  return { from, to };
+};
+
+const toFormState = (exam: ExamListItem): FormState => {
+  let fromJuz = 1;
+  let toJuz = 5;
+  if (exam.type === "JUZ_RANGE" && exam.examBranch) {
+    const parsed = parseJuzRangeBranch(exam.examBranch);
+    if (parsed) { fromJuz = parsed.from; toJuz = parsed.to; }
+  }
+  return {
+    title: exam.title,
+    type: exam.type === "FULL_QURAN" ? "FULL_QURAN" : exam.type === "JUZ_RANGE" ? "JUZ_RANGE" : "JUZ",
+    examBranch:
+      exam.type === "JUZ"
+        ? exam.examBranch?.trim() || JUZ_BRANCH_OPTIONS[0]
+        : JUZ_BRANCH_OPTIONS[0],
+    fromJuz,
+    toJuz,
+    maxScore: exam.maxScore,
+    passScore: exam.passScore,
+    memorizationScore: exam.criteria?.memorizationScore ?? 60,
+    tajweedScore: exam.criteria?.tajweedScore ?? 20,
+    theoreticalTajweedScore: exam.criteria?.theoreticalTajweedScore ?? 10,
+    performanceScore: exam.criteria?.performanceScore ?? 10,
+    promptingPenalty: exam.criteria?.promptingPenalty ?? 1,
+    remindingPenalty: exam.criteria?.remindingPenalty ?? 1,
+    tajweedPenalty: exam.criteria?.tajweedPenalty ?? 1,
+    minQuestionCount: exam.criteria?.minQuestionCount ?? 1,
+    defaultQuestionCount: exam.criteria?.defaultQuestionCount ?? 5,
+    maxQuestionCount: exam.criteria?.maxQuestionCount ?? 10
+  };
+};
 
 const criteriaTotal = (form: FormState) =>
   form.memorizationScore +
@@ -88,18 +119,9 @@ const criteriaTotal = (form: FormState) =>
   form.performanceScore;
 
 const tableStatusVariant = (status: string) => {
-  if (status === "PUBLISHED") {
-    return "success";
-  }
-
-  if (status === "DRAFT") {
-    return "warning";
-  }
-
-  if (status === "CANCELLED") {
-    return "error";
-  }
-
+  if (status === "PUBLISHED") return "success";
+  if (status === "DRAFT") return "warning";
+  if (status === "CANCELLED") return "error";
   return "secondary";
 };
 
@@ -135,8 +157,6 @@ export function ExamTypesTab() {
   const [editingExam, setEditingExam] = useState<ExamListItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExamListItem | null>(null);
-  const [formError, setFormError] = useState("");
-  const [publishError, setPublishError] = useState("");
 
   const isPending =
     createMutation.isPending ||
@@ -153,6 +173,10 @@ export function ExamTypesTab() {
 
   const currentCriteriaTotal = criteriaTotal(form);
   const branchRequired = form.type === "JUZ";
+  const juzRangeRequired = form.type === "JUZ_RANGE";
+  
+  // Immutability lock: if the exam has attempts, we disable editing scoring/type fields
+  const isLocked = Boolean(editingExam && (editingExam._count?.attempts ?? 0) > 0);
 
   const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -161,25 +185,28 @@ export function ExamTypesTab() {
   const openCreate = () => {
     setEditingExam(null);
     setForm(emptyForm());
-    setFormError("");
     setIsModalOpen(true);
   };
 
   const openEdit = (exam: ExamListItem) => {
     setEditingExam(exam);
     setForm(toFormState(exam));
-    setFormError("");
+    setIsModalOpen(true);
+  };
+
+  const openClone = (exam: ExamListItem) => {
+    setEditingExam(null); // Treat as a new exam creation
+    setForm({
+      ...toFormState(exam),
+      title: `${exam.title} (نسخة)`
+    });
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
-    if (isPending) {
-      return;
-    }
-
+    if (isPending) return;
     setIsModalOpen(false);
     setEditingExam(null);
-    setFormError("");
   };
 
   const buildCriteria = (): ExamCriteriaPayload => ({
@@ -195,6 +222,12 @@ export function ExamTypesTab() {
     maxQuestionCount: form.maxQuestionCount
   });
 
+  const buildExamBranch = (): string | null => {
+    if (form.type === "JUZ") return form.examBranch;
+    if (form.type === "JUZ_RANGE") return `من الجزء ${form.fromJuz} إلى الجزء ${form.toJuz}`;
+    return null;
+  };
+
   const validateForm = () => {
     if (!form.title.trim()) {
       return "يرجى إدخال اسم واضح للاختبار.";
@@ -202,6 +235,10 @@ export function ExamTypesTab() {
 
     if (branchRequired && !form.examBranch.trim()) {
       return "يرجى تحديد فرع الاختبار عند اختيار اختبار الأجزاء.";
+    }
+
+    if (juzRangeRequired && form.fromJuz > form.toJuz) {
+      return "جزء البداية يجب أن يكون قبل أو يساوي جزء النهاية.";
     }
 
     if (form.passScore > form.maxScore) {
@@ -239,18 +276,17 @@ export function ExamTypesTab() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFormError("");
 
     const validationMessage = validateForm();
     if (validationMessage) {
-      setFormError(validationMessage);
+      toast.error(validationMessage);
       return;
     }
 
     const payload = {
       title: form.title.trim(),
       type: form.type,
-      examBranch: form.type === "JUZ" ? form.examBranch : null,
+      examBranch: buildExamBranch(),
       maxScore: form.maxScore,
       passScore: form.passScore,
       criteria: buildCriteria()
@@ -258,47 +294,42 @@ export function ExamTypesTab() {
 
     try {
       if (editingExam) {
+        // If locked, we still pass the values but the backend will ignore scoring/type changes 
+        // to prevent validation errors on disabled fields.
         await updateMutation.mutateAsync({
           examId: editingExam.id,
           payload
         });
+        toast.success("تم تعديل القالب بنجاح");
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success("تم إنشاء القالب بنجاح");
       }
 
       closeModal();
     } catch (error) {
-      setFormError(
-        error instanceof Error && error.message
-          ? error.message
-          : "تعذر حفظ قالب الاختبار. حاول مرة أخرى."
-      );
+      toast.error(getLocalizedApiErrorMessage(error, "تعذّر حفظ قالب الاختبار. حاول مرة أخرى."));
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) {
-      return;
-    }
+    if (!deleteTarget) return;
 
     try {
       await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
+      toast.success("تم حذف القالب بنجاح");
     } catch (error) {
-      setFormError(
-        error instanceof Error && error.message ? error.message : "تعذر حذف قالب الاختبار."
-      );
+      toast.error(getLocalizedApiErrorMessage(error, "تعذّر حذف قالب الاختبار."));
     }
   };
 
   const handlePublish = async (exam: ExamListItem) => {
     try {
-      setPublishError("");
       await publishMutation.mutateAsync(exam.id);
+      toast.success("تم نشر قالب الاختبار بنجاح");
     } catch (error) {
-      setPublishError(
-        error instanceof Error && error.message ? error.message : "تعذر نشر قالب الاختبار."
-      );
+      toast.error(getLocalizedApiErrorMessage(error, "تعذّر نشر قالب الاختبار."));
     }
   };
 
@@ -332,13 +363,6 @@ export function ExamTypesTab() {
           </Button>
         </div>
       </div>
-
-      {publishError && (
-        <div className="grade-scales-alert grade-scales-alert--error" style={{ marginBottom: "1rem" }}>
-          <AlertCircle size={14} />
-          <span style={{ fontSize: '0.75rem' }}>{publishError}</span>
-        </div>
-      )}
 
       <div className="exam-types-tab__workspace">
         {examsQuery.isLoading ? (
@@ -393,27 +417,45 @@ export function ExamTypesTab() {
                       <span style={{ fontSize: '0.6rem' }}>محاولة</span>
                     </div>
                     <div className="et-actions">
+                      {/* زر النشر: يظهر فقط للمسودات */}
                       <button
                         className="gs-icon-btn gs-icon-btn--publish"
                         disabled={exam.status !== "DRAFT" || publishMutation.isPending}
                         onClick={() => void handlePublish(exam)}
-                        title="نشر القالب"
+                        title={exam.status === "DRAFT" ? "نشر القالب" : "القالب منشور بالفعل - عدّله أولاً لإعادة النشر"}
                       >
                         <Rocket size={13} />
                       </button>
+                      {/* زر النسخ: متاح دائماً */}
                       <button
                         className="gs-icon-btn"
-                        disabled={exam.status !== "DRAFT"}
+                        onClick={() => openClone(exam)}
+                        title="استنساخ القالب لإنشاء نسخة جديدة"
+                      >
+                        <Copy size={13} />
+                      </button>
+                      {/* زر التعديل: مفعّل دائماً - تعديل المنشور يُعيده لمسودة */}
+                      <button
+                        className="gs-icon-btn"
                         onClick={() => openEdit(exam)}
-                        title="تعديل"
+                        title={
+                          exam.status === "PUBLISHED"
+                            ? "تعديل (سيُعاد إلى مسودة - يجب إعادة نشره)"
+                            : "تعديل"
+                        }
                       >
                         <Edit2 size={13} />
                       </button>
+                      {/* زر الحذف: معطّل فقط إذا كانت هناك محاولات */}
                       <button
                         className="gs-icon-btn gs-icon-btn--delete"
-                        disabled={exam.status !== "DRAFT"}
+                        disabled={(exam._count?.attempts ?? 0) > 0}
                         onClick={() => setDeleteTarget(exam)}
-                        title="حذف"
+                        title={
+                          (exam._count?.attempts ?? 0) > 0
+                            ? `لا يمكن الحذف: يوجد ${exam._count?.attempts} محاولة مرتبطة`
+                            : "حذف"
+                        }
                       >
                         <Trash2 size={13} />
                       </button>
@@ -474,7 +516,11 @@ export function ExamTypesTab() {
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingExam ? "تعديل قالب اختبار" : "إضافة قالب اختبار جديد"}
-        description="حدد بنية الاختبار والقيم الافتراضية للتقييم."
+        description={
+          editingExam?.status === "PUBLISHED"
+            ? "⚠️ هذا القالب منشور. سيُعاد تلقائياً إلى المسودة عند الحفظ ويحتاج إعادة نشر."
+            : "حدد بنية الاختبار والقيم الافتراضية للتقييم."
+        }
         size="md"
         footer={
           <>
@@ -486,10 +532,13 @@ export function ExamTypesTab() {
         }
       >
         <form id="exam-template-form" className="et-modal-form" dir="rtl" onSubmit={handleSubmit}>
-          {formError && (
-            <div className="grade-scales-alert grade-scales-alert--error" style={{ marginBottom: "0.5rem" }}>
+          {isLocked && (
+            <div className="grade-scales-alert" style={{ marginBottom: "1rem", backgroundColor: "rgba(234, 179, 8, 0.1)", color: "#ca8a04", padding: "10px", borderRadius: "8px", display: "flex", gap: "8px", alignItems: "center" }}>
               <AlertCircle size={16} />
-              <span>{formError}</span>
+              <span style={{ fontSize: '0.8rem' }}>
+                لا يمكن تعديل معايير التقييم لأن هذا القالب مستخدم بالفعل لتقييم طلاب سابقين.
+                الرجاء استنساخ القالب لتغيير المعايير.
+              </span>
             </div>
           )}
 
@@ -502,22 +551,67 @@ export function ExamTypesTab() {
               </label>
               <label className="et-field">
                 <span style={{ fontSize: '0.75rem' }}>نوع الاختبار</span>
-                <select style={{ height: '38px', fontSize: '0.85rem' }} value={form.type} onChange={(e) => {
+                <select disabled={isLocked} style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }} value={form.type} onChange={(e) => {
                   const val = e.target.value as SupportedExamTemplateType;
-                  setForm(c => ({ ...c, type: val, examBranch: val === "JUZ" ? c.examBranch || JUZ_BRANCH_OPTIONS[0] : "" }));
+                  setForm(c => ({
+                    ...c,
+                    type: val,
+                    examBranch: val === "JUZ" ? c.examBranch || JUZ_BRANCH_OPTIONS[0] : "",
+                    fromJuz: 1,
+                    toJuz: 5
+                  }));
                 }}>
                   {EXAM_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </label>
             </div>
-            {branchRequired ? (
+
+            {/* اختبار جزء واحد */}
+            {branchRequired && (
               <label className="et-field">
-                <span style={{ fontSize: '0.75rem' }}>فرع الاختبار (الأجزاء)</span>
-                <select style={{ height: '38px', fontSize: '0.85rem' }} value={form.examBranch} onChange={(e) => setField("examBranch", e.target.value)}>
+                <span style={{ fontSize: '0.75rem' }}>فرع الاختبار (الجزء)</span>
+                <select disabled={isLocked} style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }} value={form.examBranch} onChange={(e) => setField("examBranch", e.target.value)}>
                   {JUZ_BRANCH_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </label>
-            ) : (
+            )}
+
+            {/* فئات الأجزاء (من - إلى) */}
+            {juzRangeRequired && (
+              <div className="et-form-grid">
+                <label className="et-field">
+                  <span style={{ fontSize: '0.75rem' }}>من الجزء</span>
+                  <select
+                    disabled={isLocked}
+                    style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }}
+                    value={form.fromJuz}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setForm(c => ({ ...c, fromJuz: val, toJuz: Math.max(val, c.toJuz) }));
+                    }}
+                  >
+                    {JUZ_NUMBERS.map(n => <option key={n} value={n}>الجزء {n}</option>)}
+                  </select>
+                </label>
+                <label className="et-field">
+                  <span style={{ fontSize: '0.75rem' }}>إلى الجزء</span>
+                  <select
+                    disabled={isLocked}
+                    style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }}
+                    value={form.toJuz}
+                    onChange={(e) => setField("toJuz", Number(e.target.value))}
+                  >
+                    {JUZ_NUMBERS.filter(n => n >= form.fromJuz).map(n => <option key={n} value={n}>الجزء {n}</option>)}
+                  </select>
+                </label>
+                <div className="et-field--hint" style={{ fontSize: '0.7rem', gridColumn: '1 / -1' }}>
+                  النطاق المحدد: من الجزء {form.fromJuz} إلى الجزء {form.toJuz} ({form.toJuz - form.fromJuz + 1} جزء)
+                </div>
+              </div>
+            )}
+
+            {/* المصحف كاملاً */}
+            {form.type === "FULL_QURAN" && (
               <div className="et-field--hint" style={{ fontSize: '0.7rem' }}>فرع الاختبار غير مطلوب في اختبار المصحف كاملاً.</div>
             )}
           </div>
@@ -527,11 +621,11 @@ export function ExamTypesTab() {
             <div className="et-form-grid">
               <label className="et-field">
                 <span style={{ fontSize: '0.75rem' }}>الدرجة العظمى</span>
-                <input style={{ height: '38px', fontSize: '0.85rem' }} type="number" min={1} value={form.maxScore} onChange={(e) => setField("maxScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={1} value={form.maxScore} onChange={(e) => setField("maxScore", Number(e.target.value))} />
               </label>
               <label className="et-field">
                 <span style={{ fontSize: '0.75rem' }}>علامة النجاح</span>
-                <input style={{ height: '38px', fontSize: '0.85rem' }} type="number" min={0} value={form.passScore} onChange={(e) => setField("passScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} value={form.passScore} onChange={(e) => setField("passScore", Number(e.target.value))} />
               </label>
             </div>
             
@@ -543,19 +637,19 @@ export function ExamTypesTab() {
             <div className="et-form-grid">
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>درجة الحفظ</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" min={0} value={form.memorizationScore} onChange={(e) => setField("memorizationScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} value={form.memorizationScore} onChange={(e) => setField("memorizationScore", Number(e.target.value))} />
               </label>
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>درجة التجويد</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" min={0} value={form.tajweedScore} onChange={(e) => setField("tajweedScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} value={form.tajweedScore} onChange={(e) => setField("tajweedScore", Number(e.target.value))} />
               </label>
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>تجويد نظري</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" min={0} value={form.theoreticalTajweedScore} onChange={(e) => setField("theoreticalTajweedScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} value={form.theoreticalTajweedScore} onChange={(e) => setField("theoreticalTajweedScore", Number(e.target.value))} />
               </label>
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>الأداء</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" min={0} value={form.performanceScore} onChange={(e) => setField("performanceScore", Number(e.target.value))} />
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} value={form.performanceScore} onChange={(e) => setField("performanceScore", Number(e.target.value))} />
               </label>
             </div>
           </div>
@@ -564,16 +658,16 @@ export function ExamTypesTab() {
             <h3 style={{ fontSize: '0.8rem' }}>سياسة الخصومات (التقييم)</h3>
             <div className="et-form-grid">
               <label className="et-field">
-                <span style={{ fontSize: '0.72rem' }}>تلقين (-0.5)</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" step="0.5" value={form.promptingPenalty} onChange={(e) => setField("promptingPenalty", Number(e.target.value))} />
+                <span style={{ fontSize: '0.72rem' }}>خصم التلقين</span>
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} step="0.5" value={form.promptingPenalty} onChange={(e) => setField("promptingPenalty", Number(e.target.value))} />
               </label>
               <label className="et-field">
-                <span style={{ fontSize: '0.72rem' }}>تنبيه (-0.5)</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" step="0.5" value={form.remindingPenalty} onChange={(e) => setField("remindingPenalty", Number(e.target.value))} />
+                <span style={{ fontSize: '0.72rem' }}>خصم التنبيه</span>
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} step="0.5" value={form.remindingPenalty} onChange={(e) => setField("remindingPenalty", Number(e.target.value))} />
               </label>
               <label className="et-field">
-                <span style={{ fontSize: '0.72rem' }}>تجويد (-0.25)</span>
-                <input style={{ height: '36px', fontSize: '0.82rem' }} type="number" step="0.25" value={form.tajweedPenalty} onChange={(e) => setField("tajweedPenalty", Number(e.target.value))} />
+                <span style={{ fontSize: '0.72rem' }}>خصم التجويد</span>
+                <input disabled={isLocked} style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }} type="number" min={0} step="0.25" value={form.tajweedPenalty} onChange={(e) => setField("tajweedPenalty", Number(e.target.value))} />
               </label>
             </div>
           </div>
@@ -591,7 +685,8 @@ export function ExamTypesTab() {
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>الحد الأدنى</span>
                 <input
-                  style={{ height: '36px', fontSize: '0.82rem' }}
+                  disabled={isLocked}
+                  style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }}
                   type="number"
                   min={1}
                   max={20}
@@ -603,7 +698,8 @@ export function ExamTypesTab() {
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>العدد الافتراضي</span>
                 <input
-                  style={{ height: '36px', fontSize: '0.82rem' }}
+                  disabled={isLocked}
+                  style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }}
                   type="number"
                   min={1}
                   max={20}
@@ -615,7 +711,8 @@ export function ExamTypesTab() {
               <label className="et-field">
                 <span style={{ fontSize: '0.72rem' }}>الحد الأعلى</span>
                 <input
-                  style={{ height: '36px', fontSize: '0.82rem' }}
+                  disabled={isLocked}
+                  style={{ height: '36px', fontSize: '0.82rem', opacity: isLocked ? 0.7 : 1 }}
                   type="number"
                   min={1}
                   max={20}
@@ -634,7 +731,7 @@ export function ExamTypesTab() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="حذف قالب الاختبار"
-        message={`سيتم حذف قالب "${deleteTarget?.title ?? ""}" نهائيًا ما دام ما زال في حالة مسودة.`}
+        message={`سيتم حذف قالب "${deleteTarget?.title ?? ""}" نهائيًا. هذا الإجراء لا يمكن التراجع عنه.`}
         confirmLabel="حذف القالب"
         cancelLabel="إلغاء"
         isConfirming={deleteMutation.isPending}

@@ -468,12 +468,42 @@ const parseBranchIndex = (branch: string | null | undefined): number | null => {
   return Number.isInteger(parsed) && parsed >= 1 && parsed <= 30 ? parsed : null;
 };
 
-const normalizeTemplateType = (type: ExamType): "JUZ" | "FULL_QURAN" => {
-  if (type !== "JUZ" && type !== "FULL_QURAN") {
-    throw new AppError("فقط نماذج اختبارات الجزء والمصحف كاملاً مدعومة", 400);
+const normalizeTemplateType = (type: ExamType): "JUZ" | "FULL_QURAN" | "JUZ_RANGE" => {
+  if (type !== "JUZ" && type !== "FULL_QURAN" && type !== "JUZ_RANGE") {
+    throw new AppError("فقط نماذج اختبارات الجزء والفئات والمصحف كاملاً مدعومة", 400);
   }
 
-  return type;
+  return type as "JUZ" | "FULL_QURAN" | "JUZ_RANGE";
+};
+
+/**
+ * Parses a JUZ_RANGE examBranch string formatted as "من الجزء X إلى الجزء Y"
+ * Returns { from, to } juz indices (1-30) or null if parsing fails.
+ */
+const parseJuzRangeBranch = (branch: string | null | undefined): { from: number; to: number } | null => {
+  const normalized = branch?.trim();
+  if (!normalized) return null;
+
+  const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+  const toWestern = (s: string) => s.replace(/[٠-٩]/g, (d) => String(arabicDigits.indexOf(d)));
+  const westernized = toWestern(normalized);
+
+  // Format: "من الجزء X إلى الجزء Y"
+  const match = westernized.match(/من\s+الجزء\s+(\d+)\s+إلى\s+الجزء\s+(\d+)/);
+  if (!match) return null;
+
+  const from = Number(match[1]);
+  const to = Number(match[2]);
+
+  if (
+    !Number.isInteger(from) || from < 1 || from > 30 ||
+    !Number.isInteger(to) || to < 1 || to > 30 ||
+    from > to
+  ) {
+    return null;
+  }
+
+  return { from, to };
 };
 
 const resolveAttemptBoundary = (exam: { type: ExamType; examBranch?: string | null }): JuzBoundary => {
@@ -482,6 +512,23 @@ const resolveAttemptBoundary = (exam: { type: ExamType; examBranch?: string | nu
   }
 
   const normalizedBranch = exam.examBranch?.trim();
+
+  // JUZ_RANGE: من الجزء X إلى الجزء Y
+  if (exam.type === "JUZ_RANGE") {
+    const range = parseJuzRangeBranch(normalizedBranch);
+    if (!range) {
+      throw new AppError("نطاق الأجزاء غير صحيح. يجب أن يكون بالتنسيق: من الجزء X إلى الجزء Y", 400);
+    }
+    const fromBoundary = JUZ_BOUNDARIES[range.from - 1];
+    const toBoundary = JUZ_BOUNDARIES[range.to - 1];
+    return {
+      fromSurah: fromBoundary.fromSurah,
+      fromAyah: fromBoundary.fromAyah,
+      toSurah: toBoundary.toSurah,
+      toAyah: toBoundary.toAyah
+    };
+  }
+
   if (normalizedBranch && JUZ_CATEGORICAL_BOUNDARIES[normalizedBranch]) {
     return JUZ_CATEGORICAL_BOUNDARIES[normalizedBranch];
   }
@@ -1000,6 +1047,14 @@ export const examsService = {
     const criteria = input.criteria ?? buildDefaultCriteria(input.maxScore);
     ensureCriteriaHasPositiveScore(criteria);
 
+    const duplicate = await examsRepository.findExamByTitle({
+      title: input.title.trim(),
+      organizationId: scope.organizationId
+    });
+    if (duplicate) {
+      throw new AppError(`يوجد قالب اختبار مسبقاً بنفس الاسم "${input.title.trim()}"`, 400);
+    }
+
     const exam = await examsRepository.createExam({
       organizationId: scope.organizationId,
       centerId: null,
@@ -1043,8 +1098,46 @@ export const examsService = {
 
     const existingExam = await getExamInScope(scope, examId);
 
-    if (existingExam.status !== "DRAFT") {
-      throw new AppError("فقط الاختبارات المسودة يمكن تحديثها", 400);
+    // If the template has attempts, we enforce immutability for scoring/type fields
+    // to preserve historical data integrity. Only the title and purpose can be changed.
+    const hasAttempts = (existingExam._count?.attempts ?? 0) > 0;
+    if (hasAttempts) {
+      if (
+        (input.maxScore !== undefined && input.maxScore !== existingExam.maxScore) ||
+        (input.passScore !== undefined && input.passScore !== existingExam.passScore) ||
+        (input.type !== undefined && input.type !== existingExam.type) ||
+        (input.examBranch !== undefined && input.examBranch !== existingExam.examBranch) ||
+        input.criteria !== undefined
+      ) {
+        throw new AppError(
+          "لا يمكن تعديل معايير التقييم أو نوع الاختبار لقالب مستخدم مسبقاً. الرجاء إنشاء نسخة جديدة من القالب لتعديل المعايير.",
+          400
+        );
+      }
+      
+      // Forcefully strip them to be safe
+      input.maxScore = undefined;
+      input.passScore = undefined;
+      input.type = undefined;
+      input.examBranch = undefined;
+      input.criteria = undefined;
+    }
+
+    // If the template is published, revert it to DRAFT automatically
+    // so it can be edited and then re-published after review.
+    const wasPublished = existingExam.status === "PUBLISHED";
+    if (wasPublished) {
+      await examsRepository.unpublishExam(examId);
+    }
+
+    if (input.title !== undefined && input.title.trim() !== existingExam.title) {
+      const duplicate = await examsRepository.findExamByTitle({
+        title: input.title.trim(),
+        organizationId: scope.organizationId
+      });
+      if (duplicate && duplicate.id !== examId) {
+        throw new AppError(`يوجد قالب اختبار مسبقاً بنفس الاسم "${input.title.trim()}"`, 400);
+      }
     }
 
     const nextType = normalizeTemplateType(input.type ?? existingExam.type);
@@ -1129,8 +1222,13 @@ export const examsService = {
 
     const existingExam = await getExamInScope(scope, examId);
 
-    if (existingExam.status !== "DRAFT") {
-      throw new AppError("فقط الاختبارات المسودة يمكن حذفها", 400);
+    // Block deletion only if there are linked attempts (historical data integrity)
+    const attemptCount = existingExam._count?.attempts ?? 0;
+    if (attemptCount > 0) {
+      throw new AppError(
+        `لا يمكن حذف هذا القالب لأنه مرتبط بـ ${attemptCount} محاولة اختبار. أوقف تفعيله بدلاً من ذلك.`,
+        400
+      );
     }
 
     const deletedExam = await examsRepository.deleteExam(examId);
@@ -1565,6 +1663,15 @@ export const examsService = {
 
     if (!enrollment) {
       throw new AppError("الطالب غير مسجل في الحلقة المحددة", 400);
+    }
+
+    const activeAttempt = await examsRepository.findActiveStudentAttemptForExam({
+      examId,
+      studentId: input.studentId
+    });
+
+    if (activeAttempt) {
+      throw new AppError("يوجد محاولة اختبار نشطة أو مجدولة مسبقاً لهذا الطالب لنفس الاختبار", 400);
     }
 
     const examDate = examsDomain.resolveRequiredDate(input.examDate, "examDate");

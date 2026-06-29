@@ -368,6 +368,16 @@ export const examsRepository = {
     });
   },
 
+  async findExamByTitle(input: { title: string; organizationId: number }) {
+    return prisma.exam.findFirst({
+      where: {
+        title: input.title,
+        organizationId: input.organizationId
+      },
+      select: examSelect
+    });
+  },
+
   async createExam(input: CreateExamInput) {
     return prisma.exam.create({
       data: {
@@ -495,6 +505,18 @@ export const examsRepository = {
       },
       data: {
         status: "PUBLISHED"
+      },
+      select: examSelect
+    });
+  },
+
+  async unpublishExam(examId: number) {
+    return prisma.exam.update({
+      where: {
+        id: examId
+      },
+      data: {
+        status: "DRAFT"
       },
       select: examSelect
     });
@@ -878,6 +900,17 @@ export const examsRepository = {
     return prisma.examAttempt.findMany({
       where,
       orderBy: [{ examDate: "desc" }, { createdAt: "desc" }],
+      select: attemptSelect
+    });
+  },
+
+  async findActiveStudentAttemptForExam(input: { examId: number; studentId: number }) {
+    return prisma.examAttempt.findFirst({
+      where: {
+        examId: input.examId,
+        studentId: input.studentId,
+        status: { in: ["SCHEDULED", "IN_PROGRESS"] }
+      },
       select: attemptSelect
     });
   },

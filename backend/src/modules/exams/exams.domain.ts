@@ -300,7 +300,7 @@ export const examsDomain = {
   },
 
   assertAttemptSchedule(input: {
-    examType: "JUZ" | "FULL_QURAN";
+    examType: "JUZ" | "FULL_QURAN" | "JUZ_RANGE";
     examDate: Date;
     fullQuranCompletedAt?: Date | null;
   }) {
@@ -316,6 +316,7 @@ export const examsDomain = {
       return;
     }
 
+    // JUZ and JUZ_RANGE do not require fullQuranCompletedAt
     if (input.fullQuranCompletedAt) {
       throw new AppError("fullQuranCompletedAt must be empty for JUZ attempts", 400);
     }

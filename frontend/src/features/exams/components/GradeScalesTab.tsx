@@ -15,6 +15,8 @@ import { Button } from "../../../components/ui/Button";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import Modal from "../../../components/ui/Modal";
+import toast from "react-hot-toast";
+import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import {
   useCreateGradeScaleMutation,
   useDeleteGradeScaleMutation,
@@ -140,7 +142,6 @@ export function GradeScalesTab() {
   });
   const [deleteConfirm, setDeleteConfirm] = useState<GradeScale | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [formError, setFormError] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -178,7 +179,6 @@ export function GradeScalesTab() {
 
   const openCreate = () => {
     setForm(emptyForm());
-    setFormError("");
     setModal({ open: true, editing: null });
   };
 
@@ -191,7 +191,6 @@ export function GradeScalesTab() {
       sortOrder: scale.sortOrder,
       isActive: scale.isActive
     });
-    setFormError("");
     setModal({ open: true, editing: scale });
   };
 
@@ -201,15 +200,13 @@ export function GradeScalesTab() {
     }
 
     setModal({ open: false, editing: null });
-    setFormError("");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFormError("");
 
     if (!form.label.trim()) {
-      setFormError("يرجى إدخال اسم واضح للتقدير.");
+      toast.error("يرجى إدخال اسم واضح للتقدير.");
       return;
     }
 
@@ -218,7 +215,7 @@ export function GradeScalesTab() {
       form.maxPercentage > 100 ||
       form.minPercentage > form.maxPercentage
     ) {
-      setFormError("يجب أن تكون النسبة بين 0 و100 وأن يكون الحد الأدنى أقل من الحد الأعلى أو مساويًا له.");
+      toast.error("يجب أن تكون النسبة بين 0 و100 وأن يكون الحد الأدنى أقل من الحد الأعلى أو مساويًا له.");
       return;
     }
 
@@ -237,15 +234,15 @@ export function GradeScalesTab() {
           id: modal.editing.id,
           payload
         });
+        toast.success("تم تعديل التقدير بنجاح");
       } else {
         await createMutation.mutateAsync(payload);
+        toast.success("تم إضافة التقدير بنجاح");
       }
 
       closeModal();
     } catch (error) {
-      setFormError(
-        error instanceof Error && error.message ? error.message : "تعذر حفظ التقدير."
-      );
+      toast.error(getLocalizedApiErrorMessage(error, "تعذر حفظ التقدير."));
     }
   };
 
@@ -257,10 +254,9 @@ export function GradeScalesTab() {
     try {
       await deleteMutation.mutateAsync(deleteConfirm.id);
       setDeleteConfirm(null);
+      toast.success("تم حذف التقدير بنجاح");
     } catch (error) {
-      setFormError(
-        error instanceof Error && error.message ? error.message : "تعذر حذف التقدير."
-      );
+      toast.error(getLocalizedApiErrorMessage(error, "تعذر حذف التقدير."));
     }
   };
 
@@ -449,13 +445,6 @@ export function GradeScalesTab() {
         }
       >
         <form id="grade-scale-form" className="grade-scales-editor" onSubmit={handleSubmit} dir="rtl">
-          {formError ? (
-            <div className="grade-scales-alert grade-scales-alert--error" role="alert">
-              <AlertCircle size={16} />
-              <span>{formError}</span>
-            </div>
-          ) : null}
-
           {conflictingScales.length > 0 ? (
             <div className="grade-scales-alert grade-scales-alert--warning" role="status">
               <ShieldAlert size={16} />

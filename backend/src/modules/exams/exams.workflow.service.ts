@@ -412,6 +412,15 @@ export const examsWorkflowService = {
       throw new AppError("الطالب غير مسجل في الحلقة المحددة", 400);
     }
 
+    const activeNomination = await examsWorkflowRepository.findActiveNomination({
+      examId: input.examId,
+      studentId: input.studentId
+    });
+
+    if (activeNomination) {
+      throw new AppError("يوجد طلب ترشيح قيد الانتظار أو معتمد مسبقاً لهذا الطالب لنفس الاختبار", 400);
+    }
+
     const nomination = await examsWorkflowRepository.createNominationRequest({
       organizationId: scope.organizationId,
       centerId: circle.centerId,
