@@ -558,6 +558,21 @@ export const studentFeeProfileSelect = {
   }
 } satisfies Prisma.StudentFeeProfileSelect;
 
+export const tuitionPlanSelect = {
+  id: true,
+  organizationId: true,
+  centerId: true,
+  name: true,
+  monthlyAmount: true,
+  isActive: true,
+  planKind: true,
+  createdAt: true,
+  updatedAt: true,
+  center: {
+    select: { id: true, name: true, code: true }
+  }
+} satisfies Prisma.TuitionPlanSelect;
+
 export const normalizeDecimals = (value: unknown): unknown => {
   if (value instanceof Prisma.Decimal) {
     return Number(value.toFixed(2));

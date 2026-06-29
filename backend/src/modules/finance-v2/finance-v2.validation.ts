@@ -13,6 +13,7 @@ import {
   RewardBeneficiaryRole,
   RewardCycle,
   RewardType,
+  TuitionPlanKind,
   VoucherAccountingCategory,
   VoucherSourceType,
   VoucherStatus,
@@ -102,6 +103,38 @@ export const updateStudentFeeProfileBodySchema = z
     startDate: z.string().trim().min(1).optional(),
     endDate: z.string().trim().min(1).nullable().optional(),
     notes: z.string().trim().max(500).nullable().optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "حقل واحد على الأقل مطلوب"
+  });
+
+export const listTuitionPlansQuerySchema = z
+  .object({
+    centerId: optionalPositiveInt,
+    isActive: z
+      .union([z.boolean(), z.enum(["true", "false"])])
+      .transform((value) => (typeof value === "boolean" ? value : value === "true"))
+      .optional()
+  })
+  .strict();
+
+export const createTuitionPlanBodySchema = z
+  .object({
+    centerId: positiveInt,
+    name: z.string().trim().min(1).max(120),
+    monthlyAmount: z.coerce.number().positive().max(100000000),
+    planKind: z.nativeEnum(TuitionPlanKind).optional(),
+    isActive: z.boolean().optional()
+  })
+  .strict();
+
+export const updateTuitionPlanBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    monthlyAmount: z.coerce.number().positive().max(100000000).optional(),
+    planKind: z.nativeEnum(TuitionPlanKind).optional(),
+    isActive: z.boolean().optional()
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {

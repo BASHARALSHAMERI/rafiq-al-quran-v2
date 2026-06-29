@@ -24,7 +24,6 @@ interface CenterFormModalProps {
   draft: CenterDraft;
   setDraft: React.Dispatch<React.SetStateAction<CenterDraft>>;
   pending: boolean;
-  formErr: string | null;
   ar: boolean;
   canManage: boolean;
   adminOpts: { id: number; label: string }[];
@@ -174,7 +173,6 @@ export function CenterFormModal({
   draft,
   setDraft,
   pending,
-  formErr,
   ar,
   canManage,
   adminOpts,
@@ -934,12 +932,6 @@ export function CenterFormModal({
           </div>
         </div>
 
-        {formErr && (
-          <div className="circlemod-error" role="alert">
-            <AlertCircle size={14} className="flex-shrink-0" />
-            <span>{formErr}</span>
-          </div>
-        )}
       </div>
     </Modal>
   );

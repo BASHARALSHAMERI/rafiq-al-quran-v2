@@ -20,8 +20,6 @@ interface CircleFormModalProps {
   draft: CircleDraft;
   setDraft: React.Dispatch<React.SetStateAction<CircleDraft>>;
   pending: boolean;
-  formErr: string | null;
-  setFormErr: (v: string | null) => void;
   centerOpts: { id: number; label: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null }[];
   teacherOpts: { id: number; label: string }[];
   selectedDraftCenter: { gender?: string; mosqueName?: string | null; latitude?: number | null; longitude?: number | null } | undefined;
@@ -97,8 +95,6 @@ export function CircleFormModal({
   draft,
   setDraft,
   pending,
-  formErr,
-  setFormErr,
   centerOpts,
   teacherOpts,
   selectedDraftCenter,
@@ -112,9 +108,8 @@ export function CircleFormModal({
   const handleClose = useCallback(() => {
     if (!pending) {
       setModal(null);
-      setFormErr(null);
     }
-  }, [pending, setModal, setFormErr]);
+  }, [pending, setModal]);
 
   const handleChange = useCallback(
     (field: keyof CircleDraft, value: string | number | boolean | import("../../circleSchedule").CircleScheduleDraftRow[]) => {
@@ -364,16 +359,11 @@ export function CircleFormModal({
         </div>
 
         {/* Error Banner */}
-        {formErr && (
-          <div className="circlemod-error" role="alert">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{formErr}</span>
-          </div>
-        )}
       </div>
     </Modal>
   );
 }
 
 export default CircleFormModal;
+
 

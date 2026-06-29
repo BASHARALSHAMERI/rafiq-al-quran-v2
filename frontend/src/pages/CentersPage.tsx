@@ -56,6 +56,7 @@ import {
   type LocalizedLabel
 } from "../shared/ui/feedback";
 import { stagger, fadeUp } from "../shared/pageAnimations";
+import { useAttendancePolicy } from "../features/staff-attendance/staff-attendance.api";
 import { apiClient } from "../shared/api/http";
 
 const CENTER_ENTITY: LocalizedLabel = { ar: "المركز", en: "center" };
@@ -113,6 +114,7 @@ export default function CentersPage() {
   const supervisorsQ = useUsersQuery({ role: "SUPERVISOR" as Role });
   const circlesQ = useCirclesQuery();
   const studentsQ = useUsersQuery({ role: "STUDENT" as Role });
+  const attendancePolicyQ = useAttendancePolicy();
 
   const createM = useCreateCenterMutation();
   const updateM = useUpdateCenterMutation();
@@ -129,7 +131,6 @@ export default function CentersPage() {
   const [modalMode, setModalMode] = useState<FormMode | null>(null);
   const [activeCenter, setActiveCenter] = useState<Center | null>(null);
   const [draft, setDraft] = useState<CenterDraft>(emptyCenterDraft);
-  const [formErr, setFormErr] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [statusTarget, setStatusTarget] = useState<Center | null>(null);
   const [quickRole, setQuickRole] = useState<QuickRole | null>(null);
@@ -236,7 +237,6 @@ export default function CentersPage() {
   };
 
   const openCreate = () => {
-    setFormErr(null);
     setActionErr(null);
     setModalMode("create");
     setActiveCenter(null);
@@ -244,7 +244,6 @@ export default function CentersPage() {
   };
 
   const openEdit = (center: Center) => {
-    setFormErr(null);
     setActionErr(null);
     setModalMode("edit");
     setActiveCenter(center);
@@ -280,14 +279,26 @@ export default function CentersPage() {
     if (!modalMode) return;
     const action = modalMode === "create" ? "create" : "update";
 
-    const validationError = validateCenter(draft, ar);
+    if (attendancePolicyQ.isPending) {
+      notifyError(ar ? "جاري تحميل بيانات سياسة الحضور، يرجى الانتظار" : "Loading attendance policy, please wait");
+      return;
+    }
+    if (attendancePolicyQ.isError) {
+      notifyError(ar ? "فشل في قراءة سياسة الحضور، تأكد من اتصالك أو قم بتحديث الصفحة" : "Failed to load attendance policy");
+      return;
+    }
+
+    const geoEnforcement = attendancePolicyQ.data?.geoEnforcement;
+    const weekendDays = attendancePolicyQ.data?.weekendDays;
+
+    const validationError = validateCenter(draft, ar, geoEnforcement, weekendDays);
     if (validationError) {
-      setFormErr(validationError);
+      notifyError(validationError);
       return;
     }
 
     if (!draft.gender) {
-      setFormErr(ar ? "الجنس مطلوب" : "Gender required");
+      notifyError(ar ? "الجنس مطلوب" : "Gender required");
       return;
     }
 
@@ -310,7 +321,6 @@ export default function CentersPage() {
     if (shouldIncludeSchedule) payload.centerAdminSchedule = serializedSchedule;
 
     try {
-      setFormErr(null);
       if (modalMode === "create") await createM.mutateAsync(payload);
       else await updateM.mutateAsync({ centerId: activeCenter!.id, payload });
       setModalMode(null);
@@ -318,7 +328,6 @@ export default function CentersPage() {
       notifySuccess(entityFeedback.success(ar, action, CENTER_ENTITY));
     } catch (error) {
       const message = getApiErrorMessage(error, entityFeedback.error(ar, action, CENTER_ENTITY));
-      setFormErr(message);
       notifyError(message);
     }
   };
@@ -653,7 +662,6 @@ export default function CentersPage() {
           draft={draft}
           setDraft={setDraft}
           pending={pending}
-          formErr={formErr}
           ar={ar}
           canManage={canManage}
           adminOpts={adminOpts}
@@ -661,7 +669,6 @@ export default function CentersPage() {
           onClose={() => {
             if (!pending) {
               setModalMode(null);
-              setFormErr(null);
             }
           }}
           onSubmit={submitCenter}

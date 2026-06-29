@@ -93,6 +93,38 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  listTuitionPlans: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const query = res.locals.validatedQuery as { centerId?: number; isActive?: boolean };
+      const data = await billingService.listTuitionPlans(req.scope, query);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  createTuitionPlan: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const data = await billingService.createTuitionPlan(req.scope, req.body);
+      res.status(201).json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  updateTuitionPlan: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const params = res.locals.validatedParams as { id: number };
+      const data = await billingService.updateTuitionPlan(req.scope, params.id, req.body);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   listInvoices: (async (req, res, next) => {
     try {
       if (!req.scope) {

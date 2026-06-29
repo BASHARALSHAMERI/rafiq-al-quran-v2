@@ -28,6 +28,9 @@ import type {
   FinanceReportVouchersV2,
   FinanceReportCenterFundingV2,
   FinanceVoucherV2,
+  TuitionPlanV2,
+  StudentFeeProfileV2,
+  FinancePolicyV2,
   DonationReportQuery,
   DonationReportResponse,
   ReceiptReportQuery,
@@ -1309,5 +1312,56 @@ export const financeV2Api = {
       payload
     );
     return normalizePayrollProfile(response.data.data);
+  },
+
+  async getTuitionPlans(params: { centerId?: number; isActive?: boolean } = {}): Promise<PaginatedRows<TuitionPlanV2>> {
+    const response = await apiClient.get<ApiResponse<PaginatedRows<TuitionPlanV2>>>(
+      "/finance/v2/tuition-plans", { params }
+    );
+    return response.data.data;
+  },
+
+  async createTuitionPlan(payload: { centerId: number; name: string; monthlyAmount: number; planKind?: string; isActive?: boolean }): Promise<TuitionPlanV2> {
+    const response = await apiClient.post<ApiResponse<TuitionPlanV2>>("/finance/v2/tuition-plans", payload);
+    return response.data.data;
+  },
+
+  async updateTuitionPlan(id: number, payload: { name?: string; monthlyAmount?: number; planKind?: string; isActive?: boolean }): Promise<TuitionPlanV2> {
+    const response = await apiClient.patch<ApiResponse<TuitionPlanV2>>(`/finance/v2/tuition-plans/${id}`, payload);
+    return response.data.data;
+  },
+
+  async getStudentFeeProfiles(params: { centerId?: number; studentId?: number; isActive?: boolean; page?: number; pageSize?: number } = {}): Promise<PaginatedRows<StudentFeeProfileV2>> {
+    const response = await apiClient.get<ApiResponse<PaginatedRows<StudentFeeProfileV2>>>(
+      "/finance/v2/student-fee-profiles", { params }
+    );
+    return response.data.data;
+  },
+
+  async createStudentFeeProfile(payload: {
+    centerId: number; studentId: number; feeMode: string;
+    tuitionPlanId?: number; symbolicAmount?: number;
+    isActive?: boolean; startDate: string; endDate?: string; notes?: string
+  }): Promise<StudentFeeProfileV2> {
+    const response = await apiClient.post<ApiResponse<StudentFeeProfileV2>>("/finance/v2/student-fee-profiles", payload);
+    return response.data.data;
+  },
+
+  async updateStudentFeeProfile(id: number, payload: {
+    feeMode?: string; tuitionPlanId?: number | null; symbolicAmount?: number | null;
+    isActive?: boolean; startDate?: string; endDate?: string | null; notes?: string | null
+  }): Promise<StudentFeeProfileV2> {
+    const response = await apiClient.patch<ApiResponse<StudentFeeProfileV2>>(`/finance/v2/student-fee-profiles/${id}`, payload);
+    return response.data.data;
+  },
+
+  async getEffectivePolicy(params: { centerId?: number } = {}): Promise<FinancePolicyV2> {
+    const response = await apiClient.get<ApiResponse<FinancePolicyV2>>("/finance/v2/policies/effective", { params });
+    return response.data.data;
+  },
+
+  async patchOrganizationPolicy(payload: Partial<FinancePolicyV2>): Promise<FinancePolicyV2> {
+    const response = await apiClient.patch<ApiResponse<FinancePolicyV2>>("/finance/v2/policies/organization", payload);
+    return response.data.data;
   }
 };

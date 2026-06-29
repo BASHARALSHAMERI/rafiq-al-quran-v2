@@ -1,6 +1,7 @@
-﻿import type { CenterGender } from "../../../org/types";
+import type { CenterGender } from "../../../org/types";
 import {
   createEmptyScheduleDraftRows,
+  validateScheduleDraftRows,
   type CircleScheduleDraftRow
 } from "../../circleSchedule";
 
@@ -48,22 +49,35 @@ export const genderLabel = (g: CenterGender | undefined, ar: boolean) =>
         : "Female"
       : "—";
 
-export const validateCenter = (d: CenterDraft, ar: boolean) => {
+export const validateCenter = (d: CenterDraft, ar: boolean, geoEnforcement?: string, weekendDays?: string[]) => {
   if (!d.nameAr.trim()) {
-    return ar ? "\u0627\u0633\u0645 \u0627\u0644\u0645\u0631\u0643\u0632 \u0645\u0637\u0644\u0648\u0628" : "Name required";
+    return ar ? "اسم المركز مطلوب" : "Name required";
+  }
+
+  if (d.nameAr.trim().length < 3) {
+    return ar ? "اسم المركز يجب أن يكون 3 أحرف على الأقل" : "Center name must be at least 3 characters";
   }
 
   if (!d.gender) {
     return ar
-      ? "\u0627\u0644\u0641\u0626\u0629 \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641\u0629 \u0645\u0637\u0644\u0648\u0628\u0629"
+      ? "الفئة المستهدفة مطلوبة"
       : "Gender required";
   }
 
   if (!d.centerAdminUserId) {
     return ar
-      ? "\u062a\u0639\u064a\u064a\u0646 \u0645\u062f\u064a\u0631 \u0627\u0644\u0645\u0631\u0643\u0632 \u0645\u0637\u0644\u0648\u0628"
+      ? "تعيين مدير المركز مطلوب"
       : "Admin required";
   }
+
+  if (geoEnforcement === "REQUIRED" && (!d.latitude || !d.longitude)) {
+    return ar
+      ? "تحديد الموقع الجغرافي للمركز إلزامي بناءً على سياسة الحضور"
+      : "Center location is required by the attendance policy";
+  }
+
+  const scheduleError = validateScheduleDraftRows(d.scheduleRows, ar, weekendDays);
+  if (scheduleError) return scheduleError;
 
   return null;
 };

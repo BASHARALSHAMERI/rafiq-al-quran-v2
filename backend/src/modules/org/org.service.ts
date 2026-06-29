@@ -12,6 +12,7 @@ import {
 import { auditLogger } from "../../shared/audit/audit-log";
 import { AppError } from "../../shared/errors/app-error";
 import type { ScopeContext } from "../../shared/types/auth.types";
+import { prisma } from "../../shared/db/prisma";
 import { staffScheduleService } from "../staff-operations/staff-schedule.service";
 import { orgDomain } from "./org.domain";
 import { orgRepository } from "./org.repository";
@@ -406,8 +407,21 @@ const toCenterResponse = <TCenter extends { centerAdminUserId?: number | null; s
 
 const validateCenterAssignments = async (
   scope: ScopeContext,
-  input: { centerAdminUserId: number; supervisorUserIds: number[] }
+  input: { centerAdminUserId: number; supervisorUserIds: number[] },
+  currentCenterId?: number
 ) => {
+  const existingCenterAsAdmin = await prisma.center.findFirst({
+    where: {
+      organizationId: scope.organizationId,
+      centerAdminUserId: input.centerAdminUserId,
+      isActive: true,
+      ...(currentCenterId ? { id: { not: currentCenterId } } : {})
+    }
+  });
+
+  if (existingCenterAsAdmin) {
+    throw new AppError("هذا المستخدم مدير لمركز آخر. يمكن لمدير المركز إدارة مركز واحد فقط.", 400);
+  }
   const centerAdmin = await ensureOrgUserActiveWithRole(
     scope,
     input.centerAdminUserId,
@@ -640,7 +654,7 @@ export const orgService = {
         supervisorUserIds:
           supervisorUserIds ??
           existingCenter.centerSupervisors.map((item) => item.supervisorUserId)
-      });
+      }, centerId);
     }
 
     try {

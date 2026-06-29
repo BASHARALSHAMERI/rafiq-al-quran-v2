@@ -101,6 +101,50 @@ export type FinancePaymentV2 = {
   };
 };
 
+export type TuitionPlanKindV2 = "MONTHLY" | "ONE_TIME_REGISTRATION";
+
+export type TuitionPlanV2 = {
+  id: number;
+  organizationId: number;
+  centerId: number;
+  name: string;
+  monthlyAmount: number;
+  isActive: boolean;
+  planKind: TuitionPlanKindV2;
+  createdAt: string;
+  updatedAt: string;
+  center?: { id: number; name: string; code: string };
+};
+
+export type StudentFeeProfileV2 = {
+  id: number;
+  organizationId: number;
+  centerId: number;
+  studentId: number;
+  feeMode: "FREE" | "SYMBOLIC_ONE_TIME" | "PLAN_MONTHLY";
+  tuitionPlanId?: number | null;
+  symbolicAmount?: number | null;
+  isActive: boolean;
+  startDate: string;
+  endDate?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  center?: { id: number; name: string; code: string };
+  student?: { id: number; fullName: string; role: string; email: string };
+  tuitionPlan?: { id: number; name: string; monthlyAmount: number; planKind: string };
+};
+
+export type FinancePolicyV2 = {
+  feesEnabled?: boolean;
+  requireTransferAttachment: boolean;
+  requireApprovalDisbursement: boolean;
+  requireApprovalReceipt: boolean;
+  allowFreeStudents: boolean;
+  allowSymbolicOneTimeFee: boolean;
+  allowOverdraft: boolean;
+};
+
 export type FinanceVoucherV2 = {
   id: number;
   accountId?: number;

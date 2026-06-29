@@ -25,6 +25,8 @@ import {
   createRewardBatchBodySchema,
   createRewardProfileBodySchema,
   createStudentFeeProfileBodySchema,
+  createTuitionPlanBodySchema,
+  updateTuitionPlanBodySchema,
   createVoucherBodySchema,
   financeV2EntityIdParamSchema,
   invoiceAgingReportQuerySchema,
@@ -58,6 +60,7 @@ import {
   updateStudentFeeProfileBodySchema,
   vouchersReportQuerySchema,
   receiptsReportQuerySchema,
+  listTuitionPlansQuerySchema,
   listSalaryGradesQuerySchema,
   createSalaryGradeBodySchema,
   updateSalaryGradeBodySchema,
@@ -152,6 +155,28 @@ financeV2Router.patch(
   validateParams(financeV2EntityIdParamSchema),
   validateBody(updateStudentFeeProfileBodySchema),
   financeV2Controller.updateStudentFeeProfile
+);
+
+financeV2Router.get(
+  "/finance/v2/tuition-plans",
+  requireRoles(financeReadRoles),
+  validateQuery(listTuitionPlansQuerySchema),
+  financeV2Controller.listTuitionPlans
+);
+
+financeV2Router.post(
+  "/finance/v2/tuition-plans",
+  requireRoles(financeSettingsWriteRoles),
+  validateBody(createTuitionPlanBodySchema),
+  financeV2Controller.createTuitionPlan
+);
+
+financeV2Router.patch(
+  "/finance/v2/tuition-plans/:id",
+  requireRoles(financeSettingsWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(updateTuitionPlanBodySchema),
+  financeV2Controller.updateTuitionPlan
 );
 
 financeV2Router.get(

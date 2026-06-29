@@ -21,6 +21,7 @@ import type { Circle, CircleType } from "../features/org/types";
 import { useUsersQuery } from "../features/users/users.hooks";
 import { createEmptyScheduleDraftRows, hydrateScheduleDraftRows, serializeScheduleDraftRows, validateScheduleDraftRows } from "../features/org/circleSchedule";
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
+import { useAttendancePolicy } from "../features/staff-attendance/staff-attendance.api";
 import {
   entityFeedback,
   notifyError,
@@ -60,9 +61,10 @@ const emptyDraft: CircleDraft = {
   scheduleRows: createEmptyScheduleDraftRows()
 };
 
-const validateCircle = (draft: CircleDraft, ar: boolean) => {
+const validateCircle = (draft: CircleDraft, ar: boolean, weekendDays?: string[]) => {
   if (!draft.centerId) return ar ? "المركز مطلوب" : "Center is required";
   if (!draft.nameAr.trim()) return ar ? "اسم الحلقة مطلوب" : "Name is required";
+  if (draft.nameAr.trim().length < 3) return ar ? "اسم الحلقة يجب أن يكون 3 أحرف على الأقل" : "Circle name must be at least 3 characters";
   if (!draft.circleType) return ar ? "نوع الحلقة مطلوب" : "Type is required";
   if (!draft.primaryTeacherUserId) return ar ? "المعلم مطلوب" : "Teacher is required";
 
@@ -75,7 +77,7 @@ const validateCircle = (draft: CircleDraft, ar: boolean) => {
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return ar ? "\u062e\u0637 \u0627\u0644\u0637\u0648\u0644 \u063a\u064a\u0631 \u0635\u062d\u064a\u062d" : "Invalid longitude";
     if (!Number.isInteger(radius) || radius <= 0) return ar ? "\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u0648\u0642\u0639 \u064a\u062c\u0628 \u0623\u0646 \u064a\u0643\u0648\u0646 \u0639\u062f\u062f\u0627 \u0635\u062d\u064a\u062d\u0627 \u0645\u0648\u062c\u0628\u0627" : "Location radius must be a positive integer";
   }
-  const scheduleError = validateScheduleDraftRows(draft.scheduleRows, ar);
+  const scheduleError = validateScheduleDraftRows(draft.scheduleRows, ar, weekendDays);
   if (scheduleError) return scheduleError;
 
   return null;
@@ -106,6 +108,7 @@ export default function CirclesPage() {
   const createM = useCreateCircleMutation();
   const updateM = useUpdateCircleMutation();
   const statusM = useUpdateCircleStatusMutation();
+  const attendancePolicyQ = useAttendancePolicy();
 
   const [q, setQ] = useState("");
   const [tFilter, setTFilter] = useState<CircleTypeFilter>("ALL");
@@ -117,7 +120,6 @@ export default function CirclesPage() {
   const [modal, setModal] = useState<{ mode: FormMode; circle?: Circle } | null>(null);
   const [statusTarget, setStatusTarget] = useState<Circle | null>(null);
   const [draft, setDraft] = useState<CircleDraft>(emptyDraft);
-  const [formErr, setFormErr] = useState<string | null>(null);
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [scopeMsg, setScopeMsg] = useState<string | null>(null);
 
@@ -194,7 +196,6 @@ export default function CirclesPage() {
   };
 
   const openCreate = () => {
-    setFormErr(null);
     setActionErr(null);
     setModal({ mode: "create" });
     setDraft({
@@ -205,7 +206,6 @@ export default function CirclesPage() {
   };
 
   const openEdit = (circle: Circle) => {
-    setFormErr(null);
     setActionErr(null);
     setModal({ mode: "edit", circle });
     setDraft({
@@ -227,9 +227,20 @@ export default function CirclesPage() {
     if (!modal) return;
     const action = modal.mode === "create" ? "create" : "update";
 
-    const validationError = validateCircle(draft, ar);
+    if (attendancePolicyQ.isPending) {
+      notifyError(ar ? "جاري تحميل بيانات سياسة الحضور، يرجى الانتظار" : "Loading attendance policy, please wait");
+      return;
+    }
+    if (attendancePolicyQ.isError) {
+      notifyError(ar ? "فشل في قراءة سياسة الحضور، تأكد من اتصالك أو قم بتحديث الصفحة" : "Failed to load attendance policy");
+      return;
+    }
+
+    const weekendDays = attendancePolicyQ.data?.weekendDays;
+
+    const validationError = validateCircle(draft, ar, weekendDays);
     if (validationError) {
-      setFormErr(validationError);
+      notifyError(validationError);
       return;
     }
 
@@ -246,7 +257,6 @@ export default function CirclesPage() {
     };
 
     try {
-      setFormErr(null);
       if (modal.mode === "create") {
         await createM.mutateAsync({ centerId: Number(draft.centerId), ...payload });
       } else {
@@ -261,7 +271,6 @@ export default function CirclesPage() {
         ar,
         fallback: entityFeedback.error(ar, action, CIRCLE_ENTITY)
       });
-      setFormErr(message);
       notifyError(message);
     }
   };
@@ -526,8 +535,6 @@ export default function CirclesPage() {
         draft={draft}
         setDraft={setDraft}
         pending={pending}
-        formErr={formErr}
-        setFormErr={setFormErr}
         centerOpts={centerOpts}
         teacherOpts={teacherOpts}
         selectedDraftCenter={selectedDraftCenter}

@@ -8,7 +8,8 @@ import { printFinanceReport, formatYemeniCurrency } from "../../../accounting/pr
 import { useUsersQuery } from "../../../users/users.hooks";
 import {
   useCreateFinanceV2InvoiceMutation,
-  useFinanceV2InvoicesQuery
+  useFinanceV2InvoicesQuery,
+  useFinanceV2StudentFeeProfilesQuery
 } from "../../finance-v2.hooks";
 import { FINANCE_YEMEN_MODE } from "../../config";
 import type { InvoiceStatusV2, FinanceInvoiceV2 } from "../../types";
@@ -34,6 +35,7 @@ type Props = {
   statusLabels: Record<InvoiceStatusV2, string>;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
+  feesEnabled?: boolean;
 };
 
 const INVOICE_ENTITY: LocalizedLabel = { ar: "الفاتورة", en: "invoice" };
@@ -52,7 +54,8 @@ export default function FinanceInvoicesTab({
   onSelectInvoice,
   statusLabels,
   externalShowForm,
-  onExternalFormClose
+  onExternalFormClose,
+  feesEnabled
 }: Props) {
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
@@ -91,6 +94,25 @@ export default function FinanceInvoicesTab({
   const students = useMemo(() => studentsQ.data?.items ?? [], [studentsQ.data?.items]);
 
   const createInvoiceM = useCreateFinanceV2InvoiceMutation();
+
+  const profilesQ = useFinanceV2StudentFeeProfilesQuery(feesEnabled ? (centerId) : undefined);
+  const selectedProfile = useMemo(() => {
+    if (!feesEnabled || !invoiceForm.studentId) return null;
+    const sid = Number(invoiceForm.studentId);
+    if (!sid) return null;
+    const profiles = profilesQ.data?.items ?? [];
+    return profiles.find((p) => p.studentId === sid && p.isActive) ?? null;
+  }, [feesEnabled, invoiceForm.studentId, profilesQ.data?.items]);
+
+  // auto-fill amount from fee profile
+  useEffect(() => {
+    if (!selectedProfile) return;
+    if (selectedProfile.feeMode === "PLAN_MONTHLY") {
+      setInvoiceForm((prev) => ({ ...prev, amount: String(selectedProfile.tuitionPlan?.monthlyAmount ?? prev.amount) }));
+    } else if (selectedProfile.feeMode === "SYMBOLIC_ONE_TIME") {
+      setInvoiceForm((prev) => ({ ...prev, amount: String(selectedProfile.symbolicAmount ?? prev.amount) }));
+    }
+  }, [selectedProfile]);
 
   const closeInvoiceModal = () => {
     if (createInvoiceM.isPending) return;
@@ -190,7 +212,7 @@ export default function FinanceInvoicesTab({
   return (
     <>
       <Modal
-        isOpen={Boolean(showInvoiceForm && isAdmin)}
+        isOpen={Boolean(showInvoiceForm && isAdmin && feesEnabled !== false)}
         onClose={closeInvoiceModal}
         title={ar ? "إنشاء فاتورة جديدة" : "Create New Invoice"}
         titleIcon={
@@ -207,7 +229,7 @@ export default function FinanceInvoicesTab({
             <Button variant="secondary" onClick={closeInvoiceModal} disabled={createInvoiceM.isPending}>
               {ar ? "إلغاء" : "Cancel"}
             </Button>
-            <Button type="submit" form="finance-invoice-form" isLoading={createInvoiceM.isPending}>
+            <Button type="submit" form="finance-invoice-form" isLoading={createInvoiceM.isPending} disabled={selectedProfile?.feeMode === "FREE"}>
               {ar ? "حفظ الفاتورة" : "Save Invoice"}
             </Button>
           </div>
@@ -285,6 +307,7 @@ export default function FinanceInvoicesTab({
                   value={invoiceForm.amount}
                   onChange={(event) => setInvoiceForm((prev) => ({ ...prev, amount: event.target.value }))}
                   placeholder={ar ? "المبلغ" : "Amount"}
+                  disabled={Boolean(selectedProfile && selectedProfile.feeMode !== "FREE")}
                   required
                 />
               </div>
@@ -306,6 +329,35 @@ export default function FinanceInvoicesTab({
               </div>
             </div>
           </div>
+
+          {selectedProfile ? (
+            <div className="circlemod-section">
+              <div className="circlemod-section-head">
+                <Receipt size={15} className="circlemod-section-icon" />
+                <span>{ar ? "الاشتراك المسموح" : "Authorized Subscription"}</span>
+              </div>
+              {selectedProfile.feeMode === "FREE" ? (
+                <div className="circlemod-error" role="alert">
+                  <AlertCircle size={14} className="flex-shrink-0" />
+                  <span>{ar ? "هذا الطالب معفى من الاشتراكات" : "This student is exempt from subscriptions"}</span>
+                </div>
+              ) : (
+                <div className="text-sm text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-300 rounded-lg p-3 flex items-center gap-2">
+                  <span className="font-bold">{ar ? "الاشتراك المسموح:" : "Authorized:"}</span>
+                  <FinanceMoney amount={selectedProfile.feeMode === "PLAN_MONTHLY" ? (selectedProfile.tuitionPlan?.monthlyAmount ?? 0) : (selectedProfile.symbolicAmount ?? 0)} baseCurrency="YER" />
+                  <span className="text-xs opacity-70">({selectedProfile.tuitionPlan?.name ?? (ar ? "مبلغ رمزي" : "Symbolic")})</span>
+                </div>
+              )}
+            </div>
+          ) : feesEnabled ? (
+            <div className="circlemod-section">
+              <div className="circlemod-section-head">
+                <Receipt size={15} className="circlemod-section-icon" />
+                <span>{ar ? "الاشتراك المسموح" : "Authorized Subscription"}</span>
+              </div>
+              <p className="text-xs text-text-tertiary px-1">{ar ? "اختر طالباً لعرض الاشتراك المسموح به" : "Select a student to view authorized subscription"}</p>
+            </div>
+          ) : null}
 
           {/* Section 3: Notes */}
           <div className="circlemod-section">

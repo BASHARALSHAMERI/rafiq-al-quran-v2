@@ -1,4 +1,4 @@
-import { Prisma, FinanceAccountType, FinanceMovementDirection, FinanceMovementType, FundTransferStatus, InvoiceStatus, InvoiceType, PaymentMethod, PayrollBatchStatus, PayrollItemStatus, RewardBatchStatus, RewardCycle, RewardItemStatus, Role, VoucherSourceType, VoucherStatus, VoucherType, AuditAction, AuditEntityType, FeeMode } from "@prisma/client";
+import { Prisma, FinanceAccountType, FinanceMovementDirection, FinanceMovementType, FundTransferStatus, InvoiceStatus, InvoiceType, PaymentMethod, PayrollBatchStatus, PayrollItemStatus, RewardBatchStatus, RewardCycle, RewardItemStatus, Role, VoucherSourceType, VoucherStatus, VoucherType, AuditAction, AuditEntityType, FeeMode, TuitionPlanKind } from "@prisma/client";
 import { auditLogger } from "../../../shared/audit/audit-log";
 import { prisma } from "../../../shared/db/prisma";
 import type { ScopeContext } from "../../../shared/types/auth.types";
@@ -19,6 +19,7 @@ import {
   rewardBatchSelect,
   fundTransferSelect,
   studentFeeProfileSelect,
+  tuitionPlanSelect,
   normalizeDecimals,
   normalize,
   isKnownPrismaError,
@@ -782,5 +783,108 @@ export const billingService = {
       mapUniqueConflict(error, "VOUCHER_NUMBER_CONFLICT", "Voucher number conflict");
       throw error;
     }
+  },
+
+  async listTuitionPlans(
+    scope: ScopeContext,
+    query: { centerId?: number; isActive?: boolean }
+  ) {
+    financeV2Domain.assertReadEnabled();
+    const where: Prisma.TuitionPlanWhereInput = {
+      organizationId: scope.organizationId,
+      ...(query.centerId ? { centerId: query.centerId } : {}),
+      ...(query.isActive != null ? { isActive: query.isActive } : {})
+    };
+    const [items, total] = await Promise.all([
+      prisma.tuitionPlan.findMany({
+        where,
+        select: tuitionPlanSelect,
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.tuitionPlan.count({ where })
+    ]);
+    return { items: normalize(items), total };
+  },
+
+  async createTuitionPlan(
+    scope: ScopeContext,
+    input: {
+      centerId: number;
+      name: string;
+      monthlyAmount: number;
+      planKind?: TuitionPlanKind;
+      isActive?: boolean;
+    }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    await ensureFinanceCenter(scope, input.centerId);
+
+    const plan = await prisma.tuitionPlan.create({
+      data: {
+        organizationId: scope.organizationId,
+        centerId: input.centerId,
+        name: input.name.trim(),
+        monthlyAmount: financeV2Domain.toDecimal(input.monthlyAmount),
+        planKind: input.planKind ?? TuitionPlanKind.MONTHLY,
+        isActive: input.isActive ?? true
+      },
+      select: tuitionPlanSelect
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.SETTINGS,
+      entityId: plan.id,
+      centerId: plan.centerId,
+      summary: `تم إنشاء خطة اشتراك: ${plan.name}`
+    });
+
+    return normalize(plan);
+  },
+
+  async updateTuitionPlan(
+    scope: ScopeContext,
+    planId: number,
+    input: {
+      name?: string;
+      monthlyAmount?: number;
+      planKind?: TuitionPlanKind;
+      isActive?: boolean;
+    }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const existing = await prisma.tuitionPlan.findFirst({
+      where: { id: planId, organizationId: scope.organizationId },
+      select: tuitionPlanSelect
+    });
+    assertFinanceEntity(existing, "Tuition plan not found");
+
+    const updated = await prisma.tuitionPlan.update({
+      where: { id: planId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.monthlyAmount !== undefined
+          ? { monthlyAmount: financeV2Domain.toDecimal(input.monthlyAmount) }
+          : {}),
+        ...(input.planKind !== undefined ? { planKind: input.planKind } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+      },
+      select: tuitionPlanSelect
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.SETTINGS,
+      entityId: updated.id,
+      centerId: updated.centerId,
+      summary: `تم تحديث خطة اشتراك: ${updated.name}`
+    });
+
+    return normalize(updated);
   }
 };

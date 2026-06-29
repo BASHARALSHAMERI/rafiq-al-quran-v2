@@ -109,7 +109,12 @@ export const FINANCE_V2_QUERY_KEYS = {
       params.status ?? null
     ] as const,
   assetCustody: (assetId?: number) =>
-    [...FINANCE_V2_QUERY_KEYS.all, "asset-custody", assetId ?? null] as const
+    [...FINANCE_V2_QUERY_KEYS.all, "asset-custody", assetId ?? null] as const,
+  tuitionPlans: (centerId?: number) =>
+    [...FINANCE_V2_QUERY_KEYS.all, "tuition-plans", centerId ?? null] as const,
+  studentFeeProfiles: (centerId?: number) =>
+    [...FINANCE_V2_QUERY_KEYS.all, "student-fee-profiles", centerId ?? null] as const,
+  policy: () => [...FINANCE_V2_QUERY_KEYS.all, "policy"] as const
 };
 
 export const useFinanceV2InvoicesQuery = (filters: FinanceInvoicesV2Query) =>
@@ -252,6 +257,86 @@ export const useFinanceV2DonorsQuery = (filters: FinanceDonorsV2Query = {}) =>
     staleTime: 20_000,
     placeholderData: keepPreviousData
   });
+
+export const useFinanceV2TuitionPlansQuery = (centerId?: number) =>
+  useQuery({
+    queryKey: FINANCE_V2_QUERY_KEYS.tuitionPlans(centerId),
+    queryFn: () => financeV2Api.getTuitionPlans({ centerId, isActive: true }),
+    staleTime: 60_000
+  });
+
+export const useCreateFinanceV2TuitionPlanMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { centerId: number; name: string; monthlyAmount: number; planKind?: string; isActive?: boolean }) =>
+      financeV2Api.createTuitionPlan(payload),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.tuitionPlans() });
+    }
+  });
+};
+
+export const useUpdateFinanceV2TuitionPlanMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: number; payload: { name?: string; monthlyAmount?: number; planKind?: string; isActive?: boolean } }) =>
+      financeV2Api.updateTuitionPlan(input.id, input.payload),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.tuitionPlans() });
+    }
+  });
+};
+
+export const useFinanceV2StudentFeeProfilesQuery = (centerId?: number) =>
+  useQuery({
+    queryKey: FINANCE_V2_QUERY_KEYS.studentFeeProfiles(centerId),
+    queryFn: () => financeV2Api.getStudentFeeProfiles({ centerId, page: 1, pageSize: 100 }),
+    staleTime: 30_000,
+    placeholderData: keepPreviousData
+  });
+
+export const useCreateFinanceV2StudentFeeProfileMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      centerId: number; studentId: number; feeMode: string;
+      tuitionPlanId?: number; symbolicAmount?: number;
+      isActive?: boolean; startDate: string; endDate?: string; notes?: string
+    }) => financeV2Api.createStudentFeeProfile(payload),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useUpdateFinanceV2StudentFeeProfileMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      id: number;
+      payload: {
+        feeMode?: string; tuitionPlanId?: number | null; symbolicAmount?: number | null;
+        isActive?: boolean; startDate?: string; endDate?: string | null; notes?: string | null
+      }
+    }) => financeV2Api.updateStudentFeeProfile(input.id, input.payload),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useFinanceV2PolicyQuery = () =>
+  useQuery({
+    queryKey: FINANCE_V2_QUERY_KEYS.policy(),
+    queryFn: () => financeV2Api.getEffectivePolicy(),
+    staleTime: 120_000
+  });
+
+export const usePatchOrganizationPolicyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Partial<import("./types").FinancePolicyV2>) =>
+      financeV2Api.patchOrganizationPolicy(payload),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.policy() });
+    }
+  });
+};
 
 export const useCreateFinanceV2DonorMutation = () => {
   const queryClient = useQueryClient();

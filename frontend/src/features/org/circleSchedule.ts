@@ -138,9 +138,19 @@ const isPrayerRangeOrdered = (fromPrayer: PrayerName, toPrayer: PrayerName) => {
   return fromRank >= 0 && toRank >= 0 && fromRank < toRank;
 };
 
-export const validateScheduleDraftRows = (rows: CircleScheduleDraftRow[], ar: boolean): string | null => {
+export const validateScheduleDraftRows = (
+  rows: CircleScheduleDraftRow[],
+  ar: boolean,
+  weekendDays?: string[]
+): string | null => {
   for (const row of rows) {
     if (!row.enabled) continue;
+
+    if (weekendDays?.includes(row.day)) {
+      return ar
+        ? `يوم ${weekdayLabel(row.day, ar)} مخصص كعطلة في سياسة الحضور، لا يمكن تحديده كيوم دوام`
+        : `${weekdayLabel(row.day, ar)} is set as a holiday in the attendance policy and cannot be a work day`;
+    }
 
     if (row.mode === "CLOCK") {
       const from = row.fromTime.trim();

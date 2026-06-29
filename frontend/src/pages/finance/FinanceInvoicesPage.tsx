@@ -6,7 +6,8 @@ import {
   ArrowDownLeft,
   Clock,
   History,
-  Receipt
+  Receipt,
+  Settings
 } from "lucide-react";
 import { Suspense, lazy, useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -21,7 +22,9 @@ import {
   FinancePageHeader,
   FinanceMoney 
 } from "../../features/finance-v2/design";
-import { useFinanceV2InvoicesQuery } from "../../features/finance-v2/finance-v2.hooks";
+import { useFinanceV2InvoicesQuery, useFinanceV2PolicyQuery, usePatchOrganizationPolicyMutation } from "../../features/finance-v2/finance-v2.hooks";
+import { useAuthStore } from "../../features/auth/auth.store";
+import Modal from "../../components/ui/Modal";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -29,6 +32,7 @@ import "../../styles/pages/finance-v4.css";
 
 const FinanceInvoicesTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceInvoicesTab"));
 const FinancePaymentsTab = lazy(() => import("../../features/finance-v2/components/tabs/FinancePaymentsTab"));
+const FinanceSubscriptionTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceSubscriptionTab"));
 
 function InvoiceKpi({
   icon: Icon,
@@ -61,6 +65,7 @@ function InvoiceKpi({
 const TABS = [
   { key: "invoices", labelAr: "الفواتير", labelEn: "Invoices", icon: Receipt },
   { key: "payments", labelAr: "سجل الدفعات", labelEn: "Payment History", icon: History },
+  { key: "subscriptions", labelAr: "إدارة الاشتراكات", labelEn: "Manage Subscriptions", icon: Receipt },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -81,6 +86,19 @@ export default function FinanceInvoicesPage() {
   const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("invoices");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+
+  const user = useAuthStore((s) => s.user);
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
+  const policyQ = useFinanceV2PolicyQuery();
+  const feesEnabled = policyQ.data?.feesEnabled ?? false;
+  const patchPolicyM = usePatchOrganizationPolicyMutation();
+
+  const visibleTabs = useMemo(() => {
+    if (feesEnabled) return TABS;
+    return TABS.filter((t) => t.key !== "subscriptions");
+  }, [feesEnabled]);
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
@@ -144,15 +162,17 @@ export default function FinanceInvoicesPage() {
                   >
                     {ar ? "تحديث" : "Refresh"}
                   </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="shadow-lg shadow-brand-500/20"
-                    leftIcon={<Plus className="w-4 h-4" />}
-                    onClick={() => setShowNewInvoiceModal(true)}
-                  >
-                    {ar ? "فاتورة جديدة" : "New Invoice"}
-                  </Button>
+                  {feesEnabled ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="shadow-lg shadow-brand-500/20"
+                      leftIcon={<Plus className="w-4 h-4" />}
+                      onClick={() => setShowNewInvoiceModal(true)}
+                    >
+                      {ar ? "فاتورة جديدة" : "New Invoice"}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null
             }
@@ -192,7 +212,7 @@ export default function FinanceInvoicesPage() {
       toolbar={
         <>
           <div className="fin-tabs">
-            {TABS.map((tab) => {
+            {visibleTabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
@@ -206,6 +226,11 @@ export default function FinanceInvoicesPage() {
                 </button>
               );
             })}
+            {isSuperAdmin ? (
+              <button type="button" className="fin-tab ml-auto" onClick={() => setShowPolicyModal(true)} title={ar ? "إعدادات الاشتراكات" : "Subscription Settings"}>
+                <Settings size={16} />
+              </button>
+            ) : null}
           </div>
           {activeTab === "invoices" ? (
             <FinancePageFilters
@@ -246,6 +271,7 @@ export default function FinanceInvoicesPage() {
               statusLabels={statusLabels}
               externalShowForm={showNewInvoiceModal}
               onExternalFormClose={() => setShowNewInvoiceModal(false)}
+              feesEnabled={feesEnabled}
             />
           </Suspense>
         ) : null}
@@ -260,7 +286,30 @@ export default function FinanceInvoicesPage() {
             />
           </Suspense>
         ) : null}
+        {activeTab === "subscriptions" && feesEnabled ? (
+          <Suspense fallback={<LoadingState />}>
+            <FinanceSubscriptionTab centerId={centerId} isAdmin={isSuperAdmin} ar={ar} />
+          </Suspense>
+        ) : null}
       </div>
+
+      {/* ⚙️ Policy toggle modal */}
+      <Modal isOpen={showPolicyModal} onClose={() => setShowPolicyModal(false)} title={ar ? "إعدادات الاشتراكات" : "Subscription Settings"} size="sm" panelClassName="circlemod-panel" bodyClassName="circlemod-body">
+        <div className="circlemod-form p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold">{ar ? "تفعيل نظام الاشتراكات" : "Enable Subscription System"}</span>
+            <button
+              type="button"
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${feesEnabled ? 'bg-brand-600' : 'bg-gray-300'}`}
+              onClick={() => patchPolicyM.mutate({ feesEnabled: !feesEnabled })}
+              disabled={patchPolicyM.isPending}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${feesEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <p className="text-xs text-text-tertiary mt-2">{ar ? "عند التعطيل، يختفي تبويب إدارة الاشتراكات وزر الفاتورة الجديدة" : "When disabled, the subscriptions tab and new invoice button are hidden"}</p>
+        </div>
+      </Modal>
     </FinancePageShell>
   );
 }
