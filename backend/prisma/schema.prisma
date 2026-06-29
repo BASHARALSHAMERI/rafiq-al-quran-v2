@@ -15,6 +15,10 @@ model Organization {
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   logoUrl                  String?                   @map("logo_url") @db.VarChar(500)
+  description              String?                   @db.VarChar(500)
+  address                  String?                   @db.VarChar(255)
+  phone                    String?                   @db.VarChar(32)
+  email                    String?                   @db.VarChar(191)
   activityLogs             ActivityLog[]
   accountingAccounts       AccountingAccount[]
   journalEntries           JournalEntry[]
@@ -162,6 +166,7 @@ model Center {
   @@unique([organizationId, code])
   @@index([organizationId])
   @@index([organizationId, timezone])
+  @@unique([organizationId, name])
   @@index([centerAdminUserId])
   @@map("centers")
 }
@@ -2363,6 +2368,7 @@ model LibraryCategory {
 
   @@unique([organizationId, code])
   @@index([organizationId])
+  @@unique([organizationId, name])
   @@index([centerId])
   @@map("library_categories")
 }
@@ -3306,6 +3312,7 @@ model Supplier {
   fixedAssets  FixedAsset[]
 
   @@index([organizationId])
+  @@unique([organizationId, name])
   @@index([isActive])
   @@map("suppliers")
 }
@@ -3324,6 +3331,7 @@ model ExpenseCategory {
   accountingAccount AccountingAccount? @relation(fields: [accountingAccountId], references: [id])
   invoices          ExpenseInvoice[]
 
+  @@unique([organizationId, name])
   @@index([organizationId])
   @@map("expense_categories")
 }

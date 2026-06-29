@@ -53,6 +53,10 @@ type UpdateCenterInput = {
 type UpdateOrgBrandingInput = {
   name?: string;
   logoUrl?: string | null;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
 };
 
 type UpdateStatusInput = {
@@ -445,11 +449,19 @@ export const orgService = {
         ? normalizeRequiredName({ nameAr: input.name })
         : undefined;
     const logoUrl = input.logoUrl !== undefined ? normalizeOptionalString(input.logoUrl) ?? null : undefined;
+    const description = input.description !== undefined ? normalizeOptionalString(input.description) ?? null : undefined;
+    const address = input.address !== undefined ? normalizeOptionalString(input.address) ?? null : undefined;
+    const phone = input.phone !== undefined ? normalizeOptionalString(input.phone) ?? null : undefined;
+    const email = input.email !== undefined ? normalizeOptionalString(input.email) ?? null : undefined;
 
     const branding = await orgRepository.updateOrganizationBranding({
       organizationId: scope.organizationId,
       name,
-      logoUrl
+      logoUrl,
+      description,
+      address,
+      phone,
+      email
     });
 
     await auditLogger.log({
@@ -464,11 +476,19 @@ export const orgService = {
         organizationId: branding.id,
         before: {
           name: existing.name,
-          logoUrl: existing.logoUrl
+          logoUrl: existing.logoUrl,
+          description: existing.description,
+          address: existing.address,
+          phone: existing.phone,
+          email: existing.email
         },
         after: {
           name: branding.name,
-          logoUrl: branding.logoUrl
+          logoUrl: branding.logoUrl,
+          description: branding.description,
+          address: branding.address,
+          phone: branding.phone,
+          email: branding.email
         }
       }
     });
@@ -569,6 +589,10 @@ export const orgService = {
         return center;
       } catch (error) {
         if (isUniqueViolation(error)) {
+          const targets = normalizeMetaTargets(error as Prisma.PrismaClientKnownRequestError);
+          if (targets.includes("name_ar") || targets.includes("name")) {
+            throw new AppError("يوجد مركز بنفس الاسم مسبقاً في هذه المنظمة", 400);
+          }
           lastError = error;
           continue;
         }
@@ -688,6 +712,10 @@ export const orgService = {
       return center;
     } catch (error) {
       if (isUniqueViolation(error)) {
+        const targets = normalizeMetaTargets(error as Prisma.PrismaClientKnownRequestError);
+        if (targets.includes("name_ar") || targets.includes("name")) {
+          throw new AppError("يوجد مركز بنفس الاسم مسبقاً في هذه المنظمة", 400);
+        }
         throw new AppError("تتعارض بيانات تحديث المركز مع بيانات موجودة مسبقاً", 409);
       }
       throw error;
