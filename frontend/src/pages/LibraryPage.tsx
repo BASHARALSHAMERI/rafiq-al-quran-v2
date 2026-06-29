@@ -13,6 +13,9 @@ import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { LoadingState } from "../components/ui/LoadingState";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
+import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { Modal } from "../components/ui/Modal";
 import { useAuthStore } from "../features/auth/auth.store";
 import type { Role } from "../features/auth/types";
 import {
@@ -117,12 +120,10 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadErr, setUploadErr] = useState("");
   const [uf, setUf] = useState<UploadForm>({ title: "", description: "", visibility: "CENTER", type: "DOCUMENT", centerId: "", circleId: "", categoryId: "", bookCategory: "", file: null, cover: null });
 
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState<LibraryItem | null>(null);
-  const [editErr, setEditErr] = useState("");
   const [ef, setEf] = useState<EditForm>({ title: "", description: "", visibility: "CENTER", status: "ACTIVE", type: "DOCUMENT", centerId: "", circleId: "", categoryId: "", bookCategory: "" });
 
   const [dlId, setDlId] = useState<number | null>(null);
@@ -183,17 +184,17 @@ export default function LibraryPage() {
 
   const openUpload = () => {
     const dc = centerId ?? (centers.length === 1 ? centers[0].id : undefined);
-    setUploadErr(""); setUf({ title: "", description: "", visibility: "CENTER", type: "DOCUMENT", centerId: dc ? String(dc) : "", circleId: "", categoryId: "", bookCategory: "", file: null, cover: null }); setUploadOpen(true);
+    setUf({ title: "", description: "", visibility: "CENTER", type: "DOCUMENT", centerId: dc ? String(dc) : "", circleId: "", categoryId: "", bookCategory: "", file: null, cover: null }); setUploadOpen(true);
   };
 
   const openEdit = (item: LibraryItem) => {
-    setEditErr(""); setEditItem(item);
+    setEditItem(item);
     setEf({ title: item.title, description: item.description ?? "", visibility: item.visibility, status: item.status, type: item.type, centerId: item.centerId ? String(item.centerId) : "", circleId: item.circleId ? String(item.circleId) : "", categoryId: item.categoryId ? String(item.categoryId) : "", bookCategory: item.bookCategory ?? "" });
     setEditOpen(true); setMenuId(null);
   };
 
   const doUpload = async (e: React.FormEvent) => {
-    e.preventDefault(); setUploadErr("");
+    e.preventDefault();
     try {
       const t = uf.title.trim(); const cid = posInt(uf.centerId); const crid = posInt(uf.circleId); const catid = posInt(uf.categoryId);
       if (t.length < 2) throw new Error(ar ? "عنوان الملف مطلوب" : "Title required");
@@ -205,7 +206,7 @@ export default function LibraryPage() {
       setUploadOpen(false);
       notifySuccess(entityFeedback.success(ar, "create", LIBRARY_FILE_ENTITY));
     } catch (err) {
-      setUploadErr(
+      notifyError(
         getLocalizedApiErrorMessage(err, {
           ar,
           fallback: entityFeedback.error(ar, "create", LIBRARY_FILE_ENTITY)
@@ -215,7 +216,7 @@ export default function LibraryPage() {
   };
 
   const doEdit = async (e: React.FormEvent) => {
-    e.preventDefault(); setEditErr(""); if (!editItem) return;
+    e.preventDefault(); if (!editItem) return;
     try {
       const t = ef.title.trim(); const cid = posInt(ef.centerId); const crid = posInt(ef.circleId); const catid = posInt(ef.categoryId);
       if (t.length < 2) throw new Error(ar ? "عنوان الملف مطلوب" : "Title required");
@@ -225,7 +226,7 @@ export default function LibraryPage() {
       setEditOpen(false); setEditItem(null);
       notifySuccess(entityFeedback.success(ar, "update", LIBRARY_FILE_ENTITY));
     } catch (err) {
-      setEditErr(
+      notifyError(
         getLocalizedApiErrorMessage(err, {
           ar,
           fallback: entityFeedback.error(ar, "update", LIBRARY_FILE_ENTITY)
@@ -464,118 +465,114 @@ export default function LibraryPage() {
       </motion.div>
 
       {/* ═══ UPLOAD MODAL ═══ */}
-      <AnimatePresence>
-        {uploadOpen && (
-          <motion.div className="lib-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setUploadOpen(false)}>
-            <motion.div className="lib-modal" initial={{ opacity: 0, y: 30, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 30, scale: 0.97 }} transition={{ duration: 0.25 }} onClick={e => e.stopPropagation()}>
-              <div className="lib-modal__head">
-                <div className="lib-modal__head-icon"><FilePlus2 className="w-5 h-5" /></div>
-                <h3>{ar ? "رفع ملف جديد" : "Upload New File"}</h3>
-                <button className="lib-modal__close" onClick={() => setUploadOpen(false)} title={ar ? "إغلاق" : "Close"}><X className="w-4 h-4" /></button>
+      <Modal
+        isOpen={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        title={ar ? "رفع ملف جديد" : "Upload New File"}
+        titleIcon={<FilePlus2 className="w-5 h-5" />}
+        footer={
+          <>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setUploadOpen(false)}>{ar ? "إلغاء" : "Cancel"}</Button>
+            <Button type="submit" form="lib-upload-form" size="sm" isLoading={uploadM.isPending}>{ar ? "رفع الملف" : "Upload"}</Button>
+          </>
+        }
+      >
+        <form id="lib-upload-form" onSubmit={doUpload}>
+          <div className="flex flex-col gap-4">
+            <Input label={ar ? "العنوان" : "Title"} value={uf.title} onChange={e => setUf(p => ({ ...p, title: e.target.value }))} placeholder={ar ? "عنوان الملف" : "File title"} title={ar ? "العنوان" : "Title"} required />
+            <div className="flex flex-col gap-1.5">
+              <label className="input-label">{ar ? "الوصف" : "Description"}</label>
+              <textarea className="input-field" value={uf.description} onChange={e => setUf(p => ({ ...p, description: e.target.value }))} rows={2} placeholder={ar ? "وصف الملف" : "File description"} title={ar ? "الوصف" : "Description"} />
+            </div>
+            <div className="flex gap-4">
+              <Select className="flex-1" label={ar ? "النوع" : "Type"} value={uf.type} onChange={e => setUf(p => ({ ...p, type: e.target.value as LibraryItemType }))} title={ar ? "النوع" : "Type"}>{(["DOCUMENT", "AUDIO", "VIDEO"] as const).map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}</Select>
+              <Select className="flex-1" label={ar ? "الظهور" : "Visibility"} value={uf.visibility} onChange={e => { const v = e.target.value as LibraryVisibility; setUf(p => ({ ...p, visibility: v, centerId: v === "ORG" ? "" : p.centerId, circleId: v === "CIRCLE" ? p.circleId : "" })); }} title={ar ? "الظهور" : "Visibility"}>{visibilityOpts.map(v => <option key={v} value={v}>{visLabels[v]}</option>)}</Select>
+            </div>
+            <div className="flex gap-4">
+              {uf.visibility !== "ORG" && <Select className="flex-1" label={ar ? "المركز" : "Center"} value={uf.centerId} onChange={e => setUf(p => ({ ...p, centerId: e.target.value, circleId: "", categoryId: "" }))} title={ar ? "المركز" : "Center"} required><option value="">{ar ? "اختر" : "Select"}</option>{centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}
+              {uf.visibility === "CIRCLE" && <Select className="flex-1" label={ar ? "الحلقة" : "Circle"} value={uf.circleId} onChange={e => setUf(p => ({ ...p, circleId: e.target.value }))} title={ar ? "الحلقة" : "Circle"} required><option value="">{ar ? "اختر" : "Select"}</option>{(ufCirclesQ.data?.items ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}
+            </div>
+            <div className="flex gap-4">
+              <Select className="flex-1" label={ar ? "التصنيف الإداري" : "Admin Category"} value={uf.categoryId} onChange={e => setUf(p => ({ ...p, categoryId: e.target.value }))} title={ar ? "التصنيف" : "Category"}><option value="">{ar ? "بدون" : "None"}</option>{ufCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
+              <Select className="flex-1" label={ar ? "تصنيف الكتاب" : "Book Class"} value={uf.bookCategory} onChange={e => setUf(p => ({ ...p, bookCategory: e.target.value as BookCategory }))} title={ar ? "تصنيف الكتاب" : "Book Category"}><option value="">{ar ? "بدون" : "None"}</option>{BOOK_CATEGORIES.map(c => <option key={c} value={c}>{bookCatLabels[c]}</option>)}</Select>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1 flex flex-col gap-1.5">
+                <label className="input-label">{ar ? "الملف" : "File"}</label>
+                <div className="lib-file-drop">
+                  <Upload className="w-5 h-5" />
+                  <span>{uf.file ? uf.file.name : (ar ? "اختر ملف" : "Choose file")}</span>
+                  <input type="file" accept=".pdf,.docx,.mp3,.wav,.mp4,image/*" onChange={e => { const f = e.target.files?.[0] ?? null; setUf(p => ({ ...p, file: f })); }} title={ar ? "الملف" : "File"} required />
+                </div>
               </div>
-              <form onSubmit={doUpload}>
-                <div className="lib-modal__body">
-                  <div className="lib-fg"><label>{ar ? "العنوان" : "Title"}</label><input className="lib-input" value={uf.title} onChange={e => setUf(p => ({ ...p, title: e.target.value }))} placeholder={ar ? "عنوان الملف" : "File title"} title={ar ? "العنوان" : "Title"} required /></div>
-                  <div className="lib-fg"><label>{ar ? "الوصف" : "Description"}</label><textarea className="lib-input lib-textarea" value={uf.description} onChange={e => setUf(p => ({ ...p, description: e.target.value }))} rows={2} placeholder={ar ? "وصف الملف" : "File description"} title={ar ? "الوصف" : "Description"} /></div>
-                  <div className="lib-fg-row">
-                    <div className="lib-fg"><label>{ar ? "النوع" : "Type"}</label><select className="lib-input" value={uf.type} onChange={e => setUf(p => ({ ...p, type: e.target.value as LibraryItemType }))} title={ar ? "النوع" : "Type"}>{(["DOCUMENT", "AUDIO", "VIDEO"] as const).map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}</select></div>
-                    <div className="lib-fg"><label>{ar ? "الظهور" : "Visibility"}</label><select className="lib-input" value={uf.visibility} onChange={e => { const v = e.target.value as LibraryVisibility; setUf(p => ({ ...p, visibility: v, centerId: v === "ORG" ? "" : p.centerId, circleId: v === "CIRCLE" ? p.circleId : "" })); }} title={ar ? "الظهور" : "Visibility"}>{visibilityOpts.map(v => <option key={v} value={v}>{visLabels[v]}</option>)}</select></div>
-                  </div>
-                  <div className="lib-fg-row">
-                    {uf.visibility !== "ORG" && <div className="lib-fg"><label>{ar ? "المركز" : "Center"}</label><select className="lib-input" value={uf.centerId} onChange={e => setUf(p => ({ ...p, centerId: e.target.value, circleId: "", categoryId: "" }))} title={ar ? "المركز" : "Center"} required><option value="">{ar ? "اختر" : "Select"}</option>{centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-                    {uf.visibility === "CIRCLE" && <div className="lib-fg"><label>{ar ? "الحلقة" : "Circle"}</label><select className="lib-input" value={uf.circleId} onChange={e => setUf(p => ({ ...p, circleId: e.target.value }))} title={ar ? "الحلقة" : "Circle"} required><option value="">{ar ? "اختر" : "Select"}</option>{(ufCirclesQ.data?.items ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-                  </div>
-                  <div className="lib-fg-row">
-                    <div className="lib-fg"><label>{ar ? "التصنيف الإداري" : "Admin Category"}</label><select className="lib-input" value={uf.categoryId} onChange={e => setUf(p => ({ ...p, categoryId: e.target.value }))} title={ar ? "التصنيف" : "Category"}><option value="">{ar ? "بدون" : "None"}</option>{ufCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                    <div className="lib-fg"><label>{ar ? "تصنيف الكتاب" : "Book Class"}</label><select className="lib-input" value={uf.bookCategory} onChange={e => setUf(p => ({ ...p, bookCategory: e.target.value as BookCategory }))} title={ar ? "تصنيف الكتاب" : "Book Category"}><option value="">{ar ? "بدون" : "None"}</option>{BOOK_CATEGORIES.map(c => <option key={c} value={c}>{bookCatLabels[c]}</option>)}</select></div>
-                  </div>
-                  <div className="lib-fg-row">
-                    <div className="lib-fg">
-                      <label>{ar ? "الملف" : "File"}</label>
-                      <div className="lib-file-drop">
-                        <Upload className="w-5 h-5" />
-                        <span>{uf.file ? uf.file.name : (ar ? "اختر ملف" : "Choose file")}</span>
-                        <input type="file" accept=".pdf,.docx,.mp3,.wav,.mp4,image/*" onChange={e => { const f = e.target.files?.[0] ?? null; setUf(p => ({ ...p, file: f })); }} title={ar ? "الملف" : "File"} required />
-                      </div>
-                    </div>
-                    <div className="lib-fg">
-                      <label>{ar ? "الغلاف" : "Cover"}</label>
-                      <div className="lib-file-drop lib-file-drop--cover">
-                        <FileImage className="w-5 h-5" />
-                        <span>{uf.cover ? uf.cover.name : (ar ? "صورة الغلاف" : "Cover Image")}</span>
-                        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { const f = e.target.files?.[0] ?? null; setUf(p => ({ ...p, cover: f })); }} title={ar ? "الغلاف" : "Cover"} />
-                      </div>
-                    </div>
-                  </div>
-                  {uploadErr && <p className="lib-err">{uploadErr}</p>}
+              <div className="flex-1 flex flex-col gap-1.5">
+                <label className="input-label">{ar ? "الغلاف" : "Cover"}</label>
+                <div className="lib-file-drop lib-file-drop--cover">
+                  <FileImage className="w-5 h-5" />
+                  <span>{uf.cover ? uf.cover.name : (ar ? "صورة الغلاف" : "Cover Image")}</span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { const f = e.target.files?.[0] ?? null; setUf(p => ({ ...p, cover: f })); }} title={ar ? "الغلاف" : "Cover"} />
                 </div>
-                <div className="lib-modal__foot">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setUploadOpen(false)}>{ar ? "إلغاء" : "Cancel"}</Button>
-                  <Button type="submit" size="sm" isLoading={uploadM.isPending}>{ar ? "رفع الملف" : "Upload"}</Button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* ═══ EDIT MODAL ═══ */}
-      <AnimatePresence>
-        {editOpen && editItem && (
-          <motion.div className="lib-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setEditOpen(false); setEditItem(null); }}>
-            <motion.div className="lib-modal" initial={{ opacity: 0, y: 30, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 30, scale: 0.97 }} transition={{ duration: 0.25 }} onClick={e => e.stopPropagation()}>
-              <div className="lib-modal__head">
-                <div className="lib-modal__head-icon lib-modal__head-icon--edit"><PencilLine className="w-5 h-5" /></div>
-                <h3>{ar ? "تعديل مادة المكتبة" : "Edit Library Item"}</h3>
-                <button className="lib-modal__close" onClick={() => { setEditOpen(false); setEditItem(null); }} title={ar ? "إغلاق" : "Close"}><X className="w-4 h-4" /></button>
+      <Modal
+        isOpen={editOpen}
+        onClose={() => { setEditOpen(false); setEditItem(null); }}
+        title={ar ? "تعديل مادة المكتبة" : "Edit Library Item"}
+        titleIcon={<PencilLine className="w-5 h-5" />}
+        footer={
+          <>
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setEditOpen(false); setEditItem(null); }}>{ar ? "إلغاء" : "Cancel"}</Button>
+            <Button type="submit" form="lib-edit-form" size="sm" isLoading={updateM.isPending}>{ar ? "حفظ" : "Save"}</Button>
+          </>
+        }
+      >
+        <form id="lib-edit-form" onSubmit={doEdit}>
+          <div className="flex flex-col gap-4">
+            <Input label={ar ? "العنوان" : "Title"} value={ef.title} onChange={e => setEf(p => ({ ...p, title: e.target.value }))} placeholder={ar ? "عنوان الملف" : "File title"} title={ar ? "العنوان" : "Title"} required />
+            <div className="flex flex-col gap-1.5">
+              <label className="input-label">{ar ? "الوصف" : "Description"}</label>
+              <textarea className="input-field" value={ef.description} onChange={e => setEf(p => ({ ...p, description: e.target.value }))} rows={2} placeholder={ar ? "وصف الملف" : "File description"} title={ar ? "الوصف" : "Description"} />
+            </div>
+            <div className="flex gap-4">
+              <Select className="flex-1" label={ar ? "النوع" : "Type"} value={ef.type} onChange={e => setEf(p => ({ ...p, type: e.target.value as LibraryItemType }))} title={ar ? "النوع" : "Type"}>{(["DOCUMENT", "AUDIO", "VIDEO"] as const).map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}</Select>
+              <Select className="flex-1" label={ar ? "الظهور" : "Visibility"} value={ef.visibility} onChange={e => { const v = e.target.value as LibraryVisibility; setEf(p => ({ ...p, visibility: v, centerId: v === "ORG" ? "" : p.centerId, circleId: v === "CIRCLE" ? p.circleId : "" })); }} title={ar ? "الظهور" : "Visibility"}>{visibilityOpts.map(v => <option key={v} value={v}>{visLabels[v]}</option>)}</Select>
+            </div>
+            <div className="flex gap-4">
+              {ef.visibility !== "ORG" && <Select className="flex-1" label={ar ? "المركز" : "Center"} value={ef.centerId} onChange={e => setEf(p => ({ ...p, centerId: e.target.value, circleId: "", categoryId: "" }))} title={ar ? "المركز" : "Center"} required><option value="">{ar ? "اختر" : "Select"}</option>{centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}
+              {ef.visibility === "CIRCLE" && <Select className="flex-1" label={ar ? "الحلقة" : "Circle"} value={ef.circleId} onChange={e => setEf(p => ({ ...p, circleId: e.target.value }))} title={ar ? "الحلقة" : "Circle"} required><option value="">{ar ? "اختر" : "Select"}</option>{(efCirclesQ.data?.items ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}
+              {ef.visibility === "ORG" && <Select className="flex-1" label={ar ? "الحالة" : "Status"} value={ef.status} onChange={e => setEf(p => ({ ...p, status: e.target.value as LibraryItemStatus }))} title={ar ? "الحالة" : "Status"}>{(["ACTIVE", "ARCHIVED"] as const).map(s => <option key={s} value={s}>{statLabels[s]}</option>)}</Select>}
+            </div>
+            <div className="flex gap-4">
+              <Select className="flex-1" label={ar ? "التصنيف الإداري" : "Admin Category"} value={ef.categoryId} onChange={e => setEf(p => ({ ...p, categoryId: e.target.value }))} title={ar ? "التصنيف" : "Category"}><option value="">{ar ? "بدون" : "None"}</option>{efCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
+              <Select className="flex-1" label={ar ? "تصنيف الكتاب" : "Book Class"} value={ef.bookCategory} onChange={e => setEf(p => ({ ...p, bookCategory: e.target.value as BookCategory }))} title={ar ? "تصنيف الكتاب" : "Book Category"}><option value="">{ar ? "بدون" : "None"}</option>{BOOK_CATEGORIES.map(c => <option key={c} value={c}>{bookCatLabels[c]}</option>)}</Select>
+            </div>
+            <div className="flex gap-4">
+              {ef.visibility !== "ORG" && <Select className="flex-1" label={ar ? "الحالة" : "Status"} value={ef.status} onChange={e => setEf(p => ({ ...p, status: e.target.value as LibraryItemStatus }))} title={ar ? "الحالة" : "Status"}>{(["ACTIVE", "ARCHIVED"] as const).map(s => <option key={s} value={s}>{statLabels[s]}</option>)}</Select>}
+            </div>
+            <div className="flex gap-4 opacity-60">
+              <div className="flex-1 flex flex-col gap-1.5">
+                <label className="input-label">{ar ? "الملف (لا يمكن تغييره)" : "File (Cannot be changed)"}</label>
+                <div className="lib-file-drop cursor-not-allowed">
+                  <FileText className="w-5 h-5" />
+                  <span className="truncate max-w-[150px]" title={editItem?.fileName}>{editItem?.fileName}</span>
+                </div>
               </div>
-              <form onSubmit={doEdit}>
-                <div className="lib-modal__body">
-                  <div className="lib-fg"><label>{ar ? "العنوان" : "Title"}</label><input className="lib-input" value={ef.title} onChange={e => setEf(p => ({ ...p, title: e.target.value }))} placeholder={ar ? "عنوان الملف" : "File title"} title={ar ? "العنوان" : "Title"} required /></div>
-                  <div className="lib-fg"><label>{ar ? "الوصف" : "Description"}</label><textarea className="lib-input lib-textarea" value={ef.description} onChange={e => setEf(p => ({ ...p, description: e.target.value }))} rows={2} placeholder={ar ? "وصف الملف" : "File description"} title={ar ? "الوصف" : "Description"} /></div>
-                  <div className="lib-fg-row">
-                    <div className="lib-fg"><label>{ar ? "النوع" : "Type"}</label><select className="lib-input" value={ef.type} onChange={e => setEf(p => ({ ...p, type: e.target.value as LibraryItemType }))} title={ar ? "النوع" : "Type"}>{(["DOCUMENT", "AUDIO", "VIDEO"] as const).map(t => <option key={t} value={t}>{typeLabels[t]}</option>)}</select></div>
-                    <div className="lib-fg"><label>{ar ? "الظهور" : "Visibility"}</label><select className="lib-input" value={ef.visibility} onChange={e => { const v = e.target.value as LibraryVisibility; setEf(p => ({ ...p, visibility: v, centerId: v === "ORG" ? "" : p.centerId, circleId: v === "CIRCLE" ? p.circleId : "" })); }} title={ar ? "الظهور" : "Visibility"}>{visibilityOpts.map(v => <option key={v} value={v}>{visLabels[v]}</option>)}</select></div>
-                  </div>
-                  <div className="lib-fg-row">
-                    {ef.visibility !== "ORG" && <div className="lib-fg"><label>{ar ? "المركز" : "Center"}</label><select className="lib-input" value={ef.centerId} onChange={e => setEf(p => ({ ...p, centerId: e.target.value, circleId: "", categoryId: "" }))} title={ar ? "المركز" : "Center"} required><option value="">{ar ? "اختر" : "Select"}</option>{centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-                    {ef.visibility === "CIRCLE" && <div className="lib-fg"><label>{ar ? "الحلقة" : "Circle"}</label><select className="lib-input" value={ef.circleId} onChange={e => setEf(p => ({ ...p, circleId: e.target.value }))} title={ar ? "الحلقة" : "Circle"} required><option value="">{ar ? "اختر" : "Select"}</option>{(efCirclesQ.data?.items ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-                    {ef.visibility === "ORG" && <div className="lib-fg"><label>{ar ? "الحالة" : "Status"}</label><select className="lib-input" value={ef.status} onChange={e => setEf(p => ({ ...p, status: e.target.value as LibraryItemStatus }))} title={ar ? "الحالة" : "Status"}>{(["ACTIVE", "ARCHIVED"] as const).map(s => <option key={s} value={s}>{statLabels[s]}</option>)}</select></div>}
-                  </div>
-                  <div className="lib-fg-row">
-                    <div className="lib-fg"><label>{ar ? "التصنيف الإداري" : "Admin Category"}</label><select className="lib-input" value={ef.categoryId} onChange={e => setEf(p => ({ ...p, categoryId: e.target.value }))} title={ar ? "التصنيف" : "Category"}><option value="">{ar ? "بدون" : "None"}</option>{efCats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                    <div className="lib-fg"><label>{ar ? "تصنيف الكتاب" : "Book Class"}</label><select className="lib-input" value={ef.bookCategory} onChange={e => setEf(p => ({ ...p, bookCategory: e.target.value as BookCategory }))} title={ar ? "تصنيف الكتاب" : "Book Category"}><option value="">{ar ? "بدون" : "None"}</option>{BOOK_CATEGORIES.map(c => <option key={c} value={c}>{bookCatLabels[c]}</option>)}</select></div>
-                  </div>
-                  <div className="lib-fg-row">
-                    {ef.visibility !== "ORG" && <div className="lib-fg"><label>{ar ? "الحالة" : "Status"}</label><select className="lib-input" value={ef.status} onChange={e => setEf(p => ({ ...p, status: e.target.value as LibraryItemStatus }))} title={ar ? "الحالة" : "Status"}>{(["ACTIVE", "ARCHIVED"] as const).map(s => <option key={s} value={s}>{statLabels[s]}</option>)}</select></div>}
-                  </div>
-                  <div className="lib-fg-row opacity-60">
-                    <div className="lib-fg">
-                      <label>{ar ? "الملف (لا يمكن تغييره)" : "File (Cannot be changed)"}</label>
-                      <div className="lib-file-drop cursor-not-allowed">
-                        <FileText className="w-5 h-5" />
-                        <span className="truncate max-w-[150px]" title={editItem?.fileName}>{editItem?.fileName}</span>
-                      </div>
-                    </div>
-                    <div className="lib-fg">
-                      <label>{ar ? "الغلاف (لا يمكن تغييره)" : "Cover (Cannot be changed)"}</label>
-                      <div className="lib-file-drop lib-file-drop--cover cursor-not-allowed">
-                        <FileImage className="w-5 h-5" />
-                        <span>{editItem?.coverStorageKey ? (ar ? "يوجد غلاف" : "Has Cover") : (ar ? "لا يوجد غلاف" : "No Cover")}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {editErr && <p className="lib-err">{editErr}</p>}
+              <div className="flex-1 flex flex-col gap-1.5">
+                <label className="input-label">{ar ? "الغلاف (لا يمكن تغييره)" : "Cover (Cannot be changed)"}</label>
+                <div className="lib-file-drop lib-file-drop--cover cursor-not-allowed">
+                  <FileImage className="w-5 h-5" />
+                  <span>{editItem?.coverStorageKey ? (ar ? "يوجد غلاف" : "Has Cover") : (ar ? "لا يوجد غلاف" : "No Cover")}</span>
                 </div>
-                <div className="lib-modal__foot">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { setEditOpen(false); setEditItem(null); }}>{ar ? "إلغاء" : "Cancel"}</Button>
-                  <Button type="submit" size="sm" isLoading={updateM.isPending}>{ar ? "حفظ" : "Save"}</Button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmModal
         isOpen={archiveTarget !== null}
