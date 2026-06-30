@@ -82,15 +82,15 @@ export const listStudentFeeProfilesQuerySchema = z
 
 export const createStudentFeeProfileBodySchema = z
   .object({
-    centerId: positiveInt,
-    studentId: positiveInt,
+    centerId: positiveInt.describe("معرف المركز مطلوب"),
+    studentId: positiveInt.describe("معرف الطالب مطلوب"),
     feeMode: z.nativeEnum(FeeMode),
     tuitionPlanId: optionalPositiveInt,
-    symbolicAmount: z.coerce.number().positive().max(100000000).optional(),
+    symbolicAmount: z.coerce.number().positive("المبلغ يجب أن يكون أكبر من صفر").max(100000000, "المبلغ كبير جداً").optional(),
     isActive: z.boolean().optional(),
-    startDate: z.string().trim().min(1),
+    startDate: z.string().trim().min(1, "تاريخ البدء مطلوب"),
     endDate: z.string().trim().min(1).optional(),
-    notes: z.string().trim().max(500).optional()
+    notes: z.string().trim().max(500, "الملاحظات يجب ألا تتجاوز 500 حرف").optional()
   })
   .strict();
 
@@ -122,8 +122,8 @@ export const listTuitionPlansQuerySchema = z
 export const createTuitionPlanBodySchema = z
   .object({
     centerId: positiveInt,
-    name: z.string().trim().min(1).max(120),
-    monthlyAmount: z.coerce.number().positive().max(100000000),
+    name: z.string().trim().min(1, "اسم الخطة مطلوب").max(120, "اسم الخطة يجب ألا يتجاوز 120 حرف"),
+    monthlyAmount: z.coerce.number().positive("المبلغ يجب أن يكون أكبر من صفر").max(100000000, "المبلغ كبير جداً"),
     planKind: z.nativeEnum(TuitionPlanKind).optional(),
     isActive: z.boolean().optional()
   })

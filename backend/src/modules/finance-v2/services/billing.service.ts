@@ -49,6 +49,41 @@ import {
   Tx
 } from "../finance-v2.internal";
 
+const assertNoActiveStudentFeeProfileOverlapTx = async (
+  tx: Tx,
+  scope: ScopeContext,
+  input: {
+    centerId: number;
+    studentId: number;
+    startDate: Date;
+    endDate: Date | null;
+    excludeId?: number;
+  }
+) => {
+  // ponytail: serialize fee-profile writes per student; narrow the lock only if cross-center contention is measured.
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${scope.organizationId}::integer, ${input.studentId}::integer)`;
+
+  const overlapping = await tx.studentFeeProfile.findFirst({
+    where: {
+      organizationId: scope.organizationId,
+      centerId: input.centerId,
+      studentId: input.studentId,
+      isActive: true,
+      ...(input.excludeId ? { id: { not: input.excludeId } } : {}),
+      ...(input.endDate ? { startDate: { lte: input.endDate } } : {}),
+      OR: [{ endDate: null }, { endDate: { gte: input.startDate } }]
+    },
+    select: { id: true }
+  });
+
+  if (overlapping) {
+    throw financeV2Domain.financeError(
+      "Student already has an overlapping active fee profile in this center",
+      409,
+      "STUDENT_FEE_PROFILE_OVERLAP"
+    );
+  }
+};
 export const billingService = {
   async listStudentFeeProfiles(
     scope: ScopeContext,
@@ -140,24 +175,51 @@ export const billingService = {
       throw financeV2Domain.financeError("startDate is required", 400, "VALIDATION_ERROR");
     }
     const endDate = ensureDate(input.endDate);
+    if (endDate && endDate < startDate) {
+      throw financeV2Domain.financeError("endDate cannot be before startDate", 400, "VALIDATION_ERROR");
+    }
 
-    const profile = await prisma.studentFeeProfile.create({
-      data: {
+    const profile = await prisma.$transaction(async (tx) => {
+      const policy = await getEffectivePolicyTx(tx, {
         organizationId: scope.organizationId,
-        centerId: input.centerId,
-        studentId: input.studentId,
-        feeMode: input.feeMode,
-        tuitionPlanId: input.tuitionPlanId ?? null,
-        symbolicAmount:
-          input.symbolicAmount !== undefined
-            ? financeV2Domain.toDecimal(input.symbolicAmount)
-            : null,
-        isActive: input.isActive ?? true,
-        startDate,
-        endDate: endDate ?? null,
-        notes: input.notes?.trim() || null
-      },
-      select: studentFeeProfileSelect
+        centerId: input.centerId
+      });
+
+      if (input.feeMode === FeeMode.FREE && !policy.allowFreeStudents) {
+        throw financeV2Domain.financeError("المركز لا يسمح باشتراكات الإعفاء المجانية", 409, "POLICY_VIOLATION");
+      }
+
+      if (input.feeMode === FeeMode.SYMBOLIC_ONE_TIME && !policy.allowSymbolicOneTimeFee) {
+        throw financeV2Domain.financeError("المركز لا يسمح باشتراكات الرسوم الرمزية المقطوعة", 409, "POLICY_VIOLATION");
+      }
+
+      if (input.isActive !== false) {
+        await assertNoActiveStudentFeeProfileOverlapTx(tx, scope, {
+          centerId: input.centerId,
+          studentId: input.studentId,
+          startDate,
+          endDate: endDate ?? null
+        });
+      }
+
+      return tx.studentFeeProfile.create({
+        data: {
+          organizationId: scope.organizationId,
+          centerId: input.centerId,
+          studentId: input.studentId,
+          feeMode: input.feeMode,
+          tuitionPlanId: input.tuitionPlanId ?? null,
+          symbolicAmount:
+            input.symbolicAmount !== undefined
+              ? financeV2Domain.toDecimal(input.symbolicAmount)
+              : null,
+          isActive: input.isActive ?? true,
+          startDate,
+          endDate: endDate ?? null,
+          notes: input.notes?.trim() || null
+        },
+        select: studentFeeProfileSelect
+      });
     });
 
     await addAudit({
@@ -223,31 +285,66 @@ export const billingService = {
       );
     }
 
-    const updated = await prisma.studentFeeProfile.update({
-      where: { id: profileId },
-      data: {
-        ...(input.feeMode !== undefined ? { feeMode: input.feeMode } : {}),
-        ...(input.tuitionPlanId !== undefined ? { tuitionPlanId: input.tuitionPlanId } : {}),
-        ...(input.symbolicAmount !== undefined
-          ? {
-              symbolicAmount:
-                input.symbolicAmount === null
-                  ? null
-                  : financeV2Domain.toDecimal(input.symbolicAmount)
-            }
-          : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-        ...(input.startDate !== undefined
-          ? {
-              startDate: requireFinanceEntity(ensureDate(input.startDate), "startDate is invalid")
-            }
-          : {}),
-        ...(input.endDate !== undefined
-          ? { endDate: input.endDate ? ensureDate(input.endDate) ?? null : null }
-          : {}),
-        ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {})
-      },
-      select: studentFeeProfileSelect
+    const newStartDate = input.startDate
+      ? requireFinanceEntity(ensureDate(input.startDate), "startDate is invalid")
+      : requireFinanceEntity(existing.startDate, "startDate is invalid");
+    const newEndDate = input.endDate !== undefined
+      ? (input.endDate ? ensureDate(input.endDate) ?? null : null)
+      : existing.endDate;
+    if (newEndDate && newStartDate && newEndDate < newStartDate) {
+      throw financeV2Domain.financeError("endDate cannot be before startDate", 400, "VALIDATION_ERROR");
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const policy = await getEffectivePolicyTx(tx, {
+        organizationId: scope.organizationId,
+        centerId: existing.centerId
+      });
+
+      if (feeMode === FeeMode.FREE && !policy.allowFreeStudents) {
+        throw financeV2Domain.financeError("المركز لا يسمح باشتراكات الإعفاء المجانية", 409, "POLICY_VIOLATION");
+      }
+
+      if (feeMode === FeeMode.SYMBOLIC_ONE_TIME && !policy.allowSymbolicOneTimeFee) {
+        throw financeV2Domain.financeError("المركز لا يسمح باشتراكات الرسوم الرمزية المقطوعة", 409, "POLICY_VIOLATION");
+      }
+
+      if (input.isActive ?? existing.isActive) {
+        await assertNoActiveStudentFeeProfileOverlapTx(tx, scope, {
+          centerId: existing.centerId,
+          studentId: existing.studentId,
+          startDate: newStartDate,
+          endDate: newEndDate ?? null,
+          excludeId: existing.id
+        });
+      }
+
+      return tx.studentFeeProfile.update({
+        where: { id: profileId },
+        data: {
+          ...(input.feeMode !== undefined ? { feeMode: input.feeMode } : {}),
+          ...(input.tuitionPlanId !== undefined ? { tuitionPlanId: input.tuitionPlanId } : {}),
+          ...(input.symbolicAmount !== undefined
+            ? {
+                symbolicAmount:
+                  input.symbolicAmount === null
+                    ? null
+                    : financeV2Domain.toDecimal(input.symbolicAmount)
+              }
+            : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+          ...(input.startDate !== undefined
+            ? {
+                startDate: requireFinanceEntity(ensureDate(input.startDate), "startDate is invalid")
+              }
+            : {}),
+          ...(input.endDate !== undefined
+            ? { endDate: input.endDate ? ensureDate(input.endDate) ?? null : null }
+            : {}),
+          ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {})
+        },
+        select: studentFeeProfileSelect
+      });
     });
 
     await addAudit({
@@ -449,7 +546,7 @@ export const billingService = {
             invoiceType !== InvoiceType.TUITION_MONTHLY ||
             !feeProfile.tuitionPlan ||
             !feeProfile.tuitionPlan.isActive ||
-            feeProfile.tuitionPlan.planKind !== "MONTHLY"
+            feeProfile.tuitionPlan.planKind === "ONE_TIME_REGISTRATION"
           ) {
             throw financeV2Domain.financeError(
               "Invoice type does not match the student's monthly fee policy",
@@ -469,7 +566,8 @@ export const billingService = {
           );
         }
 
-        return tx.invoice.create({
+
+        const createdInvoice = await tx.invoice.create({
           data: {
             studentId: input.studentId,
             centerId: input.centerId,
@@ -484,6 +582,13 @@ export const billingService = {
           },
           select: invoiceSelect
         });
+
+        await accountingService.postInvoiceJournalEntryTx(tx, scope, {
+          invoiceId: createdInvoice.id,
+          postedById: scope.userId
+        });
+
+        return createdInvoice;
       });
 
       await addAudit({
@@ -539,18 +644,28 @@ export const billingService = {
       );
     }
 
-    const updated = await prisma.invoice.update({
-      where: {
-        id: existing.id
-      },
-      data: {
-        status: InvoiceStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledById: scope.userId,
-        cancelReason: input.reason.trim(),
-        lockVersion: existing.lockVersion + 1
-      },
-      select: invoiceSelect
+    const updated = await prisma.$transaction(async (tx) => {
+      const cancelled = await tx.invoice.update({
+        where: {
+          id: existing.id
+        },
+        data: {
+          status: InvoiceStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelledById: scope.userId,
+          cancelReason: input.reason.trim(),
+          lockVersion: existing.lockVersion + 1
+        },
+        select: invoiceSelect
+      });
+
+      await accountingService.reverseInvoiceJournalEntryTx(tx, scope, {
+        invoiceId: existing.id,
+        postedById: scope.userId,
+        reason: input.reason
+      });
+
+      return cancelled;
     });
 
     await addAudit({
@@ -803,7 +918,7 @@ export const billingService = {
       }),
       prisma.tuitionPlan.count({ where })
     ]);
-    return { items: normalize(items), total };
+    return { rows: normalize(items), total };
   },
 
   async createTuitionPlan(

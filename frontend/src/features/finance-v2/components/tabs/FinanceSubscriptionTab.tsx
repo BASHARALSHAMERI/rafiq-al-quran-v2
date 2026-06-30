@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Power, PowerOff, User, Receipt, Hash, Calendar, StickyNote, AlertCircle } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Pencil, Power, PowerOff, User, Receipt, Calendar, StickyNote, AlertCircle } from "lucide-react";
 import { useUsersQuery } from "../../../users/users.hooks";
 import { useCentersQuery } from "../../../org/org.hooks";
 import {
   useFinanceV2TuitionPlansQuery,
-  useCreateFinanceV2TuitionPlanMutation,
-  useUpdateFinanceV2TuitionPlanMutation,
   useFinanceV2StudentFeeProfilesQuery,
   useCreateFinanceV2StudentFeeProfileMutation,
   useUpdateFinanceV2StudentFeeProfileMutation
@@ -27,73 +25,38 @@ type Props = {
 };
 
 export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props) {
-  const [planModal, setPlanModal] = useState<{ mode: "create" | "edit"; id?: number } | null>(null);
   const [profileModal, setProfileModal] = useState<{ mode: "create" | "edit"; id?: number } | null>(null);
-  const [planForm, setPlanForm] = useState({ name: "", monthlyAmount: "", planKind: "MONTHLY" });
   const [profileForm, setProfileForm] = useState({
     centerId: "", studentId: "", feeMode: "FREE", tuitionPlanId: "",
     symbolicAmount: "", startDate: new Date().toISOString().split('T')[0],
     endDate: "", notes: ""
   });
-  const [formError, setFormError] = useState("");
 
   const plansQ = useFinanceV2TuitionPlansQuery(centerId);
-  const plans = useMemo(() => plansQ.data?.items ?? [], [plansQ.data]);
-  const plansPagination = useClientPagination(plans, { initialPageSize: 10 });
+  const plans = useMemo(() => plansQ.data?.rows ?? [], [plansQ.data]);
 
   const profilesQ = useFinanceV2StudentFeeProfilesQuery(centerId);
-  const profiles = useMemo(() => profilesQ.data?.items ?? [], [profilesQ.data]);
+  const profiles = useMemo(() => profilesQ.data?.rows ?? [], [profilesQ.data]);
   const profilesPagination = useClientPagination(profiles, { initialPageSize: 10 });
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
-  const studentsQ = useUsersQuery({ role: "STUDENT", centerId: centerId, circleId: undefined });
+  const queryCenterId = profileForm.centerId ? Number(profileForm.centerId) : centerId;
+  const studentsQ = useUsersQuery({ role: "STUDENT", centerId: queryCenterId, circleId: undefined });
   const students = useMemo(() => studentsQ.data?.items ?? [], [studentsQ.data?.items]);
 
-  const createPlanM = useCreateFinanceV2TuitionPlanMutation();
-  const updatePlanM = useUpdateFinanceV2TuitionPlanMutation();
   const createProfileM = useCreateFinanceV2StudentFeeProfileMutation();
   const updateProfileM = useUpdateFinanceV2StudentFeeProfileMutation();
 
-  const openPlanModal = (mode: "create" | "edit", plan?: TuitionPlanV2) => {
-    setFormError("");
-    if (mode === "create") {
-      setPlanForm({ name: "", monthlyAmount: "", planKind: "MONTHLY" });
-      setPlanModal({ mode: "create" });
-    } else if (plan) {
-      setPlanForm({ name: plan.name, monthlyAmount: String(plan.monthlyAmount), planKind: plan.planKind });
-      setPlanModal({ mode: "edit", id: plan.id });
-    }
-  };
-
-  const handleSavePlan = async () => {
-    setFormError("");
+  const toggleProfileStatus = async (profile: StudentFeeProfileV2) => {
     try {
-      if (!planForm.name.trim()) throw new Error(ar ? "الاسم مطلوب" : "Name is required");
-      const amt = Number(planForm.monthlyAmount);
-      if (!amt || amt <= 0) throw new Error(ar ? "المبلغ غير صحيح" : "Invalid amount");
-      if (!centerId) throw new Error(ar ? "اختر مركزاً أولاً" : "Select a center first");
-
-      if (planModal?.mode === "create") {
-        await createPlanM.mutateAsync({ centerId, name: planForm.name, monthlyAmount: amt, planKind: planForm.planKind });
-      } else if (planModal?.mode === "edit" && planModal.id) {
-        await updatePlanM.mutateAsync({ id: planModal.id, payload: { name: planForm.name, monthlyAmount: amt, planKind: planForm.planKind } });
-      }
-      notifySuccess(ar ? "تم حفظ الخطة" : "Plan saved");
-      setPlanModal(null);
+      await updateProfileM.mutateAsync({ id: profile.id, payload: { isActive: !profile.isActive } });
     } catch (err) {
-      setFormError(getLocalizedApiErrorMessage(err, { ar, fallback: String(err) }));
+      notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: String(err) }));
     }
-  };
-
-  const togglePlanStatus = async (plan: TuitionPlanV2) => {
-    try {
-      await updatePlanM.mutateAsync({ id: plan.id, payload: { isActive: !plan.isActive } });
-    } catch { }
   };
 
   const openProfileModal = (mode: "create" | "edit", profile?: StudentFeeProfileV2) => {
-    setFormError("");
     if (mode === "create") {
       setProfileForm({
         centerId: String(centerId ?? ""), studentId: "", feeMode: "FREE",
@@ -114,12 +77,12 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
   };
 
   const handleSaveProfile = async () => {
-    setFormError("");
     try {
       const pCenterId = profileForm.centerId ? Number(profileForm.centerId) : centerId;
-      if (!pCenterId) throw new Error(ar ? "المركز مطلوب" : "Center is required");
-      if (!profileForm.studentId) throw new Error(ar ? "الطالب مطلوب" : "Student is required");
-      if (!profileForm.startDate) throw new Error(ar ? "تاريخ البداية مطلوب" : "Start date is required");
+      if (!pCenterId) { notifyError(ar ? "المركز مطلوب" : "Center is required"); return; }
+      if (!profileForm.studentId) { notifyError(ar ? "الطالب مطلوب" : "Student is required"); return; }
+      if (!profileForm.startDate) { notifyError(ar ? "تاريخ البداية مطلوب" : "Start date is required"); return; }
+      if (profileForm.endDate && profileForm.endDate < profileForm.startDate) { notifyError(ar ? "تاريخ النهاية لا يمكن أن يكون قبل تاريخ البداية" : "End date cannot be before start date"); return; }
 
       const payload: any = {
         centerId: pCenterId,
@@ -131,12 +94,12 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
       };
 
       if (profileForm.feeMode === "PLAN_MONTHLY") {
-        if (!profileForm.tuitionPlanId) throw new Error(ar ? "اختر خطة اشتراك" : "Select a plan");
+        if (!profileForm.tuitionPlanId) { notifyError(ar ? "اختر خطة اشتراك" : "Select a plan"); return; }
         payload.tuitionPlanId = Number(profileForm.tuitionPlanId);
       }
       if (profileForm.feeMode === "SYMBOLIC_ONE_TIME") {
         const sym = Number(profileForm.symbolicAmount);
-        if (!sym || sym <= 0) throw new Error(ar ? "المبلغ الرمزي مطلوب" : "Symbolic amount is required");
+        if (!sym || sym <= 0) { notifyError(ar ? "المبلغ الرمزي مطلوب" : "Symbolic amount is required"); return; }
         payload.symbolicAmount = sym;
       }
 
@@ -148,7 +111,7 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
       notifySuccess(ar ? "تم حفظ الاشتراك" : "Subscription saved");
       setProfileModal(null);
     } catch (err) {
-      setFormError(getLocalizedApiErrorMessage(err, { ar, fallback: String(err) }));
+      notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: String(err) }));
     }
   };
 
@@ -159,77 +122,6 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
 
   return (
     <div className="flex flex-col gap-8 animate-premium mt-4">
-      {/* ─── Plans Section ─── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-            <Receipt className="text-brand-500" size={20} />
-            {ar ? "خطط الاشتراكات" : "Subscription Plans"}
-          </h3>
-          {isAdmin && (
-            <Button size="sm" variant="primary" leftIcon={<Plus size={16} />} onClick={() => openPlanModal("create")}>
-              {ar ? "إضافة خطة" : "Add Plan"}
-            </Button>
-          )}
-        </div>
-        {plansQ.isLoading ? <FinSkeleton rows={3} /> : (
-          <FinanceDataTable<TuitionPlanV2>
-            rows={plansPagination.pagedRows}
-            columns={[
-              { header: ar ? "الاسم" : "Name", render: (p) => <span className="font-bold">{p.name}</span> },
-              { header: ar ? "المبلغ" : "Amount", render: (p) => <FinanceMoney amount={p.monthlyAmount} baseCurrency="YER" /> },
-              { header: ar ? "النوع" : "Type", render: (p) => <span className="text-sm text-text-secondary">{p.planKind === "MONTHLY" ? (ar ? "شهري" : "Monthly") : (ar ? "تسجيل" : "Registration")}</span> },
-              { header: ar ? "الحالة" : "Status", render: (p) => <span className={`fin-status-pill ${p.isActive ? 'fin-status--success' : 'fin-status--error'}`}>{p.isActive ? (ar ? "نشط" : "Active") : (ar ? "معطل" : "Inactive")}</span> },
-              ...(isAdmin ? [{
-                header: ar ? "إجراءات" : "Actions",
-                render: (p: TuitionPlanV2) => (
-                  <div className="flex items-center gap-2">
-                    <button className="fin-action-btn view" onClick={() => openPlanModal("edit", p)} title={ar ? "تعديل" : "Edit"}><Pencil size={16} /></button>
-                    <button className="fin-action-btn view" onClick={() => togglePlanStatus(p)} title={p.isActive ? (ar ? "تعطيل" : "Deactivate") : (ar ? "تفعيل" : "Activate")}>{p.isActive ? <PowerOff size={16} /> : <Power size={16} />}</button>
-                  </div>
-                )
-              } as any] : [])
-            ]}
-            rowKey="id"
-            className="fin-premium-table"
-          />
-        )}
-        <FinancePaginationFooter ar={ar} pageSize={plansPagination.pageSize} setPageSize={plansPagination.setPageSize} currentPage={plansPagination.currentPage} setPage={plansPagination.setCurrentPage} totalFilteredCount={plansPagination.totalItems} pages={plansPagination.totalPages} />
-      </div>
-
-      {/* ─── Plan Modal ─── */}
-      <Modal isOpen={Boolean(planModal)} onClose={() => setPlanModal(null)} title={planModal?.mode === "create" ? (ar ? "إضافة خطة" : "Add Plan") : (ar ? "تعديل الخطة" : "Edit Plan")} size="sm" panelClassName="circlemod-panel" bodyClassName="circlemod-body" footerClassName="circlemod-footer-wrap" footer={
-        <div className="circlemod-footer">
-          <Button variant="secondary" onClick={() => setPlanModal(null)} disabled={createPlanM.isPending || updatePlanM.isPending}>{ar ? "إلغاء" : "Cancel"}</Button>
-          <Button onClick={handleSavePlan} isLoading={createPlanM.isPending || updatePlanM.isPending}>{ar ? "حفظ" : "Save"}</Button>
-        </div>
-      }>
-        <div className="circlemod-form">
-          <div className="circlemod-section">
-            <div className="circlemod-row">
-              <div className="circlemod-field circlemod-field--full">
-                <label>{ar ? "اسم الخطة" : "Plan Name"}</label>
-                <input className="circlemod-input" value={planForm.name} onChange={(e) => setPlanForm(p => ({ ...p, name: e.target.value }))} placeholder={ar ? "مثال: اشتراك شهري" : "Ex: Monthly Subscription"} />
-              </div>
-            </div>
-            <div className="circlemod-row">
-              <div className="circlemod-field circlemod-field--sm">
-                <label>{ar ? "المبلغ" : "Amount"}</label>
-                <input className="circlemod-input" type="number" min={1} value={planForm.monthlyAmount} onChange={(e) => setPlanForm(p => ({ ...p, monthlyAmount: e.target.value }))} />
-              </div>
-              <div className="circlemod-field circlemod-field--lg">
-                <label>{ar ? "النوع" : "Type"}</label>
-                <select className="circlemod-select" value={planForm.planKind} onChange={(e) => setPlanForm(p => ({ ...p, planKind: e.target.value }))}>
-                  <option value="MONTHLY">{ar ? "شهري" : "Monthly"}</option>
-                  <option value="ONE_TIME_REGISTRATION">{ar ? "تسجيل لمرة واحدة" : "One-time Registration"}</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          {formError ? <div className="circlemod-error" role="alert"><AlertCircle size={14} /><span>{formError}</span></div> : null}
-        </div>
-      </Modal>
-
       {/* ─── Student Fee Profiles Section ─── */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -258,6 +150,7 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
                 render: (p: StudentFeeProfileV2) => (
                   <div className="flex items-center gap-2">
                     <button className="fin-action-btn view" onClick={() => openProfileModal("edit", p)} title={ar ? "تعديل" : "Edit"}><Pencil size={16} /></button>
+                    <button className="fin-action-btn view" onClick={() => toggleProfileStatus(p)} title={p.isActive ? (ar ? "تعطيل" : "Deactivate") : (ar ? "تفعيل" : "Activate")}>{p.isActive ? <PowerOff size={16} /> : <Power size={16} />}</button>
                   </div>
                 )
               } as any] : [])
@@ -312,6 +205,12 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
                   <option value="SYMBOLIC_ONE_TIME">{ar ? "مبلغ رمزي لمرة واحدة" : "One-time Symbolic"}</option>
                 </select>
               </div>
+              {profileForm.feeMode === "FREE" && (
+                <div className="w-full mt-2 text-sm text-amber-800 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                  <span>{ar ? "تنبيه: باختيار 'مجاني'، لن تصدر أي فواتير إطلاقاً لهذا الطالب وسيتم إعفاؤه بالكامل. تأكد من أن المركز يسمح بذلك." : "Warning: By selecting 'Free', no invoices will be generated for this student. Make sure the center allows it."}</span>
+                </div>
+              )}
               {profileForm.feeMode === "PLAN_MONTHLY" ? (
                 <div className="circlemod-field circlemod-field--lg">
                   <label>{ar ? "الخطة" : "Plan"}</label>
@@ -335,6 +234,9 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
               <div className="circlemod-field circlemod-field--sm">
                 <label><Calendar size={12} className="inline-block ml-1 opacity-60" />{ar ? "تاريخ الانتهاء" : "End Date"}</label>
                 <input className="circlemod-input" type="date" value={profileForm.endDate} onChange={(e) => setProfileForm(p => ({ ...p, endDate: e.target.value }))} />
+                <p className="text-[10px] text-text-tertiary mt-1">
+                  {ar ? "اختياري (إذا تُرك فارغاً يعتبر اشتراكاً مستمراً)" : "Optional (leave empty for continuous)"}
+                </p>
               </div>
             </div>
             <div className="circlemod-row">
@@ -344,7 +246,6 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
               </div>
             </div>
           </div>
-          {formError ? <div className="circlemod-error" role="alert"><AlertCircle size={14} /><span>{formError}</span></div> : null}
         </div>
       </Modal>
     </div>

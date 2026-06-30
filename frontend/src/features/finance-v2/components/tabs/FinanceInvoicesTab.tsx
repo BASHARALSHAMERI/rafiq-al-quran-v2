@@ -14,8 +14,8 @@ import {
 import { FINANCE_YEMEN_MODE } from "../../config";
 import type { InvoiceStatusV2, FinanceInvoiceV2 } from "../../types";
 import { FinSkeleton, posInt, FinancePaginationFooter } from "../FinanceShared";
-import { 
-  FinanceStatusBadge, 
+import {
+  FinanceStatusBadge,
   FinanceMoney
 } from "../../design";
 import { FinanceDataTable } from "../../design/FinanceDataTable";
@@ -86,23 +86,36 @@ export default function FinanceInvoicesTab({
   const invoices = useMemo(() => invoicesQ.data?.rows ?? [], [invoicesQ.data?.rows]);
   const pagination = useClientPagination(invoices, { initialPageSize: 10 });
 
+  const selectedCenterId = posInt(invoiceForm.centerId) ?? centerId;
+  const selectedStudentId = posInt(invoiceForm.studentId);
   const studentsQ = useUsersQuery({
     role: "STUDENT",
-    centerId: posInt(invoiceForm.centerId) || centerId,
+    centerId: selectedCenterId,
     circleId: undefined
   });
   const students = useMemo(() => studentsQ.data?.items ?? [], [studentsQ.data?.items]);
 
   const createInvoiceM = useCreateFinanceV2InvoiceMutation();
 
-  const profilesQ = useFinanceV2StudentFeeProfilesQuery(feesEnabled ? (centerId) : undefined);
+  const profilesQ = useFinanceV2StudentFeeProfilesQuery(
+    selectedCenterId,
+    selectedStudentId,
+    Boolean(feesEnabled && selectedCenterId && selectedStudentId)
+  );
   const selectedProfile = useMemo(() => {
-    if (!feesEnabled || !invoiceForm.studentId) return null;
-    const sid = Number(invoiceForm.studentId);
-    if (!sid) return null;
-    const profiles = profilesQ.data?.items ?? [];
-    return profiles.find((p) => p.studentId === sid && p.isActive) ?? null;
-  }, [feesEnabled, invoiceForm.studentId, profilesQ.data?.items]);
+    const invoiceDate = /^\d{4}-\d{2}-\d{2}$/.test(invoiceForm.dueDate)
+      ? `${invoiceForm.dueDate.slice(0, 7)}-01`
+      : null;
+    if (!feesEnabled || !selectedCenterId || !selectedStudentId || !invoiceDate) return null;
+    const profiles = profilesQ.data?.rows ?? [];
+    return profiles.find((p) =>
+      p.centerId === selectedCenterId &&
+      p.studentId === selectedStudentId &&
+      p.isActive &&
+      p.startDate.slice(0, 10) <= invoiceDate &&
+      (!p.endDate || p.endDate.slice(0, 10) >= invoiceDate)
+    ) ?? null;
+  }, [feesEnabled, invoiceForm.dueDate, profilesQ.data?.rows, selectedCenterId, selectedStudentId]);
 
   // auto-fill amount from fee profile
   useEffect(() => {
@@ -310,6 +323,12 @@ export default function FinanceInvoicesTab({
                   disabled={Boolean(selectedProfile && selectedProfile.feeMode !== "FREE")}
                   required
                 />
+                {selectedProfile && selectedProfile.feeMode !== "FREE" && (
+                  <p className="text-[10px] text-text-tertiary mt-1 flex items-start gap-1">
+                    <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
+                    <span>{ar ? "المبلغ مقفل بناءً على خطة الطالب ولا يمكن تعديله يدوياً." : "Amount is locked based on student's plan and cannot be edited manually."}</span>
+                  </p>
+                )}
               </div>
             </div>
             <div className="circlemod-row">
@@ -461,22 +480,14 @@ export default function FinanceInvoicesTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (v) => (
                       <div className="flex items-center gap-2">
-                        <button 
-                          className="fin-action-btn view" 
-                          onClick={() => handlePrintInvoice(v)} 
+                        <button
+                          className="fin-action-btn view"
+                          onClick={() => handlePrintInvoice(v)}
                           title={ar ? "طباعة الفاتورة" : "Print Invoice"}
                         >
                           <Printer size={16} />
                         </button>
-                        {v.status !== 'PAID' && (
-                          <button 
-                            className="fin-action-btn approve" 
-                            onClick={() => onSelectInvoice(v.id)}
-                            title={ar ? "تحصيل دفعة" : "Collect Payment"}
-                          >
-                            <Wallet size={16} />
-                          </button>
-                        )}
+                        {/* The collect payment button was moved to the top bar */}
                         <button className="fin-action-btn view group" onClick={() => onSelectInvoice(v.id)} title={ar ? "عرض التفاصيل" : "View Details"}>
                           <ArrowRight size={16} className="transition-transform group-hover:translate-x-[-4px] rtl:group-hover:translate-x-[4px]" />
                         </button>

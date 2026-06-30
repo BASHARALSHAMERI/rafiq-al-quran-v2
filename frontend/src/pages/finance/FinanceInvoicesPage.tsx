@@ -1,5 +1,5 @@
-import { 
-  FileText, 
+import {
+  FileText,
   RefreshCw,
   Plus,
   ArrowUpRight,
@@ -7,9 +7,10 @@ import {
   Clock,
   History,
   Receipt,
-  Settings
+  Settings,
+  AlertCircle
 } from "lucide-react";
-import { Suspense, lazy, useMemo, useState, useCallback } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useI18n } from "../../app/i18n";
 import { Button } from "../../components/ui/Button";
@@ -17,14 +18,16 @@ import { LoadingState } from "../../components/ui/LoadingState";
 import { FinancePageFilters } from "../../features/finance-v2/components/page/FinancePageFilters";
 import { statusLabels } from "../../features/finance-v2/components/FinanceShared";
 import { useCentersQuery } from "../../features/org/org.hooks";
-import { 
-  FinancePageShell, 
+import {
+  FinancePageShell,
   FinancePageHeader,
-  FinanceMoney 
+  FinanceMoney
 } from "../../features/finance-v2/design";
 import { useFinanceV2InvoicesQuery, useFinanceV2PolicyQuery, usePatchOrganizationPolicyMutation } from "../../features/finance-v2/finance-v2.hooks";
 import { useAuthStore } from "../../features/auth/auth.store";
 import Modal from "../../components/ui/Modal";
+import { notifyError, notifySuccess } from "../../shared/ui/feedback";
+import { getLocalizedApiErrorMessage } from "../../shared/api/error";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -33,6 +36,7 @@ import "../../styles/pages/finance-v4.css";
 const FinanceInvoicesTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceInvoicesTab"));
 const FinancePaymentsTab = lazy(() => import("../../features/finance-v2/components/tabs/FinancePaymentsTab"));
 const FinanceSubscriptionTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceSubscriptionTab"));
+const FinanceTuitionPlansTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceTuitionPlansTab"));
 
 function InvoiceKpi({
   icon: Icon,
@@ -65,6 +69,7 @@ function InvoiceKpi({
 const TABS = [
   { key: "invoices", labelAr: "الفواتير", labelEn: "Invoices", icon: Receipt },
   { key: "payments", labelAr: "سجل الدفعات", labelEn: "Payment History", icon: History },
+  { key: "tuition-plans", labelAr: "خطط الرسوم", labelEn: "Tuition Plans", icon: Receipt },
   { key: "subscriptions", labelAr: "إدارة الاشتراكات", labelEn: "Manage Subscriptions", icon: Receipt },
 ] as const;
 
@@ -84,21 +89,32 @@ export default function FinanceInvoicesPage() {
   const [status, setStatus] = useState<any>("");
 
   const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
+  const [showNewPaymentModal, setShowNewPaymentModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("invoices");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
 
   const user = useAuthStore((s) => s.user);
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const role = user?.role;
+  const isSuperAdmin = role === "SUPER_ADMIN";
+  const isFinanceManager = role === "FINANCE_MANAGER";
+  const isAccountant = role === "ACCOUNTANT";
+  const isTreasurer = role === "TREASURER";
 
-  const policyQ = useFinanceV2PolicyQuery();
-  const feesEnabled = policyQ.data?.feesEnabled ?? false;
+  const policyQ = useFinanceV2PolicyQuery(centerId);
+  const feesEnabled = policyQ.data?.effective?.feesEnabled ?? false;
   const patchPolicyM = usePatchOrganizationPolicyMutation();
 
   const visibleTabs = useMemo(() => {
     if (feesEnabled) return TABS;
-    return TABS.filter((t) => t.key !== "subscriptions");
+    return TABS.filter((t) => t.key !== "subscriptions" && t.key !== "tuition-plans");
   }, [feesEnabled]);
+
+  useEffect(() => {
+    if (policyQ.isSuccess && !feesEnabled && (activeTab === "subscriptions" || activeTab === "tuition-plans")) {
+      setActiveTab("invoices");
+    }
+  }, [activeTab, feesEnabled, policyQ.isSuccess]);
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
@@ -111,7 +127,7 @@ export default function FinanceInvoicesPage() {
     page: 1,
     pageSize: 100
   });
-  
+
   const invoices = useMemo(() => invoicesQ.data?.rows ?? [], [invoicesQ.data?.rows]);
 
   const stats = useMemo(() => {
@@ -121,6 +137,7 @@ export default function FinanceInvoicesPage() {
     let remaining = 0;
 
     for (const inv of invoices) {
+      if (inv.status === "CANCELLED") continue;
       total += inv.amount;
       due += inv.amount;
       collected += inv.totalPaid;
@@ -171,6 +188,20 @@ export default function FinanceInvoicesPage() {
                       onClick={() => setShowNewInvoiceModal(true)}
                     >
                       {ar ? "فاتورة جديدة" : "New Invoice"}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : activeTab === "payments" ? (
+                <div className="flex items-center gap-3">
+                  {(isSuperAdmin || isFinanceManager || isAccountant || isTreasurer) ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="shadow-lg shadow-brand-500/20"
+                      leftIcon={<Plus className="w-4 h-4" />}
+                      onClick={() => setShowNewPaymentModal(true)}
+                    >
+                      {ar ? "تسجيل سداد" : "Record Payment"}
                     </Button>
                   ) : null}
                 </div>
@@ -229,17 +260,28 @@ export default function FinanceInvoicesPage() {
             {isSuperAdmin ? (
               <button type="button" className="fin-tab ml-auto" onClick={() => setShowPolicyModal(true)} title={ar ? "إعدادات الاشتراكات" : "Subscription Settings"}>
                 <Settings size={16} />
+                <span>{ar ? "الإعدادات" : "Settings"}</span>
               </button>
             ) : null}
           </div>
           {activeTab === "invoices" ? (
-            <FinancePageFilters
-              ar={ar}
-              centers={centers}
-              centerId={centerId}
-              month={month}
-              year={year}
-              status={status}
+            <>
+              {!feesEnabled && (
+                <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 p-4 rounded-xl flex items-start gap-3 border border-amber-200 dark:border-amber-900/30">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-sm">{ar ? "الرسوم غير مفعلة" : "Fees Disabled"}</h4>
+                    <p className="text-sm mt-1">{ar ? "إصدار الفواتير معطل في هذا المركز بناءً على سياساته. لا يمكن إضافة فواتير جديدة حتى يتم تفعيل الرسوم من الإعدادات." : "Invoice issuance is disabled in this center based on its policies. You cannot add new invoices until fees are enabled in settings."}</p>
+                  </div>
+                </div>
+              )}
+              <FinancePageFilters
+                ar={ar}
+                centers={centers}
+                centerId={centerId}
+                month={month}
+                year={year}
+                status={status}
               statusLabels={statusLabels}
               onCenterChange={setCenterId}
               onMonthChange={setMonth}
@@ -252,6 +294,7 @@ export default function FinanceInvoicesPage() {
                 setStatus("");
               }}
             />
+            </>
           ) : null}
         </>
       }
@@ -264,7 +307,7 @@ export default function FinanceInvoicesPage() {
               month={month}
               year={year}
               status={status}
-              isAdmin={true}
+              isAdmin={isSuperAdmin || isFinanceManager || isAccountant}
               ar={ar}
               centers={centers}
               onSelectInvoice={handleSelectInvoice}
@@ -279,35 +322,68 @@ export default function FinanceInvoicesPage() {
           <Suspense fallback={<LoadingState />}>
             <FinancePaymentsTab
               centerId={centerId}
-              isAdmin={true}
-              isSuperAdmin={false}
+              isAdmin={isSuperAdmin || isFinanceManager || isAccountant || isTreasurer}
+              isSuperAdmin={isSuperAdmin}
               ar={ar}
               initialInvoiceId={selectedInvoiceId}
+              externalShowPaymentForm={showNewPaymentModal}
+              onExternalPaymentFormClose={() => setShowNewPaymentModal(false)}
             />
           </Suspense>
         ) : null}
         {activeTab === "subscriptions" && feesEnabled ? (
           <Suspense fallback={<LoadingState />}>
-            <FinanceSubscriptionTab centerId={centerId} isAdmin={isSuperAdmin} ar={ar} />
+            <FinanceSubscriptionTab centerId={centerId} isAdmin={isSuperAdmin || isFinanceManager} ar={ar} />
+          </Suspense>
+        ) : null}
+
+        {activeTab === "tuition-plans" && feesEnabled ? (
+          <Suspense fallback={<LoadingState />}>
+            <FinanceTuitionPlansTab centerId={centerId} isAdmin={isSuperAdmin || isFinanceManager} ar={ar} />
           </Suspense>
         ) : null}
       </div>
 
       {/* ⚙️ Policy toggle modal */}
-      <Modal isOpen={showPolicyModal} onClose={() => setShowPolicyModal(false)} title={ar ? "إعدادات الاشتراكات" : "Subscription Settings"} size="sm" panelClassName="circlemod-panel" bodyClassName="circlemod-body">
-        <div className="circlemod-form p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold">{ar ? "تفعيل نظام الاشتراكات" : "Enable Subscription System"}</span>
-            <button
-              type="button"
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${feesEnabled ? 'bg-brand-600' : 'bg-gray-300'}`}
-              onClick={() => patchPolicyM.mutate({ feesEnabled: !feesEnabled })}
-              disabled={patchPolicyM.isPending}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${feesEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
+      <Modal isOpen={showPolicyModal} onClose={() => setShowPolicyModal(false)} title={ar ? "إعدادات الاشتراكات" : "Subscription Settings"} size="sm" panelClassName="circlemod-panel" bodyClassName="circlemod-body" footer={
+        <div className="circlemod-footer">
+          <Button variant="secondary" onClick={() => setShowPolicyModal(false)}>{ar ? "إغلاق" : "Close"}</Button>
+        </div>
+      }>
+        <div className="circlemod-form">
+          <div className="circlemod-section">
+            <div className="flex items-center justify-between">
+              <span className="font-bold">{ar ? "نظام الاشتراكات" : "Subscription System"}</span>
+              <span className={`px-3 py-1 rounded-full text-sm font-bold ${feesEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}>
+                {feesEnabled ? (ar ? "مفعل" : "Enabled") : (ar ? "معطل" : "Disabled")}
+              </span>
+            </div>
+            <p className="text-xs text-text-tertiary mt-3">{ar ? "عند التعطيل، يختفي تبويب إدارة الاشتراكات وزر الفاتورة الجديدة" : "When disabled, the subscriptions tab and new invoice button are hidden"}</p>
           </div>
-          <p className="text-xs text-text-tertiary mt-2">{ar ? "عند التعطيل، يختفي تبويب إدارة الاشتراكات وزر الفاتورة الجديدة" : "When disabled, the subscriptions tab and new invoice button are hidden"}</p>
+          <div className="flex justify-center mt-4">
+            <Button
+              variant={feesEnabled ? "danger" : "primary"}
+              onClick={async () => {
+                if (feesEnabled && !window.confirm(ar ? "هل أنت متأكد من تعطيل نظام الاشتراكات؟" : "Are you sure you want to disable the subscription system?")) return;
+                try {
+                  await patchPolicyM.mutateAsync({ feesEnabled: !feesEnabled });
+                  if (feesEnabled) {
+                    setActiveTab("invoices");
+                  }
+                  notifySuccess(feesEnabled
+                    ? (ar ? "تم تعطيل الاشتراكات" : "Subscriptions disabled")
+                    : (ar ? "تم تفعيل الاشتراكات" : "Subscriptions enabled"));
+                } catch (err) {
+                  notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "فشل التحديث" : "Update failed" }));
+                }
+              }}
+              isLoading={patchPolicyM.isPending}
+            >
+              {feesEnabled
+                ? (ar ? "تعطيل نظام الاشتراكات" : "Disable Subscriptions")
+                : (ar ? "تفعيل نظام الاشتراكات" : "Enable Subscriptions")}
+            </Button>
+          </div>
         </div>
       </Modal>
     </FinancePageShell>

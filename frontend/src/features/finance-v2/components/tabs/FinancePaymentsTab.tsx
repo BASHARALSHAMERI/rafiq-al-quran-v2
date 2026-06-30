@@ -58,6 +58,7 @@ export default function FinancePaymentsTab({
   onExternalPaymentFormClose
 }: Props) {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [historyInvoiceId, setHistoryInvoiceId] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState("");
   const [paymentForm, setPaymentForm] = useState({
     invoiceId: "",
@@ -88,8 +89,8 @@ export default function FinancePaymentsTab({
   const invoices = useMemo(() => invoicesQ.data?.rows ?? [], [invoicesQ.data?.rows]);
 
   const paymentsQ = useFinanceV2InvoicePaymentsQuery(
-    paymentForm.invoiceId ? parseInt(paymentForm.invoiceId) : null,
-    Boolean(paymentForm.invoiceId)
+    historyInvoiceId ? parseInt(historyInvoiceId) : null,
+    Boolean(historyInvoiceId)
   );
   const payments = useMemo(() => paymentsQ.data ?? [], [paymentsQ.data]);
 
@@ -136,7 +137,10 @@ export default function FinancePaymentsTab({
       if (isNaN(invId)) throw new Error(ar ? "يجب اختيار فاتورة" : "Invoice is required");
       if (isNaN(amt) || amt <= 0) throw new Error(ar ? "مبلغ غير صحيح" : "Invalid amount");
 
-
+      const selectedInv = invoices.find(inv => inv.id === invId);
+      if (selectedInv && amt > selectedInv.remainingAmount) {
+        throw new Error(ar ? `المبلغ المدفوع (${amt}) أكبر من المتبقي للفاتورة (${selectedInv.remainingAmount})` : `Amount paid (${amt}) exceeds remaining (${selectedInv.remainingAmount})`);
+      }
 
       await createPaymentM.mutateAsync({
         invoiceId: invId,
@@ -197,7 +201,15 @@ export default function FinancePaymentsTab({
                   id="pay-invoice"
                   className="circlemod-select"
                   value={paymentForm.invoiceId}
-                  onChange={(e) => setPaymentForm(p => ({ ...p, invoiceId: e.target.value }))}
+                  onChange={(e) => {
+                    const invId = e.target.value;
+                    const selectedInv = invoices.find((inv) => inv.id.toString() === invId);
+                    setPaymentForm(p => ({ 
+                      ...p, 
+                      invoiceId: invId,
+                      amount: selectedInv ? selectedInv.remainingAmount.toFixed(2) : ""
+                    }));
+                  }}
                   required
                 >
                   <option value="">{ar ? "اختر الفاتورة..." : "Select invoice..."}</option>
@@ -224,7 +236,7 @@ export default function FinancePaymentsTab({
                   id="pay-amount"
                   className="circlemod-input"
                   type="number"
-                  min="1"
+                  min="0.01"
                   step="0.01"
                   value={paymentForm.amount}
                   onChange={(e) => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
@@ -259,6 +271,9 @@ export default function FinancePaymentsTab({
                   <option value="CASH">{ar ? "نقداً" : "Cash"}</option>
                   <option value="TRANSFER">{ar ? "حوالة بنكية" : "Bank Transfer"}</option>
                 </select>
+                <p className="text-[10px] text-text-tertiary mt-1">
+                  {paymentForm.method === "CASH" ? (ar ? "سيتم إنشاء سند قبض نقدي تلقائياً." : "A cash receipt voucher will be generated automatically.") : (ar ? "حوالة بنكية تتطلب مراجعة من المشرف المالي." : "Bank transfers require financial supervisor review.")}
+                </p>
               </div>
               <div className="circlemod-field circlemod-field--sm">
                 <label htmlFor="pay-date">
@@ -346,21 +361,8 @@ export default function FinancePaymentsTab({
                     header: ar ? "الإجراءات" : "Actions",
                     render: (inv) => (
                       <div className="flex items-center gap-2">
-                        {isAdmin && inv.remainingAmount > 0 && (
-                          <Button 
-                            size="sm" 
-                            variant="primary" 
-                            className="shadow-sm"
-                            leftIcon={<Plus className="w-4 h-4" />}
-                            onClick={() => {
-                              setPaymentForm(p => ({ ...p, invoiceId: inv.id.toString(), amount: inv.remainingAmount.toString() }));
-                              setShowPaymentForm(true);
-                            }}
-                          >
-                            {ar ? "سداد" : "Pay"}
-                          </Button>
-                        )}
-                        <button className="fin-action-btn view group" onClick={() => setPaymentForm(p => ({ ...p, invoiceId: inv.id.toString() }))}>
+                        {/* The collect payment button was moved to the top bar */}
+                        <button className="fin-action-btn view group" onClick={() => setHistoryInvoiceId(inv.id.toString())}>
                           <History size={16} />
                         </button>
                       </div>
@@ -379,82 +381,90 @@ export default function FinancePaymentsTab({
                 totalFilteredCount={invoicesPagination.totalItems}
                 pages={invoicesPagination.totalPages}
               />
+              <Modal
+                isOpen={Boolean(historyInvoiceId)}
+                onClose={() => setHistoryInvoiceId(null)}
+                title={ar ? `تاريخ الدفعات للفاتورة #${historyInvoiceId}` : `Payment History for Invoice #${historyInvoiceId}`}
+                titleIcon={
+                  <div className="circlemod-head-icon">
+                    <History className="w-4 h-4" />
+                  </div>
+                }
+                size="xl"
+                footer={
+                  <div className="flex justify-end gap-2 w-full">
+                    <Button variant="secondary" onClick={() => setHistoryInvoiceId(null)}>
+                      {ar ? "إغلاق" : "Close"}
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="bg-white dark:bg-[#1a1f2e] border border-border-light rounded-2xl shadow-sm overflow-hidden mt-2">
+                  <FinanceDataTable<any>
+                    rows={paymentsPagination.pagedRows}
+                    loading={paymentsQ.isLoading}
+                    columns={[
+                      {
+                        header: ar ? "رقم الدفعة" : "Payment ID",
+                        render: (p) => <span className="font-bold text-brand-600">#{p.id}</span>
+                      },
+                      {
+                        header: ar ? "المبلغ" : "Amount",
+                        render: (p) => <FinanceMoney amount={p.amount} baseCurrency="YER" className="font-extrabold" />
+                      },
+                      {
+                        header: ar ? "التاريخ" : "Date",
+                        render: (p) => <span className="text-sm text-text-secondary">{shortDate(p.receivedAt, ar)}</span>
+                      },
+                      {
+                        header: ar ? "الوسيلة" : "Method",
+                        render: (p) => (
+                          <span className={`fin-status-pill ${p.method === 'CASH' ? 'fin-status--info' : 'fin-status--success'}`}>
+                            {methodLabels[p.method as PaymentMethodV2] || p.method}
+                          </span>
+                        )
+                      },
+                      {
+                        header: ar ? "سند القبض" : "Voucher",
+                        render: (p) => (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">#{p.voucher?.voucherNo || "-"}</span>
+                            {p.voucher && <FinanceStatusBadge status={p.voucher.status} label={voucherStatusLabels[p.voucher.status as string] || p.voucher.status} />}
+                          </div>
+                        )
+                      },
+                      {
+                        header: ar ? "الإجراءات" : "Actions",
+                        render: (p) => (
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="fin-action-btn view"
+                              title={ar ? "طباعة الإيصال" : "Print Receipt"}
+                              onClick={() => handlePrintPayment(p as FinancePaymentV2)}
+                            >
+                              <Printer size={16} />
+                            </button>
+                          </div>
+                        )
+                      }
+                    ]}
+                    rowKey="id"
+                    className="fin-premium-table"
+                  />
+                  <div className="p-4 border-t border-border-light">
+                    <FinancePaginationFooter
+                      ar={ar}
+                      pageSize={paymentsPagination.pageSize}
+                      setPageSize={paymentsPagination.setPageSize}
+                      currentPage={paymentsPagination.currentPage}
+                      setPage={paymentsPagination.setCurrentPage}
+                      totalFilteredCount={paymentsPagination.totalItems}
+                      pages={paymentsPagination.totalPages}
+                    />
+                  </div>
+                </div>
+              </Modal>
         </div>
-      )}
-
-      {paymentForm.invoiceId && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-              <History className="text-brand-500" />
-              {ar ? `تاريخ الدفعات للفاتورة #${paymentForm.invoiceId}` : `Payment History for Invoice #${paymentForm.invoiceId}`}
-            </h3>
-            <Button variant="secondary" size="sm" onClick={() => setPaymentForm(p => ({ ...p, invoiceId: "" }))}>
-              {ar ? "إغلاق" : "Close"}
-            </Button>
-          </div>
-          
-          <FinanceDataTable<any>
-            rows={paymentsPagination.pagedRows}
-                loading={paymentsQ.isLoading}
-                columns={[
-                  {
-                    header: ar ? "رقم الدفعة" : "Payment ID",
-                    render: (p) => <span className="font-bold text-brand-600">#{p.id}</span>
-                  },
-                  {
-                    header: ar ? "المبلغ" : "Amount",
-                    render: (p) => <FinanceMoney amount={p.amount} baseCurrency="YER" className="font-extrabold" />
-                  },
-                  {
-                    header: ar ? "التاريخ" : "Date",
-                    render: (p) => <span className="text-sm text-text-secondary">{shortDate(p.receivedAt, ar)}</span>
-                  },
-                  {
-                    header: ar ? "الوسيلة" : "Method",
-                    render: (p) => (
-                      <span className={`fin-status-pill ${p.method === 'CASH' ? 'fin-status--info' : 'fin-status--success'}`}>
-                        {methodLabels[p.method as PaymentMethodV2] || p.method}
-                      </span>
-                    )
-                  },
-                  {
-                    header: ar ? "سند القبض" : "Voucher",
-                    render: (p) => (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">#{p.voucher?.voucherNo || "-"}</span>
-                        {p.voucher && <FinanceStatusBadge status={p.voucher.status} label={voucherStatusLabels[p.voucher.status as string] || p.voucher.status} />}
-                      </div>
-                    )
-                  },
-                  {
-                    header: ar ? "الإجراءات" : "Actions",
-                    render: (p) => (
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="fin-action-btn view"
-                          title={ar ? "طباعة الإيصال" : "Print Receipt"}
-                          onClick={() => handlePrintPayment(p as FinancePaymentV2)}
-                        >
-                          <Printer size={16} />
-                        </button>
-                      </div>
-                    )
-                  }
-                ]}
-                rowKey="id"
-                className="fin-premium-table"
-              />
-              <FinancePaginationFooter
-                ar={ar}
-                pageSize={paymentsPagination.pageSize}
-                setPageSize={paymentsPagination.setPageSize}
-                currentPage={paymentsPagination.currentPage}
-                setPage={paymentsPagination.setCurrentPage}
-                totalFilteredCount={paymentsPagination.totalItems}
-                pages={paymentsPagination.totalPages}
-              />
-        </motion.div>
       )}
     </div>
   );

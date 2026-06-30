@@ -31,6 +31,7 @@ import type {
   TuitionPlanV2,
   StudentFeeProfileV2,
   FinancePolicyV2,
+  FinancePolicyProfileV2,
   DonationReportQuery,
   DonationReportResponse,
   ReceiptReportQuery,
@@ -1360,7 +1361,7 @@ export const financeV2Api = {
     return response.data.data;
   },
 
-  async patchOrganizationPolicy(payload: Partial<FinancePolicyV2>): Promise<FinancePolicyV2> {
+  async patchOrganizationPolicy(payload: Partial<FinancePolicyProfileV2>): Promise<FinancePolicyV2> {
     const response = await apiClient.patch<ApiResponse<FinancePolicyV2>>("/finance/v2/policies/organization", payload);
     return response.data.data;
   }

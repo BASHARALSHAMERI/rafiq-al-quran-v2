@@ -2991,6 +2991,11 @@ enum InvoiceType {
 enum TuitionPlanKind {
   MONTHLY
   ONE_TIME_REGISTRATION
+  QUARTERLY
+  SEMESTERLY
+  TERM
+  HALF_YEARLY
+  YEARLY
 }
 
 enum PayrollBatchStatus {

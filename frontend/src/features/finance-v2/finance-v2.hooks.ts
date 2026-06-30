@@ -112,9 +112,9 @@ export const FINANCE_V2_QUERY_KEYS = {
     [...FINANCE_V2_QUERY_KEYS.all, "asset-custody", assetId ?? null] as const,
   tuitionPlans: (centerId?: number) =>
     [...FINANCE_V2_QUERY_KEYS.all, "tuition-plans", centerId ?? null] as const,
-  studentFeeProfiles: (centerId?: number) =>
-    [...FINANCE_V2_QUERY_KEYS.all, "student-fee-profiles", centerId ?? null] as const,
-  policy: () => [...FINANCE_V2_QUERY_KEYS.all, "policy"] as const
+  studentFeeProfiles: (centerId?: number, studentId?: number) =>
+    [...FINANCE_V2_QUERY_KEYS.all, "student-fee-profiles", centerId ?? null, studentId ?? null] as const,
+  policy: (centerId?: number) => [...FINANCE_V2_QUERY_KEYS.all, "policy", centerId ?? null] as const
 };
 
 export const useFinanceV2InvoicesQuery = (filters: FinanceInvoicesV2Query) =>
@@ -285,12 +285,13 @@ export const useUpdateFinanceV2TuitionPlanMutation = () => {
   });
 };
 
-export const useFinanceV2StudentFeeProfilesQuery = (centerId?: number) =>
+export const useFinanceV2StudentFeeProfilesQuery = (centerId?: number, studentId?: number, enabled = true) =>
   useQuery({
-    queryKey: FINANCE_V2_QUERY_KEYS.studentFeeProfiles(centerId),
-    queryFn: () => financeV2Api.getStudentFeeProfiles({ centerId, page: 1, pageSize: 100 }),
+    queryKey: FINANCE_V2_QUERY_KEYS.studentFeeProfiles(centerId, studentId),
+    queryFn: () => financeV2Api.getStudentFeeProfiles({ centerId, studentId, page: 1, pageSize: 100 }),
     staleTime: 30_000,
-    placeholderData: keepPreviousData
+    placeholderData: keepPreviousData,
+    enabled
   });
 
 export const useCreateFinanceV2StudentFeeProfileMutation = () => {
@@ -321,19 +322,20 @@ export const useUpdateFinanceV2StudentFeeProfileMutation = () => {
   });
 };
 
-export const useFinanceV2PolicyQuery = () =>
+export const useFinanceV2PolicyQuery = (centerId?: number) =>
   useQuery({
-    queryKey: FINANCE_V2_QUERY_KEYS.policy(),
-    queryFn: () => financeV2Api.getEffectivePolicy(),
-    staleTime: 120_000
+    queryKey: FINANCE_V2_QUERY_KEYS.policy(centerId),
+    queryFn: () => financeV2Api.getEffectivePolicy({ centerId }),
+    staleTime: 120_000,
+    placeholderData: keepPreviousData
   });
 
 export const usePatchOrganizationPolicyMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Partial<import("./types").FinancePolicyV2>) =>
+    mutationFn: (payload: Partial<import("./types").FinancePolicyProfileV2>) =>
       financeV2Api.patchOrganizationPolicy(payload),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.policy() });
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "policy"] });
     }
   });
 };

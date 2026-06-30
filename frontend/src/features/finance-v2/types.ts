@@ -101,7 +101,7 @@ export type FinancePaymentV2 = {
   };
 };
 
-export type TuitionPlanKindV2 = "MONTHLY" | "ONE_TIME_REGISTRATION";
+export type TuitionPlanKindV2 = "MONTHLY" | "ONE_TIME_REGISTRATION" | "TERM" | "QUARTERLY" | "SEMESTERLY" | "HALF_YEARLY" | "YEARLY";
 
 export type TuitionPlanV2 = {
   id: number;
@@ -135,7 +135,7 @@ export type StudentFeeProfileV2 = {
   tuitionPlan?: { id: number; name: string; monthlyAmount: number; planKind: string };
 };
 
-export type FinancePolicyV2 = {
+export type FinancePolicyProfileV2 = {
   feesEnabled?: boolean;
   requireTransferAttachment: boolean;
   requireApprovalDisbursement: boolean;
@@ -143,6 +143,14 @@ export type FinancePolicyV2 = {
   allowFreeStudents: boolean;
   allowSymbolicOneTimeFee: boolean;
   allowOverdraft: boolean;
+};
+
+export type FinancePolicyV2 = {
+  organizationId: number;
+  centerId: number | null;
+  effective: FinancePolicyProfileV2;
+  organizationPolicy: FinancePolicyProfileV2 | null;
+  centerPolicy: FinancePolicyProfileV2 | null;
 };
 
 export type FinanceVoucherV2 = {
