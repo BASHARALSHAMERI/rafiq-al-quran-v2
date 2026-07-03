@@ -12,7 +12,13 @@ type ScopeInput = {
 
 const accessibleCircleSelect = {
   id: true,
-  centerId: true
+  name: true,
+  centerId: true,
+  center: {
+    select: {
+      name: true
+    }
+  }
 } satisfies PrismaTypes.CircleSelect;
 
 export const attendanceRepository = {
@@ -146,6 +152,7 @@ export const attendanceRepository = {
       select: {
         id: true,
         studentId: true,
+        status: true,
         createdAt: true,
         lockVersion: true
       }
@@ -225,12 +232,23 @@ export const attendanceRepository = {
               status: record.status,
               markedById: input.markedById,
               note: record.note,
-              lockVersion: {
-                increment: 1
-              }
             }
           });
         }
+      }
+    });
+  },
+
+  async findParentsForStudents(studentIds: number[]) {
+    if (!studentIds.length) return [];
+    
+    return prisma.parentStudentLink.findMany({
+      where: {
+        studentId: { in: studentIds }
+      },
+      select: {
+        studentId: true,
+        parentId: true
       }
     });
   }

@@ -880,7 +880,8 @@ const notifyAttemptSchedule = async (scope: ScopeContext, attemptId: number) => 
   const recipientUserIds = examsDomain.uniqueIds([
     context.student.id,
     context.circle.teacherId,
-    ...context.student.childLinks.map((link) => link.parentId)
+    ...context.student.childLinks.map((link) => link.parentId),
+    ...context.committeeMembers.map((member) => member.userId)
   ]);
   const title = "موعد اختبار جديد";
   const body = buildScheduleNotificationBody({
@@ -1816,7 +1817,7 @@ export const examsService = {
     attemptId: number,
     input: { examDate: string }
   ) {
-    examsDomain.assertCanScheduleAttempt(scope);
+    examsDomain.assertCanManageAttemptCommittee(scope);
 
     const attempt = await getAttemptInScope(scope, attemptId);
 
@@ -1826,11 +1827,18 @@ export const examsService = {
 
     const newDate = examsDomain.resolveRequiredDate(input.examDate, "examDate");
 
-    const updatedAttempt = await examsRepository.updateAttemptSchedule({
+    const updatedAttempt = await examsRepository.replaceAttemptCommittee({
       attemptId,
       examDate: newDate,
-      committeeMembers: attempt.committeeMembers.map(m => m.userId)
+      committeeMembers: attempt.committeeMembers.map(m => ({
+        userId: m.userId,
+        roleAtAssignment: m.roleAtAssignment
+      }))
     });
+
+    if (!updatedAttempt) {
+      throw new AppError("فشل تحديث موعد الاختبار، يرجى المحاولة مرة أخرى", 409);
+    }
 
     await auditLogger.log({
       organizationId: scope.organizationId,

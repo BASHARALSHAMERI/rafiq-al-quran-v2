@@ -1293,6 +1293,11 @@ export const examsRepository = {
             type: true,
             examBranch: true
           }
+        },
+        committeeMembers: {
+          select: {
+            userId: true
+          }
         }
       }
     });

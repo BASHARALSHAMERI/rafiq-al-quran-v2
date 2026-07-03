@@ -195,7 +195,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           iconColor: AppColors.infoLight,
         ),
         const SizedBox(height: 10),
-        _SettingsGroup(
+        const _SettingsGroup(
           items: [
             _SettingsItem(
               icon: Icons.language_rounded,
@@ -216,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icons.notifications_rounded,
               iconColor: AppColors.warningLight,
               title: 'الإشعارات',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
                 color: AppColors.warningLight,
               ),
@@ -226,7 +226,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icons.dark_mode_rounded,
               iconColor: AppColors.textSecondaryLight,
               title: 'المظهر',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
                 color: AppColors.warningLight,
               ),
@@ -238,19 +238,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 28),
 
         // ── § 3 الأمان والخصوصية ──────────────────────────────────────────
-        _SectionHeader(
+        const _SectionHeader(
           icon: Icons.security_rounded,
           title: 'الأمان والخصوصية',
           iconColor: AppColors.successLight,
         ),
         const SizedBox(height: 10),
-        _SettingsGroup(
+        const _SettingsGroup(
           items: [
             _SettingsItem(
               icon: Icons.lock_reset_rounded,
               iconColor: AppColors.primaryLight,
               title: 'تغيير كلمة المرور',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'غير متاح حاليًا',
                 color: AppColors.warningLight,
               ),
@@ -260,7 +260,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icons.verified_user_rounded,
               iconColor: AppColors.successLight,
               title: 'سياسة الخصوصية',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
                 color: AppColors.warningLight,
               ),
@@ -270,7 +270,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icons.description_rounded,
               iconColor: AppColors.infoLight,
               title: 'شروط الاستخدام',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
                 color: AppColors.warningLight,
               ),
@@ -282,7 +282,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 28),
 
         // ── § 4 عن التطبيق ─────────────────────────────────────────────────
-        _SectionHeader(
+        const _SectionHeader(
           icon: Icons.info_outline_rounded,
           title: 'عن التطبيق',
           iconColor: AppColors.accentLight,
@@ -312,11 +312,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               enabled: false,
             ),
-            _SettingsItem(
+            const _SettingsItem(
               icon: Icons.support_agent_rounded,
               iconColor: AppColors.infoLight,
               title: 'الدعم الفني',
-              trailing: const FeatureStatusChip.custom(
+              trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
                 color: AppColors.warningLight,
               ),
@@ -744,7 +744,7 @@ class _SectionHeader extends StatelessWidget {
               ),
         ),
         const SizedBox(width: 10),
-        Expanded(
+        const Expanded(
           child: Divider(
             color: AppColors.borderLight,
             thickness: 1,
@@ -781,7 +781,7 @@ class _InfoCard extends StatelessWidget {
             children: [
               _buildRow(context, row),
               if (!isLast)
-                Divider(
+                const Divider(
                   height: 1,
                   thickness: 1,
                   indent: 56,
@@ -880,7 +880,7 @@ class _SettingsGroup extends StatelessWidget {
             children: [
               _buildItem(context, item),
               if (!isLast)
-                Divider(
+                const Divider(
                   height: 1,
                   thickness: 1,
                   indent: 56,

@@ -303,6 +303,48 @@ export const notificationsService = {
     return { createdCount: result.count };
   },
 
+  async notifyStudentAbsence(input: {
+    organizationId: number;
+    centerId: number;
+    circleId: number;
+    recipientParentIds: number[];
+    studentId: number;
+    studentName: string;
+    absenceDate: string;
+    centerName: string;
+    circleName: string;
+    createdById?: number;
+  }) {
+    if (!input.recipientParentIds.length) {
+      return { createdCount: 0 };
+    }
+
+    const title = "تنبيه بغياب الطالب";
+    const body = `تم تسجيل غياب الطالب ${input.studentName} عن حلقة ${input.circleName} في مركز ${input.centerName} بتاريخ ${input.absenceDate}.`;
+
+    const result = await notificationsRepository.createMany({
+      data: input.recipientParentIds.map((parentId) => ({
+        organizationId: input.organizationId,
+        centerId: input.centerId,
+        circleId: input.circleId,
+        type: "STUDENT_ABSENCE_MARKED",
+        title,
+        body,
+        payload: {
+          workflow: "STUDENT_ATTENDANCE",
+          studentId: input.studentId,
+          absenceDate: input.absenceDate,
+          centerId: input.centerId,
+          circleId: input.circleId
+        },
+        recipientUserId: parentId,
+        createdById: input.createdById ?? null
+      }))
+    });
+
+    return { createdCount: result.count };
+  },
+
   async notifyGoldenRecordNominationApproved(
     input: {
       organizationId: number;

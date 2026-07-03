@@ -140,7 +140,8 @@ const notifyAttemptSchedule = async (scope: ScopeContext, attemptId: number) => 
   const recipientUserIds = examsDomain.uniqueIds([
     context.student.id,
     context.circle.teacherId,
-    ...context.student.childLinks.map((link) => link.parentId)
+    ...context.student.childLinks.map((link) => link.parentId),
+    ...context.committeeMembers.map((member) => member.userId)
   ]);
   const body = buildScheduleNotificationBody({
     studentName: context.student.fullName,

@@ -836,137 +836,6 @@ export default function GoldenRecordsPage() {
     }
   };
 
-  const recordColumns: Array<DataTableColumn<GoldenRecordItem>> = [
-    {
-      id: "student",
-      header: ar ? "الطالب" : "Student",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{row.studentName}</strong>
-          <span>{row.centerName}</span>
-        </div>
-      )
-    },
-    {
-      id: "type",
-      header: ar ? "النوع / الرواية" : "Type / Riwaya",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{goldenRecordTypeLabel(row.type, ar)}</strong>
-          <span>{riwayaLabel(row.riwaya, ar)}</span>
-        </div>
-      )
-    },
-    {
-      id: "grade",
-      header: ar ? "الدرجة / المتوسط" : "Grade / Average",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{row.grade}</strong>
-          <span>{formatAverageLabel(row.average, ar)}</span>
-        </div>
-      )
-    },
-    {
-      id: "appreciation",
-      header: ar ? "التقدير / التاريخ" : "Appreciation / Date",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{row.appreciation}</strong>
-          <span>{formatDateLabel(row.examDate, ar)}</span>
-        </div>
-      )
-    },
-    {
-      id: "source",
-      header: ar ? "المصدر" : "Source",
-      cell: (row) => (
-        <Badge variant="default">
-          {row.source === "CANDIDATE" ? (ar ? "مرشح" : "Candidate") : row.source === "EXAM_BASED" ? (ar ? "اختبار" : "Exam") : (ar ? "يدوي" : "Manual")}
-        </Badge>
-      )
-    },
-    {
-      id: "status",
-      header: ar ? "الحالة" : "Status",
-      cell: (row) => (
-        <Badge variant={badgeVariantForStatus(row.status)}>
-          {goldenRecordStatusLabel(row.status, ar)}
-        </Badge>
-      )
-    },
-    {
-      id: "registry",
-      header: ar ? "الرقم التسلسلي" : "Registry Serial",
-      cell: (row) => row.registrySerial ?? (ar ? "غير مولد بعد" : "Not generated yet")
-    },
-    {
-      id: "actions",
-      header: ar ? "الإجراءات" : "Actions",
-      isActions: true,
-      width: 320,
-      cell: (row) => (
-        <div className="golden-records-row-actions">
-          {canEditRecord(row) ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              leftIcon={<Pencil className="w-4 h-4" />}
-              onClick={() => openEditRecordModal(row)}
-            >
-              {ar ? "تعديل" : "Edit"}
-            </Button>
-          ) : null}
-          {row.status === "APPROVED" && row.type === "KHATEM" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              leftIcon={<Printer className="w-4 h-4" />}
-              onClick={() => void printCompletionCertificate(row)}
-              isLoading={printingRecordId === row.id}
-            >
-              {ar ? "شهادة الختم" : "Certificate"}
-            </Button>
-          ) : null}
-          {canSubmitRecord(row) ? (
-            <Button
-              type="button"
-              variant="warning"
-              size="sm"
-              leftIcon={<ShieldCheck className="w-4 h-4" />}
-              onClick={() => openRecordDecisionModal("submit", row)}
-            >
-              {ar ? "إرسال" : "Submit"}
-            </Button>
-          ) : null}
-          {isSuperAdmin && canApproveRecord(row) ? (
-            <Button
-              type="button"
-              variant="success"
-              size="sm"
-              leftIcon={<CheckCircle2 className="w-4 h-4" />}
-              onClick={() => openRecordDecisionModal("approve", row)}
-            >
-              {ar ? "اعتماد" : "Approve"}
-            </Button>
-          ) : null}
-          {isSuperAdmin && canApproveRecord(row) ? (
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              leftIcon={<XCircle className="w-4 h-4" />}
-              onClick={() => openRecordDecisionModal("reject", row)}
-            >
-              {ar ? "رفض" : "Reject"}
-            </Button>
-          ) : null}
-        </div>
-      )
-    }
-  ];
 
   const statsColumns: Array<DataTableColumn<GoldenRecordStatsBreakdownItem>> = [
     {
@@ -1084,14 +953,16 @@ export default function GoldenRecordsPage() {
                  />
               </div>
 
-              <select
-                className="users-filter-select-modern"
-                value={statsFilters.centerId}
-                onChange={(event) => setStatsFilters((current) => ({ ...current, centerId: event.target.value }))}
-              >
-                <option value="">{ar ? "على مستوى الجهة" : "Organization level"}</option>
-                {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
+              {centers.length > 1 && (
+                <select
+                  className="users-filter-select-modern"
+                  value={statsFilters.centerId}
+                  onChange={(event) => setStatsFilters((current) => ({ ...current, centerId: event.target.value }))}
+                >
+                  <option value="">{ar ? "على مستوى الجهة" : "Organization level"}</option>
+                  {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 ms-2 shrink-0">
@@ -1244,14 +1115,16 @@ export default function GoldenRecordsPage() {
                 })}
               </select>
 
-              <select
-                className="users-filter-select-modern"
-                value={recordFilters.centerId}
-                onChange={(event) => setRecordFilters((current) => ({ ...current, centerId: event.target.value, circleId: "", page: 1 }))}
-              >
-                <option value="">{ar ? "كل المراكز" : "All centers"}</option>
-                {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
+              {centers.length > 1 && (
+                <select
+                  className="users-filter-select-modern"
+                  value={recordFilters.centerId}
+                  onChange={(event) => setRecordFilters((current) => ({ ...current, centerId: event.target.value, circleId: "", page: 1 }))}
+                >
+                  <option value="">{ar ? "كل المراكز" : "All centers"}</option>
+                  {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              )}
 
               <select
                 className="users-filter-select-modern"
@@ -1311,81 +1184,91 @@ export default function GoldenRecordsPage() {
               onRetry={() => void recordsQ.refetch()}
             />
           ) : (
-            <div className="golden-records-table-wrap">
-              <DataTable
-                className="golden-records-table"
-                columns={recordColumns}
-                rows={recordsQ.data?.items ?? []}
-                rowKey="id"
-                loading={recordsQ.isLoading}
-                emptyState={<EmptyState title={ar ? "لا توجد سجلات نهائية" : "No final records found"} description={ar ? "أنشئ أول سجل نهائي يدويًا أو من مرشح معتمد." : "Create the first final record manually or from an approved candidate."} />}
-              />
+            <div className="gr-registry-list">
+              {recordsQ.data?.items.map((row) => (
+                <div key={row.id} className="gr-registry-row">
+                  <div className="gr-row-right">
+                    <div className="gr-student-avatar">
+                      {row.studentName.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                    </div>
+                    <div className="gr-student-info">
+                      <strong className="gr-student-name">{row.studentName}</strong>
+                      <div className="gr-circle-name">
+                        <span>{row.centerName}</span>
+                      </div>
+                    </div>
+                  </div>
 
+                  <div className="gr-row-center">
+                    <strong className="gr-record-title">{goldenRecordTypeLabel(row.type, ar)} - {riwayaLabel(row.riwaya, ar)}</strong>
+                    <span className="gr-record-type">{ar ? "المتوسط: " : "Average: "} {formatAverageLabel(row.average, ar)} | {row.grade}</span>
+                  </div>
 
+                  <div className="gr-row-left">
+                    <div className="gr-date-box">
+                      <span>{ar ? "تاريخ السجل" : "Record Date"}</span>
+                      <strong>{formatDateLabel(row.examDate, ar)}</strong>
+                    </div>
 
+                    <div style={{ minWidth: '100px', display: 'flex', justifyContent: 'center' }}>
+                      <Badge variant={badgeVariantForStatus(row.status)} size="sm" className="text-[0.62rem]">
+                        {goldenRecordStatusLabel(row.status, ar)}
+                      </Badge>
+                    </div>
 
+                    <div className="gr-result-box">
+                      <span className="gr-result-score" style={{ fontSize: '0.8rem' }}>{row.appreciation}</span>
+                      <span className="gr-result-grade">{row.source === "CANDIDATE" ? (ar ? "مرشح" : "Candidate") : row.source === "EXAM_BASED" ? (ar ? "اختبار" : "Exam") : (ar ? "يدوي" : "Manual")}</span>
+                    </div>
 
-
-
-
-
+                    <div className="flex items-center gap-1">
+                      {row.status === "APPROVED" && row.type === "KHATEM" && (
+                        <button className="gs-icon-btn text-brand-600 hover:bg-brand-50" onClick={() => void printCompletionCertificate(row)} title={ar ? "طباعة شهادة الختم" : "Print Certificate"} disabled={printingRecordId === row.id}>
+                          <Printer size={14} />
+                        </button>
+                      )}
+                      {canEditRecord(row) && (
+                        <button className="gs-icon-btn" onClick={() => openEditRecordModal(row)} title={ar ? "تعديل" : "Edit"}>
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      {canSubmitRecord(row) && (
+                        <button className="gs-icon-btn text-amber-600 hover:bg-amber-50" onClick={() => openRecordDecisionModal("submit", row)} title={ar ? "إرسال" : "Submit"}>
+                          <ShieldCheck size={14} />
+                        </button>
+                      )}
+                      {isSuperAdmin && canApproveRecord(row) && (
+                        <button className="gs-icon-btn text-emerald-600 hover:bg-emerald-50" onClick={() => openRecordDecisionModal("approve", row)} title={ar ? "اعتماد" : "Approve"}>
+                          <CheckCircle2 size={14} />
+                        </button>
+                      )}
+                      {isSuperAdmin && canApproveRecord(row) && (
+                        <button className="gs-icon-btn text-rose-600 hover:bg-rose-50" onClick={() => openRecordDecisionModal("reject", row)} title={ar ? "رفض" : "Reject"}>
+                          <XCircle size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
 
               {recordsQ.data && recordsQ.data.total > 0 && (
                 <div className="grade-scales-footer">
                   <div className="gs-page-size">
                     <span>{ar ? "الصفوف لكل صفحة:" : "Rows per page:"}</span>
-                    <select
-                      value={recordFilters.pageSize}
-                      onChange={(e) => setRecordFilters(c => ({ ...c, pageSize: Number(e.target.value), page: 1 }))}
-                    >
+                    <select value={recordFilters.pageSize} onChange={(e) => setRecordFilters(c => ({ ...c, pageSize: Number(e.target.value), page: 1 }))}>
                       {PAGE_SIZES.map(sz => <option key={sz} value={sz}>{sz}</option>)}
                     </select>
                   </div>
-
                   <div className="gs-pagination-info">
-                    {ar
-                      ? `عرض ${Math.min(recordsQ.data.total, (recordFilters.page - 1) * recordFilters.pageSize + 1)} - ${Math.min(recordsQ.data.total, recordFilters.page * recordFilters.pageSize)} من ${recordsQ.data.total} سجل`
-                      : `Showing ${Math.min(recordsQ.data.total, (recordFilters.page - 1) * recordFilters.pageSize + 1)} - ${Math.min(recordsQ.data.total, recordFilters.page * recordFilters.pageSize)} of ${recordsQ.data.total} records`
-                    }
+                    {ar ? `عرض ${Math.min(recordsQ.data.total, (recordFilters.page - 1) * recordFilters.pageSize + 1)} - ${Math.min(recordsQ.data.total, recordFilters.page * recordFilters.pageSize)} من ${recordsQ.data.total} سجل` : `Showing ${Math.min(recordsQ.data.total, (recordFilters.page - 1) * recordFilters.pageSize + 1)} - ${Math.min(recordsQ.data.total, recordFilters.page * recordFilters.pageSize)} of ${recordsQ.data.total} records`}
                   </div>
-
                   <div className="gs-pagination-controls">
-                    <button
-                      type="button"
-                      className="gs-page-btn"
-                      disabled={recordFilters.page === 1}
-                      onClick={() => setRecordFilters(c => ({ ...c, page: recordFilters.page - 1 }))}
-                    >
+                    <button type="button" className="gs-page-btn" disabled={recordFilters.page === 1} onClick={() => setRecordFilters(c => ({ ...c, page: recordFilters.page - 1 }))}>
                       {ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                     </button>
-
-                    {Array.from({ length: Math.min(5, Math.ceil(recordsQ.data.total / recordFilters.pageSize)) }, (_, i) => {
-                      const totalPages = Math.ceil(recordsQ.data.total / recordFilters.pageSize);
-                      let p = recordFilters.page;
-                      if (recordFilters.page <= 3) p = i + 1;
-                      else if (recordFilters.page >= totalPages - 2) p = totalPages - 4 + i;
-                      else p = recordFilters.page - 2 + i;
-
-                      if (p <= 0 || p > totalPages) return null;
-
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          className={`gs-page-btn ${recordFilters.page === p ? "gs-page-btn--active" : ""}`}
-                          onClick={() => setRecordFilters(c => ({ ...c, page: p }))}
-                        >
-                          {p}
-                        </button>
-                      );
-                    })}
-
-                    <button
-                      type="button"
-                      className="gs-page-btn"
-                      disabled={recordFilters.page >= Math.ceil(recordsQ.data.total / recordFilters.pageSize)}
-                      onClick={() => setRecordFilters(c => ({ ...c, page: recordFilters.page + 1 }))}
-                    >
+                    <button type="button" className="gs-page-btn gs-page-btn--active">{recordFilters.page}</button>
+                    <button type="button" className="gs-page-btn" disabled={recordFilters.page >= Math.ceil(recordsQ.data.total / recordFilters.pageSize)} onClick={() => setRecordFilters(c => ({ ...c, page: recordFilters.page + 1 }))}>
                       {ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                     </button>
                   </div>

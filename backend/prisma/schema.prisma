@@ -754,6 +754,10 @@ model StaffScheduleAssignment {
   isActive       Boolean             @default(true) @map("is_active")
   effectiveFrom  DateTime            @default(now()) @map("effective_from") @db.Date
   effectiveTo    DateTime?           @map("effective_to") @db.Date
+  latitude       Decimal?            @map("latitude") @db.Decimal(10, 7)
+  longitude      Decimal?            @map("longitude") @db.Decimal(10, 7)
+  allowedRadiusMeters Int?           @map("allowed_radius_meters")
+  locationText   String?             @map("location_text") @db.VarChar(255)
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
   center         Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
@@ -990,6 +994,7 @@ model FollowUpRecord {
   matnToRef               String?                  @map("matn_to_ref") @db.VarChar(80)
   updatedAt               DateTime                 @updatedAt @map("updated_at")
   lockVersion             Int                      @default(0) @map("lock_version")
+  idempotencyKey          String?                  @unique @map("idempotency_key") @db.VarChar(128)
   circle                  Circle                   @relation(fields: [circleId], references: [id], onDelete: Cascade)
   matn                    MatnCatalog?             @relation(fields: [matnId], references: [id])
   student                 User                     @relation("FollowUpStudent", fields: [studentId], references: [id], onDelete: Cascade)
@@ -1640,6 +1645,8 @@ model FinanceAccount {
   id                  Int                      @id @default(autoincrement())
   organizationId      Int
   centerId            Int?
+  code                String?                  @unique @db.VarChar(60)
+  name                String?                  @db.VarChar(120)
   accountingAccountId Int?                     @map("accounting_account_id")
   accountType         FinanceAccountType
   openingBalance      Decimal                  @db.Decimal(12, 2)
@@ -3097,6 +3104,7 @@ enum NotificationType {
   STAFF_SHIFT_REMINDER
   STAFF_LATE_ALERT
   STAFF_ABSENCE_MARKED
+  STUDENT_ABSENCE_MARKED
 }
 
 enum AuditEntityType {

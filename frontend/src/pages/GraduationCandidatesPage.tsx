@@ -4,7 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ClipboardCheck,
-  Clock3,
   FileCheck2,
   Pencil,
   Plus,
@@ -16,11 +15,10 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useI18n } from "../app/i18n";
+import { notifyError } from "../shared/ui/feedback";
 import { Badge } from "../components/ui/Badge";
 import { Button, type ButtonVariant } from "../components/ui/Button";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
-import { DataTable, type DataTableColumn } from "../components/ui/DataTable";
-import { EmptyState } from "../components/ui/EmptyState";
 import { ErrorState } from "../components/ui/ErrorState";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
@@ -62,6 +60,7 @@ import { canReadCenters, canReadCircles } from "../features/org/org.permissions"
 import { useUserByIdQuery, useUsersQuery } from "../features/users/users.hooks";
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
 import { entityFeedback, notifySuccess, type LocalizedLabel, validationFeedback } from "../shared/ui/feedback";
+import "../styles/features/golden-registry.css";
 
 type CandidateFormMode = "create" | "edit";
 type CandidateDecisionKind = "approve" | "reject" | "defer";
@@ -121,7 +120,6 @@ type DecisionModalProps = {
   notePlaceholder: string;
   requireNote?: boolean;
   summary?: ReactNode;
-  error?: string | null;
   isLoading?: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
@@ -140,7 +138,6 @@ function DecisionModal({
   notePlaceholder,
   requireNote = false,
   summary,
-  error,
   isLoading,
   onClose,
   onConfirm,
@@ -175,7 +172,6 @@ function DecisionModal({
             placeholder={notePlaceholder}
           />
         </div>
-        {error ? <p className="golden-records-form-error">{error}</p> : null}
       </div>
     </ConfirmModal>
   );
@@ -207,15 +203,12 @@ export default function GraduationCandidatesPage({
   const [formMode, setFormMode] = useState<CandidateFormMode | null>(null);
   const [formDraft, setFormDraft] = useState<CandidateFormState>(blankCandidateForm());
   const [formTarget, setFormTarget] = useState<GraduationCandidateItem | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
   
   const [examLinkTarget, setExamLinkTarget] = useState<GraduationCandidateItem | null>(null);
   const [examLinkDraft, setExamLinkDraft] = useState<CandidateExamLinkFormState>(blankCandidateExamLinkForm());
-  const [examLinkError, setExamLinkError] = useState<string | null>(null);
 
   const [decision, setDecision] = useState<{ kind: CandidateDecisionKind; item: GraduationCandidateItem; } | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
-  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
   const circlesQ = useCirclesQuery(undefined, { enabled: canLoadCircles });
@@ -308,14 +301,12 @@ export default function GraduationCandidatesPage({
   const openCreateModal = () => {
     setFormMode("create");
     setFormTarget(null);
-    setFormError(null);
     setFormDraft(blankCandidateForm());
   };
 
   const openEditModal = (item: GraduationCandidateItem) => {
     setFormMode("edit");
     setFormTarget(item);
-    setFormError(null);
     setFormDraft(
       blankCandidateForm({
         studentId: String(item.studentId),
@@ -329,37 +320,33 @@ export default function GraduationCandidatesPage({
   const closeModal = () => {
     setFormMode(null);
     setFormTarget(null);
-    setFormError(null);
   };
 
   const openExamLinkModal = (item: GraduationCandidateItem) => {
     setExamLinkTarget(item);
-    setExamLinkError(null);
     setExamLinkDraft(blankCandidateExamLinkForm({ examAttemptId: item.examAttemptId ? String(item.examAttemptId) : "" }));
   };
 
   const closeExamLinkModal = () => {
     setExamLinkTarget(null);
-    setExamLinkError(null);
     setExamLinkDraft(blankCandidateExamLinkForm());
   };
 
   const openDecisionModal = (kind: CandidateDecisionKind, item: GraduationCandidateItem) => {
     setDecision({ kind, item });
     setDecisionNote(item.statusNote ?? "");
-    setDecisionError(null);
   };
 
   const closeDecisionModal = () => {
     setDecision(null);
     setDecisionNote("");
-    setDecisionError(null);
   };
 
   const validateForm = () => {
     if (!toPositiveNumber(formDraft.studentId)) return ar ? "اختيار الطالب مطلوب" : "Student is required";
     if (!formDraft.memorizationCompletionDate.trim()) return ar ? "تاريخ إكمال الحفظ مطلوب" : "Memorization completion date is required";
     if (!formDraft.khatmaTestDate.trim()) return ar ? "تاريخ اختبار المصحف المخطط مطلوب" : "Planned mushaf exam date is required";
+    if (formDraft.memorizationCompletionDate > formDraft.khatmaTestDate) return ar ? "تاريخ إكمال الحفظ يجب أن يسبق أو يساوي تاريخ الاختبار المخطط" : "Memorization completion date must be on or before the planned exam date";
     if (selectedStudentQ.isLoading) return ar ? "جاري تحميل بيانات الطالب الحالية، حاول بعد لحظة." : "Student context is still loading. Try again in a moment.";
     if (selectedStudentQ.isError) return ar ? "تعذر تحميل بيانات الطالب الحالية." : "Unable to load the current student context.";
     if (enrollmentError) return enrollmentError;
@@ -369,7 +356,7 @@ export default function GraduationCandidatesPage({
   const submitForm = async () => {
     const err = validateForm();
     if (err) {
-      setFormError(err);
+      notifyError(err);
       return;
     }
 
@@ -381,7 +368,6 @@ export default function GraduationCandidatesPage({
     };
 
     try {
-      setFormError(null);
       if (formMode === "create") {
         await createM.mutateAsync(payloadBase as CreateCandidatePayload);
         notifySuccess(entityFeedback.success(ar, "create", CANDIDATE_ENTITY));
@@ -394,7 +380,7 @@ export default function GraduationCandidatesPage({
       }
       closeModal();
     } catch (error) {
-      setFormError(
+      notifyError(
         getLocalizedApiErrorMessage(error, {
           ar,
           fallback: entityFeedback.error(ar, "save", CANDIDATE_ENTITY)
@@ -407,12 +393,11 @@ export default function GraduationCandidatesPage({
     if (!examLinkTarget) return;
     const examAttemptId = toPositiveNumber(examLinkDraft.examAttemptId);
     if (!examAttemptId) {
-      setExamLinkError(validationFeedback.required(ar, EXAM_ATTEMPT_ENTITY));
+      notifyError(validationFeedback.required(ar, EXAM_ATTEMPT_ENTITY));
       return;
     }
 
     try {
-      setExamLinkError(null);
       await linkExamM.mutateAsync({
         candidateId: examLinkTarget.id,
         payload: { examAttemptId, lockVersion: examLinkTarget.lockVersion }
@@ -420,7 +405,7 @@ export default function GraduationCandidatesPage({
       notifySuccess(entityFeedback.success(ar, "link", CANDIDATE_ENTITY));
       closeExamLinkModal();
     } catch (error) {
-      setExamLinkError(
+      notifyError(
         getLocalizedApiErrorMessage(error, {
           ar,
           fallback: entityFeedback.error(ar, "link", CANDIDATE_ENTITY)
@@ -432,7 +417,6 @@ export default function GraduationCandidatesPage({
   const confirmDecision = async () => {
     if (!decision) return;
     try {
-      setDecisionError(null);
       if (decision.kind === "approve") {
         await approveM.mutateAsync({
           candidateId: decision.item.id,
@@ -454,7 +438,7 @@ export default function GraduationCandidatesPage({
       }
       closeDecisionModal();
     } catch (error) {
-      setDecisionError(
+      notifyError(
         getLocalizedApiErrorMessage(error, {
           ar,
           fallback: entityFeedback.error(ar, decision.kind, CANDIDATE_ENTITY)
@@ -463,162 +447,7 @@ export default function GraduationCandidatesPage({
     }
   };
 
-  const columns: Array<DataTableColumn<GraduationCandidateItem>> = [
-    {
-      id: "student",
-      header: ar ? "الطالب" : "Student",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{row.studentName}</strong>
-          <span>{row.year}</span>
-        </div>
-      )
-    },
-    {
-      id: "center",
-      header: ar ? "المركز / الحلقة" : "Center / Halaqa",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{row.centerName}</strong>
-          <span>{row.circleName ?? (ar ? "بدون حلقة" : "No halaqa")}</span>
-        </div>
-      )
-    },
-    {
-      id: "completion",
-      header: ar ? "الإكمال / الاختبار المخطط" : "Completion / Planned Exam",
-      cell: (row) => (
-        <div className="golden-records-cell">
-          <strong>{formatDateLabel(row.memorizationCompletionDate, ar)}</strong>
-          <span>{formatDateLabel(row.khatmaTestDate, ar)}</span>
-        </div>
-      )
-    },
-    {
-      id: "duration",
-      header: ar ? "مدة الحفظ" : "Duration",
-      cell: (row) => formatDurationLabel(row.memorizationDurationMonths, ar)
-    },
-    {
-      id: "status",
-      header: ar ? "الحالة" : "Status",
-      cell: (row) => (
-        <Badge variant={badgeVariantForStatus(row.status)}>
-          {candidateStatusLabel(row.status, ar)}
-        </Badge>
-      )
-    },
-    {
-      id: "examLinkage",
-      header: ar ? "ربط الاختبار" : "Exam Linkage",
-      cell: (row) =>
-        row.examAttempt ? (
-          <div className="golden-records-cell">
-            <strong>{row.exam?.title ?? `#${row.examAttempt.examId}`}</strong>
-            <span>{attemptStatusLabel(row.examAttempt.status, ar)}</span>
-          </div>
-        ) : (
-          <span>{ar ? "غير مرتبط" : "Not linked"}</span>
-        )
-    },
-    {
-      id: "notes",
-      header: ar ? "ملاحظات" : "Notes",
-      cell: (row) => (
-        <span title={row.notes ?? ""}>
-          {row.notes?.trim()
-            ? row.notes.length > 80
-              ? `${row.notes.slice(0, 80)}...`
-              : row.notes
-            : ar
-              ? "لا توجد"
-              : "None"}
-        </span>
-      )
-    },
-    {
-      id: "actions",
-      header: ar ? "الإجراءات" : "Actions",
-      isActions: true,
-      width: 420,
-      cell: (row) => (
-        <div className="golden-records-row-actions">
-          {canManageCandidateNominations && canEditCandidate(row) ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              leftIcon={<Pencil className="w-4 h-4" />}
-              onClick={() => openEditModal(row)}
-            >
-              {ar ? "تعديل" : "Edit"}
-            </Button>
-          ) : null}
-          {canManageCandidateNominations && canLinkCandidateExamAttempt(row) ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              leftIcon={<ClipboardCheck className="w-4 h-4" />}
-              onClick={() => openExamLinkModal(row)}
-            >
-              {row.examAttemptId ? (ar ? "تحديث الربط" : "Update Link") : (ar ? "ربط المحاولة" : "Link Attempt")}
-            </Button>
-          ) : null}
-          {isSuperAdmin && canTransitionCandidate(row, "APPROVED") ? (
-            <Button
-              type="button"
-              variant="success"
-              size="sm"
-              leftIcon={<CheckCircle2 className="w-4 h-4" />}
-              onClick={() => openDecisionModal("approve", row)}
-            >
-              {ar ? "اعتماد" : "Approve"}
-            </Button>
-          ) : null}
-          {isSuperAdmin && canTransitionCandidate(row, "REJECTED") ? (
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              leftIcon={<XCircle className="w-4 h-4" />}
-              onClick={() => openDecisionModal("reject", row)}
-            >
-              {ar ? "رفض" : "Reject"}
-            </Button>
-          ) : null}
-          {isSuperAdmin && canTransitionCandidate(row, "DEFERRED") ? (
-            <Button
-              type="button"
-              variant="warning"
-              size="sm"
-              leftIcon={<Clock3 className="w-4 h-4" />}
-              onClick={() => openDecisionModal("defer", row)}
-            >
-              {ar ? "تأجيل" : "Defer"}
-            </Button>
-          ) : null}
-          {canCreateRecordFromCandidate(row) ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              leftIcon={<FileCheck2 className="w-4 h-4" />}
-              onClick={() =>
-                navigate("/golden-records?tab=records", {
-                  state: { createFromCandidateId: row.id }
-                })
-              }
-            >
-              {ar ? "إنشاء سجل نهائي" : "Create Final Record"}
-            </Button>
-          ) : null}
-        </div>
-      )
-    }
-  ];
-
-  const pageHeader = (
+    const pageHeader = (
     <PageHeader
       title={ar ? "مرشحو التخرج" : "Graduation Candidates"}
       description={ar ? "إدارة عمليات ترشيح التخرج والمركز والحلقات المرتبطة بنظام الحفظ والمراجعة." : "Manage graduation nominations, center and circle links for the memorization system."}
@@ -680,14 +509,16 @@ export default function GraduationCandidatesPage({
               })}
             </select>
 
-            <select
-              className="users-filter-select-modern"
-              value={filters.centerId}
-              onChange={(event) => setFilters((current) => ({ ...current, centerId: event.target.value, circleId: "", page: 1 }))}
-            >
-              <option value="">{ar ? "كل المراكز" : "All centers"}</option>
-              {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
+            {centers.length > 1 && (
+              <select
+                className="users-filter-select-modern"
+                value={filters.centerId}
+                onChange={(event) => setFilters((current) => ({ ...current, centerId: event.target.value, circleId: "", page: 1 }))}
+              >
+                <option value="">{ar ? "كل المراكز" : "All centers"}</option>
+                {centerOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            )}
 
             <select
               className="users-filter-select-modern"
@@ -746,72 +577,91 @@ export default function GraduationCandidatesPage({
             onRetry={() => void candidatesQ.refetch()}
           />
         ) : (
-          <div className="golden-records-table-wrap">
-            <DataTable
-              className="golden-records-table"
-              columns={columns}
-              rows={candidatesQ.data?.items ?? []}
-              rowKey="id"
-              loading={candidatesQ.isLoading}
-              emptyState={<EmptyState title={ar ? "لا يوجد مرشحون حاليًا" : "No candidates found"} description={ar ? "أضف أول مرشح للتخرج لهذا العام أو غيّر الفلاتر الحالية." : "Add the first graduation candidate for this year or adjust the filters."} />}
-            />
+          
+          <div className="gr-registry-list">
+            {candidatesQ.data?.items.map((row) => (
+              <div key={row.id} className="gr-registry-row">
+                <div className="gr-row-right">
+                  <div className="gr-student-avatar">
+                    {row.studentName.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="gr-student-info">
+                    <strong className="gr-student-name">{row.studentName}</strong>
+                    <div className="gr-circle-name">
+                      <span>{row.centerName}</span>
+                      {row.circleName && <span style={{ opacity: 0.6 }}>• {row.circleName}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="gr-row-center">
+                  <strong className="gr-record-title">{ar ? "تاريخ الحفظ: " : "Memorization: "} {formatDateLabel(row.memorizationCompletionDate, ar)}</strong>
+                  <span className="gr-record-type">{ar ? "اختبار المصحف: " : "Mushaf Exam: "} {formatDateLabel(row.khatmaTestDate, ar)}</span>
+                </div>
+
+                <div className="gr-row-left">
+                  <div className="gr-date-box">
+                    <span>{ar ? "تاريخ الترشيح" : "Nomination Date"}</span>
+                    <strong>{formatDateLabel(row.createdAt, ar)}</strong>
+                  </div>
+
+                  <div style={{ minWidth: '100px', display: 'flex', justifyContent: 'center' }}>
+                    <Badge variant={badgeVariantForStatus(row.status)} size="sm" className="text-[0.62rem]">
+                      {candidateStatusLabel(row.status, ar)}
+                    </Badge>
+                  </div>
+
+                  <div className="gr-result-box">
+                    {row.examAttempt ? (
+                      <>
+                        <span className="gr-result-score" style={{ fontSize: '0.8rem' }}>{row.exam?.title ?? `#${row.examAttempt.examId}`}</span>
+                        <span className="gr-result-grade">{attemptStatusLabel(row.examAttempt.status, ar)}</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{ar ? "غير مرتبط باختبار" : "Not linked to exam"}</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {canManageCandidateNominations && canEditCandidate(row) && (
+                      <button className="gs-icon-btn" onClick={() => openEditModal(row)} title={ar ? "تعديل" : "Edit"}><Pencil size={14} /></button>
+                    )}
+                    {canManageCandidateNominations && canLinkCandidateExamAttempt(row) && (
+                      <button className="gs-icon-btn" onClick={() => openExamLinkModal(row)} title={row.examAttemptId ? (ar ? "تحديث الربط" : "Update Link") : (ar ? "ربط المحاولة" : "Link Attempt")}><ClipboardCheck size={14} /></button>
+                    )}
+                    {isSuperAdmin && canTransitionCandidate(row, "APPROVED") && (
+                      <button className="gs-icon-btn text-emerald-600 hover:bg-emerald-50" onClick={() => openDecisionModal("approve", row)} title={ar ? "اعتماد" : "Approve"}><CheckCircle2 size={14} /></button>
+                    )}
+                    {isSuperAdmin && canTransitionCandidate(row, "REJECTED") && (
+                      <button className="gs-icon-btn text-rose-600 hover:bg-rose-50" onClick={() => openDecisionModal("reject", row)} title={ar ? "رفض" : "Reject"}><XCircle size={14} /></button>
+                    )}
+                    {canCreateRecordFromCandidate(row) && (
+                      <Button type="button" variant="secondary" size="sm" leftIcon={<FileCheck2 size={14} />} onClick={() => navigate("/golden-records?tab=records", { state: { createFromCandidateId: row.id } })}>
+                        {ar ? "إنشاء سجل نهائي" : "Create Final Record"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
 
             {candidatesQ.data && candidatesQ.data.total > 0 && (
               <div className="grade-scales-footer">
                 <div className="gs-page-size">
                   <span>{ar ? "الصفوف لكل صفحة:" : "Rows per page:"}</span>
-                  <select
-                    value={filters.pageSize}
-                    onChange={(e) => setFilters(c => ({ ...c, pageSize: Number(e.target.value), page: 1 }))}
-                  >
+                  <select value={filters.pageSize} onChange={(e) => setFilters(c => ({ ...c, pageSize: Number(e.target.value), page: 1 }))}>
                     {PAGE_SIZES.map(sz => <option key={sz} value={sz}>{sz}</option>)}
                   </select>
                 </div>
-
                 <div className="gs-pagination-info">
-                  {ar
-                    ? `عرض ${Math.min(candidatesQ.data.total, (filters.page - 1) * filters.pageSize + 1)} - ${Math.min(candidatesQ.data.total, filters.page * filters.pageSize)} من ${candidatesQ.data.total} مرشح`
-                    : `Showing ${Math.min(candidatesQ.data.total, (filters.page - 1) * filters.pageSize + 1)} - ${Math.min(candidatesQ.data.total, filters.page * filters.pageSize)} of ${candidatesQ.data.total} candidates`
-                  }
+                  {ar ? `عرض ${Math.min(candidatesQ.data.total, (filters.page - 1) * filters.pageSize + 1)} - ${Math.min(candidatesQ.data.total, filters.page * filters.pageSize)} من ${candidatesQ.data.total} مرشح` : `Showing ${Math.min(candidatesQ.data.total, (filters.page - 1) * filters.pageSize + 1)} - ${Math.min(candidatesQ.data.total, filters.page * filters.pageSize)} of ${candidatesQ.data.total} candidates`}
                 </div>
-
                 <div className="gs-pagination-controls">
-                  <button
-                    type="button"
-                    className="gs-page-btn"
-                    disabled={filters.page === 1}
-                    onClick={() => setFilters(c => ({ ...c, page: filters.page - 1 }))}
-                  >
+                  <button type="button" className="gs-page-btn" disabled={filters.page === 1} onClick={() => setFilters(c => ({ ...c, page: filters.page - 1 }))}>
                     {ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                   </button>
-
-                  {Array.from({ length: Math.min(5, Math.ceil(candidatesQ.data.total / filters.pageSize)) }, (_, i) => {
-                    const totalPages = Math.ceil(candidatesQ.data.total / filters.pageSize);
-                    let p = filters.page;
-                    if (filters.page <= 3) p = i + 1;
-                    else if (filters.page >= totalPages - 2) p = totalPages - 4 + i;
-                    else p = filters.page - 2 + i;
-
-                    if (p <= 0 || p > totalPages) return null;
-
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        className={`gs-page-btn ${filters.page === p ? "gs-page-btn--active" : ""}`}
-                        onClick={() => setFilters(c => ({ ...c, page: p }))}
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    type="button"
-                    className="gs-page-btn"
-                    disabled={filters.page >= Math.ceil(candidatesQ.data.total / filters.pageSize)}
-                    onClick={() => setFilters(c => ({ ...c, page: filters.page + 1 }))}
-                  >
+                  <button type="button" className="gs-page-btn gs-page-btn--active">{filters.page}</button>
+                  <button type="button" className="gs-page-btn" disabled={filters.page >= Math.ceil(candidatesQ.data.total / filters.pageSize)} onClick={() => setFilters(c => ({ ...c, page: filters.page + 1 }))}>
                     {ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                   </button>
                 </div>
@@ -819,6 +669,7 @@ export default function GraduationCandidatesPage({
             )}
           </div>
         )}
+
       </section>
 
       <Modal isOpen={formOpen} onClose={closeModal} title={formMode === "create" ? (ar ? "إضافة مرشح تخرج" : "Add Graduation Candidate") : (ar ? "تعديل المرشح" : "Edit Candidate")} description={ar ? "ترشيح الطالب لمرحلة اختبار المصحف فقط. المركز والحلقة والسنة ومدة الحفظ تُشتق تلقائيًا من بيانات الطالب الحالية." : "Nominate the student for the planned mushaf exam only. Center, halaqa, year, and memorization duration are derived automatically from the current student context."} size="lg" panelClassName="golden-records-modal-panel" footer={<><Button type="button" variant="ghost" onClick={closeModal}>{ar ? "إلغاء" : "Cancel"}</Button><Button type="button" variant="primary" onClick={() => void submitForm()} isLoading={createM.isPending || updateM.isPending}>{formMode === "create" ? (ar ? "إضافة المرشح" : "Create Candidate") : (ar ? "حفظ التعديلات" : "Save Changes")}</Button></>}>
@@ -845,7 +696,6 @@ export default function GraduationCandidatesPage({
             <textarea className="golden-records-textarea" rows={4} value={formDraft.notes} onChange={(event) => setFormDraft((current) => ({ ...current, notes: event.target.value }))} placeholder={ar ? "أضف أي ملاحظات مرتبطة بالترشيح" : "Add nomination notes"} />
           </div>
         </div>
-        {formError ? <p className="golden-records-form-error">{formError}</p> : null}
       </Modal>
 
       <Modal isOpen={examLinkOpen} onClose={closeExamLinkModal} title={examLinkTarget?.examAttemptId ? (ar ? "تحديث ربط محاولة الاختبار" : "Update Exam Attempt Link") : (ar ? "ربط المرشح بمحاولة اختبار" : "Link Candidate to Exam Attempt")} description={ar ? "يتم الربط بمحاولات اختبارات المصحف فقط، ويُشتق الامتحان تلقائيًا من المحاولة المرتبطة." : "Only mushaf exam attempts are available here. The linked exam is derived automatically from the selected attempt."} size="md" panelClassName="golden-records-modal-panel golden-records-modal-panel--narrow" footer={<><Button type="button" variant="ghost" onClick={closeExamLinkModal}>{ar ? "إلغاء" : "Cancel"}</Button><Button type="button" variant="primary" onClick={() => void submitExamLink()} isLoading={linkExamM.isPending}>{examLinkTarget?.examAttemptId ? (ar ? "حفظ الربط" : "Save Link") : (ar ? "ربط المحاولة" : "Link Attempt")}</Button></>}>
@@ -862,12 +712,11 @@ export default function GraduationCandidatesPage({
               <Input label={ar ? "الحالة التشغيلية" : "Attempt Status"} value={selectedExamLinkAttempt ? attemptStatusLabel(selectedExamLinkAttempt.status, ar) : ""} disabled />
             </div>
             {examLinkAttemptsQ.isError ? <p className="golden-records-form-error">{getLocalizedApiErrorMessage(examLinkAttemptsQ.error, { ar, fallback: entityFeedback.error(ar, "load", EXAM_ATTEMPTS_ENTITY) })}</p> : examLinkAttemptsQ.isLoading ? <p className="golden-records-form-hint">{ar ? "جاري تحميل محاولات اختبار المصحف المتاحة..." : "Loading available mushaf exam attempts..."}</p> : examLinkAttempts.length === 0 ? <p className="golden-records-form-hint">{ar ? "لا توجد حاليًا محاولات اختبار مصحف مرتبطة بهذا الطالب في وحدة الاختبارات." : "There are currently no mushaf exam attempts for this student in the Exams module."}</p> : null}
-            {examLinkError ? <p className="golden-records-form-error">{examLinkError}</p> : null}
           </>
         ) : null}
       </Modal>
 
-      <DecisionModal isOpen={Boolean(decision)} title={decision?.kind === "approve" ? (ar ? "اعتماد المرشح" : "Approve Candidate") : decision?.kind === "reject" ? (ar ? "رفض المرشح" : "Reject Candidate") : (ar ? "تأجيل المرشح" : "Defer Candidate")} description={decision?.kind === "approve" ? (ar ? "يمكن إضافة ملاحظة اعتماد اختيارية قبل تثبيت القرار." : "You may add an optional approval note before confirming.") : (ar ? "يرجى إدخال سبب واضح لهذا القرار." : "Please enter a clear reason for this decision.")} confirmLabel={decision?.kind === "approve" ? (ar ? "اعتماد" : "Approve") : decision?.kind === "reject" ? (ar ? "رفض" : "Reject") : (ar ? "تأجيل" : "Defer")} cancelLabel={ar ? "إلغاء" : "Cancel"} confirmVariant={decision?.kind === "approve" ? "success" : decision?.kind === "reject" ? "danger" : "warning"} note={decisionNote} noteLabel={ar ? "الملاحظة / السبب" : "Note / Reason"} notePlaceholder={decision?.kind === "approve" ? (ar ? "ملاحظة اعتماد اختيارية" : "Optional approval note") : (ar ? "سبب القرار" : "Decision reason")} requireNote={decision?.kind !== "approve"} summary={decision ? <div className="golden-records-banner"><strong>{decision.item.studentName}</strong><span>{decision.item.centerName}</span></div> : null} error={decisionError} isLoading={approveM.isPending || rejectM.isPending || deferM.isPending} onClose={closeDecisionModal} onConfirm={() => void confirmDecision()} onNoteChange={setDecisionNote} />
+      <DecisionModal isOpen={Boolean(decision)} title={decision?.kind === "approve" ? (ar ? "اعتماد المرشح" : "Approve Candidate") : decision?.kind === "reject" ? (ar ? "رفض المرشح" : "Reject Candidate") : (ar ? "تأجيل المرشح" : "Defer Candidate")} description={decision?.kind === "approve" ? (ar ? "يمكن إضافة ملاحظة اعتماد اختيارية قبل تثبيت القرار." : "You may add an optional approval note before confirming.") : (ar ? "يرجى إدخال سبب واضح لهذا القرار." : "Please enter a clear reason for this decision.")} confirmLabel={decision?.kind === "approve" ? (ar ? "اعتماد" : "Approve") : decision?.kind === "reject" ? (ar ? "رفض" : "Reject") : (ar ? "تأجيل" : "Defer")} cancelLabel={ar ? "إلغاء" : "Cancel"} confirmVariant={decision?.kind === "approve" ? "success" : decision?.kind === "reject" ? "danger" : "warning"} note={decisionNote} noteLabel={ar ? "الملاحظة / السبب" : "Note / Reason"} notePlaceholder={decision?.kind === "approve" ? (ar ? "ملاحظة اعتماد اختيارية" : "Optional approval note") : (ar ? "سبب القرار" : "Decision reason")} requireNote={decision?.kind !== "approve"} summary={decision ? <div className="golden-records-banner"><strong>{decision.item.studentName}</strong><span>{decision.item.centerName}</span></div> : null} isLoading={approveM.isPending || rejectM.isPending || deferM.isPending} onClose={closeDecisionModal} onConfirm={() => void confirmDecision()} onNoteChange={setDecisionNote} />
     </div>
   );
 }

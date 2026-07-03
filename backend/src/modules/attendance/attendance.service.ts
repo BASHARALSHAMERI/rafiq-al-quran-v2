@@ -4,6 +4,7 @@ import { editLockPolicy } from "../../shared/policies/edit-lock.policy";
 import { safeDate } from "../../shared/utils/time";
 import type { ScopeContext } from "../../shared/types/auth.types";
 import { attendanceRepository } from "./attendance.repository";
+import { notificationsService } from "../notifications/notifications.service";
 
 type AttendanceQueryInput = {
   circleId: number;
@@ -176,6 +177,59 @@ export const attendanceService = {
         expectedLockVersion: existingByStudentId.get(record.studentId)?.lockVersion
       }))
     });
+
+    const newlyAbsentStudentIds: number[] = [];
+    normalizedRecords.forEach((record) => {
+      const existingStatus = existingByStudentId.get(record.studentId)?.status;
+      if (existingStatus !== "ABSENT" && record.status === "ABSENT") {
+        newlyAbsentStudentIds.push(record.studentId);
+      }
+    });
+
+    if (newlyAbsentStudentIds.length) {
+      const enrollments = await attendanceRepository.findActiveEnrollmentsWithNames({ circleId: input.circleId });
+      const parentLinks = await attendanceRepository.findParentsForStudents(newlyAbsentStudentIds);
+      
+      const enrollmentsMap = new Map(enrollments.map((e) => [e.studentId, e.student]));
+      const parentsMap = new Map<number, number[]>();
+      
+      parentLinks.forEach((link) => {
+        const parents = parentsMap.get(link.studentId) || [];
+        parents.push(link.parentId);
+        parentsMap.set(link.studentId, parents);
+      });
+
+      const circle = await attendanceRepository.findAccessibleCircle({
+        organizationId: scope.organizationId,
+        circleId: input.circleId,
+        allowAll: true,
+        scopeCircleIds: [],
+        scopeCenterIds: []
+      });
+
+      if (circle) {
+        for (const studentId of newlyAbsentStudentIds) {
+          const parents = parentsMap.get(studentId);
+          if (!parents?.length) continue;
+          
+          const student = enrollmentsMap.get(studentId);
+          if (!student) continue;
+          
+          await notificationsService.notifyStudentAbsence({
+            organizationId: scope.organizationId,
+            centerId: circle.centerId,
+            circleId: input.circleId,
+            recipientParentIds: parents,
+            studentId,
+            studentName: student.profile?.fullName ?? student.fullName,
+            absenceDate: attendanceDate.toISOString().slice(0, 10),
+            centerName: circle.center.name,
+            circleName: circle.name,
+            createdById: scope.userId
+          });
+        }
+      }
+    }
 
     return {
       circleId: input.circleId,
