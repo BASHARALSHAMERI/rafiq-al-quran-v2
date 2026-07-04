@@ -4,7 +4,6 @@ import {
   GraduationCap,
   LayoutGrid,
   MapPin,
-  AlertCircle,
   CalendarDays
 } from "lucide-react";
 import type { FormMode, CircleDraft } from "./circles.types";
@@ -12,6 +11,7 @@ import type { CircleType } from "../../types";
 import CircleScheduleEditor from "../../CircleScheduleEditor";
 import { Button } from "../../../../components/ui/Button";
 import Modal from "../../../../components/ui/Modal";
+import LocationPicker from "../LocationPicker";
 
 interface CircleFormModalProps {
   ar: boolean;
@@ -300,42 +300,15 @@ export function CircleFormModal({
               </label>
 
               {!draft.useCenterLocation ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  <input
-                    className="circlemod-input"
-                    value={draft.locationText}
-                    onChange={(e) => handleChange("locationText", e.target.value)}
-                    placeholder={ar ? "\u0648\u0635\u0641 \u0645\u0648\u0642\u0639 \u0627\u0644\u062d\u0644\u0642\u0629" : "Circle location description"}
-                    disabled={pending}
-                  />
-                  <div className="circlemod-row">
-                    <input
-                      type="number"
-                      step="any"
-                      className="circlemod-input"
-                      value={draft.latitude}
-                      onChange={(e) => handleChange("latitude", e.target.value)}
-                      placeholder={ar ? "\u062e\u0637 \u0627\u0644\u0639\u0631\u0636" : "Latitude"}
-                      disabled={pending}
-                    />
-                    <input
-                      type="number"
-                      step="any"
-                      className="circlemod-input"
-                      value={draft.longitude}
-                      onChange={(e) => handleChange("longitude", e.target.value)}
-                      placeholder={ar ? "\u062e\u0637 \u0627\u0644\u0637\u0648\u0644" : "Longitude"}
-                      disabled={pending}
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    className="circlemod-input"
-                    value={draft.allowedRadiusMeters}
-                    onChange={(e) => handleChange("allowedRadiusMeters", e.target.value)}
-                    placeholder={ar ? "\u0646\u0637\u0627\u0642 \u0627\u0644\u0633\u0645\u0627\u062d \u0628\u0627\u0644\u0645\u062a\u0631" : "Allowed radius in meters"}
-                    disabled={pending}
+                <div className="mt-3">
+                  <LocationPicker
+                    active={isOpen}
+                    ar={ar}
+                    latitude={draft.latitude}
+                    longitude={draft.longitude}
+                    allowedRadiusMeters={draft.allowedRadiusMeters}
+                    pending={pending}
+                    onChange={handleChange}
                   />
                 </div>
               ) : null}
