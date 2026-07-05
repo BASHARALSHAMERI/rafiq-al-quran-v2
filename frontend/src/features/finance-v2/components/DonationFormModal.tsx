@@ -8,7 +8,6 @@ import {
   CreditCard,
   Calendar,
   StickyNote,
-  AlertCircle,
   Target
 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
@@ -37,6 +36,7 @@ interface DonationFormState {
 
 interface DonationFormModalProps {
   ar: boolean;
+  canReceive: boolean;
   isOpen: boolean;
   onClose: () => void;
   form: DonationFormState;
@@ -51,12 +51,12 @@ interface DonationFormModalProps {
 
 export default function DonationFormModal({
   ar,
+  canReceive,
   isOpen,
   onClose,
   form,
   setForm,
   pending,
-  error,
   donors,
   centers,
   currencies,
@@ -220,18 +220,30 @@ export default function DonationFormModal({
             <span>{ar ? "المبلغ والعملة" : "Amount & Currency"}</span>
           </div>
           <div className="circlemod-row">
-            <div className="circlemod-field circlemod-field--sm">
+            <div className="circlemod-field circlemod-field--lg">
               <label htmlFor="dn-amount">{ar ? "المبلغ *" : "Amount *"}</label>
               <input
                 id="dn-amount"
                 className="circlemod-input"
                 type="number"
                 min={1}
+                max={100000000}
                 step="any"
                 value={form.originalAmount}
                 onChange={(e) => handleChange("originalAmount", e.target.value)}
                 placeholder={ar ? "المبلغ" : "Amount"}
                 required
+                onInvalid={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.validity.rangeUnderflow) {
+                    target.setCustomValidity(ar ? "يجب أن يكون المبلغ أكبر من 0" : "Amount must be greater than 0");
+                  } else if (target.validity.rangeOverflow) {
+                    target.setCustomValidity(ar ? "المبلغ يتجاوز الحد المسموح به" : "Amount exceeds max limit");
+                  } else if (target.validity.valueMissing) {
+                    target.setCustomValidity(ar ? "المبلغ مطلوب" : "Amount is required");
+                  }
+                }}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--sm">
@@ -265,14 +277,15 @@ export default function DonationFormModal({
                 </label>
                 <input
                   id="dn-rate"
-                  className="circlemod-input"
+                  className="circlemod-input cursor-not-allowed opacity-70 bg-gray-50 dark:bg-gray-800"
                   type="number"
                   min={0}
                   step="any"
                   value={form.exchangeRateToBase}
                   onChange={(e) => handleChange("exchangeRateToBase", e.target.value)}
                   placeholder={isYer ? "1" : (ar ? "سعر الصرف" : "Rate")}
-                  disabled={isYer}
+                  disabled
+                  readOnly
                   required={!isYer}
                 />
               </div>
@@ -317,7 +330,9 @@ export default function DonationFormModal({
                 value={form.mode}
                 onChange={(e) => handleChange("mode", e.target.value)}
               >
+                {canReceive ? (
                 <option value="RECEIVED">{ar ? "مستلم الآن" : "Received Now"}</option>
+                ) : null}
                 <option value="PLEDGED">{ar ? "تعهد" : "Pledge"}</option>
               </select>
             </div>
@@ -360,8 +375,7 @@ export default function DonationFormModal({
         <div className="circlemod-section">
           <div className="circlemod-section-head">
             <StickyNote size={15} className="circlemod-section-icon" />
-            <span>{ar ? "الغرض والملاحظات" : "Purpose & Notes"}</span>
-            <span className="circlemod-section-hint">{ar ? "اختياري" : "Optional"}</span>
+            <span>{ar ? "الغرض من التبرع والملاحظات" : "Purpose & Notes"}</span>
           </div>
           <div className="circlemod-row">
             <div className="circlemod-field circlemod-field--lg">
@@ -371,7 +385,15 @@ export default function DonationFormModal({
                 className="circlemod-input"
                 value={form.purpose}
                 onChange={(e) => handleChange("purpose", e.target.value)}
-                placeholder={ar ? "الغرض من التبرع" : "Donation Purpose"}
+                placeholder={ar ? "الغرض من التبرع (مطلوب)" : "Donation Purpose (Required)"}
+                required
+                onInvalid={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.validity.valueMissing) {
+                    target.setCustomValidity(ar ? "الغرض من التبرع مطلوب" : "Donation purpose is required");
+                  }
+                }}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
           </div>
@@ -389,12 +411,7 @@ export default function DonationFormModal({
           </div>
         </div>
 
-        {error ? (
-          <div className="circlemod-error" role="alert">
-            <AlertCircle size={14} className="flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+
       </form>
     </Modal>
   );

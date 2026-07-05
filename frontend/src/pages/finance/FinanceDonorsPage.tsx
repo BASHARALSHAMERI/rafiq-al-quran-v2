@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Gift, Plus, RefreshCw, AlertTriangle, Search, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -18,7 +18,8 @@ import {
   useFinanceV2DonorsQuery,
   useLatestExchangeRateQuery,
   useReceiveFinanceV2DonationMutation,
-  useUpdateFinanceV2DonorMutation
+  useUpdateFinanceV2DonorMutation,
+  useDeleteFinanceV2DonorMutation
 } from "../../features/finance-v2/finance-v2.hooks";
 import type {
   DonationStatusV2,
@@ -148,6 +149,9 @@ export default function FinanceDonorsPage() {
   const user = useAuthStore((state) => state.user);
   const canManageDonors =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canReceiveDonations =
+    user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
+  const canCreateDonation = canManageDonors || canReceiveDonations;
 
   const [centerId, setCenterId] = useState<number | undefined>();
   const [q, setQ] = useState("");
@@ -214,10 +218,11 @@ export default function FinanceDonorsPage() {
 
   const createDonorM = useCreateFinanceV2DonorMutation();
   const updateDonorM = useUpdateFinanceV2DonorMutation();
+  const deleteDonorM = useDeleteFinanceV2DonorMutation();
   const createDonationM = useCreateFinanceV2DonationMutation();
   const receiveDonationM = useReceiveFinanceV2DonationMutation();
 
-  const isSavingDonor = createDonorM.isPending || updateDonorM.isPending;
+  const isSavingDonor = createDonorM.isPending || updateDonorM.isPending || deleteDonorM.isPending;
   const isSavingDonation = createDonationM.isPending;
   const isReceiving = receiveDonationM.isPending;
 
@@ -278,7 +283,7 @@ export default function FinanceDonorsPage() {
 
   const openCreateDonation = () => {
     setFormError("");
-    setDonationForm({ ...emptyDonationForm(), centerId: centerId ? String(centerId) : "" });
+    setDonationForm({ ...emptyDonationForm(), centerId: centerId ? String(centerId) : "", mode: canReceiveDonations ? "RECEIVED" : "PLEDGED" });
     setDonationModalOpen(true);
   };
 
@@ -287,13 +292,28 @@ export default function FinanceDonorsPage() {
     setFormError("");
     try {
       if (!donorForm.name.trim()) throw new Error(ar ? "اسم المتبرع مطلوب" : "Donor name is required");
+      const nameParts = donorForm.name.trim().split(/\s+/);
+      if (nameParts.length < 3) throw new Error(ar ? "الاسم يجب أن يكون ثلاثياً على الأقل" : "Name must be at least 3 parts");
+      const nameRegex = /^[\p{L}\s]+$/u;
+      if (!nameRegex.test(donorForm.name.trim())) throw new Error(ar ? "الاسم يجب أن يحتوي على أحرف فقط" : "Name must contain only letters");
+
+      const phoneRegex = /^\+?[0-9]{8,15}$/;
+      if (!phoneRegex.test(donorForm.phone.trim())) throw new Error(ar ? "رقم الهاتف يجب أن يحتوي على أرقام فقط (8 إلى 15 رقماً)" : "Phone must contain digits only (8-15 digits)");
+
+      if (donorForm.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(donorForm.email.trim())) throw new Error(ar ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format");
+      }
+
+      if (!donorForm.address.trim()) throw new Error(ar ? "العنوان مطلوب" : "Address is required");
+
       const payload = {
         centerId: toId(donorForm.centerId) ?? null,
         name: donorForm.name.trim(),
         donorType: donorForm.donorType,
-        phone: donorForm.phone.trim() || undefined,
+        phone: donorForm.phone.trim(),
         email: donorForm.email.trim() || undefined,
-        address: donorForm.address.trim() || undefined,
+        address: donorForm.address.trim(),
         contactPerson: donorForm.contactPerson.trim() || undefined,
         notes: donorForm.notes.trim() || undefined,
         isActive: donorForm.isActive
@@ -316,6 +336,25 @@ export default function FinanceDonorsPage() {
     }
   };
 
+  const handleDeleteDonor = async () => {
+    if (!donorForm.id) return;
+    if (!window.confirm(ar ? "هل أنت متأكد من حذف هذا المتبرع؟" : "Are you sure you want to delete this donor?")) return;
+
+    setFormError("");
+    try {
+      await deleteDonorM.mutateAsync(donorForm.id);
+      notifySuccess(ar ? "تم حذف المتبرع بنجاح" : "Donor deleted successfully");
+      setDonorModalOpen(false);
+    } catch (error) {
+      const message = getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: error instanceof Error ? error.message : ar ? "تعذر حذف المتبرع" : "Unable to delete donor"
+      });
+      setFormError(message);
+      notifyError(message);
+    }
+  };
+
   const handleCreateDonation = async (event: React.FormEvent) => {
     event.preventDefault();
     setFormError("");
@@ -330,6 +369,9 @@ export default function FinanceDonorsPage() {
       if (!donorId) throw new Error(ar ? "اختر المتبرع" : "Select donor");
       if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
         throw new Error(ar ? "المبلغ الأصلي غير صحيح" : "Invalid original amount");
+      }
+      if (originalAmount > 100000000) {
+        throw new Error(ar ? "المبلغ يتجاوز الحد المسموح به (100,000,000)" : "Amount exceeds maximum allowed (100,000,000)");
       }
       if (!isYer && (!Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
         throw new Error(ar ? "سعر الصرف غير صحيح" : "Invalid exchange rate");
@@ -347,7 +389,7 @@ export default function FinanceDonorsPage() {
         exchangeRateToBase,
         donationDate: donationForm.donationDate,
         paymentMethod: donationForm.paymentMethod,
-        purpose: donationForm.purpose.trim() || undefined,
+        purpose: donationForm.purpose.trim(),
         status: donationForm.mode === "RECEIVED" ? "RECEIVED" : "PLEDGED",
         isPledge: donationForm.mode === "PLEDGED",
         pledgeDueDate: donationForm.mode === "PLEDGED" ? donationForm.pledgeDueDate : undefined,
@@ -613,7 +655,7 @@ export default function FinanceDonorsPage() {
       align: "center",
       isActions: true,
       render: (donation) =>
-        canManageDonors && donation.status === "PLEDGED" ? (
+        canReceiveDonations && donation.status === "PLEDGED" ? (
           <Button size="sm" variant="primary" onClick={() => openReceivePledge(donation)}>
             {ar ? "استلام" : "Receive"}
           </Button>
@@ -646,11 +688,13 @@ export default function FinanceDonorsPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {canManageDonors ? (
+                {canCreateDonation ? (
                   <>
+                    {canManageDonors ? (
                     <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonor}>
                       {ar ? "إضافة متبرع" : "Add Donor"}
                     </Button>
+                    ) : null}
                     <Button variant="primary" size="sm" className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<Plus className="w-4 h-4" />} onClick={openCreateDonation}>
                       {ar ? "إضافة تبرع" : "Add Donation"}
                     </Button>
@@ -897,10 +941,12 @@ export default function FinanceDonorsPage() {
         centers={centers}
         donorTypeLabels={donorTypeLabels}
         onSave={handleSaveDonor}
+        onDelete={handleDeleteDonor}
       />
 
       <DonationFormModal
         ar={ar}
+        canReceive={canReceiveDonations}
         isOpen={donationModalOpen}
         onClose={() => setDonationModalOpen(false)}
         form={donationForm}
@@ -992,7 +1038,7 @@ export default function FinanceDonorsPage() {
              <label className="block text-xs font-bold mb-1 opacity-60">{ar ? "ملاحظات" : "Notes"}</label>
             <textarea className="fin-input" value={receiveForm.notes} onChange={(event) => setReceiveForm((previous) => ({ ...previous, notes: event.target.value }))} placeholder={ar ? "ملاحظات..." : "Notes..."} />
           </div>
-          {formError ? <p className="fin-error fin-error--modal">{formError}</p> : null}
+
         </form>
       </Modal>
     </div>

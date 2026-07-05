@@ -657,9 +657,15 @@
   .ctr-kpis-modern {
     grid-template-columns: repeat(2, 1fr);
   }
+  .ctr-grid-modern {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (max-width: 640px) {
   .ctr-kpis-modern {
+    grid-template-columns: 1fr;
+  }
+  .ctr-grid-modern {
     grid-template-columns: 1fr;
   }
   .ctr-card-modern.list-view {

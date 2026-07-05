@@ -1,4 +1,6 @@
 import {
+  AuditAction,
+  AuditEntityType,
   DonationStatus,
   DonorType,
   PaymentMethod,
@@ -11,7 +13,7 @@ import {
 import { prisma } from "../../../shared/db/prisma";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { financeV2Domain } from "../finance-v2.domain";
-import { accountSelect, nextVoucherNoTx, normalize, voucherSelect } from "../finance-v2.internal";
+import { accountSelect, addAudit, ensureCenterFundAccountTx, ensureOrgFundAccountTx, nextVoucherNoTx, normalize, voucherSelect } from "../finance-v2.internal";
 import { resolveCurrencyAmountTx, type CurrencyAmountInput } from "./currency-amount.helper";
 
 const donorSelect = {
@@ -149,26 +151,20 @@ const donationCenterScopeWhere = (
   return centerScope?.length ? { OR: [{ centerId: { in: centerScope } }, { centerId: null }] } : {};
 };
 
+/**
+ * Resolves the correct fund account for a donation receipt voucher.
+ * Uses ensure-helpers so the ORG_FUND / CENTER_FUND account is created
+ * automatically on first use instead of throwing FINANCE_ACCOUNT_MISSING.
+ */
 const resolveDonationAccountTx = async (
   tx: Prisma.TransactionClient,
   scope: ScopeContext,
   centerId: number | null
 ) => {
-  const account = await tx.financeAccount.findFirst({
-    where: {
-      organizationId: scope.organizationId,
-      isActive: true,
-      ...(centerId ? { centerId, accountType: "CENTER_FUND" } : { centerId: null, accountType: "ORG_FUND" })
-    },
-    orderBy: { id: "asc" },
-    select: accountSelect
-  });
-
-  if (!account) {
-    throw financeV2Domain.financeError("Donation receipt finance account is missing", 409, "FINANCE_ACCOUNT_MISSING");
+  if (centerId) {
+    return ensureCenterFundAccountTx(tx, { organizationId: scope.organizationId, centerId });
   }
-
-  return account;
+  return ensureOrgFundAccountTx(tx, scope.organizationId);
 };
 
 const createReceiptVoucherTx = async (
@@ -260,6 +256,33 @@ export const donorsService = {
     financeV2Domain.assertCanWrite(scope);
     financeV2Domain.ensureCenterAllowed(scope, input.centerId);
 
+    const nameStr = input.name.trim();
+    if (nameStr.split(/\s+/).length < 3) {
+      throw financeV2Domain.financeError("Name must be at least 3 parts", 400, "VALIDATION_ERROR");
+    }
+    const nameRegex = /^[\p{L}\s]+$/u;
+    if (!nameRegex.test(nameStr)) {
+      throw financeV2Domain.financeError("Name must contain only letters", 400, "VALIDATION_ERROR");
+    }
+
+    const existingName = await prisma.donor.findFirst({
+      where: { organizationId: scope.organizationId, name: nameStr },
+      select: { id: true }
+    });
+    if (existingName) {
+      throw financeV2Domain.financeError("Donor name is already registered", 409, "DUPLICATE_DONOR_NAME");
+    }
+
+    if (input.phone) {
+      const phoneRegex = /^\+?[0-9]{8,15}$/;
+      if (!phoneRegex.test(input.phone.trim())) throw financeV2Domain.financeError("Invalid phone number format", 400, "VALIDATION_ERROR");
+    }
+
+    if (input.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input.email.trim())) throw financeV2Domain.financeError("Invalid email format", 400, "VALIDATION_ERROR");
+    }
+
     const donor = await prisma.donor.create({
       data: {
         organizationId: scope.organizationId,
@@ -291,6 +314,35 @@ export const donorsService = {
     financeV2Domain.ensureCenterAllowed(scope, existing.centerId);
     if (input.centerId !== undefined) financeV2Domain.ensureCenterAllowed(scope, input.centerId);
 
+    if (input.name !== undefined) {
+      const nameStr = input.name.trim();
+      if (nameStr.split(/\s+/).length < 3) {
+        throw financeV2Domain.financeError("Name must be at least 3 parts", 400, "VALIDATION_ERROR");
+      }
+      const nameRegex = /^[\p{L}\s]+$/u;
+      if (!nameRegex.test(nameStr)) {
+        throw financeV2Domain.financeError("Name must contain only letters", 400, "VALIDATION_ERROR");
+      }
+
+      const existingName = await prisma.donor.findFirst({
+        where: { organizationId: scope.organizationId, name: nameStr, id: { not: donorId } },
+        select: { id: true }
+      });
+      if (existingName) {
+        throw financeV2Domain.financeError("Donor name is already registered", 409, "DUPLICATE_DONOR_NAME");
+      }
+    }
+
+    if (input.phone) {
+      const phoneRegex = /^\+?[0-9]{8,15}$/;
+      if (!phoneRegex.test(input.phone.trim())) throw financeV2Domain.financeError("Invalid phone number format", 400, "VALIDATION_ERROR");
+    }
+
+    if (input.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input.email.trim())) throw financeV2Domain.financeError("Invalid email format", 400, "VALIDATION_ERROR");
+    }
+
     const donor = await prisma.donor.update({
       where: { id: existing.id },
       data: {
@@ -308,6 +360,35 @@ export const donorsService = {
     });
 
     return normalize(donor);
+  },
+
+  async deleteDonor(scope: ScopeContext, donorId: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const existing = await prisma.donor.findFirst({
+      where: { id: donorId, organizationId: scope.organizationId },
+      select: { id: true, centerId: true }
+    });
+    if (!existing) throw financeV2Domain.financeError("Donor not found", 404, "ENTITY_NOT_FOUND");
+    financeV2Domain.ensureCenterAllowed(scope, existing.centerId);
+
+    const donationsCount = await prisma.donation.count({
+      where: { donorId: existing.id }
+    });
+    if (donationsCount > 0) {
+      throw financeV2Domain.financeError(
+        "Cannot delete donor with existing donations",
+        409,
+        "CANNOT_DELETE_DONOR"
+      );
+    }
+
+    await prisma.donor.delete({
+      where: { id: existing.id }
+    });
+
+    return { success: true };
   },
 
   async listDonations(scope: ScopeContext, query: { centerId?: number; donorId?: number; status?: DonationStatus; page?: number; pageSize?: number }) {
@@ -412,7 +493,13 @@ export const donorsService = {
 
   async createDonation(scope: ScopeContext, input: DonationInput) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+
+    const requestedReceived = input.status === DonationStatus.RECEIVED || input.isPledge === false;
+    if (requestedReceived) {
+      financeV2Domain.assertCanExecute(scope);
+    } else {
+      financeV2Domain.assertCanWrite(scope);
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const donor = await tx.donor.findFirst({
@@ -427,7 +514,6 @@ export const donorsService = {
         throw financeV2Domain.financeError("Donation center must match donor center", 400, "VALIDATION_ERROR");
       }
 
-      const requestedReceived = input.status === DonationStatus.RECEIVED || input.isPledge === false;
       const status = requestedReceived ? DonationStatus.RECEIVED : DonationStatus.PLEDGED;
 
       // FA-UX-4B: derive YER base amount from the optional currency triple.
@@ -482,6 +568,17 @@ export const donorsService = {
         select: donationSelect
       });
     });
+    if (result.voucherId) {
+      await addAudit({
+        scope,
+        action: AuditAction.CREATE,
+        entityType: AuditEntityType.VOUCHER,
+        entityId: result.voucherId,
+        centerId: result.centerId,
+        summary: "Donation received and receipt voucher created"
+      });
+    }
+
 
     return normalize(result);
   },
@@ -492,7 +589,7 @@ export const donorsService = {
     input: { paymentMethod?: PaymentMethod; receivedDate?: string; exchangeRateToBase?: number; notes?: string | null }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const result = await prisma.$transaction(async (tx) => {
       const donation = await tx.donation.findFirst({
@@ -559,6 +656,15 @@ export const donorsService = {
         select: donationSelect
       });
     });
+    await addAudit({
+      scope,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.VOUCHER,
+      entityId: result.voucherId!,
+      centerId: result.centerId,
+      summary: "Donation pledge received and receipt voucher created"
+    });
+
 
     return normalize(result);
   }

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { User, Building2, Phone, Mail, MapPin, StickyNote, AlertCircle, UserCheck } from "lucide-react";
+import { User, Building2, Phone, Mail, MapPin, StickyNote, UserCheck } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import type { DonorTypeV2 } from "../types";
@@ -28,6 +28,7 @@ interface DonorFormModalProps {
   centers: Array<{ id: number; name: string }>;
   donorTypeLabels: Record<DonorTypeV2, { ar: string; en: string }>;
   onSave: (e: React.FormEvent) => void;
+  onDelete?: () => void;
 }
 
 export default function DonorFormModal({
@@ -37,10 +38,10 @@ export default function DonorFormModal({
   form,
   setForm,
   pending,
-  error,
   centers,
   donorTypeLabels,
-  onSave
+  onSave,
+  onDelete
 }: DonorFormModalProps) {
   const handleChange = useCallback(
     (field: keyof DonorFormState, value: any) => {
@@ -64,17 +65,26 @@ export default function DonorFormModal({
       bodyClassName="circlemod-body"
       footerClassName="circlemod-footer-wrap"
       footer={
-        <div className="circlemod-footer">
-          <Button variant="secondary" onClick={onClose} disabled={pending}>
-            {ar ? "إلغاء" : "Cancel"}
-          </Button>
-          <Button variant="primary" isLoading={pending} onClick={onSave}>
-            {ar ? "حفظ المتبرع" : "Save Donor"}
-          </Button>
+        <div className="circlemod-footer flex justify-between w-full">
+          {form.id && onDelete ? (
+            <Button variant="danger" onClick={onDelete} disabled={pending}>
+              {ar ? "حذف" : "Delete"}
+            </Button>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose} disabled={pending}>
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button variant="primary" type="submit" form="finance-donor-form" isLoading={pending}>
+              {ar ? "حفظ المتبرع" : "Save Donor"}
+            </Button>
+          </div>
         </div>
       }
     >
-      <div className="circlemod-form">
+      <form id="finance-donor-form" className="circlemod-form" onSubmit={onSave}>
         {/* Section 1: Identity */}
         <div className="circlemod-section">
           <div className="circlemod-section-head">
@@ -90,6 +100,10 @@ export default function DonorFormModal({
                 value={form.name}
                 onChange={(e) => handleChange("name", e.target.value)}
                 placeholder={ar ? "الاسم الكامل" : "Full Name"}
+                pattern="^[\p{L}]+(?:\s+[\p{L}]+){2,}.*$"
+                title={ar ? "الاسم يجب أن يكون ثلاثياً على الأقل ويحتوي على أحرف فقط" : "Name must be at least 3 parts and contain only letters"}
+                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(ar ? "الاسم يجب أن يكون ثلاثياً على الأقل ويحتوي على أحرف فقط" : "Name must be at least 3 parts and contain only letters")}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
                 required
               />
             </div>
@@ -157,13 +171,12 @@ export default function DonorFormModal({
           <div className="circlemod-section-head">
             <Phone size={15} className="circlemod-section-icon" />
             <span>{ar ? "معلومات التواصل" : "Contact Information"}</span>
-            <span className="circlemod-section-hint">{ar ? "اختياري" : "Optional"}</span>
           </div>
           <div className="circlemod-row">
             <div className="circlemod-field circlemod-field--lg">
               <label htmlFor="dn-phone">
                 <Phone size={12} className="inline-block ml-1 opacity-60" />
-                {ar ? "رقم الهاتف" : "Phone Number"}
+                {ar ? "رقم الهاتف *" : "Phone Number *"}
               </label>
               <input
                 id="dn-phone"
@@ -171,6 +184,18 @@ export default function DonorFormModal({
                 value={form.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
                 placeholder={ar ? "رقم الهاتف" : "Phone Number"}
+                pattern="^\+?[0-9]{8,15}$"
+                title={ar ? "رقم الهاتف يجب أن يحتوي على أرقام فقط (8 إلى 15 رقماً)، يمكن أن يبدأ بـ +" : "Phone must contain digits only (8-15 digits), can start with +"}
+                required
+                onInvalid={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.validity.patternMismatch) {
+                    target.setCustomValidity(ar ? "رقم الهاتف يجب أن يحتوي على أرقام فقط (8 إلى 15 رقماً)" : "Phone must contain digits only (8-15 digits)");
+                  } else if (target.validity.valueMissing) {
+                    target.setCustomValidity(ar ? "رقم الهاتف مطلوب" : "Phone number is required");
+                  }
+                }}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--lg">
@@ -185,6 +210,13 @@ export default function DonorFormModal({
                 value={form.email}
                 onChange={(e) => handleChange("email", e.target.value)}
                 placeholder={ar ? "البريد الإلكتروني" : "Email Address"}
+                onInvalid={(e) => {
+                  const target = e.target as HTMLInputElement;
+                  if (target.validity.typeMismatch) {
+                    target.setCustomValidity(ar ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format");
+                  }
+                }}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
           </div>
@@ -192,7 +224,7 @@ export default function DonorFormModal({
             <div className="circlemod-field circlemod-field--lg">
               <label htmlFor="dn-address">
                 <MapPin size={12} className="inline-block ml-1 opacity-60" />
-                {ar ? "العنوان" : "Address"}
+                {ar ? "العنوان *" : "Address *"}
               </label>
               <input
                 id="dn-address"
@@ -200,16 +232,21 @@ export default function DonorFormModal({
                 value={form.address}
                 onChange={(e) => handleChange("address", e.target.value)}
                 placeholder={ar ? "العنوان" : "Address"}
+                required
+                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(ar ? "العنوان مطلوب" : "Address is required")}
+                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--lg">
-              <label htmlFor="dn-contact">{ar ? "شخص التواصل" : "Contact Person"}</label>
+              <label htmlFor="dn-contact">
+                {ar ? "شخص التواصل (ممثل المتبرع إن وجد)" : "Contact Person (Representative if any)"}
+              </label>
               <input
                 id="dn-contact"
                 className="circlemod-input"
                 value={form.contactPerson}
                 onChange={(e) => handleChange("contactPerson", e.target.value)}
-                placeholder={ar ? "شخص التواصل" : "Contact Person"}
+                placeholder={ar ? "الاسم الذي سيتم التواصل معه" : "Name of person to contact"}
               />
             </div>
           </div>
@@ -236,13 +273,7 @@ export default function DonorFormModal({
           </div>
         </div>
 
-        {error ? (
-          <div className="circlemod-error" role="alert">
-            <AlertCircle size={14} className="flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        ) : null}
-      </div>
+      </form>
     </Modal>
   );
 }
