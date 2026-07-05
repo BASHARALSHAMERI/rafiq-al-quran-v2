@@ -18,7 +18,7 @@ import { safeDate, toDateOnly } from "../../../shared/utils/time";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { accountingService, ensurePeriodOpenTx } from "../../accounting/accounting.service";
 import { financeV2Domain } from "../finance-v2.domain";
-import { addAudit, isKnownPrismaError, nextVoucherNoTx, normalize, postVoucherTx } from "../finance-v2.internal";
+import { addAudit, isKnownPrismaError, nextVoucherNoTx, normalize, postVoucherTx, getEffectivePolicyTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
   return tx.accountingAccount.findFirst({
@@ -357,8 +357,8 @@ export const expensesService = {
           undefined,
           "ACCOUNTING_MAPPING_MISSING",
           {
-            ar: "التصنيف غير مرتبط بحساب مصروفات ترحيل",
-            en: "Expense category is not linked to a posting expense account"
+            ar: "لا يمكن اعتماد الفاتورة لأن تصنيف المصروف غير مربوط بحساب محاسبي. يرجى ربط التصنيف بحساب مصروفات أولاً.",
+            en: "Cannot approve the invoice because the expense category is not linked to an accounting account. Please link the category to an expense account first."
           }
         );
       }
@@ -379,8 +379,8 @@ export const expensesService = {
           undefined,
           "ACCOUNTING_MAPPING_MISSING",
           {
-            ar: "التصنيف غير مرتبط بحساب مصروفات ترحيل",
-            en: "Expense category is not linked to a posting expense account"
+            ar: "لا يمكن اعتماد الفاتورة لأن تصنيف المصروف غير مربوط بحساب محاسبي. يرجى ربط التصنيف بحساب مصروفات أولاً.",
+            en: "Cannot approve the invoice because the expense category is not linked to an accounting account. Please link the category to an expense account first."
           }
         );
       }
@@ -538,12 +538,19 @@ export const expensesService = {
         })) > 0
       ) {
         throw new AppError(
-          "الحساب المالي غير مرتبط بحساب أصول ترحيل نشط",
+          "لا يمكن دفع الفاتورة لأن الصندوق أو الحساب المالي غير مربوط بحساب محاسبي من نوع أصل",
           409,
           { financeAccountId: financeAccount.id, expectedType: AccountingAccountType.ASSET },
           "FINANCE_ACCOUNT_LEDGER_MAPPING_MISSING"
         );
       }
+
+      // Read the effective financial policy to honour allowOverdraft setting
+      // (same pattern as payroll.service.ts and rewards.service.ts)
+      const policy = await getEffectivePolicyTx(tx, {
+        organizationId: scope.organizationId,
+        centerId: invoice.centerId
+      });
 
       // Create Finance Voucher (Disbursement)
       const voucherNo = await nextVoucherNoTx(tx, "DV", scope.organizationId);
@@ -568,7 +575,7 @@ export const expensesService = {
         voucherId: voucher.id,
         postedById: scope.userId,
         movementType: FinanceMovementType.VOUCHER_DISBURSEMENT,
-        allowOverdraft: false
+        allowOverdraft: policy.allowOverdraft
       });
 
       // Create Payment Record

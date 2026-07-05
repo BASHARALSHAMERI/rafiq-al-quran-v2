@@ -4,10 +4,11 @@ function FinanceTeamPage() {
   const isAr = document.documentElement.lang === "ar";
   return (
     <UserRolePage
-      role="ACCOUNTANT" // default/fallback role for types if needed, or we just pass allowedRoles
+      role="ACCOUNTANT"
       allowedRoles={["FINANCE_MANAGER", "ACCOUNTANT", "TREASURER"]}
       title={isAr ? "الفريق المالي" : "Finance Team"}
       description={isAr ? "إدارة المستخدمين الماليين (مدير مالي، محاسب، أمين صندوق)" : "Manage finance team members"}
+      addButtonLabel={isAr ? "إضافة مستخدم مالي" : "Add Finance User"}
     />
   );
 }

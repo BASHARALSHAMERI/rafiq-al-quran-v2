@@ -62,12 +62,14 @@ export default function UserRolePage({
   role,
   allowedRoles,
   title,
-  description
+  description,
+  addButtonLabel
 }: {
   role: Role;
   allowedRoles?: Role[];
   title?: string;
   description: string;
+  addButtonLabel?: string;
 }) {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -323,7 +325,7 @@ export default function UserRolePage({
                   </Button>
                   {canCreate ? (
                     <Button variant="primary" size="sm" leftIcon={<Plus />} onClick={() => setFormModal({ mode: "create" })}>
-                      {addLabel(role, ar)}
+                      {addButtonLabel ?? addLabel(role, ar)}
                     </Button>
                   ) : null}
                 </div>
