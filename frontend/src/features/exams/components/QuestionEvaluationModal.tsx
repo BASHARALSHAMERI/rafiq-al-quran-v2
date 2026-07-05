@@ -141,7 +141,7 @@ export function QuestionEvaluationModal({
         onClick={(event) => event.stopPropagation()}
         style={{
           width: shouldEnableScroll ? "min(720px, 94vw)" : "min(660px, 92vw)",
-          maxHeight: shouldEnableScroll ? "86vh" : "auto"
+          maxHeight: "90vh"
         }}
       >
         <header className="eval-header">
@@ -168,7 +168,7 @@ export function QuestionEvaluationModal({
           </button>
         </header>
 
-        <div className={`eval-body ${shouldEnableScroll ? "eval-body--scroll" : "eval-body--static"}`}>
+        <div className="eval-body eval-body--scroll">
           {/* Reference Range Section */}
           <section className="eval-panel eval-panel--refined">
             <div className="eval-panel__head">
@@ -276,7 +276,7 @@ export function QuestionEvaluationModal({
               )}
             </div>
 
-            <div className="eval-deductions-list">
+            <div className="eval-deductions-grid">
               {[
                 {
                   id: "prompting",

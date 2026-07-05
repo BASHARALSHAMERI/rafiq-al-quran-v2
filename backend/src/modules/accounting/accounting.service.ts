@@ -225,6 +225,17 @@ type PostPaymentJournalEntryTxInput = {
   postedById: number;
 };
 
+type PostInvoiceJournalEntryTxInput = {
+  invoiceId: number;
+  postedById: number;
+};
+
+type ReverseInvoiceJournalEntryTxInput = {
+  invoiceId: number;
+  postedById: number;
+  reason?: string;
+};
+
 type PostVoucherJournalEntryTxInput = {
   voucherId: number;
   postedById: number;
@@ -625,7 +636,7 @@ export const accountingService = {
       });
     });
   },
-  
+
   async getChartOfAccounts(
     scope: ScopeContext,
     query: {
@@ -906,6 +917,202 @@ export const accountingService = {
     return normalizeDecimals(result);
   },
 
+  async postInvoiceJournalEntryTx(
+    tx: Prisma.TransactionClient,
+    scope: ScopeContext,
+    input: PostInvoiceJournalEntryTxInput
+  ) {
+    assertAccountingRole(scope);
+
+    const existing = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.INVOICE,
+        sourceId: input.invoiceId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (existing) {
+      return normalizeDecimals(existing);
+    }
+
+    const invoice = await tx.invoice.findFirst({
+      where: {
+        id: input.invoiceId,
+        center: { organizationId: scope.organizationId }
+      }
+    });
+    if (!invoice) {
+      throw new AppError("Invoice not found", 404, undefined, "ENTITY_NOT_FOUND");
+    }
+    ensureCenterAllowed(scope, invoice.centerId);
+
+    const receivableAccount = await findRequiredAccountTx(tx, {
+      organizationId: scope.organizationId,
+      systemKey: "STUDENT_RECEIVABLES",
+      fallbackCode: "1140",
+      expectedType: AccountingAccountType.ASSET
+    });
+    const revenueAccount = await findRequiredAccountTx(tx, {
+      organizationId: scope.organizationId,
+      systemKey: "STUDENT_CONTRIBUTIONS_REVENUE",
+      fallbackCode: "4100",
+      expectedType: AccountingAccountType.REVENUE
+    });
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, invoice.issuedAt);
+    const postedAt = new Date();
+
+    const entry = await tx.journalEntry.create({
+      data: {
+        organizationId: scope.organizationId,
+        centerId: invoice.centerId,
+        entryNo: `INV-${scope.organizationId}-${invoice.id}`,
+        entryDate: invoice.issuedAt,
+        sourceType: JournalSourceType.INVOICE,
+        sourceId: invoice.id,
+        status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
+        description: `Student invoice ${invoice.id}`,
+        postedById: input.postedById,
+        postedAt
+      }
+    });
+
+    await tx.journalEntryLine.createMany({
+      data: [
+        {
+          organizationId: scope.organizationId,
+          journalEntryId: entry.id,
+          accountId: receivableAccount.id,
+          centerId: invoice.centerId,
+          debit: invoice.amount,
+          credit: new Prisma.Decimal(0),
+          memo: "Student receivable",
+          sourceLineType: JournalSourceType.INVOICE,
+          sourceLineId: invoice.id
+        },
+        {
+          organizationId: scope.organizationId,
+          journalEntryId: entry.id,
+          accountId: revenueAccount.id,
+          centerId: invoice.centerId,
+          debit: new Prisma.Decimal(0),
+          credit: invoice.amount,
+          memo: "Student contributions revenue",
+          sourceLineType: JournalSourceType.INVOICE,
+          sourceLineId: invoice.id
+        }
+      ]
+    });
+
+    const created = await tx.journalEntry.findUnique({
+      where: { id: entry.id },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    return normalizeDecimals(created);
+  },
+
+  async reverseInvoiceJournalEntryTx(
+    tx: Prisma.TransactionClient,
+    scope: ScopeContext,
+    input: ReverseInvoiceJournalEntryTxInput
+  ) {
+    assertAccountingRole(scope);
+
+    const original = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.INVOICE,
+        sourceId: input.invoiceId
+      },
+      include: { lines: true }
+    });
+    if (!original) return null;
+
+    const reversalSourceId = -input.invoiceId;
+    const existing = await tx.journalEntry.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        sourceType: JournalSourceType.INVOICE,
+        sourceId: reversalSourceId
+      },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+    if (existing) return normalizeDecimals(existing);
+
+    const entryDate = new Date();
+    const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, entryDate);
+    const entry = await tx.journalEntry.create({
+      data: {
+        organizationId: scope.organizationId,
+        centerId: original.centerId,
+        entryNo: `INV-CANCEL-${scope.organizationId}-${input.invoiceId}`,
+        entryDate,
+        sourceType: JournalSourceType.INVOICE,
+        sourceId: reversalSourceId,
+        status: JournalEntryStatus.POSTED,
+        fiscalPeriodId: fiscalPeriod?.id ?? null,
+        description: input.reason?.trim() || `Cancel student invoice ${input.invoiceId}`,
+        postedById: input.postedById,
+        postedAt: entryDate
+      }
+    });
+
+    await tx.journalEntryLine.createMany({
+      data: original.lines.map((line) => ({
+        organizationId: scope.organizationId,
+        journalEntryId: entry.id,
+        accountId: line.accountId,
+        centerId: line.centerId,
+        debit: line.credit,
+        credit: line.debit,
+        memo: `Reversal: ${line.memo ?? ""}`.trim(),
+        sourceLineType: JournalSourceType.INVOICE,
+        sourceLineId: input.invoiceId
+      }))
+    });
+
+    const created = await tx.journalEntry.findUnique({
+      where: { id: entry.id },
+      include: {
+        lines: {
+          orderBy: { id: "asc" },
+          include: {
+            account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } }
+          }
+        },
+        postedBy: { select: { id: true, fullName: true } }
+      }
+    });
+
+    return normalizeDecimals(created);
+  },
   async postPaymentJournalEntryTx(
     tx: Prisma.TransactionClient,
     scope: ScopeContext,
@@ -972,9 +1179,9 @@ export const accountingService = {
     });
     const creditAccount = await findRequiredAccountTx(tx, {
       organizationId: payment.organizationId,
-      systemKey: "STUDENT_CONTRIBUTIONS_REVENUE",
-      fallbackCode: "4100",
-      expectedType: AccountingAccountType.REVENUE
+      systemKey: "STUDENT_RECEIVABLES",
+      fallbackCode: "1140",
+      expectedType: AccountingAccountType.ASSET
     });
 
     const amount = payment.amount;
@@ -1018,7 +1225,7 @@ export const accountingService = {
           centerId,
           debit: new Prisma.Decimal(0),
           credit: amount,
-          memo: "Student contributions revenue",
+          memo: "Student receivable settlement",
           sourceLineType: JournalSourceType.PAYMENT,
           sourceLineId: payment.id
         }

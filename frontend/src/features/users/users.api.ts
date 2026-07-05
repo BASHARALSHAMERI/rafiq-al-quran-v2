@@ -198,7 +198,7 @@ export const usersApi = {
   async getUsers(params: UsersQueryParams): Promise<UsersListResult<UserListItem>> {
     const response = await apiClient.get<ApiResponse<UsersPayload<UserListItem>>>("/users", {
       params: {
-        role: params.role,
+        role: Array.isArray(params.role) ? params.role.join(',') : params.role,
         centerId: params.centerId,
         circleId: params.circleId
       }

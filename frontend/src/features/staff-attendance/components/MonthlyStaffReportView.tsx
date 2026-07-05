@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   CalendarDays,
   CheckCircle,
@@ -9,7 +9,8 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowUpRight,
-  Download
+  Download,
+  Printer
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Badge } from "../../../components/ui/Badge";
@@ -19,9 +20,8 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import type { StaffMonthlyReport } from "../staff-attendance.api";
 import { useStaffMonthlyReport, useExportMonthlyReport } from "../staff-attendance.api";
-import {
-  useClientPagination
-} from "../../../shared/ui/useClientPagination";
+import { useClientPagination } from "../../../shared/ui/useClientPagination";
+import { printSummaryReport } from "../../accounting/printAccounting";
 
 const DEFAULT_MONTH = (() => {
   const now = new Date();
@@ -69,7 +69,7 @@ export function MonthlyStaffReportView() {
       label: ar ? "أيام العمل" : "Work Days",
       value: workDays,
       icon: Clock,
-      cls: "brand"
+      cls: "blue"
     },
     {
       label: ar ? "عدد الكادر" : "Staff Count",
@@ -188,30 +188,64 @@ export function MonthlyStaffReportView() {
     [ar, workDays]
   );
 
+  const handlePrint = () => {
+    printSummaryReport({
+      title: ar ? "تقرير حضور الكادر" : "Staff Attendance Report",
+      subtitle: ar ? `شهر ${month} - ${year}` : `Month ${month} - ${year}`,
+      kpis: [
+        { label: ar ? "أيام العمل" : "Work Days", value: workDays },
+        { label: ar ? "عدد الكادر" : "Staff Count", value: staff.length },
+        { label: ar ? "نسبة الحضور" : "Attendance %", value: `${attendancePct}%` },
+        { label: ar ? "إجمالي الزيارات" : "Total Visits", value: totalVisits },
+      ],
+      rows: staff.map((e) => ({
+        [ar ? "الموظف" : "Staff"]: e.fullName,
+        [ar ? "حضر" : "Present"]: e.presentDays,
+        [ar ? "غاب" : "Absent"]: e.absentDays,
+        [ar ? "بعذر" : "Excused"]: e.excusedDays,
+        [ar ? "إجازة" : "Leave"]: e.onLeaveDays,
+        [ar ? "زيارات" : "Visits"]: e.visitsCount,
+      })),
+      columns: Object.keys(staff[0] || {}).length
+        ? Object.keys({
+            [ar ? "الموظف" : "Staff"]: "",
+            [ar ? "حضر" : "Present"]: "",
+            [ar ? "غاب" : "Absent"]: "",
+            [ar ? "بعذر" : "Excused"]: "",
+            [ar ? "إجازة" : "Leave"]: "",
+            [ar ? "زيارات" : "Visits"]: "",
+          }).map((k) => ({
+            label: k,
+            render: (r: any) => r[k],
+            align: "center" as const,
+          }))
+        : [],
+    });
+  };
+
   return (
-    <section className="staff-ops-view ctr-workspace">
+    <section className="fin-premium-container">
       {/* ── KPIs ── */}
-      <div className="ctr-kpis-modern mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         {stats.map((stat) => (
-          <div key={stat.label} className={`ctr-kpi-modern ${stat.cls}`}>
-            <div className="ctr-kpi-icon-wrap">
-              <stat.icon size={22} />
+          <div key={stat.label} className="fin-kpi-card">
+            <div className={`fin-kpi-card__icon fin-kpi-icon--${stat.cls}`}>
+              <stat.icon size={20} />
             </div>
-            <div className="ctr-kpi-content">
-              <div className="ctr-kpi-val">{stat.value}</div>
-              <div className="ctr-kpi-label">{stat.label}</div>
+            <div className="fin-kpi-card__content">
+              <span className="fin-kpi-card__value">{stat.value}</span>
+              <span className="fin-kpi-card__label">{stat.label}</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* ── Controls ── */}
-      <div className="ctr-controls mb-6">
-        <div className="flex gap-4 items-center flex-1">
-          <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-            <CalendarDays className="text-slate-400 ms-2" size={16} />
+      <div className="fin-filters-container mb-6">
+        <div className="fin-filters-scroll">
+          <div className="fin-filter-item" style={{ minWidth: 200 }}>
+            <CalendarDays className="fin-filter-icon" size={16} />
             <select
-              className="ctr-search-input !h-8 !w-28 !bg-transparent !border-none !p-0 text-center text-sm font-semibold cursor-pointer"
               value={month}
               onChange={(e) => {
                 setMonthStr(`${year}-${String(e.target.value).padStart(2, "0")}`);
@@ -228,23 +262,17 @@ export function MonthlyStaffReportView() {
                 );
               })}
             </select>
-            <span className="text-slate-300">/</span>
+            <span className="text-slate-300 mx-1">/</span>
             <input
               type="number"
-              className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-sm font-semibold font-mono"
               value={year}
               onChange={(e) => {
                 setMonthStr(`${e.target.value}-${String(month).padStart(2, "0")}`);
                 pagination.setCurrentPage(1);
               }}
+              style={{ width: 70, fontWeight: 600 }}
             />
           </div>
-          <div className="text-[12px] text-slate-500 italic">
-            {ar ? "يتم تحديث البيانات تلقائياً عند تغيير الشهر" : "Data updates automatically on month change"}
-          </div>
-        </div>
-
-        <div className="ctr-filters-group">
           <Button
             variant="ghost"
             size="sm"
@@ -253,67 +281,63 @@ export function MonthlyStaffReportView() {
           >
             {ar ? "الشهر الحالي" : "Current Month"}
           </Button>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="secondary" size="sm" leftIcon={<Printer size={14} />} onClick={handlePrint}>
+            {ar ? "طباعة" : "Print"}
+          </Button>
           <Button
             variant="primary"
             size="sm"
+            leftIcon={<Download size={14} />}
             onClick={() => exportM.mutate({ month, year })}
             disabled={exportM.isPending || staff.length === 0}
-            className="flex items-center gap-1.5"
           >
-            <Download size={14} />
-            {exportM.isPending ? (ar ? "\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0635\u062f\u064a\u0631..." : "Exporting...") : (ar ? "\u062a\u0635\u062f\u064a\u0631 CSV" : "Export CSV")}
+            {exportM.isPending ? (ar ? "جارٍ التصدير..." : "Exporting...") : (ar ? "تصدير CSV" : "Export CSV")}
           </Button>
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {reportQuery.isError ? (
-          <ErrorState
-            title={ar ? "تعذر تحميل التقرير الشهري" : "Unable to load monthly report"}
-            onRetry={() => void reportQuery.refetch()}
-          />
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="ctr-card-modern !p-0 overflow-hidden shadow-sm border-slate-200"
-          >
-            <DataTable
-              columns={columns}
-              rows={pagination.pagedRows}
-              rowKey="userId"
-              loading={reportQuery.isLoading}
-              className="!border-none"
-              emptyState={
-                <EmptyState
-                  title={ar ? "لا توجد بيانات" : "No data found"}
-                />
-              }
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Pagination ── */}
-      {!reportQuery.isLoading && pagination.totalItems > 0 && (
-        <div className="ctr-footer mt-6">
-          <div className="ctr-page-size">
-            <span>{ar ? "الصفوف:" : "Rows:"}</span>
-            <select value={pagination.pageSize} onChange={(e) => pagination.setPageSize(Number(e.target.value))}>
-              {[25, 50, 100].map((sz) => <option key={sz} value={sz}>{sz}</option>)}
-            </select>
-          </div>
-          <div className="ctr-page-info text-slate-500 font-medium">
-             {ar
-              ? `عرض ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} من ${pagination.totalItems}`
-              : `Showing ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} of ${pagination.totalItems}`
+      {reportQuery.isError ? (
+        <ErrorState
+          title={ar ? "تعذر تحميل التقرير الشهري" : "Unable to load monthly report"}
+          onRetry={() => void reportQuery.refetch()}
+        />
+      ) : (
+        <div className="fin-premium-panel">
+          <DataTable
+            columns={columns}
+            rows={pagination.pagedRows}
+            rowKey="userId"
+            loading={reportQuery.isLoading}
+            emptyState={
+              <EmptyState
+                title={ar ? "لا توجد بيانات" : "No data found"}
+              />
             }
-          </div>
-          <div className="ctr-page-controls">
-            <button className="ctr-page-btn" disabled={pagination.currentPage === 1} onClick={() => pagination.setCurrentPage(p => p - 1)}><ChevronRight size={16} /></button>
-            <button className="ctr-page-btn active">{pagination.currentPage}</button>
-            <button className="ctr-page-btn" disabled={pagination.currentPage === pagination.totalPages} onClick={() => pagination.setCurrentPage(p => p + 1)}><ChevronLeft size={16} /></button>
-          </div>
+          />
+
+          {!reportQuery.isLoading && pagination.totalItems > 0 && (
+            <div className="ctr-footer">
+              <div className="ctr-page-size">
+                <span>{ar ? "الصفوف:" : "Rows:"}</span>
+                <select value={pagination.pageSize} onChange={(e) => pagination.setPageSize(Number(e.target.value))}>
+                  {[25, 50, 100].map((sz) => <option key={sz} value={sz}>{sz}</option>)}
+                </select>
+              </div>
+              <div className="ctr-page-info text-slate-500 font-medium">
+                {ar
+                  ? `عرض ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} من ${pagination.totalItems}`
+                  : `Showing ${Math.min(pagination.totalItems, (pagination.currentPage - 1) * pagination.pageSize + 1)} - ${Math.min(pagination.totalItems, pagination.currentPage * pagination.pageSize)} of ${pagination.totalItems}`
+                }
+              </div>
+              <div className="ctr-page-controls">
+                <button className="ctr-page-btn" disabled={pagination.currentPage === 1} onClick={() => pagination.setCurrentPage(p => p - 1)}><ChevronRight size={16} /></button>
+                <button className="ctr-page-btn active">{pagination.currentPage}</button>
+                <button className="ctr-page-btn" disabled={pagination.currentPage === pagination.totalPages} onClick={() => pagination.setCurrentPage(p => p + 1)}><ChevronLeft size={16} /></button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

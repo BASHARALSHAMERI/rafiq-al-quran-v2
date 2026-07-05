@@ -1,5 +1,5 @@
+import { ExpenseInvoiceStatus } from "@prisma/client";
 import { Request, Response } from "express";
-import { AppError } from "../../../shared/errors/app-error";
 import { expensesService } from "../services/expenses.service";
 
 export const expensesController = {
@@ -13,6 +13,12 @@ export const expensesController = {
     res.status(201).json({ data: supplier });
   },
 
+  async updateSupplier(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    const supplier = await expensesService.updateSupplier(req.scope!, id, req.body);
+    res.json({ data: supplier });
+  },
+
   async listExpenseCategories(req: Request, res: Response) {
     const categories = await expensesService.listExpenseCategories(req.scope!);
     res.json({ data: categories });
@@ -23,12 +29,19 @@ export const expensesController = {
     res.status(201).json({ data: category });
   },
 
+  async updateExpenseCategory(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    const category = await expensesService.updateExpenseCategory(req.scope!, id, req.body);
+    res.json({ data: category });
+  },
+
   async listExpenseInvoices(req: Request, res: Response) {
-    const centerId = req.query.centerId ? Number(req.query.centerId) : undefined;
-    const supplierId = req.query.supplierId ? Number(req.query.supplierId) : undefined;
-    const status = req.query.status as any;
-    
-    const invoices = await expensesService.listExpenseInvoices(req.scope!, { centerId, supplierId, status });
+    const query = res.locals.validatedQuery as {
+      centerId?: number;
+      supplierId?: number;
+      status?: ExpenseInvoiceStatus;
+    };
+    const invoices = await expensesService.listExpenseInvoices(req.scope!, query);
     res.json({ data: invoices });
   },
 
@@ -38,18 +51,21 @@ export const expensesController = {
   },
 
   async approveExpenseInvoice(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    if (isNaN(id)) throw new AppError("Invalid ID", 400);
-
+    const { id } = res.locals.validatedParams as { id: number };
     const invoice = await expensesService.approveExpenseInvoice(req.scope!, id);
     res.json({ data: invoice });
   },
 
   async payExpenseInvoice(req: Request, res: Response) {
-    const id = Number(req.params.id);
-    if (isNaN(id)) throw new AppError("Invalid ID", 400);
-
+    const { id } = res.locals.validatedParams as { id: number };
     const payment = await expensesService.payExpenseInvoice(req.scope!, id, req.body);
     res.status(201).json({ data: payment });
+  },
+
+  async cancelExpenseInvoice(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    const { reason } = res.locals.validatedBody as { reason?: string };
+    const invoice = await expensesService.cancelExpenseInvoice(req.scope!, id, reason);
+    res.json({ data: invoice });
   }
 };

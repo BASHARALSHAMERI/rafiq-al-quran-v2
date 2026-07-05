@@ -571,3 +571,229 @@
     width: 100%;
   }
 }
+
+/* ============================================================
+   FIELD TOOLTIP — رسائل توضيحية منبثقة
+   ============================================================ */
+
+.field-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-inline-start: 5px;
+}
+
+.field-tooltip__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary, #9ca3af);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, transform 0.15s;
+  line-height: 1;
+}
+
+.field-tooltip__trigger:hover,
+.field-tooltip__trigger:focus-visible {
+  color: var(--brand-600, #0d9488);
+  background: var(--brand-50, #f0fdfa);
+  transform: scale(1.15);
+  outline: none;
+}
+
+/* Popup base */
+.field-tooltip__popup {
+  position: absolute;
+  z-index: 9999;
+  width: 260px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #4b5563);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.55;
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.12),
+    0 2px 6px rgba(15, 23, 42, 0.06);
+  pointer-events: auto;
+  /* Entrance animation */
+  animation: tooltip-in 0.15s ease-out both;
+}
+
+/* Arrow shared */
+.field-tooltip__popup::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  transform: rotate(45deg);
+  left: calc(50% - 5px);
+}
+
+/* Top direction (default) */
+.field-tooltip__popup--top {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.field-tooltip__popup--top::before {
+  bottom: -6px;
+  border-top: none;
+  border-left: none;
+}
+
+/* Bottom direction */
+.field-tooltip__popup--bottom {
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.field-tooltip__popup--bottom::before {
+  top: -6px;
+  border-bottom: none;
+  border-right: none;
+}
+
+/* RTL adjustments — keep popup centered on the icon */
+[dir="rtl"] .field-tooltip__popup--top,
+[dir="rtl"] .field-tooltip__popup--bottom {
+  left: auto;
+  right: 50%;
+  transform: translateX(50%);
+}
+
+[dir="rtl"] .field-tooltip__popup::before {
+  left: auto;
+  right: calc(50% - 5px);
+}
+
+/* Entrance keyframe */
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes tooltip-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.field-tooltip__popup--top {
+  animation-name: tooltip-in;
+}
+
+.field-tooltip__popup--bottom {
+  animation-name: tooltip-in-bottom;
+}
+
+[dir="rtl"] .field-tooltip__popup--top {
+  animation-name: tooltip-in-rtl;
+}
+
+[dir="rtl"] .field-tooltip__popup--bottom {
+  animation-name: tooltip-in-bottom-rtl;
+}
+
+@keyframes tooltip-in-rtl {
+  from {
+    opacity: 0;
+    transform: translateX(50%) translateY(4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes tooltip-in-bottom-rtl {
+  from {
+    opacity: 0;
+    transform: translateX(50%) translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(50%) translateY(0) scale(1);
+  }
+}
+
+/* Tooltip label wrapper used in GoldenRecordsPage for labelled fields */
+.field-tooltip-label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.field-tooltip-label-row .input-label,
+.field-tooltip-label-row .golden-records-field__label {
+  margin-bottom: 0;
+}
+
+/* Source-toggle tooltip sits above the toggle bar */
+.golden-records-source-toggle-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-1);
+}
+
+.golden-records-source-toggle-header__label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Dark mode */
+[data-theme="dark"] .field-tooltip__popup {
+  background: color-mix(in srgb, var(--bg-surface) 90%, #0a1626 10%);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .field-tooltip__popup::before {
+  background: color-mix(in srgb, var(--bg-surface) 90%, #0a1626 10%);
+  border-color: var(--border-default);
+}
+
+[data-theme="dark"] .field-tooltip__trigger:hover,
+[data-theme="dark"] .field-tooltip__trigger:focus-visible {
+  background: var(--brand-900, #134e4a);
+  color: var(--brand-300, #5eead4);
+}
+
+/* Responsive: on narrow screens, keep popup within viewport */
+@media (max-width: 480px) {
+  .field-tooltip__popup {
+    width: 200px;
+    font-size: 0.76rem;
+  }
+}

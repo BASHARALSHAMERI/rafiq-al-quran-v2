@@ -168,6 +168,7 @@ export type CreateExamPayload = {
   title: string;
   type: SupportedExamTemplateType;
   examBranch?: string | null;
+  purpose?: ExamPurpose;
   maxScore: number;
   passScore: number;
   criteria?: ExamCriteriaPayload;

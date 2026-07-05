@@ -9,6 +9,8 @@ import { financeV2Domain } from "./finance-v2.domain";
 import { disableConditionalCache } from "./finance-v2.cache";
 import { financeV2Controller } from "./finance-v2.controller";
 import { payrollService } from "./services/payroll.service";
+import { accountingService as financeAccountingService } from "./services/accounting.service";
+import { billingService } from "./services/billing.service";
 import {
   createTaizFinanceContext,
   financeTestPrisma,
@@ -45,6 +47,31 @@ describe("finance and accounting RBAC integration", () => {
     await expect(accountingService.getChartOfAccounts(context.scopes.teacher, {})).rejects.toMatchObject({
       code: "ACCOUNTING_SCOPE_DENIED"
     });
+  });
+
+  test("separates preparation, settings, and cash execution at the service boundary", async () => {
+    const context = await createTaizFinanceContext();
+
+    expect(() => financeV2Domain.assertCanWrite(context.scopes.accountant)).not.toThrow();
+    expect(() => financeV2Domain.assertCanWrite(context.scopes.treasurer)).toThrow("Finance scope denied");
+    expect(() => financeV2Domain.assertCanManageSettings(context.scopes.manager)).not.toThrow();
+    expect(() => financeV2Domain.assertCanManageSettings(context.scopes.accountant)).toThrow("Finance scope denied");
+    expect(() => financeV2Domain.assertCanExecute(context.scopes.treasurer)).not.toThrow();
+    expect(() => financeV2Domain.assertCanExecute(context.scopes.accountant)).toThrow("Finance scope denied");
+    expect(() => financeV2Domain.assertCanExecute(context.scopes.manager)).toThrow("Finance scope denied");
+
+    await expect(
+      billingService.createPayment(context.scopes.accountant, {} as never)
+    ).rejects.toMatchObject({ code: "FINANCE_SCOPE_DENIED" });
+    await expect(
+      financeAccountingService.createVoucher(context.scopes.accountant, {} as never)
+    ).rejects.toMatchObject({ code: "FINANCE_SCOPE_DENIED" });
+    await expect(
+      billingService.createTuitionPlan(context.scopes.accountant, {} as never)
+    ).rejects.toMatchObject({ code: "FINANCE_SCOPE_DENIED" });
+    await expect(
+      billingService.createInvoice(context.scopes.treasurer, {} as never)
+    ).rejects.toMatchObject({ code: "FINANCE_SCOPE_DENIED" });
   });
 
   test("prevents a scoped accountant from reading another center", async () => {

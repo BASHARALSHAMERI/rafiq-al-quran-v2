@@ -68,8 +68,12 @@ export default function FinanceExpensesPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
-  const canManageExpenses =
+  const canPrepareExpenses =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+  const canApproveExpenses = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
+  const canPayExpenses = user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
+  const canManageExpenseCategories =
+    user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const [activeTab, setActiveTab] = useState<ExpenseTab>("expenses");
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -117,7 +121,7 @@ export default function FinanceExpensesPage() {
                 >
                   {ar ? "تحديث" : "Refresh"}
                 </Button>
-                {activeTab === "suppliers" && canManageExpenses && (
+                {activeTab === "suppliers" && canPrepareExpenses && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -128,7 +132,7 @@ export default function FinanceExpensesPage() {
                     {ar ? "مورد جديد" : "New Supplier"}
                   </Button>
                 )}
-                {activeTab === "categories" && canManageExpenses && (
+                {activeTab === "categories" && canManageExpenseCategories && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -139,7 +143,7 @@ export default function FinanceExpensesPage() {
                     {ar ? "تصنيف جديد" : "New Category"}
                   </Button>
                 )}
-                {activeTab === "expenses" && canManageExpenses && (
+                {activeTab === "expenses" && canPrepareExpenses && (
                   <Button 
                     variant="primary" 
                     size="sm" 
@@ -215,27 +219,29 @@ export default function FinanceExpensesPage() {
           {activeTab === "expenses"    && (
             <FinanceExpensesTab
               ar={ar}
-              canManage={canManageExpenses}
+              canCreate={canPrepareExpenses}
+              canApprove={canApproveExpenses}
+              canPay={canPayExpenses}
               searchTerm={searchTerm}
-              externalShowForm={canManageExpenses && showExpenseInvoiceModal}
+              externalShowForm={canPrepareExpenses && showExpenseInvoiceModal}
               onExternalFormClose={() => setShowExpenseInvoiceModal(false)}
             />
           )}
           {activeTab === "suppliers"   && (
             <FinanceSuppliersTab 
               ar={ar} 
-              canManage={canManageExpenses}
+              canManage={canPrepareExpenses}
               searchTerm={searchTerm}
-              externalShowForm={canManageExpenses && showSupplierModal}
+              externalShowForm={canPrepareExpenses && showSupplierModal}
               onExternalFormClose={() => setShowSupplierModal(false)} 
             />
           )}
           {activeTab === "categories"  && (
             <FinanceExpenseCategoriesTab 
               ar={ar} 
-              canManage={canManageExpenses}
+              canManage={canManageExpenseCategories}
               searchTerm={searchTerm}
-              externalShowForm={canManageExpenses && showCategoryModal}
+              externalShowForm={canManageExpenseCategories && showCategoryModal}
               onExternalFormClose={() => setShowCategoryModal(false)} 
             />
           )}

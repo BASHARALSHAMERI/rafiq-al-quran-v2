@@ -136,7 +136,7 @@ export const accountingService = {
     input: { accountingAccountId: number }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     const updated = await prisma.$transaction(async (tx) => {
       const account = await tx.financeAccount.findFirst({
@@ -248,7 +248,7 @@ export const accountingService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     try {
       const voucher = await prisma.$transaction(async (tx) => {
@@ -332,7 +332,7 @@ export const accountingService = {
 
   async submitVoucher(scope: ScopeContext, voucherId: number, input: { comment?: string; reason?: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const updated = await prisma.$transaction(async (tx) => {
       const voucher = await tx.financeVoucher.findFirst({
@@ -439,7 +439,7 @@ export const accountingService = {
 
   async postVoucher(scope: ScopeContext, voucherId: number, input: { comment?: string; reason?: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const result = await prisma.$transaction(async (tx) => {
       const voucher = await tx.financeVoucher.findFirst({
@@ -507,7 +507,7 @@ export const accountingService = {
 
   async requestVoucherVoid(scope: ScopeContext, voucherId: number, input: { comment?: string; reason?: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const updated = await prisma.$transaction(async (tx) => {
       const voucher = await tx.financeVoucher.findFirst({
@@ -699,7 +699,7 @@ export const accountingService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanApprove(scope);
 
     if (input.fromAccountId === input.toAccountId) {
       throw financeV2Domain.financeError(
@@ -710,7 +710,7 @@ export const accountingService = {
     }
 
     const transfer = await prisma.$transaction(async (tx) => {
-      const [fromAccount, toAccount] = await Promise.all([
+      let [fromAccount, toAccount] = await Promise.all([
         tx.financeAccount.findFirst({
           where: { id: input.fromAccountId, organizationId: scope.organizationId, isActive: true },
           select: accountSelect
@@ -720,6 +720,9 @@ export const accountingService = {
           select: accountSelect
         })
       ]);
+
+      if (!fromAccount) fromAccount = await ensureOrgFundAccountTx(tx, scope.organizationId) as any;
+      if (!toAccount) toAccount = await ensureOrgFundAccountTx(tx, scope.organizationId) as any;
 
       assertFinanceEntity(fromAccount, "Source account not found");
       assertFinanceEntity(toAccount, "Destination account not found");
@@ -756,7 +759,7 @@ export const accountingService = {
 
   async submitFundTransfer(scope: ScopeContext, transferId: number, input: { comment?: string; reason?: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanApprove(scope);
 
     const updated = await prisma.$transaction(async (tx) => {
       const transfer = await tx.financeFundTransfer.findFirst({
@@ -829,7 +832,7 @@ export const accountingService = {
 
   async postFundTransfer(scope: ScopeContext, transferId: number, input: { comment?: string; reason?: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanApprove(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const result = await prisma.$transaction(async (tx) => {
       const transfer = await tx.financeFundTransfer.findFirst({

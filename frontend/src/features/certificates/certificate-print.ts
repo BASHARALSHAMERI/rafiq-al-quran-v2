@@ -1,5 +1,6 @@
 import type { CertificateTemplateData } from "./types";
 import { CERTIFICATE_ASSETS } from "./constants";
+import QRCode from "qrcode";
 
 const escapeHtml = (value: unknown): string =>
   String(value ?? "")
@@ -49,6 +50,20 @@ const certificateBody = (data: CertificateTemplateData): string => {
     `;
   }
 
+  if (data.kind === "IJAZAH") {
+    return `
+      <div class="merged-line">
+        تشهد ${escapeHtml(data.associationName)} ومركز ${escapeHtml(data.centerName)} بأن الطالبــ / ـة:
+        <span class="student-name-inline">${escapeHtml(data.studentName)}</span>
+      </div>
+      <div class="merged-line">
+        قد نال الإجازة القرآنية بالسند المتصل برواية ${escapeHtml(data.riwaya)} عن ظهر قلب وبإتقان وحصل على تقدير: 
+        <span class="grade-inline">${escapeHtml(data.gradeLabel)}</span>
+      </div>
+      <p class="congrats-text">وبناءً عليه مُنحت له هذه الشهادة إقراراً بإجازته بالسند المتصل إلى رسول الله صلى الله عليه وسلم، سائلين الله تعالى له الثبات والقبول.</p>
+    `;
+  }
+
   return `
     <div class="merged-line">
       تشهد ${escapeHtml(data.associationName)} ومركز ${escapeHtml(data.centerName)} بأن الطالبــ / ـة:
@@ -67,11 +82,15 @@ const detailLine = (data: CertificateTemplateData): string => {
     return `تاريخ الختم/الاعتماد: ${formatDate(data.completionDate)} | الحلقة: ${escapeHtml(data.circleName ?? "-")} | الرواية: ${escapeHtml(data.riwaya ?? "-")}`;
   }
 
+  if (data.kind === "IJAZAH") {
+    return `تاريخ الإجازة/الاعتماد: ${formatDate(data.completionDate)} | الحلقة: ${escapeHtml(data.circleName ?? "-")} | الرواية: ${escapeHtml(data.riwaya ?? "-")}`;
+  }
+
   return `تاريخ الاختبار: ${formatDate(data.examDate)} | الحلقة: ${escapeHtml(data.circleName ?? "-")} | ${escapeHtml(data.examCategory ?? "اختبار")}`;
 };
 
 const getTitleImageUrl = (kind: string) => {
-  if (kind === "FULL_QURAN_COMPLETION") {
+  if (kind === "FULL_QURAN_COMPLETION" || kind === "IJAZAH") {
     return CERTIFICATE_ASSETS.QURAN_COMPLETION;
   }
   return CERTIFICATE_ASSETS.APPRECIATION;
@@ -321,6 +340,34 @@ export const renderCertificateHtml = (data: CertificateTemplateData): string => 
       padding-top: 0.32cm;
     }
 
+    .footer-layout {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1.5cm;
+    }
+
+    .signatures-wrapper {
+      flex: 1;
+    }
+
+    .qr-code-container {
+      width: 2.2cm;
+      height: 2.2cm;
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-code-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
     .approval-line {
       text-align: center;
       color: var(--muted);
@@ -407,7 +454,12 @@ export const renderCertificateHtml = (data: CertificateTemplateData): string => 
 
       <div class="footer">
         <div class="approval-line">هذه الشهادة صادرة عن النظام ومعتمدة من الجهة المختصة</div>
-        <div class="signatures">${signatures}</div>
+        <div class="footer-layout">
+          <div class="signatures-wrapper">
+            <div class="signatures">${signatures}</div>
+          </div>
+          ${data.qrCodeDataUrl ? `<div class="qr-code-container"><img src="${data.qrCodeDataUrl}" alt="QR Code" class="qr-code-img" /></div>` : ""}
+        </div>
         <div class="certificate-code">رقم الشهادة: ${escapeHtml(data.certificateSerial)}</div>
       </div>
     </div>
@@ -416,9 +468,9 @@ export const renderCertificateHtml = (data: CertificateTemplateData): string => 
 </html>`;
 };
 
-export const printCertificate = (data: CertificateTemplateData) => {
+export const printCertificate = async (data: CertificateTemplateData) => {
   const printWindow = openCertificatePrintWindow();
-  writeCertificateToWindow(printWindow, data);
+  await writeCertificateToWindow(printWindow, data);
 };
 
 export const openCertificatePrintWindow = () => {
@@ -439,7 +491,15 @@ export const openCertificatePrintWindow = () => {
   return printWindow;
 };
 
-export const writeCertificateToWindow = (printWindow: Window, data: CertificateTemplateData) => {
+export const writeCertificateToWindow = async (printWindow: Window, data: CertificateTemplateData) => {
+  if (data.verifyUrl) {
+    try {
+      data.qrCodeDataUrl = await QRCode.toDataURL(data.verifyUrl, { margin: 1, width: 120 });
+    } catch (err) {
+      console.error("Failed to generate QR code", err);
+    }
+  }
+
   printWindow.document.open();
   printWindow.document.write(renderCertificateHtml(data));
   printWindow.document.close();

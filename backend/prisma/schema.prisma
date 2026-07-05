@@ -371,6 +371,7 @@ model User {
   requestedFundTransfers                   FinanceFundTransfer[]        @relation("FundTransferRequestedBy")
   approvedFinanceVouchers                  FinanceVoucher[]             @relation("FinanceVoucherApprovedBy")
   approvedExpenseInvoices                  ExpenseInvoice[]             @relation("ExpenseInvoiceApprovedBy")
+  cancelledExpenseInvoices                 ExpenseInvoice[]             @relation("ExpenseInvoiceCancelledBy")
   assetCustodiesCreated                    AssetCustodyLog[]            @relation("AssetCustodyCreatedBy")
   assetCustodiesFrom                       AssetCustodyLog[]            @relation("AssetCustodyFromUser")
   assetCustodiesTo                         AssetCustodyLog[]            @relation("AssetCustodyToUser")
@@ -3365,6 +3366,9 @@ model ExpenseInvoice {
   status         ExpenseInvoiceStatus @default(DRAFT)
   approvedById   Int?                 @map("approved_by_id")
   approvedAt     DateTime?            @map("approved_at")
+  cancelledById  Int?                 @map("cancelled_by_id")
+  cancelledAt    DateTime?            @map("cancelled_at")
+  cancelReason   String?              @db.VarChar(500)
   createdAt      DateTime             @default(now()) @map("created_at")
   updatedAt      DateTime             @updatedAt @map("updated_at")
 
@@ -3373,9 +3377,11 @@ model ExpenseInvoice {
   supplier     Supplier?        @relation(fields: [supplierId], references: [id])
   category     ExpenseCategory  @relation(fields: [categoryId], references: [id])
   approvedBy   User?            @relation("ExpenseInvoiceApprovedBy", fields: [approvedById], references: [id])
+  cancelledBy  User?            @relation("ExpenseInvoiceCancelledBy", fields: [cancelledById], references: [id])
   payments     ExpensePayment[]
   fixedAssets  FixedAsset[]
 
+  @@unique([organizationId, supplierId, invoiceNo])
   @@index([organizationId])
   @@index([centerId])
   @@index([supplierId])

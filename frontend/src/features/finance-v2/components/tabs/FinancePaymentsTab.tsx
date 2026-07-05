@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { 
-  Plus, 
+import {
   Receipt, 
   History,
   Printer,
@@ -11,7 +10,7 @@ import {
   Calendar,
   StickyNote
 } from "lucide-react";
-import { motion } from "framer-motion";
+
 import { 
   useCreateFinanceV2PaymentMutation, 
   useFinanceV2InvoicesQuery, 

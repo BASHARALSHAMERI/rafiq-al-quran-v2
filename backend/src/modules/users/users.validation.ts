@@ -14,7 +14,14 @@ import { z } from "zod";
 
 export const usersQuerySchema = z
   .object({
-    role: z.nativeEnum(Role).optional(),
+    role: z.union([
+      z.nativeEnum(Role),
+      z.string().transform((val) => {
+        const roles = val.split(',').map((r) => r.trim());
+        const validRoles = Object.values(Role);
+        return roles.filter((r) => validRoles.includes(r as Role)) as Role[];
+      })
+    ]).optional(),
     centerId: z.coerce.number().int().positive().optional(),
     circleId: z.coerce.number().int().positive().optional()
   })
@@ -48,7 +55,7 @@ const commonProfileCreateSchema = z
   .object({
     fullName: fullNameString(160).optional(),
     gender: z.nativeEnum(Gender).optional().nullable(),
-    birthDate: optionalDate,
+    birthDate: z.coerce.date(),
     phone: optionalTrimmedString(32),
     address: optionalTrimmedString(255),
     avatarUrl: optionalTrimmedString(500)
@@ -112,7 +119,7 @@ const studentProfileCreateSchema = z
     nickname: optionalTrimmedString(80),
     level: z.nativeEnum(StudentLevel).optional(),
     studentStatus: z.nativeEnum(StudentProfileStatus).optional(),
-    joinDate: optionalDate
+    joinDate: z.coerce.date()
   })
   .strict();
 
@@ -152,7 +159,7 @@ const userLinksCreateSchema = z
         z
           .object({
             circleId: positiveId,
-            startDate: z.coerce.date().optional()
+            startDate: z.coerce.date()
           })
           .strict()
       )
@@ -197,6 +204,7 @@ export const updateUserBodySchema = z
     fullName: fullNameString(120).optional(), // legacy compatibility
     email: z.string().trim().email().max(191).optional(),
     username: optionalTrimmedString(80),
+    role: z.nativeEnum(Role).optional(),
     profile: commonProfileUpdateSchema.optional(),
     teacherProfile: teacherProfileUpdateSchema.optional(),
     supervisorProfile: supervisorProfileUpdateSchema.optional(),
@@ -238,7 +246,7 @@ export const createParentStudentLinkBodySchema = z
 export const createStudentEnrollmentBodySchema = z
   .object({
     circleId: positiveId,
-    startDate: z.coerce.date().optional()
+    startDate: z.coerce.date()
   })
   .strict();
 

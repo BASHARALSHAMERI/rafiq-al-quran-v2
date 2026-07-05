@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
-  CheckCircle2,
   Eye,
   FileCheck2,
   FileText,
@@ -278,29 +276,27 @@ export function ExamEvaluationWorkspace({ attempt: initialAttempt, onClose, onUp
   const markAbsentMutation = useMarkAttemptAsAbsentMutation();
 
   useEffect(() => {
-    setCurrentAttempt(attempt);
-    setQuestions(toEvaluationQuestions(attempt));
+    setCurrentAttempt(initialAttempt);
+    setQuestions(toEvaluationQuestions(initialAttempt));
     const nextDefaults = resolveDefaultScores();
     setTheoreticalTajweedScore(
-      attempt.breakdown?.theoreticalTajweedScore ?? nextDefaults.theoreticalTajweed
+      initialAttempt.breakdown?.theoreticalTajweedScore ?? nextDefaults.theoreticalTajweed
     );
-    setPerformanceScore(attempt.breakdown?.performanceScore ?? nextDefaults.performance);
-    const nextQuestionCountPolicy = resolveQuestionCountPolicy(attempt);
+    setPerformanceScore(initialAttempt.breakdown?.performanceScore ?? nextDefaults.performance);
+    const nextQuestionCountPolicy = resolveQuestionCountPolicy(initialAttempt);
     setQuestionCount(
       clampQuestionCount(
-        attempt.questions?.length || nextQuestionCountPolicy.defaultQuestionCount,
+        initialAttempt.questions?.length || nextQuestionCountPolicy.defaultQuestionCount,
         nextQuestionCountPolicy
       )
     );
-    setCommitteeNotes(attempt.committeeNotes ?? "");
-    setStrengthNotes(attempt.breakdown?.strengthNotes ?? "");
-    setWeaknessNotes(attempt.breakdown?.weaknessNotes ?? "");
+    setCommitteeNotes(initialAttempt.committeeNotes ?? "");
+    setStrengthNotes(initialAttempt.breakdown?.strengthNotes ?? "");
+    setWeaknessNotes(initialAttempt.breakdown?.weaknessNotes ?? "");
     setViewStep("workspace");
     setSelectedQuestionId(null);
     setIsQuestionEvaluationOpen(false);
-    setError("");
-    setSuccess("");
-  }, [attempt]);
+  }, [initialAttempt]);
 
   const selectedQuestion = useMemo(
     () => {
@@ -589,7 +585,7 @@ export function ExamEvaluationWorkspace({ attempt: initialAttempt, onClose, onUp
     try {
       printWindow = openCertificatePrintWindow();
       const certificate = await certificatesApi.getExamAttemptCertificate(currentAttempt.id);
-      writeCertificateToWindow(printWindow, certificate);
+      await writeCertificateToWindow(printWindow, certificate);
       notifySuccess("تم تجهيز شهادة الاختبار للطباعة.");
     } catch (printError) {
       printWindow?.close();

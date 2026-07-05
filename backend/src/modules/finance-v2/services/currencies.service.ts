@@ -4,7 +4,9 @@
  */
 import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
+import { safeDate, toDateOnly } from "../../../shared/utils/time";
 import type { ScopeContext } from "../../../shared/types/auth.types";
+import { financeV2Domain } from "../finance-v2.domain";
 
 interface CurrencyDef {
   code: string;
@@ -52,6 +54,8 @@ function getPredefinedCurrency(code: string) {
 }
 
 export async function listCurrencies(scope: ScopeContext) {
+  financeV2Domain.assertReadEnabled();
+  financeV2Domain.assertCanRead(scope);
   return prisma.currency.findMany({
     where: { organizationId: scope.organizationId },
     orderBy: [{ isBase: "desc" }, { code: "asc" }]
@@ -59,6 +63,8 @@ export async function listCurrencies(scope: ScopeContext) {
 }
 
 export async function getAvailablePredefinedCurrencies(scope: ScopeContext) {
+  financeV2Domain.assertReadEnabled();
+  financeV2Domain.assertCanRead(scope);
   const existing = await prisma.currency.findMany({
     where: { organizationId: scope.organizationId },
     select: { code: true }
@@ -71,6 +77,8 @@ export async function getAvailablePredefinedCurrencies(scope: ScopeContext) {
 export async function createCurrency(scope: ScopeContext, input: CreateCurrencyInput) {
   const organizationId = scope.organizationId;
   const code = normalizeCurrencyCode(input.code);
+  financeV2Domain.assertWriteEnabled();
+  financeV2Domain.assertCanManageSettings(scope);
   const predefined = getPredefinedCurrency(code);
 
   if (!predefined) {
@@ -113,6 +121,8 @@ export async function updateCurrency(
   input: Partial<CreateCurrencyInput>
 ) {
   const organizationId = scope.organizationId;
+  financeV2Domain.assertWriteEnabled();
+  financeV2Domain.assertCanManageSettings(scope);
 
   const currency = await prisma.currency.findFirst({
     where: { id, organizationId }
@@ -145,6 +155,8 @@ export async function updateCurrency(
 
 export async function listExchangeRates(scope: ScopeContext, currencyCode?: string) {
   const code = currencyCode ? normalizeCurrencyCode(currencyCode) : undefined;
+  financeV2Domain.assertReadEnabled();
+  financeV2Domain.assertCanRead(scope);
 
   return prisma.exchangeRate.findMany({
     where: {
@@ -157,6 +169,8 @@ export async function listExchangeRates(scope: ScopeContext, currencyCode?: stri
 }
 
 export async function getLatestExchangeRate(scope: ScopeContext, currencyCode: string) {
+  financeV2Domain.assertReadEnabled();
+  financeV2Domain.assertCanRead(scope);
   return prisma.exchangeRate.findFirst({
     where: {
       organizationId: scope.organizationId,
@@ -169,6 +183,8 @@ export async function getLatestExchangeRate(scope: ScopeContext, currencyCode: s
 
 export async function createExchangeRate(scope: ScopeContext, input: CreateExchangeRateInput) {
   const organizationId = scope.organizationId;
+  financeV2Domain.assertWriteEnabled();
+  financeV2Domain.assertCanManageSettings(scope);
   const currencyCode = normalizeCurrencyCode(input.currencyCode);
 
   const currency = await prisma.currency.findFirst({
@@ -196,7 +212,7 @@ export async function createExchangeRate(scope: ScopeContext, input: CreateExcha
       organizationId,
       currencyCode,
       rateToBase: input.rateToBase,
-      effectiveDate: new Date(input.effectiveDate),
+      effectiveDate: toDateOnly(safeDate(input.effectiveDate, "effectiveDate")),
       source: input.source,
       notes: input.notes
     },
@@ -205,6 +221,8 @@ export async function createExchangeRate(scope: ScopeContext, input: CreateExcha
 }
 
 export async function getBaseCurrency(scope: ScopeContext) {
+  financeV2Domain.assertReadEnabled();
+  financeV2Domain.assertCanRead(scope);
   return prisma.currency.findFirst({
     where: { organizationId: scope.organizationId, isBase: true }
   });

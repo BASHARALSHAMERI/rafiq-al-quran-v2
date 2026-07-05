@@ -36,8 +36,8 @@ describe("finance idempotency and concurrency integration", () => {
       method: PaymentMethod.CASH,
       receivedAt: TAIZ_FINANCE_FIXTURE.dates.openPeriod
     };
-    const first = await billingService.createPayment(context.scopes.manager, input, "test-payment-0001");
-    const second = await billingService.createPayment(context.scopes.manager, input, "test-payment-0001");
+    const first = await billingService.createPayment(context.scopes.treasurer, input, "test-payment-0001");
+    const second = await billingService.createPayment(context.scopes.treasurer, input, "test-payment-0001");
 
     expect(second.payment.id).toBe(first.payment.id);
     expect(await financeTestPrisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(1);
@@ -52,12 +52,12 @@ describe("finance idempotency and concurrency integration", () => {
     const { context, invoice } = await createInvoice();
     const result = await Promise.allSettled([
       billingService.createPayment(
-        context.scopes.manager,
+        context.scopes.treasurer,
         { invoiceId: invoice.id, amount: 60000, method: PaymentMethod.CASH },
         "test-concurrent-a"
       ),
       billingService.createPayment(
-        context.scopes.manager,
+        context.scopes.treasurer,
         { invoiceId: invoice.id, amount: 60000, method: PaymentMethod.CASH },
         "test-concurrent-b"
       )

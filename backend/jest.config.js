@@ -2,6 +2,9 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  transformIgnorePatterns: [
+    "node_modules/(?!puppeteer|puppeteer-core)"
+  ],
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.test.ts"],
   transform: {
@@ -10,6 +13,7 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
+  setupFiles: ["<rootDir>/src/test/global-test-env.ts"],
   setupFilesAfterEnv: ["<rootDir>/src/test/finance/finance-test-timeout.ts"],
   collectCoverageFrom: [
     "src/**/*.ts",

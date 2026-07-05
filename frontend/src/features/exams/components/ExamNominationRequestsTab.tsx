@@ -88,13 +88,11 @@ const nominationStatusVariant = (status: NominationRequestStatus) => {
 
 const canSetupNomination = (nomination: ExamNominationRequest) =>
   !nomination.attempt &&
-  ["SUBMITTED", "SUPERVISOR_APPROVED", "CENTER_APPROVED"].includes(nomination.status) &&
-  nomination.exam?.purpose !== "GOLDEN_RECORD_MUSHAF";
+  ["SUBMITTED", "SUPERVISOR_APPROVED", "CENTER_APPROVED"].includes(nomination.status);
 
 const isDirectCenterNomination = (nomination: ExamNominationRequest, userId?: number) =>
   nomination.status === "CENTER_APPROVED" &&
-  nomination.createdById === userId &&
-  nomination.exam?.purpose !== "GOLDEN_RECORD_MUSHAF";
+  nomination.createdById === userId;
 
 const approvalMutationErrorMessage = (error: unknown) => {
   const message = error instanceof Error ? error.message : "";

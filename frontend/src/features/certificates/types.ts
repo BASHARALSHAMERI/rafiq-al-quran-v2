@@ -1,4 +1,4 @@
-export type CertificateKind = "EXAM" | "FULL_QURAN_COMPLETION";
+export type CertificateKind = "EXAM" | "FULL_QURAN_COMPLETION" | "IJAZAH";
 
 export type CertificateSignature = {
   role: string;
@@ -24,5 +24,7 @@ export type CertificateTemplateData = {
   riwaya: string | null;
   certificateSerial: string;
   detailLine: string;
+  verifyUrl?: string;
+  qrCodeDataUrl?: string;
   signatures: [CertificateSignature, CertificateSignature, CertificateSignature];
 };

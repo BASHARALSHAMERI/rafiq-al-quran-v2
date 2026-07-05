@@ -32,9 +32,12 @@ export const teacherMonthlyHalqaQuerySchema = z
 
 export const studentMonthlyReportQuerySchema = z
   .object({
+    centerId: optionalId,
+    circleId: optionalId,
     month: z.coerce.number().int().min(1).max(12).optional(),
     year: z.coerce.number().int().min(2000).max(2100).optional()
-  });
+  })
+  .strict();
 
 export const attendanceReportQuerySchema = baseDateRangeSchema;
 

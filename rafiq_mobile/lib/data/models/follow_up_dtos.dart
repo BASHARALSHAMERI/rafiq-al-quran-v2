@@ -14,13 +14,20 @@ class FollowUpRecordDto with _$FollowUpRecordDto {
     required String type, // RECITE, REVIEW, BOTH
     required String status, // DRAFT, FINAL
     String? surah,
+    int? fromSurah,
+    int? toSurah,
     int? fromAyah,
     int? toAyah,
+    int? fromPage,
+    int? toPage,
     double? pagesCount,
     int? rating,
+    int? matnId,
     String? matnName,
     String? matnStatus, // PENDING, COMPLETED, FAILED
     String? notes,
+    String? idempotencyKey,
+    int? lockVersion,
     // Joined standard fields might exist but we map what we need
     Map<String, dynamic>? student,
     Map<String, dynamic>? teacher,
@@ -39,13 +46,19 @@ class CreateFollowUpRequestDto with _$CreateFollowUpRequestDto {
     required String type, // RECITE, REVIEW, BOTH
     String? status, // DRAFT, FINAL (default FINAL usually if not draft)
     String? surah,
+    int? fromSurah,
+    int? toSurah,
     int? fromAyah,
     int? toAyah,
+    int? fromPage,
+    int? toPage,
     double? pagesCount,
     int? rating,
+    int? matnId,
     String? matnName,
     String? matnStatus,
     String? notes,
+    String? idempotencyKey,
   }) = _CreateFollowUpRequestDto;
 
   factory CreateFollowUpRequestDto.fromJson(Map<String, dynamic> json) =>
@@ -58,13 +71,19 @@ class UpdateFollowUpRequestDto with _$UpdateFollowUpRequestDto {
     String? recordDate,
     String? type,
     String? surah,
+    int? fromSurah,
+    int? toSurah,
     int? fromAyah,
     int? toAyah,
+    int? fromPage,
+    int? toPage,
     double? pagesCount,
     int? rating,
+    int? matnId,
     String? matnName,
     String? matnStatus,
     String? notes,
+    int? lockVersion,
   }) = _UpdateFollowUpRequestDto;
 
   factory UpdateFollowUpRequestDto.fromJson(Map<String, dynamic> json) =>

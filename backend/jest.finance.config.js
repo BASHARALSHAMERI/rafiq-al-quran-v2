@@ -4,7 +4,7 @@ module.exports = {
   testEnvironment: "node",
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.finance.test.ts", "**/*.finance.integration.test.ts"],
-  setupFiles: ["<rootDir>/src/test/finance/finance-test-env.ts"],
+  setupFiles: ["<rootDir>/src/test/global-test-env.ts"],
   setupFilesAfterEnv: ["<rootDir>/src/test/finance/finance-test-timeout.ts"],
   transform: {
     "^.+\\.ts$": "ts-jest"

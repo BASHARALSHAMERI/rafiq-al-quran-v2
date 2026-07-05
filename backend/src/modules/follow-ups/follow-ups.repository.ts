@@ -96,11 +96,13 @@ export type CreateFollowUpRecordInput = {
   matnToRef?: string | null;
   notes?: string;
   finalizedAt?: Date | null;
+  idempotencyKey?: string | null;
 };
 
 export type UpdateFollowUpRecordInput = {
   recordDate?: Date;
   type?: FollowUpType;
+  status?: FollowUpRecordStatus;
   surah?: string | null;
   fromSurah?: number | null;
   fromAyah?: number | null;
@@ -240,7 +242,8 @@ export const followUpsRepository = {
         matnFromRef: input.matnFromRef,
         matnToRef: input.matnToRef,
         notes: input.notes,
-        finalizedAt: input.finalizedAt
+        finalizedAt: input.finalizedAt,
+        idempotencyKey: input.idempotencyKey
       },
       select: followUpRecordSelect
     });
@@ -276,7 +279,7 @@ export const followUpsRepository = {
       return null;
     }
 
-    return prisma.followUpRecord.findUnique({
+    return db.followUpRecord.findUnique({
       where: { id },
       select: followUpRecordSelect
     });

@@ -1,5 +1,7 @@
-import { AlertCircle, ShieldCheck } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { AlertCircle, ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
 import Badge from "../../../components/ui/Badge";
+import { DataTable, type DataTableColumn } from "../../../components/ui/DataTable";
 import { useI18n } from "../../../app/i18n";
 
 export type FinancialStatementItem = {
@@ -35,55 +37,130 @@ export type FinancialStatementTreeProps = {
   data: FinancialStatementData;
   isLoading?: boolean;
   error?: Error | null;
+  search?: string;
 };
 
 const formatCurrency = (val: number) =>
   new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
-function SectionTitle({ title, amount }: { title: string; amount: number }) {
+const amountCell = (val: number) => {
+  const isNeg = val < 0;
   return (
-    <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h3>
-      <span className="text-lg font-bold text-brand-600">{formatCurrency(amount)}</span>
-    </div>
+    <span
+      className="font-bold tabular-nums"
+      style={{ direction: "ltr", display: "inline-block", color: isNeg ? "#C62828" : "#1A1A2E" }}
+    >{formatCurrency(val)}</span>
   );
-}
+};
 
-function SubSectionTitle({ title, amount }: { title: string; amount: number }) {
-  return (
-    <div className="flex justify-between items-center mt-6 mb-2">
-      <h4 className="text-md font-semibold text-gray-700 dark:text-gray-300">{title}</h4>
-      <span className="text-md font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(amount)}</span>
-    </div>
-  );
-}
+const sharedColumns = (ar: boolean): DataTableColumn<FinancialStatementItem>[] => [
+  {
+    id: "code",
+    header: ar ? "الكود" : "Code",
+    width: "20%",
+    align: "center",
+    cell: (r) => <span className="font-mono text-xs" style={{ color: "#78909C" }}>{r.code}</span>,
+  },
+  {
+    id: "name",
+    header: ar ? "الحساب" : "Account",
+    cell: (r) => <span className="font-semibold" style={{ color: "#1A1A2E" }}>{r.name}</span>,
+  },
+  {
+    id: "balance",
+    header: ar ? "المبلغ" : "Amount",
+    width: "30%",
+    align: "end",
+    headerClassName: "text-center",
+    cell: (r) => amountCell(r.balance),
+  },
+];
 
-function DataRow({ label, code, amount, indent = false, ar }: { label: string; code: string; amount: number; indent?: boolean; ar: boolean }) {
+function SectionBlock({ title, total, bgColor, headerBg, children }: { title: string; total: string; bgColor: string; headerBg: string; children: ReactNode }) {
   return (
-    <div className={`flex justify-between items-center py-2 text-sm ${indent ? (ar ? 'pr-6' : 'pl-6') : ''}`}>
-      <div className="flex gap-2">
-        <span className="text-gray-400 font-mono text-xs">{code}</span>
-        <span className="text-gray-600 dark:text-gray-400">{label}</span>
+    <div className="rounded-2xl shadow-sm border overflow-hidden" style={{ background: bgColor, borderColor: headerBg }}>
+      <div className="flex justify-between items-center px-5 py-3" style={{ background: headerBg }}>
+        <h3 className="text-base font-extrabold" style={{ color: "#1A1A2E" }}>{title}</h3>
+        <span className="text-base font-extrabold tabular-nums" style={{ color: "#1A1A2E", direction: "ltr" }}>{total}</span>
       </div>
-      <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(amount)}</span>
+      {children}
     </div>
   );
 }
 
-export function FinancialStatementTree({ data, isLoading, error }: FinancialStatementTreeProps) {
+function SubTable({ items, subtitle, subtotal, ar }: { items: FinancialStatementItem[]; subtitle: string; subtotal: string; ar: boolean }) {
+  return (
+    <div>
+      <div className="flex justify-between items-center px-5 py-2" style={{ background: "rgba(255,255,255,0.7)" }}>
+        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: "#546E7A" }}>{subtitle}</h4>
+        <span className="text-xs font-bold tabular-nums" style={{ color: "#1A1A2E", direction: "ltr" }}>{subtotal}</span>
+      </div>
+      <div className="px-2 py-1">
+        <DataTable
+          columns={sharedColumns(ar)}
+          rows={items}
+          rowKey={(_, i) => i}
+          dense
+          emptyState={null}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MobileCard({ title, total, bgColor, headerBg, children, defaultOpen }: { title: string; total: string; bgColor: string; headerBg: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  return (
+    <div className="rounded-2xl shadow-sm border overflow-hidden lg:hidden" style={{ background: bgColor, borderColor: headerBg }}>
+      <button onClick={() => setOpen((p) => !p)} className="flex justify-between items-center w-full px-5 py-3 text-start" style={{ background: headerBg }}>
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-extrabold" style={{ color: "#1A1A2E" }}>{title}</h3>
+          {open ? <ChevronUp size={16} style={{ color: "#1A1A2E" }} /> : <ChevronDown size={16} style={{ color: "#1A1A2E" }} />}
+        </div>
+        <span className="text-base font-extrabold tabular-nums" style={{ color: "#1A1A2E", direction: "ltr" }}>{total}</span>
+      </button>
+      {open && <div>{children}</div>}
+    </div>
+  );
+}
+
+export function FinancialStatementTree({ data, isLoading, error, search }: FinancialStatementTreeProps) {
   const { language } = useI18n();
   const ar = language === "ar";
 
+  const sq = (search ?? "").trim().toLowerCase();
+  const matches = (item: FinancialStatementItem) =>
+    !sq || item.name.toLowerCase().includes(sq) || item.code.toLowerCase().includes(sq);
+
+  const filtered = sq ? {
+    assets: {
+      current: data.assets.current.filter(matches),
+      fixed: data.assets.fixed.filter(matches),
+      totalCurrent: data.assets.current.filter(matches).reduce((s, i) => s + i.balance, 0),
+      totalFixed: data.assets.fixed.filter(matches).reduce((s, i) => s + i.balance, 0),
+      totalAssets: data.assets.current.filter(matches).reduce((s, i) => s + i.balance, 0) + data.assets.fixed.filter(matches).reduce((s, i) => s + i.balance, 0),
+    },
+    liabilities: {
+      rows: data.liabilities.rows.filter(matches),
+      totalLiabilities: data.liabilities.rows.filter(matches).reduce((s, i) => s + i.balance, 0),
+    },
+    netAssets: {
+      unrestricted: data.netAssets.unrestricted.filter(matches),
+      restricted: data.netAssets.restricted.filter(matches),
+      totalUnrestricted: data.netAssets.unrestricted.filter(matches).reduce((s, i) => s + i.balance, 0),
+      totalRestricted: data.netAssets.restricted.filter(matches).reduce((s, i) => s + i.balance, 0),
+      totalNetAssets: data.netAssets.unrestricted.filter(matches).reduce((s, i) => s + i.balance, 0) + data.netAssets.restricted.filter(matches).reduce((s, i) => s + i.balance, 0),
+    },
+    isBalanced: data.isBalanced,
+  } : data;
+
+  const d = filtered;
+
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 p-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="h-6 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4" />
-            <div className="h-4 w-full bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-2" />
-            <div className="h-4 w-3/4 bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-2" />
-            <div className="h-4 w-1/2 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
-          </div>
+          <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
         ))}
       </div>
     );
@@ -93,12 +170,8 @@ export function FinancialStatementTree({ data, isLoading, error }: FinancialStat
     return (
       <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-8 text-center border border-red-200 dark:border-red-800">
         <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-        <p className="text-red-700 dark:text-red-300 font-semibold">
-          {ar ? "تعذر تحميل التقرير" : "Failed to load report"}
-        </p>
-        <p className="text-red-500 dark:text-red-400 text-sm mt-1">
-          {error.message}
-        </p>
+        <p className="text-red-700 dark:text-red-300 font-semibold">{ar ? "تعذر تحميل التقرير" : "Failed to load report"}</p>
+        <p className="text-red-500 dark:text-red-400 text-sm mt-1">{error.message}</p>
       </div>
     );
   }
@@ -114,9 +187,18 @@ export function FinancialStatementTree({ data, isLoading, error }: FinancialStat
   }
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-6">
-        {data.isBalanced ? (
+    <div className="p-1">
+      {sq && (
+        <div className="text-sm mb-4 px-4" style={{ color: "#78909C" }}>
+          {ar
+            ? `نتائج البحث "${sq}": ${d.assets.current.length + d.assets.fixed.length + d.liabilities.rows.length + d.netAssets.unrestricted.length + d.netAssets.restricted.length} عنصر`
+            : `Search results for "${sq}": ${d.assets.current.length + d.assets.fixed.length + d.liabilities.rows.length + d.netAssets.unrestricted.length + d.netAssets.restricted.length} items`
+          }
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 mb-6 px-4">
+        {d.isBalanced ? (
           <Badge variant="success" className="px-3 py-1 flex gap-1 items-center">
             <ShieldCheck size={14} />
             {ar ? "الميزانية متوازنة" : "Balanced"}
@@ -129,56 +211,100 @@ export function FinancialStatementTree({ data, isLoading, error }: FinancialStat
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <SectionTitle title={ar ? "الأصول" : "Assets"} amount={data.assets.totalAssets} />
+      {/* ───────── Desktop: side by side ───────── */}
+      <div className="hidden lg:grid lg:grid-cols-2 gap-5 px-4">
+        {/* ASSETS — Green */}
+        <SectionBlock title={ar ? "الأصول" : "Assets"} total={formatCurrency(d.assets.totalAssets)} bgColor="#E8F5E9" headerBg="#C8E6C9">
+          {d.assets.current.length > 0 && (
+            <SubTable items={d.assets.current} subtitle={ar ? "الأصول المتداولة" : "Current Assets"} subtotal={formatCurrency(d.assets.totalCurrent)} ar={ar} />
+          )}
+          {d.assets.fixed.length > 0 && (
+            <SubTable items={d.assets.fixed} subtitle={ar ? "الأصول الثابتة" : "Fixed Assets"} subtotal={formatCurrency(d.assets.totalFixed)} ar={ar} />
+          )}
+          {d.assets.current.length === 0 && d.assets.fixed.length === 0 && (
+            <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد أصول مسجلة" : "No assets recorded"}</p></div>
+          )}
+        </SectionBlock>
 
-          <SubSectionTitle title={ar ? "الأصول المتداولة" : "Current Assets"} amount={data.assets.totalCurrent} />
-          {data.assets.current.map((item) => (
-            <DataRow key={item.accountId} code={item.code} label={item.name} amount={item.balance} indent ar={ar} />
-          ))}
-
-          <SubSectionTitle title={ar ? "الأصول الثابتة" : "Fixed Assets"} amount={data.assets.totalFixed} />
-          {data.assets.fixed.map((item) => (
-            <DataRow key={item.accountId} code={item.code} label={item.name} amount={item.balance} indent ar={ar} />
-          ))}
-        </div>
-
-        <div className="space-y-8">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <SectionTitle title={ar ? "الخصوم" : "Liabilities"} amount={data.liabilities.totalLiabilities} />
-            {data.liabilities.rows.length === 0 ? (
-              <p className="text-sm text-gray-400 italic text-center py-4">{ar ? "لا توجد خصوم مسجلة" : "No liabilities recorded"}</p>
+        {/* LIABILITIES + NET ASSETS — Red + Blue */}
+        <div className="space-y-5">
+          {/* LIABILITIES — Red */}
+          <SectionBlock title={ar ? "الخصوم" : "Liabilities"} total={formatCurrency(d.liabilities.totalLiabilities)} bgColor="#FFEBEE" headerBg="#FFCDD2">
+            {d.liabilities.rows.length > 0 ? (
+              <SubTable items={d.liabilities.rows} subtitle={ar ? "الخصوم" : "Liabilities"} subtotal={formatCurrency(d.liabilities.totalLiabilities)} ar={ar} />
             ) : (
-              data.liabilities.rows.map((item) => (
-                <DataRow key={item.accountId} code={item.code} label={item.name} amount={item.balance} indent ar={ar} />
-              ))
+              <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد خصوم مسجلة" : "No liabilities recorded"}</p></div>
             )}
-          </div>
+          </SectionBlock>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <SectionTitle title={ar ? "صافي الأصول" : "Net Assets"} amount={data.netAssets.totalNetAssets} />
+          {/* NET ASSETS — Blue */}
+          <SectionBlock title={ar ? "صافي الأصول" : "Net Assets"} total={formatCurrency(d.netAssets.totalNetAssets)} bgColor="#E3F2FD" headerBg="#BBDEFB">
+            {d.netAssets.unrestricted.length > 0 && (
+              <SubTable items={d.netAssets.unrestricted} subtitle={ar ? "غير مقيدة" : "Unrestricted"} subtotal={formatCurrency(d.netAssets.totalUnrestricted)} ar={ar} />
+            )}
+            {d.netAssets.restricted.length > 0 && (
+              <SubTable items={d.netAssets.restricted} subtitle={ar ? "مقيدة" : "Restricted"} subtotal={formatCurrency(d.netAssets.totalRestricted)} ar={ar} />
+            )}
+            {d.netAssets.unrestricted.length === 0 && d.netAssets.restricted.length === 0 && (
+              <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد صافي أصول مسجلة" : "No net assets recorded"}</p></div>
+            )}
+          </SectionBlock>
 
-            <SubSectionTitle title={ar ? "صافي أصول غير مقيدة" : "Unrestricted"} amount={data.netAssets.totalUnrestricted} />
-            {data.netAssets.unrestricted.map((item) => (
-              <DataRow key={item.accountId} code={item.code} label={item.name} amount={item.balance} indent ar={ar} />
-            ))}
-
-            <SubSectionTitle title={ar ? "صافي أصول مقيدة" : "Restricted"} amount={data.netAssets.totalRestricted} />
-            {data.netAssets.restricted.map((item) => (
-              <DataRow key={item.accountId} code={item.code} label={item.name} amount={item.balance} indent ar={ar} />
-            ))}
-          </div>
-
-          <div className="bg-brand-50 dark:bg-brand-900/20 rounded-2xl p-6 border border-brand-100 dark:border-brand-800">
+          <div className="rounded-2xl p-5 border" style={{ background: "#E8F5E9", borderColor: "#C8E6C9" }}>
             <div className="flex justify-between items-center">
-              <span className="text-lg font-bold text-brand-900 dark:text-brand-100">
+              <span className="text-base font-bold" style={{ color: "#1A1A2E" }}>
                 {ar ? "إجمالي الخصوم وصافي الأصول" : "Total Liabilities & Net Assets"}
               </span>
-              <span className="text-2xl font-black text-brand-600">
-                {formatCurrency(data.liabilities.totalLiabilities + data.netAssets.totalNetAssets)}
+              <span className="text-xl font-black tabular-nums" style={{ color: "#2E7D32", direction: "ltr" }}>
+                {formatCurrency(d.liabilities.totalLiabilities + d.netAssets.totalNetAssets)}
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ───────── Mobile: accordion cards ───────── */}
+      <div className="flex flex-col gap-3 lg:hidden px-4">
+        <MobileCard title={ar ? "الأصول" : "Assets"} total={formatCurrency(d.assets.totalAssets)} bgColor="#E8F5E9" headerBg="#C8E6C9" defaultOpen>
+          {d.assets.current.length > 0 && (
+            <SubTable items={d.assets.current} subtitle={ar ? "الأصول المتداولة" : "Current Assets"} subtotal={formatCurrency(d.assets.totalCurrent)} ar={ar} />
+          )}
+          {d.assets.fixed.length > 0 && (
+            <SubTable items={d.assets.fixed} subtitle={ar ? "الأصول الثابتة" : "Fixed Assets"} subtotal={formatCurrency(d.assets.totalFixed)} ar={ar} />
+          )}
+          {d.assets.current.length === 0 && d.assets.fixed.length === 0 && (
+            <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد أصول مسجلة" : "No assets recorded"}</p></div>
+          )}
+        </MobileCard>
+
+        <MobileCard title={ar ? "الخصوم" : "Liabilities"} total={formatCurrency(d.liabilities.totalLiabilities)} bgColor="#FFEBEE" headerBg="#FFCDD2">
+          {d.liabilities.rows.length > 0 ? (
+            <SubTable items={d.liabilities.rows} subtitle={ar ? "الخصوم" : "Liabilities"} subtotal={formatCurrency(d.liabilities.totalLiabilities)} ar={ar} />
+          ) : (
+            <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد خصوم مسجلة" : "No liabilities recorded"}</p></div>
+          )}
+        </MobileCard>
+
+        <MobileCard title={ar ? "صافي الأصول" : "Net Assets"} total={formatCurrency(d.netAssets.totalNetAssets)} bgColor="#E3F2FD" headerBg="#BBDEFB">
+          {d.netAssets.unrestricted.length > 0 && (
+            <SubTable items={d.netAssets.unrestricted} subtitle={ar ? "غير مقيدة" : "Unrestricted"} subtotal={formatCurrency(d.netAssets.totalUnrestricted)} ar={ar} />
+          )}
+          {d.netAssets.restricted.length > 0 && (
+            <SubTable items={d.netAssets.restricted} subtitle={ar ? "مقيدة" : "Restricted"} subtotal={formatCurrency(d.netAssets.totalRestricted)} ar={ar} />
+          )}
+          {d.netAssets.unrestricted.length === 0 && d.netAssets.restricted.length === 0 && (
+            <div className="px-5 py-6 text-center"><p className="text-sm italic" style={{ color: "#78909C" }}>{ar ? "لا توجد صافي أصول مسجلة" : "No net assets recorded"}</p></div>
+          )}
+        </MobileCard>
+
+        <div className="rounded-2xl p-5 border" style={{ background: "#E8F5E9", borderColor: "#C8E6C9" }}>
+          <div className="flex justify-between items-center">
+            <span className="text-base font-bold" style={{ color: "#1A1A2E" }}>
+              {ar ? "إجمالي الخصوم وصافي الأصول" : "Total Liabilities & Net Assets"}
+            </span>
+            <span className="text-xl font-black tabular-nums" style={{ color: "#2E7D32", direction: "ltr" }}>
+              {formatCurrency(d.liabilities.totalLiabilities + d.netAssets.totalNetAssets)}
+            </span>
           </div>
         </div>
       </div>

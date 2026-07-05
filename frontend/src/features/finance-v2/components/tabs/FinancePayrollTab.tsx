@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, Printer, Users, Eye, TrendingDown, TrendingUp, User, AlertCircle, Calendar, StickyNote, CreditCard, Receipt, RefreshCcw } from "lucide-react";
+import { Calculator, Printer, Users, Eye, TrendingDown, TrendingUp, User, Calendar, CreditCard, Receipt, RefreshCcw } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
@@ -27,11 +27,15 @@ import { FinanceDataTable } from "../../design/FinanceDataTable";
 import Modal from "../../../../components/ui/Modal";
 import useClientPagination from "../../../../shared/ui/useClientPagination";
 import { useOrgBrandingQuery } from "../../../org/org.hooks";
+import { useDeductionEvents } from "../../../staff-attendance/staff-attendance.api";
+import { useAccountingJournalEntriesQuery } from "../../../../pages/accounting/accounting.hooks";
+import { useFinanceV2VouchersQuery } from "../../finance-v2.hooks";
 
 type Props = {
   centerId: number | undefined;
   year: number;
   month: number;
+  status?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   canCreateBatch?: boolean;
@@ -92,6 +96,23 @@ const getPayrollSummary = (batch: PayrollBatchV2 | null) => {
       totalCount: items.length
     }
   );
+};
+
+const getTriggerLabel = (trigger: string, ar: boolean) => {
+  switch (trigger) {
+    case "UNEXCUSED_ABSENCE":
+      return ar ? "غياب غير مبرر" : "Unexcused Absence";
+    case "LATE_THRESHOLD":
+      return ar ? "تجاوز حد التأخير" : "Late Threshold";
+    case "EARLY_DEPARTURE":
+      return ar ? "انصراف مبكر" : "Early Departure";
+    case "UNPAID_LEAVE":
+      return ar ? "إجازة غير مدفوعة" : "Unpaid Leave";
+    case "MISSED_VISIT":
+      return ar ? "زيارة فائتة" : "Missed Visit";
+    default:
+      return trigger;
+  }
 };
 
 const escapeHtml = (value: unknown) =>
@@ -229,7 +250,9 @@ export default function FinancePayrollTab({
   centerId, 
   year: propYear, 
   month: propMonth,
+  status,
   isAdmin,
+  isSuperAdmin,
   canCreateBatch = isAdmin,
   ar, 
   methodLabels,
@@ -245,13 +268,47 @@ export default function FinancePayrollTab({
     reference: string;
     failureReason: string;
   } | null>(null);
-  const [payrollError, setPayrollError] = useState("");
   
   const [batchForm, setBatchForm] = useState({
     year: propYear,
-    month: propMonth,
-    description: ""
+    month: propMonth
   });
+
+  const [selectedDeductionItem, setSelectedDeductionItem] = useState<PayrollItemV2 | null>(null);
+  const [selectedVoucherItem, setSelectedVoucherItem] = useState<PayrollItemV2 | null>(null);
+
+  const deductionsQuery = useDeductionEvents(
+    selectedDeductionItem && selectedBatch
+      ? {
+          month: selectedBatch.periodMonth,
+          year: selectedBatch.periodYear,
+          centerId: selectedBatch.centerId ?? undefined
+        }
+      : undefined
+  );
+
+  const employeeDeductionEvents = useMemo(() => {
+    if (!selectedDeductionItem || !deductionsQuery.data?.records) return [];
+    return deductionsQuery.data.records.filter(
+      (ev) => ev.userId === selectedDeductionItem.beneficiaryUserId
+    );
+  }, [selectedDeductionItem, deductionsQuery.data]);
+
+  const vouchersQ = useFinanceV2VouchersQuery(selectedBatch?.centerId ?? undefined);
+  const journalEntriesQ = useAccountingJournalEntriesQuery();
+
+  const selectedVoucher = useMemo(() => {
+    if (!selectedVoucherItem || !vouchersQ.data) return null;
+    return vouchersQ.data.rows.find((v: any) => v.id === selectedVoucherItem.voucherId);
+  }, [selectedVoucherItem, vouchersQ.data]);
+
+  const selectedJournalEntry = useMemo(() => {
+    if (!selectedVoucherItem || !journalEntriesQ.data) return null;
+    return journalEntriesQ.data.find(
+      (entry) =>
+        entry.sourceType === "VOUCHER" && entry.sourceId === selectedVoucherItem.voucherId
+    );
+  }, [selectedVoucherItem, journalEntriesQ.data]);
 
   useEffect(() => {
     if (externalShowBatchForm) {
@@ -260,16 +317,15 @@ export default function FinancePayrollTab({
   }, [externalShowBatchForm]);
 
   useEffect(() => {
-    setBatchForm({
-      year: propYear,
-      month: propMonth,
-      description: ar ? `رواتب شهر ${propMonth}/${propYear}` : `Payroll for ${propMonth}/${propYear}`
-    });
-  }, [propYear, propMonth, ar]);
+    setBatchForm({ year: propYear, month: propMonth });
+  }, [propYear, propMonth]);
 
   const brandingQ = useOrgBrandingQuery();
   const batchesQ = useFinanceV2PayrollBatchesQuery(centerId, propYear, propMonth);
-  const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
+  const batches = useMemo(
+    () => (batchesQ.data?.rows ?? []).filter((batch) => !status || batch.status === status),
+    [batchesQ.data?.rows, status]
+  );
   const pagination = useClientPagination(batches, { initialPageSize: 10 });
 
   const createBatchM = useCreateFinanceV2PayrollBatchMutation();
@@ -281,15 +337,13 @@ export default function FinancePayrollTab({
   const closeBatchModal = () => {
     if (createBatchM.isPending) return;
     setShowBatchForm(false);
-    setPayrollError("");
     onExternalBatchFormClose?.();
   };
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!centerId) {
-      setPayrollError(ar ? "المركز مطلوب لإنشاء دفعة الرواتب." : "A center is required to create a payroll batch.");
-      notifyRequiredFields(ar);
+    if (!centerId && !isSuperAdmin) {
+      notifyError(ar ? "المركز مطلوب لإنشاء دفعة الرواتب." : "A center is required to create a payroll batch.");
       return;
     }
 
@@ -306,7 +360,6 @@ export default function FinancePayrollTab({
         ar,
         fallback: ar ? "تعذر إنشاء دفعة الرواتب." : "Unable to create the payroll batch."
       });
-      setPayrollError(message);
       notifyError(message);
     }
   };
@@ -368,11 +421,11 @@ export default function FinancePayrollTab({
   const handleSubmitBatch = async (batchId: number) => {
     try {
       await submitBatchM.mutateAsync({ batchId });
-      notifySuccess(ar ? "تم اعتماد دفعة الرواتب بنجاح" : "Payroll batch approved successfully");
+      notifySuccess(ar ? "تم إرسال دفعة الرواتب للاعتماد" : "Payroll batch submitted for approval");
     } catch (error) {
       notifyError(getLocalizedApiErrorMessage(error, {
         ar,
-        fallback: ar ? "تعذر اعتماد دفعة الرواتب." : "Unable to approve the payroll batch."
+        fallback: ar ? "تعذر إرسال دفعة الرواتب للاعتماد." : "Unable to submit the payroll batch for approval."
       }));
     }
   };
@@ -446,33 +499,6 @@ export default function FinancePayrollTab({
             </div>
           </div>
 
-          {/* Section 2: Description */}
-          <div className="circlemod-section">
-            <div className="circlemod-section-head">
-              <StickyNote size={15} className="circlemod-section-icon" />
-              <span>{ar ? "الوصف" : "Description"}</span>
-              <span className="circlemod-section-hint">{ar ? "للعرض فقط" : "Display only"}</span>
-            </div>
-            <div className="circlemod-row">
-              <div className="circlemod-field circlemod-field--lg">
-                <label htmlFor="pr-desc">{ar ? "وصف الدفعة" : "Batch Description"}</label>
-                <input
-                  id="pr-desc"
-                  className="circlemod-input"
-                  value={batchForm.description}
-                  onChange={(e) => setBatchForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder={ar ? "وصف الدفعة" : "Batch Description"}
-                />
-              </div>
-            </div>
-          </div>
-
-          {payrollError ? (
-            <div className="circlemod-error" role="alert">
-              <AlertCircle size={14} className="flex-shrink-0" />
-              <span>{payrollError}</span>
-            </div>
-          ) : null}
         </form>
       </Modal>
 
@@ -589,9 +615,13 @@ export default function FinancePayrollTab({
                           <FinanceMoney amount={item.deductionAmount} baseCurrency="YER" className="text-sm" />
                         </div>
                         {item.deductionEventIds?.length ? (
-                          <span className="text-[0.65rem] font-semibold text-rose-500">
-                            {ar ? "من الحضور" : "From attendance"} · {item.deductionEventIds.length}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDeductionItem(item)}
+                            className="text-[0.65rem] font-bold text-rose-500 hover:underline hover:text-rose-700 text-start flex items-center gap-0.5"
+                          >
+                            <span>{ar ? "تفاصيل الخصم" : "Deduction details"} ({item.deductionEventIds.length})</span>
+                          </button>
                         ) : null}
                       </div>
                     )
@@ -633,9 +663,10 @@ export default function FinancePayrollTab({
                     header: ar ? "السند" : "Voucher",
                     render: (item) => item.voucherId ? (
                       <button
-                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:underline"
-                        onClick={() => { window.location.href = "/finance/vouchers"; }}
-                        title={ar ? "عرض السند" : "View voucher"}
+                        type="button"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:underline hover:text-brand-800"
+                        onClick={() => setSelectedVoucherItem(item)}
+                        title={ar ? "عرض السند والقيود" : "View voucher & journal"}
                       >
                         <Receipt size={13} />
                         {item.voucher?.voucherNo ?? `#${item.voucherId}`}
@@ -657,8 +688,8 @@ export default function FinancePayrollTab({
                           </Button>
                         ) : null}
                         {item.voucherId ? (
-                          <Button size="sm" variant="ghost" onClick={() => { window.location.href = "/finance/vouchers"; }}>
-                            {ar ? "عرض السند" : "View voucher"}
+                          <Button size="sm" variant="ghost" onClick={() => setSelectedVoucherItem(item)}>
+                            {ar ? "عرض السند والقيود" : "View voucher & journal"}
                           </Button>
                         ) : null}
                       </div>
@@ -799,7 +830,7 @@ export default function FinancePayrollTab({
                             onClick={() => void handleSubmitBatch(b.id)}
                             isLoading={submitBatchM.isPending}
                           >
-                            {ar ? "اعتماد" : "Approve"}
+                            {ar ? "إرسال للاعتماد" : "Submit for approval"}
                           </Button>
                         )}
                         <button 
@@ -834,6 +865,242 @@ export default function FinancePayrollTab({
               />
         </div>
       ) : null}
+
+      {/* 1. Deduction Events Modal */}
+      <Modal
+        isOpen={Boolean(selectedDeductionItem)}
+        onClose={() => setSelectedDeductionItem(null)}
+        title={
+          ar
+            ? `خصومات حضور الموظف: ${selectedDeductionItem?.beneficiary?.fullName || ""}`
+            : `Attendance Deductions for: ${selectedDeductionItem?.beneficiary?.fullName || ""}`
+        }
+        titleIcon={
+          <div className="circlemod-head-icon bg-rose-50 text-rose-600">
+            <TrendingDown className="w-4 h-4" />
+          </div>
+        }
+        size="lg"
+        panelClassName="circlemod-panel"
+        bodyClassName="circlemod-body"
+      >
+        <div className="p-4" dir={ar ? "rtl" : "ltr"}>
+          {deductionsQuery.isLoading ? (
+            <div className="py-12 text-center text-slate-500 font-semibold animate-pulse">
+              {ar ? "جاري تحميل تفاصيل الخصومات..." : "Loading deduction details..."}
+            </div>
+          ) : employeeDeductionEvents.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 font-semibold">
+              {ar ? "لا توجد خصومات حضور معتمدة مسجلة لهذا الشهر." : "No approved attendance deductions recorded for this month."}
+            </div>
+          ) : (
+            <div className="overflow-hidden border border-slate-100 rounded-xl">
+              <table className="min-w-full divide-y divide-slate-100 text-sm">
+                <thead className="bg-slate-50/50">
+                  <tr>
+                    <th className="px-4 py-3 text-start font-bold text-slate-700">{ar ? "نوع المخالفة" : "Violation Type"}</th>
+                    <th className="px-4 py-3 text-center font-bold text-slate-700">{ar ? "التكرار" : "Occurrences"}</th>
+                    <th className="px-4 py-3 text-center font-bold text-slate-700">{ar ? "مبلغ الخصم" : "Deduction Amount"}</th>
+                    <th className="px-4 py-3 text-center font-bold text-slate-700">{ar ? "الحالة" : "Status"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {employeeDeductionEvents.map((ev) => (
+                    <tr key={ev.id} className="hover:bg-slate-50/40 transition-colors">
+                      <td className="px-4 py-3 font-semibold text-slate-800">
+                        {getTriggerLabel(ev.triggerType, ar)}
+                      </td>
+                      <td className="px-4 py-3 text-center font-medium text-slate-600">
+                        {ev.occurrences} {ar ? "مرات" : "times"}
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-rose-600">
+                        <FinanceMoney amount={ev.amount} baseCurrency="YER" />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                          ev.status === "APPROVED"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                            : ev.status === "WAIVED"
+                            ? "bg-slate-100 text-slate-600 border border-slate-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
+                        }`}>
+                          {ev.status === "APPROVED" ? (ar ? "معتمد" : "Approved") : ev.status === "WAIVED" ? (ar ? "معفى" : "Waived") : ev.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="bg-rose-50/30 px-4 py-3 border-t border-slate-100 flex justify-between items-center text-xs font-semibold text-rose-800">
+                <span>{ar ? "إجمالي خصومات الحضور المستقطعة:" : "Total Deductions Deducted:"}</span>
+                <span className="text-sm font-black text-rose-600">
+                  <FinanceMoney amount={selectedDeductionItem?.deductionAmount ?? 0} baseCurrency="YER" />
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* 2. Voucher & Journal Entries Modal */}
+      <Modal
+        isOpen={Boolean(selectedVoucherItem)}
+        onClose={() => setSelectedVoucherItem(null)}
+        title={
+          ar
+            ? `عرض السند المحاسبي والقيود اليومية`
+            : `Accounting Voucher & Journal Double-Entry`
+        }
+        titleIcon={
+          <div className="circlemod-head-icon bg-emerald-50 text-emerald-600">
+            <Receipt className="w-4 h-4" />
+          </div>
+        }
+        size="xl"
+        panelClassName="circlemod-panel"
+        bodyClassName="circlemod-body"
+      >
+        <div className="p-5" dir={ar ? "rtl" : "ltr"}>
+          {vouchersQ.isLoading || journalEntriesQ.isLoading ? (
+            <div className="py-16 text-center text-slate-500 font-semibold flex flex-col items-center gap-3 animate-pulse">
+              <RefreshCcw className="w-6 h-6 animate-spin text-brand-500" />
+              <span>{ar ? "جاري تحميل تفاصيل السند والقيود المحاسبية..." : "Loading voucher and accounting details..."}</span>
+            </div>
+          ) : !selectedVoucher ? (
+            <div className="py-12 text-center text-slate-500 font-semibold">
+              {ar ? "تعذر تحميل تفاصيل هذا السند. يرجى التحقق من لوحة السندات." : "Could not load voucher details. Please check the vouchers dashboard."}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Voucher Core details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{ar ? "بيانات السند المحاسبي" : "Voucher Specifications"}</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "رقم السند:" : "Voucher No:"}</span>
+                      <span className="font-bold text-slate-900">{selectedVoucher.voucherNo}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "تاريخ السند:" : "Voucher Date:"}</span>
+                      <span className="font-semibold text-slate-800">{selectedVoucher.voucherDate ? new Date(selectedVoucher.voucherDate as string).toLocaleDateString(ar ? "ar-SA-u-nu-latn" : "en-US") : ""}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "الحساب / الصندوق:" : "Debit Account / Fund:"}</span>
+                      <span className="font-semibold text-slate-800">
+                        {(selectedVoucher as any).account?.name || (ar ? "الصندوق الرئيسي" : "Main Fund")} ({(selectedVoucher as any).account?.accountingAccount?.code})
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "المصدر:" : "Source:"}</span>
+                      <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-xs">
+                        {selectedVoucher.sourceType === "PAYROLL" ? (ar ? "مسير الرواتب" : "Payroll Batch") : selectedVoucher.sourceType} #{selectedVoucher.sourceId}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">{ar ? "الدفعة والصرف" : "Payment Information"}</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "المبلغ المصروف:" : "Amount Disbursed:"}</span>
+                      <span className="font-black text-brand-600 text-base"><FinanceMoney amount={selectedVoucher.amount} baseCurrency="YER" /></span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "طريقة الصرف:" : "Payment Method:"}</span>
+                      <span className="font-semibold text-slate-800">{selectedVoucher.paymentMethod ? methodLabels[selectedVoucher.paymentMethod as PaymentMethodV2] : "-"}</span>
+                    </div>
+                    {selectedVoucher.externalTransferRef && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">{ar ? "رقم الحوالة/المرجع:" : "Transfer Reference:"}</span>
+                        <span className="font-mono text-slate-800 text-xs">{selectedVoucher.externalTransferRef}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{ar ? "حالة السند:" : "Voucher Status:"}</span>
+                      <FinanceStatusBadge status={selectedVoucher.status} label={voucherStatusLabels[selectedVoucher.status as string] || selectedVoucher.status} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Journal Entry Double Entry Table */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{ar ? "قيود اليومية المزدوجة المتولدة (القيد المحاسبي)" : "Double-Entry Journal Movements"}</h4>
+                  {selectedJournalEntry && (
+                    <span className="text-xs text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                      {ar ? "ترحيل آلي" : "Auto-Posted"} · {selectedJournalEntry.entryNo}
+                    </span>
+                  )}
+                </div>
+
+                {selectedJournalEntry ? (
+                  <div className="overflow-hidden border border-slate-100 rounded-xl">
+                    <table className="min-w-full divide-y divide-slate-100 text-sm">
+                      <thead className="bg-slate-50/50">
+                        <tr>
+                          <th className="px-4 py-3 text-start font-bold text-slate-700">{ar ? "رمز واسم الحساب المحاسبي" : "Account Code & Name"}</th>
+                          <th className="px-4 py-3 text-center font-bold text-slate-700 w-32">{ar ? "مدين (Debit)" : "Debit (Dr)"}</th>
+                          <th className="px-4 py-3 text-center font-bold text-slate-700 w-32">{ar ? "دائن (Credit)" : "Credit (Cr)"}</th>
+                          <th className="px-4 py-3 text-start font-bold text-slate-700">{ar ? "البيان / شرح القيد" : "Memo / Description"}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {selectedJournalEntry.lines.map((line) => (
+                          <tr key={line.id} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-slate-800">
+                              <span className="text-brand-600 font-mono text-xs block mb-0.5">{line.account?.code}</span>
+                              <span className="text-xs">{line.account?.name}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center font-bold text-emerald-600 bg-emerald-50/10">
+                              {Number(line.debit) > 0 ? <FinanceMoney amount={Number(line.debit)} baseCurrency="YER" /> : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-center font-bold text-rose-600 bg-rose-50/10">
+                              {Number(line.credit) > 0 ? <FinanceMoney amount={Number(line.credit)} baseCurrency="YER" /> : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-start text-xs text-slate-600">
+                              {line.memo || selectedJournalEntry.description || "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-slate-50/50 font-bold border-t border-slate-100">
+                        <tr>
+                          <td className="px-4 py-3 text-start text-slate-700 font-bold">{ar ? "الإجمالي" : "Total"}</td>
+                          <td className="px-4 py-3 text-center text-emerald-600 font-black text-sm bg-emerald-50/20">
+                            <FinanceMoney 
+                              amount={selectedJournalEntry.lines.reduce((sum, l) => sum + Number(l.debit || 0), 0)} 
+                              baseCurrency="YER" 
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-center text-rose-600 font-black text-sm bg-rose-50/20">
+                            <FinanceMoney 
+                              amount={selectedJournalEntry.lines.reduce((sum, l) => sum + Number(l.credit || 0), 0)} 
+                              baseCurrency="YER" 
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-start text-slate-500 font-normal text-xs">{ar ? "القيد متوازن ومتطابق ✅" : "Journal is Balanced ✅"}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-12 border border-dashed border-slate-200 rounded-xl text-center text-slate-500 font-semibold bg-slate-50/30">
+                    <Receipt className="mx-auto mb-2 text-amber-500 w-6 h-6" />
+                    <span>
+                      {ar
+                        ? "السند الحالي لم يُرحَّل للحسابات بعد. يتم توليد القيود المزدوجة تلقائياً فور اعتماد ترحيل السند."
+                        : "Voucher has not been posted to Ledger yet. Double-entry is recorded automatically upon posting."}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </>
   );
 }

@@ -15,5 +15,12 @@ export const certificatesApi = {
       `/golden-records/${recordId}/certificate`
     );
     return response.data.data;
+  },
+
+  async verifyCertificate(token: string): Promise<any> {
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/public/certificates/verify/${token}`
+    );
+    return response.data.data;
   }
 };

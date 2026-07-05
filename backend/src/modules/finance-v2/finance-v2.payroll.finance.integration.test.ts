@@ -77,19 +77,19 @@ describe("payroll workflow integration", () => {
 
     await payrollService.submitPayrollBatch(context.scopes.manager, batch.id, {});
     await payrollService.approvePayrollBatch(context.scopes.manager, batch.id, {});
-    await payrollService.payPayrollBatch(context.scopes.manager, batch.id, {
+    await payrollService.payPayrollBatch(context.scopes.treasurer, batch.id, {
       payments: [{ itemId: teacherItem.id, method: PaymentMethod.CASH }]
     });
     expect((await financeTestPrisma.payrollBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
       PayrollBatchStatus.PARTIALLY_PAID
     );
-    await payrollService.payPayrollBatch(context.scopes.manager, batch.id, {
+    await payrollService.payPayrollBatch(context.scopes.treasurer, batch.id, {
       payments: [{ itemId: teacherItem.id, method: PaymentMethod.CASH }]
     });
     expect(await financeTestPrisma.financeVoucher.count({ where: { sourceType: "PAYROLL_ITEM", sourceId: teacherItem.id } })).toBe(1);
 
     const otherItem = items.find((item) => item.id !== teacherItem.id)!;
-    await payrollService.payPayrollBatch(context.scopes.manager, batch.id, {
+    await payrollService.payPayrollBatch(context.scopes.treasurer, batch.id, {
       payments: [{ itemId: otherItem.id, method: PaymentMethod.CASH }]
     });
     const stored = await financeTestPrisma.payrollBatch.findUniqueOrThrow({ where: { id: batch.id } });

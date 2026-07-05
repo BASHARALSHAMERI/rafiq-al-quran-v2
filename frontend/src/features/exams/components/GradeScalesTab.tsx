@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
   GraduationCap,
@@ -242,7 +241,7 @@ export function GradeScalesTab() {
 
       closeModal();
     } catch (error) {
-      toast.error(getLocalizedApiErrorMessage(error, "تعذر حفظ التقدير."));
+      toast.error(getLocalizedApiErrorMessage(error, { ar: true, fallback: "تعذر حفظ التقدير." }));
     }
   };
 
@@ -256,7 +255,7 @@ export function GradeScalesTab() {
       setDeleteConfirm(null);
       toast.success("تم حذف التقدير بنجاح");
     } catch (error) {
-      toast.error(getLocalizedApiErrorMessage(error, "تعذر حذف التقدير."));
+      toast.error(getLocalizedApiErrorMessage(error, { ar: true, fallback: "تعذر حذف التقدير." }));
     }
   };
 

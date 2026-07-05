@@ -17,6 +17,7 @@ import {
 } from "../../finance-v2.hooks";
 import type {
   CreatePayrollProfileV2Payload,
+  UpdatePayrollProfileV2Payload,
   PaymentMethodV2,
   PayrollProfileV2,
   EligibleEmployeeV2,
@@ -55,8 +56,12 @@ const emptyForm = (): CreatePayrollProfileV2Payload => ({
   monthlyBaseAmount: 0,
   salaryCurrencyCode: "YER",
   paymentMethodDefault: "CASH" as PaymentMethodV2,
+  bankAccountNumber: "",
+  bankName: "",
+  iban: "",
   effectiveFrom: new Date().toISOString().slice(0, 10),
   isActive: true,
+  notes: "",
 });
 
 export default function FinancePayrollProfilesTab({ 
@@ -140,9 +145,13 @@ export default function FinancePayrollProfilesTab({
       monthlyBaseAmount: p.monthlyBaseAmount,
       salaryCurrencyCode: p.salaryCurrencyCode ?? "YER",
       paymentMethodDefault: p.paymentMethodDefault ?? "CASH",
+      bankAccountNumber: p.bankAccountNumber ?? "",
+      bankName: p.bankName ?? "",
+      iban: p.iban ?? "",
       effectiveFrom: p.effectiveFrom?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
       effectiveTo: p.effectiveTo?.slice(0, 10),
       isActive: p.isActive,
+      notes: p.notes ?? "",
     });
     // Set a synthetic employee object from existing profile data
     if (p.user) {
@@ -189,7 +198,7 @@ export default function FinancePayrollProfilesTab({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formState.userId || (isOverride && !formState.overrideReason?.trim())) {
+    if (!formState.userId || formState.monthlyBaseAmount <= 0 || (isOverride && !formState.overrideReason?.trim())) {
       const employeeInput = e.currentTarget.querySelector<HTMLInputElement>("input[list='employeeList']");
       if (!formState.userId) {
         employeeInput?.setCustomValidity(ar ? "اختر موظفًا من القائمة." : "Select an employee from the list.");
@@ -198,17 +207,42 @@ export default function FinancePayrollProfilesTab({
       notifyRequiredFields(ar);
       return;
     }
-    try {
-      const payload = {
-        ...formState,
-        salarySource: isOverride ? "OVERRIDE" : "GRADE",
-        overrideReason: isOverride ? formState.overrideReason : undefined,
-      } as CreatePayrollProfileV2Payload;
+    if (formState.effectiveTo && formState.effectiveTo < formState.effectiveFrom) {
+      notifyError(ar ? "تاريخ الانتهاء لا يمكن أن يسبق تاريخ السريان." : "Effective-to date cannot be before effective-from date.");
+      return;
+    }
 
+    try {
       if (formMode === "edit" && editingId) {
+        const payload: UpdatePayrollProfileV2Payload = {
+          salaryGradeId: formState.salaryGradeId,
+          salarySource: isOverride ? "OVERRIDE" : "GRADE",
+          overrideReason: isOverride ? formState.overrideReason?.trim() || null : null,
+          monthlyBaseAmount: formState.monthlyBaseAmount,
+          salaryCurrencyCode: formState.salaryCurrencyCode,
+          paymentMethodDefault: formState.paymentMethodDefault,
+          bankAccountNumber: formState.bankAccountNumber?.trim() || null,
+          bankName: formState.bankName?.trim() || null,
+          iban: formState.iban?.trim() || null,
+          effectiveFrom: formState.effectiveFrom,
+          effectiveTo: formState.effectiveTo || null,
+          isActive: formState.isActive,
+          notes: formState.notes?.trim() || null,
+        };
         await updateProfileM.mutateAsync({ id: editingId, payload });
       } else {
-        await createProfileM.mutateAsync({ ...payload, centerId });
+        const payload: CreatePayrollProfileV2Payload = {
+          ...formState,
+          centerId,
+          salarySource: isOverride ? "OVERRIDE" : "GRADE",
+          overrideReason: isOverride ? formState.overrideReason?.trim() : undefined,
+          bankAccountNumber: formState.bankAccountNumber?.trim() || undefined,
+          bankName: formState.bankName?.trim() || undefined,
+          iban: formState.iban?.trim() || undefined,
+          effectiveTo: formState.effectiveTo || undefined,
+          notes: formState.notes?.trim() || undefined,
+        };
+        await createProfileM.mutateAsync(payload);
       }
       notifySuccess(formMode === "edit"
         ? (ar ? "تم تحديث ملف الراتب بنجاح" : "Payroll profile updated successfully")
@@ -546,6 +580,56 @@ export default function FinancePayrollProfilesTab({
                   <option value="CASH">{ar ? "نقدي (Cash)" : "Cash"}</option>
                   <option value="TRANSFER">{ar ? "تحويل / بنك (Transfer)" : "Transfer"}</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="circlemod-row">
+              <div className="circlemod-field circlemod-field--lg">
+                <label htmlFor="bankName">{ar ? "اسم البنك" : "Bank Name"}</label>
+                <input
+                  id="bankName"
+                  className="circlemod-input"
+                  value={formState.bankName || ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, bankName: e.target.value }))}
+                  maxLength={120}
+                  placeholder={ar ? "اختياري" : "Optional"}
+                />
+              </div>
+              <div className="circlemod-field circlemod-field--lg">
+                <label htmlFor="bankAccountNumber">{ar ? "رقم الحساب البنكي" : "Bank Account Number"}</label>
+                <input
+                  id="bankAccountNumber"
+                  className="circlemod-input"
+                  value={formState.bankAccountNumber || ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, bankAccountNumber: e.target.value }))}
+                  maxLength={80}
+                  placeholder={ar ? "اختياري" : "Optional"}
+                />
+              </div>
+            </div>
+
+            <div className="circlemod-row">
+              <div className="circlemod-field circlemod-field--lg">
+                <label htmlFor="iban">IBAN</label>
+                <input
+                  id="iban"
+                  className="circlemod-input"
+                  value={formState.iban || ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, iban: e.target.value }))}
+                  maxLength={34}
+                  placeholder={ar ? "اختياري" : "Optional"}
+                />
+              </div>
+              <div className="circlemod-field circlemod-field--lg">
+                <label htmlFor="profileNotes">{ar ? "ملاحظات" : "Notes"}</label>
+                <input
+                  id="profileNotes"
+                  className="circlemod-input"
+                  value={formState.notes || ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, notes: e.target.value }))}
+                  maxLength={500}
+                  placeholder={ar ? "ملاحظات اختيارية" : "Optional notes"}
+                />
               </div>
             </div>
             

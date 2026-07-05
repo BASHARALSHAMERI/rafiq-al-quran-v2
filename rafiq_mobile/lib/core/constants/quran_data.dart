@@ -156,6 +156,24 @@ abstract class QuranData {
     }
   }
 
+  /// حساب رقم الصفحة التقريبي للآية داخل السورة
+  static int getPageNumber(int surahNumber, int ayahNumber) {
+    final surah = findByNumber(surahNumber);
+    if (surah == null) return 1;
+    
+    final nextSurah = findByNumber(surahNumber + 1);
+    final surahPages = nextSurah != null
+        ? nextSurah.startPage - surah.startPage
+        : (totalPages - surah.startPage + 1);
+        
+    if (surah.ayahCount == 0) return surah.startPage;
+    
+    // تقدير الصفحة بناء على نسبة الآية من إجمالي آيات السورة
+    final ratio = (ayahNumber - 1) / surah.ayahCount;
+    final extraPages = (ratio * surahPages).floor();
+    return (surah.startPage + extraPages).clamp(1, totalPages);
+  }
+
   /// حساب عدد الصفحات التقريبي بناءً على السورة ونطاق الآيات
   /// يحسب النسبة من آيات السورة ثم يضربها بعدد صفحات السورة
   static double estimatePages({

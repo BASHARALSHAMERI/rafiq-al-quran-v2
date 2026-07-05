@@ -14,10 +14,11 @@ import {
 } from "@prisma/client";
 import { prisma } from "../../../shared/db/prisma";
 import { AppError } from "../../../shared/errors/app-error";
+import { safeDate, toDateOnly } from "../../../shared/utils/time";
 import type { ScopeContext } from "../../../shared/types/auth.types";
 import { accountingService, ensurePeriodOpenTx } from "../../accounting/accounting.service";
 import { financeV2Domain } from "../finance-v2.domain";
-import { addAudit, nextVoucherNoTx, postVoucherTx } from "../finance-v2.internal";
+import { addAudit, isKnownPrismaError, nextVoucherNoTx, normalize, postVoucherTx } from "../finance-v2.internal";
 
 const findPostingAccountsPayableTx = (tx: Prisma.TransactionClient, organizationId: number) => {
   return tx.accountingAccount.findFirst({
@@ -67,6 +68,8 @@ const ensureFinanceAccountScope = (
 
 export const expensesService = {
   async listSuppliers(scope: ScopeContext) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const suppliers = await prisma.supplier.findMany({
       where: { organizationId: scope.organizationId },
       orderBy: { name: "asc" }
@@ -78,19 +81,35 @@ export const expensesService = {
     scope: ScopeContext,
     input: { name: string; phone?: string; address?: string; notes?: string }
   ) {
-    const supplier = await prisma.supplier.create({
-      data: {
-        organizationId: scope.organizationId,
-        name: input.name,
-        phone: input.phone,
-        address: input.address,
-        notes: input.notes
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    try {
+      return await prisma.supplier.create({
+        data: {
+          organizationId: scope.organizationId,
+          name: input.name.trim(),
+          phone: input.phone?.trim() || null,
+          address: input.address?.trim() || null,
+          notes: input.notes?.trim() || null
+        }
+      });
+    } catch (error) {
+      if (isKnownPrismaError(error) && error.code === "P2002") {
+        throw new AppError(
+          "Supplier already exists",
+          409,
+          undefined,
+          "DUPLICATE_SUPPLIER",
+          { ar: "المورد موجود مسبقاً", en: "Supplier already exists" }
+        );
       }
-    });
-    return supplier;
+      throw error;
+    }
   },
 
   async listExpenseCategories(scope: ScopeContext) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const categories = await prisma.expenseCategory.findMany({
       where: { organizationId: scope.organizationId },
       include: { accountingAccount: { select: { id: true, name: true, code: true } } },
@@ -103,6 +122,8 @@ export const expensesService = {
     scope: ScopeContext,
     input: { name: string; type?: string; accountingAccountId?: number }
   ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanManageSettings(scope);
     if (input.accountingAccountId) {
       const account = await prisma.accountingAccount.findFirst({
         where: {
@@ -118,21 +139,35 @@ export const expensesService = {
       }
     }
 
-    const category = await prisma.expenseCategory.create({
-      data: {
-        organizationId: scope.organizationId,
-        name: input.name,
-        type: input.type,
-        accountingAccountId: input.accountingAccountId
+    try {
+      return await prisma.expenseCategory.create({
+        data: {
+          organizationId: scope.organizationId,
+          name: input.name.trim(),
+          type: input.type?.trim() || null,
+          accountingAccountId: input.accountingAccountId
+        }
+      });
+    } catch (error) {
+      if (isKnownPrismaError(error) && error.code === "P2002") {
+        throw new AppError(
+          "Expense category already exists",
+          409,
+          undefined,
+          "DUPLICATE_EXPENSE_CATEGORY",
+          { ar: "تصنيف المصروف موجود مسبقاً", en: "Expense category already exists" }
+        );
       }
-    });
-    return category;
+      throw error;
+    }
   },
 
   async listExpenseInvoices(
     scope: ScopeContext,
     query: { centerId?: number; status?: ExpenseInvoiceStatus; supplierId?: number }
   ) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const centerWhere = resolveExpenseInvoiceCenterWhere(scope, query.centerId);
 
     const invoices = await prisma.expenseInvoice.findMany({
@@ -145,11 +180,23 @@ export const expensesService = {
       include: {
         supplier: true,
         category: true,
-        center: { select: { id: true, name: true } }
+        center: { select: { id: true, name: true } },
+        payments: { select: { amount: true } }
       },
       orderBy: { createdAt: "desc" }
     });
-    return invoices;
+
+    return invoices.map(({ payments, ...invoice }) => {
+      const paidAmount = payments.reduce(
+        (sum, payment) => sum.plus(payment.amount),
+        new Prisma.Decimal(0)
+      );
+      return normalize({
+        ...invoice,
+        paidAmount,
+        remainingAmount: Prisma.Decimal.max(new Prisma.Decimal(0), invoice.amount.minus(paidAmount))
+      });
+    });
   },
 
   async createExpenseInvoice(
@@ -165,32 +212,104 @@ export const expensesService = {
       amount: number;
     }
   ) {
-    const invoiceDate = new Date(input.invoiceDate);
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    const invoiceDate = toDateOnly(safeDate(input.invoiceDate, "invoiceDate"));
+    const invoiceNo = input.invoiceNo?.trim() || undefined;
     financeV2Domain.ensureScopedCenterRequired(scope, input.centerId);
-    
-    // Check if period open
-    await prisma.$transaction(async (tx) => {
-      await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, invoiceDate);
-    });
 
-    const invoice = await prisma.expenseInvoice.create({
-      data: {
-        organizationId: scope.organizationId,
-        centerId: input.centerId,
-        supplierId: input.supplierId,
-        categoryId: input.categoryId,
-        invoiceNo: input.invoiceNo,
-        invoiceDate,
-        dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        description: input.description,
-        amount: new Prisma.Decimal(input.amount),
-        status: ExpenseInvoiceStatus.DRAFT
+    return prisma.$transaction(async (tx) => {
+      await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, invoiceDate);
+
+      if (input.centerId) {
+        const center = await tx.center.findFirst({
+          where: { id: input.centerId, organizationId: scope.organizationId, isActive: true },
+          select: { id: true }
+        });
+        if (!center) {
+          throw new AppError(
+            "Center not found",
+            404,
+            undefined,
+            "ENTITY_NOT_FOUND",
+            { ar: "المركز غير موجود", en: "Center not found" }
+          );
+        }
       }
+
+      const category = await tx.expenseCategory.findFirst({
+        where: { id: input.categoryId, organizationId: scope.organizationId, isActive: true },
+        select: { id: true }
+      });
+      if (!category) {
+        throw new AppError(
+          "Expense category not found",
+          404,
+          undefined,
+          "ENTITY_NOT_FOUND",
+          { ar: "تصنيف المصروف غير موجود", en: "Expense category not found" }
+        );
+      }
+
+      if (input.supplierId) {
+        const supplier = await tx.supplier.findFirst({
+          where: { id: input.supplierId, organizationId: scope.organizationId, isActive: true },
+          select: { id: true }
+        });
+        if (!supplier) {
+          throw new AppError(
+            "Supplier not found",
+            404,
+            undefined,
+            "ENTITY_NOT_FOUND",
+            { ar: "المورد غير موجود", en: "Supplier not found" }
+          );
+        }
+      }
+
+      if (invoiceNo && input.supplierId) {
+        const duplicate = await tx.expenseInvoice.findFirst({
+          where: {
+            organizationId: scope.organizationId,
+            supplierId: input.supplierId,
+            invoiceNo
+          },
+          select: { id: true }
+        });
+        if (duplicate) {
+          throw new AppError(
+            "Invoice number already exists for this supplier",
+            409,
+            undefined,
+            "DUPLICATE_EXPENSE_INVOICE",
+            {
+              ar: "رقم الفاتورة مسجل مسبقاً لهذا المورد",
+              en: "Invoice number already exists for this supplier"
+            }
+          );
+        }
+      }
+
+      return tx.expenseInvoice.create({
+        data: {
+          organizationId: scope.organizationId,
+          centerId: input.centerId,
+          supplierId: input.supplierId,
+          categoryId: input.categoryId,
+          invoiceNo: invoiceNo ?? `EXP-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase().slice(-6)}`,
+          invoiceDate,
+          dueDate: input.dueDate ? toDateOnly(safeDate(input.dueDate, "dueDate")) : null,
+          description: input.description.trim(),
+          amount: new Prisma.Decimal(input.amount),
+          status: ExpenseInvoiceStatus.DRAFT
+        }
+      });
     });
-    return invoice;
   },
 
   async approveExpenseInvoice(scope: ScopeContext, id: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanApprove(scope);
     return prisma.$transaction(async (tx) => {
       const invoice = await tx.expenseInvoice.findUnique({
         where: { id },
@@ -202,11 +321,126 @@ export const expensesService = {
       }
       ensureExpenseInvoiceScope(scope, invoice);
 
-      if (invoice.status !== ExpenseInvoiceStatus.DRAFT && invoice.status !== ExpenseInvoiceStatus.PENDING_APPROVAL) {
-        throw new AppError("فقط الفواتير المسودة أو المعلقة يمكن اعتمادها", 400);
+      const existingEntry = await tx.journalEntry.findFirst({
+        where: {
+          organizationId: scope.organizationId,
+          sourceType: JournalSourceType.EXPENSE_INVOICE,
+          sourceId: id
+        }
+      });
+      if (existingEntry) {
+        throw new AppError(
+          "الفاتورة معتمدة مسبقاً",
+          409,
+          undefined,
+          "ALREADY_APPROVED",
+          { ar: "الفاتورة معتمدة مسبقاً", en: "Invoice already approved" }
+        );
       }
 
-      await accountingService.ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
+      if (invoice.status !== ExpenseInvoiceStatus.DRAFT && invoice.status !== ExpenseInvoiceStatus.PENDING_APPROVAL) {
+        throw new AppError(
+          "الفاتورة معتمدة مسبقاً",
+          409,
+          undefined,
+          "ALREADY_APPROVED",
+          { ar: "الفاتورة معتمدة مسبقاً", en: "Invoice already approved" }
+        );
+      }
+
+      const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
+
+      if (!invoice.category.isActive || !invoice.category.accountingAccountId) {
+        throw new AppError(
+          "Expense category is not linked to a posting expense account",
+          409,
+          undefined,
+          "ACCOUNTING_MAPPING_MISSING",
+          {
+            ar: "التصنيف غير مرتبط بحساب مصروفات ترحيل",
+            en: "Expense category is not linked to a posting expense account"
+          }
+        );
+      }
+
+      const categoryAccount = await tx.accountingAccount.findFirst({
+        where: {
+          id: invoice.category.accountingAccountId,
+          organizationId: scope.organizationId,
+          type: AccountingAccountType.EXPENSE,
+          isActive: true,
+          children: { none: { isActive: true } }
+        }
+      });
+      if (!categoryAccount) {
+        throw new AppError(
+          "Expense category is not linked to a posting expense account",
+          409,
+          undefined,
+          "ACCOUNTING_MAPPING_MISSING",
+          {
+            ar: "التصنيف غير مرتبط بحساب مصروفات ترحيل",
+            en: "Expense category is not linked to a posting expense account"
+          }
+        );
+      }
+
+      const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
+      if (!apAccount) {
+        throw new AppError(
+          "Accounts payable posting account is missing",
+          409,
+          undefined,
+          "ACCOUNTING_MAPPING_MISSING",
+          {
+            ar: "حساب الدائنون غير موجود لترحيل فاتورة المصروف",
+            en: "Accounts payable posting account is missing"
+          }
+        );
+      }
+
+      const entry = await tx.journalEntry.create({
+        data: {
+          organizationId: scope.organizationId,
+          centerId: invoice.centerId,
+          entryNo: `EXP-${invoice.id}`,
+          entryDate: invoice.invoiceDate,
+          sourceType: JournalSourceType.EXPENSE_INVOICE,
+          sourceId: invoice.id,
+          status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
+          description: invoice.description,
+          postedById: scope.userId,
+          postedAt: new Date()
+        }
+      });
+
+      await tx.journalEntryLine.createMany({
+        data: [
+          {
+            organizationId: scope.organizationId,
+            journalEntryId: entry.id,
+            accountId: categoryAccount.id,
+            centerId: invoice.centerId,
+            debit: invoice.amount,
+            credit: new Prisma.Decimal(0),
+            memo: invoice.description,
+            sourceLineType: JournalSourceType.EXPENSE_INVOICE,
+            sourceLineId: invoice.id
+          },
+          {
+            organizationId: scope.organizationId,
+            journalEntryId: entry.id,
+            accountId: apAccount.id,
+            centerId: invoice.centerId,
+            debit: new Prisma.Decimal(0),
+            credit: invoice.amount,
+            memo: `AP for invoice ${invoice.id}`,
+            sourceLineType: JournalSourceType.EXPENSE_INVOICE,
+            sourceLineId: invoice.id
+          }
+        ]
+      });
 
       const approvedInvoice = await tx.expenseInvoice.update({
         where: { id },
@@ -226,72 +460,6 @@ export const expensesService = {
         summary: "تم اعتماد فاتورة مصروف"
       });
 
-      // Post AP Journal Entry if accounting category exists
-      if (invoice.category.accountingAccountId) {
-        const categoryAccount = await tx.accountingAccount.findFirst({
-          where: {
-            id: invoice.category.accountingAccountId,
-            organizationId: scope.organizationId,
-            type: AccountingAccountType.EXPENSE,
-            isActive: true,
-            children: { none: { isActive: true } }
-          }
-        });
-        if (!categoryAccount) {
-          throw new AppError("التصنيف غير مرتبط بحساب مصروفات ترحيل", 409);
-        }
-
-        // Find AP Account
-        const apAccount = await findPostingAccountsPayableTx(tx, scope.organizationId);
-
-        if (apAccount) {
-          const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, invoice.invoiceDate);
-
-          const entry = await tx.journalEntry.create({
-            data: {
-              organizationId: scope.organizationId,
-              centerId: invoice.centerId,
-              entryNo: `EXP-${invoice.id}`,
-              entryDate: invoice.invoiceDate,
-              sourceType: JournalSourceType.EXPENSE_INVOICE,
-              sourceId: invoice.id,
-              status: JournalEntryStatus.POSTED,
-              fiscalPeriodId: fiscalPeriod?.id ?? null,
-              description: invoice.description,
-              postedById: scope.userId,
-              postedAt: new Date()
-            }
-          });
-
-          await tx.journalEntryLine.createMany({
-            data: [
-              {
-                organizationId: scope.organizationId,
-                journalEntryId: entry.id,
-                accountId: invoice.category.accountingAccountId,
-                centerId: invoice.centerId,
-                debit: invoice.amount,
-                credit: new Prisma.Decimal(0),
-                memo: invoice.description,
-                sourceLineType: JournalSourceType.EXPENSE_INVOICE,
-                sourceLineId: invoice.id
-              },
-              {
-                organizationId: scope.organizationId,
-                journalEntryId: entry.id,
-                accountId: apAccount.id,
-                centerId: invoice.centerId,
-                debit: new Prisma.Decimal(0),
-                credit: invoice.amount,
-                memo: `AP for invoice ${invoice.id}`,
-                sourceLineType: JournalSourceType.EXPENSE_INVOICE,
-                sourceLineId: invoice.id
-              }
-            ]
-          });
-        }
-      }
-
       return approvedInvoice;
     });
   },
@@ -301,6 +469,8 @@ export const expensesService = {
     id: number,
     input: { amount: number; financeAccountId: number; notes?: string }
   ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanExecute(scope);
     return prisma.$transaction(async (tx) => {
       const invoice = await tx.expenseInvoice.findUnique({
         where: { id }
@@ -440,5 +610,228 @@ export const expensesService = {
 
       return payment;
     });
+  },
+
+  async cancelExpenseInvoice(scope: ScopeContext, id: number, reason?: string) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    return prisma.$transaction(async (tx) => {
+      const invoice = await tx.expenseInvoice.findUnique({
+        where: { id },
+        include: { category: true }
+      });
+
+      if (!invoice || invoice.organizationId !== scope.organizationId) {
+        throw new AppError("الفاتورة غير موجودة", 404);
+      }
+      ensureExpenseInvoiceScope(scope, invoice);
+
+      if (invoice.status === ExpenseInvoiceStatus.PAID || invoice.status === ExpenseInvoiceStatus.PARTIALLY_PAID) {
+        throw new AppError(
+          "لا يمكن إلغاء فاتورة مدفوعة أو مدفوعة جزئياً",
+          400,
+          undefined,
+          "CANNOT_CANCEL_PAID_INVOICE",
+          { ar: "لا يمكن إلغاء فاتورة مدفوعة أو مدفوعة جزئياً. يجب إلغاء المدفوعات أولاً.", en: "Cannot cancel a paid or partially paid invoice" }
+        );
+      }
+
+      if (invoice.status === ExpenseInvoiceStatus.VOIDED) {
+        throw new AppError(
+          "الفاتورة ملغاة مسبقاً",
+          409,
+          undefined,
+          "ALREADY_VOIDED",
+          { ar: "الفاتورة ملغاة مسبقاً", en: "Invoice already voided" }
+        );
+      }
+
+      if (invoice.status === ExpenseInvoiceStatus.DRAFT) {
+        const voided = await tx.expenseInvoice.update({
+          where: { id },
+          data: {
+            status: ExpenseInvoiceStatus.VOIDED,
+            cancelledById: scope.userId,
+            cancelledAt: new Date(),
+            cancelReason: reason?.trim() || null
+          }
+        });
+        await addAudit({
+          scope,
+          action: AuditAction.UPDATE,
+          entityType: AuditEntityType.EXPENSE_INVOICE,
+          entityId: id,
+          centerId: invoice.centerId,
+          summary: "تم إلغاء فاتورة مصروف (مسودة)"
+        });
+        return voided;
+      }
+
+      if (invoice.status === ExpenseInvoiceStatus.APPROVED) {
+        const fiscalPeriod = await ensurePeriodOpenTx(tx, scope.organizationId, new Date());
+
+        const originalEntry = await tx.journalEntry.findFirst({
+          where: {
+            organizationId: scope.organizationId,
+            sourceType: JournalSourceType.EXPENSE_INVOICE,
+            sourceId: id,
+            status: JournalEntryStatus.POSTED
+          },
+          include: { lines: true }
+        });
+
+        if (originalEntry) {
+          const reversalEntry = await tx.journalEntry.create({
+            data: {
+              organizationId: scope.organizationId,
+              centerId: invoice.centerId,
+              entryNo: `EXP-CXL-${id}`,
+              entryDate: new Date(),
+              sourceType: JournalSourceType.EXPENSE_INVOICE,
+              sourceId: -id,
+              status: JournalEntryStatus.POSTED,
+              fiscalPeriodId: fiscalPeriod?.id ?? null,
+              description: `إلغاء فاتورة مصروف ${id}${reason ? ` - ${reason}` : ""}`,
+              postedById: scope.userId,
+              postedAt: new Date()
+            }
+          });
+
+          await tx.journalEntryLine.createMany({
+            data: originalEntry.lines.map((line) => ({
+              organizationId: scope.organizationId,
+              journalEntryId: reversalEntry.id,
+              accountId: line.accountId,
+              centerId: line.centerId,
+              debit: line.credit,
+              credit: line.debit,
+              memo: `عكس: ${line.memo || ""}`.trim(),
+              sourceLineType: JournalSourceType.EXPENSE_INVOICE,
+              sourceLineId: id
+            }))
+          });
+        }
+
+        const voided = await tx.expenseInvoice.update({
+          where: { id },
+          data: {
+            status: ExpenseInvoiceStatus.VOIDED,
+            cancelledById: scope.userId,
+            cancelledAt: new Date(),
+            cancelReason: reason?.trim() || null
+          }
+        });
+
+        await addAudit({
+          scope,
+          action: AuditAction.UPDATE,
+          entityType: AuditEntityType.EXPENSE_INVOICE,
+          entityId: id,
+          centerId: invoice.centerId,
+          summary: "تم إلغاء فاتورة مصروف (معتمدة)"
+        });
+
+        return voided;
+      }
+
+      throw new AppError(
+        "لا يمكن إلغاء الفاتورة في حالتها الحالية",
+        400,
+        undefined,
+        "INVALID_STATUS",
+        { ar: `لا يمكن إلغاء الفاتورة في حالتها الحالية: ${invoice.status}`, en: `Cannot cancel invoice in status: ${invoice.status}` }
+      );
+    });
+  },
+
+  async updateSupplier(
+    scope: ScopeContext,
+    id: number,
+    input: { name?: string; phone?: string; address?: string; notes?: string; isActive?: boolean }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    const supplier = await prisma.supplier.findFirst({
+      where: { id, organizationId: scope.organizationId }
+    });
+    if (!supplier) {
+      throw new AppError("المورد غير موجود", 404);
+    }
+    try {
+      return await prisma.supplier.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.phone !== undefined ? { phone: input.phone?.trim() || null } : {}),
+          ...(input.address !== undefined ? { address: input.address?.trim() || null } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+        }
+      });
+    } catch (error) {
+      if (isKnownPrismaError(error) && error.code === "P2002") {
+        throw new AppError(
+          "Supplier already exists",
+          409,
+          undefined,
+          "DUPLICATE_SUPPLIER",
+          { ar: "المورد موجود مسبقاً", en: "Supplier already exists" }
+        );
+      }
+      throw error;
+    }
+  },
+
+  async updateExpenseCategory(
+    scope: ScopeContext,
+    id: number,
+    input: { name?: string; type?: string; accountingAccountId?: number | null; isActive?: boolean }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanManageSettings(scope);
+    const category = await prisma.expenseCategory.findFirst({
+      where: { id, organizationId: scope.organizationId }
+    });
+    if (!category) {
+      throw new AppError("تصنيف المصروف غير موجود", 404);
+    }
+
+    if (input.accountingAccountId) {
+      const account = await prisma.accountingAccount.findFirst({
+        where: {
+          id: input.accountingAccountId,
+          organizationId: scope.organizationId,
+          type: AccountingAccountType.EXPENSE,
+          isActive: true,
+          children: { none: { isActive: true } }
+        }
+      });
+      if (!account) {
+        throw new AppError("حساب ترحيل المصروفات غير موجود", 404);
+      }
+    }
+
+    try {
+      return await prisma.expenseCategory.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.type !== undefined ? { type: input.type?.trim() || null } : {}),
+          ...(input.accountingAccountId !== undefined ? { accountingAccountId: input.accountingAccountId } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {})
+        }
+      });
+    } catch (error) {
+      if (isKnownPrismaError(error) && error.code === "P2002") {
+        throw new AppError(
+          "Expense category already exists",
+          409,
+          undefined,
+          "DUPLICATE_EXPENSE_CATEGORY",
+          { ar: "تصنيف المصروف موجود مسبقاً", en: "Expense category already exists" }
+        );
+      }
+      throw error;
+    }
   }
 };

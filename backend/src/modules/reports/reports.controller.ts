@@ -112,7 +112,12 @@ export const reportsController = {
       }
 
       const params = res.locals.validatedParams as { id: number };
-      const query = res.locals.validatedQuery as { month?: number; year?: number };
+      const query = res.locals.validatedQuery as {
+        centerId?: number;
+        circleId?: number;
+        month?: number;
+        year?: number;
+      };
       const data = await reportsService.student(req.scope, params.id, query);
       res.json({ ok: true, data });
     } catch (error) {

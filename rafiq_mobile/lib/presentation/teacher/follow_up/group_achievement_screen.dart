@@ -15,8 +15,8 @@ import '../../../../core/utils/app_snack_bar.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/standard_app_bar.dart';
 
-import '../../../../application/follow_up/follow_up_controller.dart';
-import '../../../../data/models/follow_up_dtos.dart';
+import '../../../../application/group_activities/group_activities_providers.dart';
+import '../../../../data/models/group_activity_dtos.dart';
 
 class ActivityType {
   final String id;
@@ -28,13 +28,13 @@ class ActivityType {
 }
 
 const List<ActivityType> activityTypes = [
-  ActivityType(id: "lecture", label: "محاضرة", emoji: "🎤"),
-  ActivityType(id: "tafseer", label: "تفسير", emoji: "📖"),
-  ActivityType(id: "seera", label: "سيرة", emoji: "🕌"),
-  ActivityType(id: "hadith", label: "حديث", emoji: "📜"),
-  ActivityType(id: "fiqh", label: "فقه", emoji: "⚖️"),
-  ActivityType(id: "tajweed", label: "تجويد", emoji: "🔊"),
-  ActivityType(id: "tarbawi", label: "نشاط تربوي", emoji: "🌱"),
+  ActivityType(id: "LECTURE", label: "محاضرة", emoji: "🎤"),
+  ActivityType(id: "TAFSEER", label: "تفسير", emoji: "📖"),
+  ActivityType(id: "SEERAH", label: "سيرة", emoji: "🕌"),
+  ActivityType(id: "HADITH", label: "حديث", emoji: "📜"),
+  ActivityType(id: "FIQH", label: "فقه", emoji: "⚖️"),
+  ActivityType(id: "TAJWEED", label: "تجويد", emoji: "🔊"),
+  ActivityType(id: "EDUCATIONAL", label: "نشاط تربوي", emoji: "🌱"),
 ];
 
 class GroupAchievementScreen extends ConsumerStatefulWidget {
@@ -56,7 +56,7 @@ class _GroupAchievementScreenState
   List<({int id, String name})> get presentStudents {
     final attState = ref.watch(attendanceControllerProvider);
     final presentIds = attState.draftByStudentId.entries
-        .where((e) => e.value.status == AttendanceStatus.present)
+        .where((e) => e.value.status == AttendanceStatus.present || e.value.status == AttendanceStatus.late)
         .map((e) => e.key)
         .toSet();
 
@@ -100,52 +100,33 @@ class _GroupAchievementScreenState
     setState(() => _isSaving = true);
 
     try {
-      final controller = ref.read(followUpControllerProvider.notifier);
-      final activityLabel =
-          activityTypes.firstWhere((t) => t.id == _selectedTypeId).label;
-      final fullTitle = '$activityLabel: ${_titleController.text.trim()}';
+      final repository = ref.read(groupActivitiesRepositoryProvider);
       final notes = _descriptionController.text.trim();
 
-      int successCount = 0;
-      for (final student in students) {
-        if (student.id == 0) continue;
-        try {
-          await controller.createFollowUp(
-            CreateFollowUpRequestDto(
-              studentId: student.id,
-              circleId: circleId,
-              type: 'MATN',
-              recordDate: DateTime.now().toIso8601String(),
-              matnName: fullTitle,
-              notes: notes.isEmpty ? null : notes,
-              rating: 100,
-            ),
-          );
-          successCount++;
-        } catch (e) {
-          debugPrint(
-              'Failed to save achievement for student ${student.id}: $e');
-        }
-      }
+      await repository.createGroupActivity(
+        CreateGroupActivityRequestDto(
+          circleId: circleId,
+          activityDate: DateTime.now().toIso8601String().split('T').first,
+          activityType: _selectedTypeId!,
+          title: _titleController.text.trim(),
+          description: notes.isEmpty ? null : notes,
+        ),
+      );
 
-      if (successCount > 0) {
-        setState(() {
-          _isSaved = true;
-          _isSaving = false;
-        });
+      setState(() {
+        _isSaved = true;
+        _isSaving = false;
+      });
 
-        if (mounted) {
-          AppSnackBar.success(
-            context,
-            'تم تسجيل النشاط بنجاح لـ $successCount طالب',
-          );
-        }
-      } else {
-        _showError('تعذر حفظ النشاط، يرجى المحاولة مرة أخرى');
-        setState(() => _isSaving = false);
+      if (mounted) {
+        AppSnackBar.success(
+          context,
+          'تم تسجيل النشاط بنجاح للمجموعة',
+        );
       }
     } catch (e) {
-      _showError('حدث خطأ غير متوقع');
+      debugPrint('Failed to save group achievement: $e');
+      _showError('تعذر حفظ النشاط، يرجى المحاولة مرة أخرى');
       setState(() => _isSaving = false);
     }
   }

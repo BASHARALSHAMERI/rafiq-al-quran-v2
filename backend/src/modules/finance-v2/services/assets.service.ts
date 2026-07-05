@@ -207,6 +207,8 @@ const assertUser = async (organizationId: number, userId?: number) => {
 
 export const assetsService = {
   async listAssetCategories(scope: ScopeContext) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     return prisma.assetCategory.findMany({
       where: { organizationId: scope.organizationId },
       include: categoryInclude,
@@ -215,6 +217,8 @@ export const assetsService = {
   },
 
   async createAssetCategory(scope: ScopeContext, input: CreateAssetCategoryInput) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanManageSettings(scope);
     const assetAccountId = optionalPositiveInt(input.assetAccountId, "assetAccountId");
     const depreciationExpenseAccountId = optionalPositiveInt(
       input.depreciationExpenseAccountId,
@@ -256,6 +260,8 @@ export const assetsService = {
 
   async listFixedAssets(scope: ScopeContext, query: { centerId?: number; categoryId?: number; status?: FixedAssetStatus }) {
     const centerId = optionalPositiveInt(query.centerId, "centerId");
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const categoryId = optionalPositiveInt(query.categoryId, "categoryId");
     await assertCenter(scope, centerId);
 
@@ -274,6 +280,8 @@ export const assetsService = {
   async createFixedAsset(scope: ScopeContext, input: CreateFixedAssetInput) {
     const centerId = optionalPositiveInt(input.centerId, "centerId");
     const categoryId = requiredPositiveInt(input.categoryId, "categoryId");
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
     const custodianUserId = optionalPositiveInt(input.custodianUserId, "custodianUserId");
     const supplierId = optionalPositiveInt(input.supplierId, "supplierId");
     const expenseInvoiceId = optionalPositiveInt(input.expenseInvoiceId, "expenseInvoiceId");
@@ -363,6 +371,8 @@ export const assetsService = {
   },
 
   async listCustodyLogs(scope: ScopeContext, query: { assetId?: number }) {
+    financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const assetId = optionalPositiveInt(query.assetId, "assetId");
     if (assetId) {
       const asset = await prisma.fixedAsset.findFirst({
@@ -386,6 +396,8 @@ export const assetsService = {
   async assignCustody(scope: ScopeContext, assetId: number, input: AssignAssetCustodyInput) {
     const toUserId = optionalPositiveInt(input.toUserId, "toUserId");
     const centerId = optionalPositiveInt(input.centerId, "centerId");
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
     await assertCenter(scope, centerId);
     await assertUser(scope.organizationId, toUserId);
 
@@ -434,6 +446,8 @@ export const assetsService = {
   async postAssetAcquisition(scope: ScopeContext, assetId: number, input: PostAssetAcquisitionInput) {
     const financeAccountId = requiredPositiveInt(input.financeAccountId, "financeAccountId");
 
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanExecute(scope);
     return prisma.$transaction(async (tx) => {
       const asset = await tx.fixedAsset.findFirst({
         where: { id: assetId, organizationId: scope.organizationId },
@@ -570,6 +584,8 @@ export const assetsService = {
       throw new AppError("شهر الإهلاك غير صالح", 400);
     }
 
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanApprove(scope);
     return prisma.$transaction(async (tx) => {
       const asset = await tx.fixedAsset.findFirst({
         where: { id: assetId, organizationId: scope.organizationId },

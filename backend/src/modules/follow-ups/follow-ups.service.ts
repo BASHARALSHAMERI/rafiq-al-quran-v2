@@ -3,6 +3,7 @@ import type { FollowUpRecordStatus } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error";
 import { editLockPolicy } from "../../shared/policies/edit-lock.policy";
 import { getSurahAyahCount } from "../../shared/quran/surah-ayah-counts";
+import { safeDate } from "../../shared/utils/time";
 import { ensureCenterAllowed, ensureCircleAllowed } from "../../shared/scoping/scope.domain";
 import type { ScopeContext } from "../../shared/types/auth.types";
 import { prisma } from "../../shared/db/prisma";
@@ -28,6 +29,7 @@ export type CreateFollowUpInput = {
   matnFromRef?: string;
   matnToRef?: string;
   notes?: string;
+  idempotencyKey?: string;
 };
 
 export type UpdateFollowUpInput = {
@@ -475,13 +477,58 @@ export const followUpsService = {
     }
 
     const status = followUpDomain.normalizeStatus(input.status);
+    const resolvedRecordDate = toDateOnly(safeDate(input.recordDate, "recordDate"));
+
+    if (status === "FINAL") {
+      const attendance = await prisma.attendanceRecord.findFirst({
+        where: {
+          studentId: input.studentId,
+          circleId: input.circleId,
+          attendanceDate: resolvedRecordDate
+        }
+      });
+      if (!attendance || (attendance.status !== "PRESENT" && attendance.status !== "LATE")) {
+        throw new AppError("لا يمكن حفظ متابعة نهائية لطالب غائب أو لم يُسجل حضوره بعد", 400);
+      }
+    }
 
     const record = await prisma.$transaction(async (tx) => {
+      if (input.idempotencyKey) {
+        const existing = await tx.followUpRecord.findUnique({
+          where: { idempotencyKey: input.idempotencyKey }
+        });
+        if (existing) {
+          const updated = await followUpsRepository.updateRecord(existing.id, {
+            recordDate: resolvedRecordDate,
+            type: input.type,
+            status,
+            surah: normalizedSurah ?? undefined,
+            fromSurah: resolvedCreateRange.fromSurah ?? undefined,
+            fromAyah: input.fromAyah,
+            toSurah: resolvedCreateRange.toSurah ?? undefined,
+            toAyah: input.toAyah,
+            ayahCount: resolvedCreateRange.ayahCount,
+            fromPage: resolvedCreateRange.fromPage,
+            toPage: resolvedCreateRange.toPage,
+            pagesCount: resolvedCreateRange.pagesCount,
+            rating: input.rating,
+            matnId: input.matnId ?? null,
+            matnName: normalizeText(input.matnName) ?? undefined,
+            matnStatus: normalizeText(input.matnStatus) ?? undefined,
+            matnFromRef: normalizeText(input.matnFromRef) ?? undefined,
+            matnToRef: normalizeText(input.matnToRef) ?? undefined,
+            notes: normalizeText(input.notes) ?? undefined,
+            finalizedAt: status === "FINAL" && existing.status !== "FINAL" ? new Date() : existing.finalizedAt
+          }, undefined, tx);
+          return updated!;
+        }
+      }
+
       const createdRecord = await followUpsRepository.createRecord({
         studentId: input.studentId,
         teacherId: scope.userId,
         circleId: input.circleId,
-        recordDate: toDateOnly(new Date(input.recordDate)),
+        recordDate: resolvedRecordDate,
       type: input.type,
       status,
       surah: normalizedSurah ?? undefined,
@@ -500,7 +547,8 @@ export const followUpsService = {
       matnFromRef: normalizeText(input.matnFromRef) ?? undefined,
       matnToRef: normalizeText(input.matnToRef) ?? undefined,
         notes: normalizeText(input.notes) ?? undefined,
-        finalizedAt: status === "FINAL" ? new Date() : null
+        finalizedAt: status === "FINAL" ? new Date() : null,
+        idempotencyKey: input.idempotencyKey ?? null
       }, tx);
 
       await tx.activityLog.create({
@@ -573,7 +621,7 @@ export const followUpsService = {
 
     const updatedResponse = await prisma.$transaction(async (tx) => {
       const updated = await followUpsRepository.updateRecord(followUpId, {
-        recordDate: input.recordDate ? toDateOnly(new Date(input.recordDate)) : undefined,
+        recordDate: input.recordDate ? toDateOnly(safeDate(input.recordDate, "recordDate")) : undefined,
         type: input.type,
         surah: normalizeText(input.surah),
       ...(input.fromSurah !== undefined ? { fromSurah: input.fromSurah } : {}),

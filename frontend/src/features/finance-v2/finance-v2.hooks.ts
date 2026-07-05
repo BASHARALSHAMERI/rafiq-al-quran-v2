@@ -361,6 +361,16 @@ export const useUpdateFinanceV2DonorMutation = () => {
   });
 };
 
+export const useDeleteFinanceV2DonorMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (donorId: number) => financeV2Api.deleteDonor(donorId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
 export const useFinanceV2DonationsQuery = (filters: FinanceDonationsV2Query = {}) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.donations(filters),

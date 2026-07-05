@@ -7,6 +7,7 @@ import {
   FundTransferStatus,
   InvoiceStatus,
   InvoiceType,
+  ExpenseInvoiceStatus,
   PaymentMethod,
   PayrollBatchStatus,
   RewardBatchStatus,
@@ -92,7 +93,20 @@ export const createStudentFeeProfileBodySchema = z
     endDate: z.string().trim().min(1).optional(),
     notes: z.string().trim().max(500, "الملاحظات يجب ألا تتجاوز 500 حرف").optional()
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        start.setHours(0,0,0,0);
+        end.setHours(0,0,0,0);
+        return end >= start;
+      }
+      return true;
+    },
+    { message: "تاريخ الانتهاء لا يمكن أن يكون قبل تاريخ البدء", path: ["endDate"] }
+  );
 
 export const updateStudentFeeProfileBodySchema = z
   .object({
@@ -185,6 +199,86 @@ export const createPaymentV2BodySchema = z
   })
   .strict();
 
+export const createSupplierBodySchema = z
+  .object({
+    name: z.string().trim().min(1, "اسم المورد مطلوب").max(120),
+    phone: z.string().trim().max(32).optional(),
+    address: z.string().trim().max(255).optional(),
+    notes: z.string().trim().max(500).optional()
+  })
+  .strict();
+
+export const updateSupplierBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    phone: z.string().trim().max(32).nullable().optional(),
+    address: z.string().trim().max(255).nullable().optional(),
+    notes: z.string().trim().max(500).nullable().optional(),
+    isActive: z.boolean().optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "حقل واحد على الأقل مطلوب للتحديث"
+  });
+
+export const createExpenseCategoryBodySchema = z
+  .object({
+    name: z.string().trim().min(1, "اسم التصنيف مطلوب").max(120),
+    type: z.string().trim().max(60).optional(),
+    accountingAccountId: optionalPositiveInt
+  })
+  .strict();
+
+export const updateExpenseCategoryBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    type: z.string().trim().max(60).nullable().optional(),
+    accountingAccountId: optionalPositiveInt.nullable().optional(),
+    isActive: z.boolean().optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "حقل واحد على الأقل مطلوب للتحديث"
+  });
+
+export const cancelExpenseInvoiceBodySchema = z
+  .object({
+    reason: z.string().trim().max(500).optional()
+  })
+  .strict();
+
+export const listExpenseInvoicesQuerySchema = z
+  .object({
+    centerId: optionalPositiveInt,
+    supplierId: optionalPositiveInt,
+    status: z.nativeEnum(ExpenseInvoiceStatus).optional()
+  })
+  .strict();
+
+export const createExpenseInvoiceBodySchema = z
+  .object({
+    centerId: optionalPositiveInt,
+    supplierId: optionalPositiveInt,
+    categoryId: positiveInt,
+    invoiceNo: z.string().trim().max(80).optional(),
+    invoiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD"),
+    dueDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD").optional(),
+    description: z.string().trim().min(1, "الوصف مطلوب").max(500),
+    amount: z.coerce.number().positive("المبلغ يجب أن يكون أكبر من صفر").max(100000000)
+  })
+  .strict()
+  .refine(
+    (data) => !data.dueDate || data.dueDate >= data.invoiceDate,
+    { message: "تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الفاتورة", path: ["dueDate"] }
+  );
+
+export const payExpenseInvoiceBodySchema = z
+  .object({
+    amount: z.coerce.number().positive("مبلغ الدفع يجب أن يكون أكبر من صفر").max(100000000),
+    financeAccountId: positiveInt,
+    notes: z.string().trim().max(500).optional()
+  })
+  .strict();
 export const listVouchersQuerySchema = z
   .object({
     centerId: optionalPositiveInt,
@@ -260,9 +354,9 @@ export const listDonorsQuerySchema = z
 export const createDonorBodySchema = z
   .object({
     centerId: optionalPositiveInt.nullable(),
-    name: z.string().trim().min(2).max(180),
+    name: z.string().trim().min(2).max(180).regex(/^[\p{L}\s]+$/u, "الاسم يجب أن يحتوي على أحرف فقط"),
     donorType: z.nativeEnum(DonorType),
-    phone: z.string().trim().max(40).optional(),
+    phone: z.string().trim().min(1, "رقم الهاتف مطلوب").max(40),
     email: z.string().trim().email().max(180).optional(),
     address: z.string().trim().max(255).optional(),
     contactPerson: z.string().trim().max(180).optional(),
@@ -294,7 +388,7 @@ export const createDonationBodySchema = z
     exchangeRateToBase: optionalExchangeRate,
     donationDate: z.string().trim().min(1),
     paymentMethod: z.nativeEnum(PaymentMethod),
-    purpose: z.string().trim().max(255).optional(),
+    purpose: z.string().trim().min(1, "الغرض من التبرع مطلوب").max(255),
     status: z.nativeEnum(DonationStatus).optional(),
     isPledge: z.boolean().optional(),
     pledgeDueDate: z.string().trim().min(1).optional(),
@@ -305,6 +399,19 @@ export const createDonationBodySchema = z
   .refine(
     (data) => data.amount !== undefined || data.originalAmount !== undefined,
     { message: "المبلغ أو المبلغ الأصلي مطلوب", path: ["amount"] }
+  )
+  .refine(
+    (data) => {
+      if (data.isPledge && data.pledgeDueDate) {
+        const pledgeDate = new Date(data.pledgeDueDate);
+        const donDate = new Date(data.donationDate);
+        pledgeDate.setHours(0, 0, 0, 0);
+        donDate.setHours(0, 0, 0, 0);
+        return pledgeDate >= donDate;
+      }
+      return true;
+    },
+    { message: "تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ التسجيل", path: ["pledgeDueDate"] }
   );
 
 export const receiveDonationBodySchema = z

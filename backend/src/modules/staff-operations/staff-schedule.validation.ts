@@ -40,6 +40,10 @@ export const createAssignmentSchema = z
     circleId: positiveId.optional().nullable(),
     effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+    latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+    longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+    allowedRadiusMeters: z.coerce.number().int().positive().optional().nullable(),
+    locationText: z.string().max(255).optional().nullable(),
     slots: z.array(slotSchema).min(1).max(7)
   })
   .superRefine((value, ctx) => {
@@ -50,13 +54,37 @@ export const createAssignmentSchema = z
         message: "جداول المشرفين لا تُدار من هنا"
       });
     }
+    const hasLat = value.latitude !== undefined && value.latitude !== null;
+    const hasLng = value.longitude !== undefined && value.longitude !== null;
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [hasLat ? "longitude" : "latitude"],
+        message: "خط العرض وخط الطول يجب إدخالهما معاً"
+      });
+    }
   })
   .strict();
 
 export const updateAssignmentSchema = z
   .object({
     effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+    latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+    longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+    allowedRadiusMeters: z.coerce.number().int().positive().optional().nullable(),
+    locationText: z.string().max(255).optional().nullable(),
     slots: z.array(slotSchema).min(1).max(7).optional()
+  })
+  .superRefine((value, ctx) => {
+    const hasLat = value.latitude !== undefined && value.latitude !== null;
+    const hasLng = value.longitude !== undefined && value.longitude !== null;
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [hasLat ? "longitude" : "latitude"],
+        message: "خط العرض وخط الطول يجب إدخالهما معاً"
+      });
+    }
   })
   .strict();
 

@@ -10,7 +10,7 @@ export type StudentLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type StudentProfileStatus = "REGULAR" | "DROPPED" | "GRADUATED";
 
 export type UsersQueryParams = {
-  role?: Role;
+  role?: Role | Role[] | string;
   centerId?: number;
   circleId?: number;
   q?: string;
@@ -263,6 +263,7 @@ export type UpdateUserPayload = {
   fullName?: string;
   email?: string;
   username?: string | null;
+  role?: Role;
   profile?: Partial<UserCommonProfileInput>;
   teacherProfile?: TeacherProfileInput;
   supervisorProfile?: SupervisorProfileInput;

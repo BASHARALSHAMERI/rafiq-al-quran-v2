@@ -1,27 +1,21 @@
-import { useState, useMemo, type ComponentType } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowUpDown,
   BarChart3,
-  BookOpen,
   Building2,
   CalendarDays,
   ChevronLeft,
+  ChevronRight,
   CircleDot,
-  ClipboardCheck,
-  FileCheck2,
-  FileText,
-  HandHeart,
   Printer,
   RefreshCw,
   RotateCcw,
-  Scale,
   Search,
   Star,
   Users,
   Wallet2,
-  Activity,
   FileDown,
   ArrowLeft,
   Award
@@ -46,9 +40,34 @@ import {
 import { ErrorState } from "../components/ui/ErrorState";
 import type { ReportsFilters, ReportType } from "../features/reports/types";
 import { ReportsSummaryCards } from "../features/reports/components/ReportsSummaryCards";
+import { OrganizationOverviewSummary } from "../features/reports/components/OrganizationOverviewSummary";
 import { MonthlyStaffReportView } from "../features/staff-attendance/components/MonthlyStaffReportView";
+import {
+  type ViewLevel,
+  type SectionFilter,
+  type StatusFilter,
+  type OutputFilter,
+  type OutputTag,
+  type ReportCardDef,
+  ACTIVE_CATALOG,
+  ALL_CARDS,
+  toDisplay,
+  humanize,
+  statusBadge,
+  statusLabelAr,
+  statusLabelEn,
+  sectionLabelAr,
+  sectionLabelEn,
+  statusFilterAr,
+  statusFilterEn,
+  outputFilterAr,
+  outputFilterEn,
+  scopeLabelAr,
+  financeSections,
+  canSeeCard
+} from "../features/reports/reports-constants";
 
-import { UNIFIED_CATALOG } from "../features/reports/reports-catalog.unified";
+
 import "../styles/pages/centers-modern.css";
 import "../styles/pages/finance-premium.css";
 import "../styles/pages/finance-v4.css";
@@ -69,116 +88,6 @@ const defaultTo = nowDate.toISOString().slice(0, 10);
 const defaultFrom = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 30)
   .toISOString()
   .slice(0, 10);
-
-/* ─── Types ─── */
-type ReportStatus = "ready" | "needs-data" | "coming-soon";
-type ViewLevel = "CATALOG" | "UNIFIED" | "STAFF";
-type SectionFilter = "all" | "admin" | "educational" | "attendance" | "exams" | "golden" | "finance" | "official" | "financial-reports" | "audit-reports" | "operational-sheets" | "donors-reports" | "receipts-reports";
-type StatusFilter = "all" | "ready" | "coming-soon" | "needs-data";
-type OutputFilter = "all" | "screen" | "print" | "pdf" | "excel";
-type OutputTag = "screen" | "print" | "pdf" | "excel";
-type ScopeTag = "org" | "center" | "circle" | "student" | "finance";
-type RoleVisibility = "all" | "super" | "center";
-
-type ReportCardDef = {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  descAr: string;
-  descEn: string;
-  icon: ComponentType<{ className?: string; size?: number | string }>;
-  status: ReportStatus;
-  kind?: "report" | "inline-report" | "summary-report" | "external-route" | "operational-list" | "coming-soon";
-  reportType?: ReportType;
-  summaryKey?: "centers" | "circles" | "students" | "golden-records";
-  href?: string;
-  section: SectionFilter;
-  scope: ScopeTag;
-  outputs: OutputTag[];
-  featured?: boolean;
-  visibility: RoleVisibility;
-};
-
-type ReportGroupDef = {
-  id: SectionFilter;
-  nameAr: string;
-  nameEn: string;
-  color: string;
-  icon: ComponentType<{ className?: string; size?: number | string }>;
-  cards: ReportCardDef[];
-};
-
-/* ─── Report Catalog ─── */
-const REPORT_GROUPS: ReportGroupDef[] = [
-  {
-    id: "admin", nameAr: "نظرة عامة وإدارة", nameEn: "Overview & Admin", color: "teal", icon: Building2,
-    cards: [
-      { id: "centers-summary", nameAr: "نظرة عامة على الجمعية", nameEn: "Organization Overview", descAr: "عدد المراكز والحلقات والموظفين", descEn: "Centers, circles and staff counts", icon: Building2, status: "ready", summaryKey: "centers", section: "admin", scope: "org", outputs: ["screen", "print", "excel"], featured: true, visibility: "super" },
-      { id: "circles-summary", nameAr: "تقرير الحلقات", nameEn: "Circles Report", descAr: "الحلقات حسب المركز والمعلم والطلاب", descEn: "Circles by center, teacher and students", icon: CircleDot, status: "ready", summaryKey: "circles", section: "admin", scope: "center", outputs: ["screen", "print", "excel"], visibility: "all" },
-      { id: "students-summary", nameAr: "تقرير الطلاب", nameEn: "Students Report", descAr: "الطلاب حسب المركز والحالة", descEn: "Students by center and status", icon: Users, status: "ready", summaryKey: "students", section: "admin", scope: "center", outputs: ["screen", "print", "excel"], visibility: "all" },
-    ],
-  },
-  {
-    id: "educational", nameAr: "تقارير تعليمية وحضور", nameEn: "Education & Attendance", color: "teal", icon: BookOpen,
-    cards: [
-      { id: "follow-up", nameAr: "التقرير الشهري التفصيلي للطالب", nameEn: "Student Monthly Detailed Report", descAr: "تقرير شهري تفصيلي للطالب (حفظ/مراجعة/متون/إنجاز جماعي) للطباعة و PDF", descEn: "Detailed monthly student report (memorization/review/mutun) for print & PDF", icon: Activity, status: "ready", href: "/reports/student-monthly", section: "educational", scope: "student", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
-      { id: "attendance", nameAr: "حضور الطلاب", nameEn: "Student Attendance", descAr: "سجل الحضور والغياب والتأخير", descEn: "Attendance, absence and late records", icon: ClipboardCheck, status: "ready", reportType: "ATTENDANCE", section: "attendance", scope: "circle", outputs: ["screen", "print"], visibility: "all" },
-      { id: "exams", nameAr: "نتائج الاختبارات", nameEn: "Exam Results", descAr: "النتائج والنجاح ومعدل الأداء", descEn: "Results, pass rates and performance", icon: FileCheck2, status: "ready", reportType: "EXAMS", section: "exams", scope: "center", outputs: ["screen", "print"], visibility: "all" },
-      { id: "staff-report", nameAr: "حضور الكادر", nameEn: "Staff Attendance", descAr: "حضور الموظفين والإجازات والخصومات", descEn: "Staff attendance, leaves and deductions", icon: Users, status: "ready", section: "attendance", scope: "center", outputs: ["screen", "print"], visibility: "all" },
-    ],
-  },
-  {
-    id: "finance", nameAr: "تقارير مالية وللداعمين", nameEn: "Financial & Donors", color: "teal", icon: Wallet2,
-    cards: [
-      { id: "fin-pos", nameAr: "قائمة المركز المالي", nameEn: "Financial Position", descAr: "الأصول والخصوم وصافي الأصول للداعمين", descEn: "Assets, liabilities and net assets", icon: Scale, status: "ready", href: "/finance/reports/financial-position", section: "finance", scope: "finance", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
-      { id: "fin-activities", nameAr: "قائمة الأنشطة", nameEn: "Statement of Activities", descAr: "الإيرادات والمصروفات والفائض", descEn: "Revenue, expenses and surplus", icon: Activity, status: "ready", href: "/finance/reports/statement-of-activities", section: "finance", scope: "finance", outputs: ["screen", "print", "pdf"], featured: true, visibility: "all" },
-      { id: "fin-donations", nameAr: "التبرعات", nameEn: "Donations", descAr: "المتبرعون والحملات الداعمة", descEn: "Donors and campaigns", icon: HandHeart, status: "ready", href: "/finance/donors", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
-      { id: "fin-vouchers", nameAr: "السندات", nameEn: "Vouchers", descAr: "سندات القبض والصرف", descEn: "Receipt and payment vouchers", icon: ClipboardCheck, status: "ready", href: "/finance/vouchers", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
-      { id: "fin-expenses", nameAr: "المصروفات", nameEn: "Expenses", descAr: "المصروفات والموردون", descEn: "Expenses and suppliers", icon: FileText, status: "ready", href: "/finance/expenses", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
-      { id: "finance-invoices", nameAr: "الفواتير والتحصيل", nameEn: "Invoices & Collection", descAr: "الفواتير والمبالغ المستحقة والمحصلة", descEn: "Invoices, amounts due and collected", icon: FileText, status: "ready", reportType: "FINANCE", section: "finance", scope: "finance", outputs: ["screen", "print"], visibility: "all" },
-    ],
-  },
-];
-
-/* ─── Active Catalog (unified source, fallback to legacy REPORT_GROUPS) ─── */
-const ACTIVE_CATALOG: ReportGroupDef[] = UNIFIED_CATALOG.length > 0 ? (UNIFIED_CATALOG as unknown as ReportGroupDef[]) : REPORT_GROUPS;
-/* ─── Helpers ─── */
-const ALL_CARDS = ACTIVE_CATALOG.flatMap((g) => g.cards);
-const toDisplay = (value: unknown): string => {
-  if (value == null) return "-";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-};
-const humanize = (key: string) =>
-  key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
-const statusBadge = (value: string): "default" | "success" | "warning" | "error" => {
-  const upper = value.toUpperCase();
-  if (["PAID", "COMPLETED", "PUBLISHED", "PASSED", "PRESENT", "SUCCESS", "APPROVED"].includes(upper)) return "success";
-  if (["PARTIAL", "PENDING", "LATE", "IN_PROGRESS", "DRAFT"].includes(upper)) return "warning";
-  if (["FAILED", "CANCELLED", "ABSENT", "ERROR", "REJECTED"].includes(upper)) return "error";
-  return "default";
-};
-
-const statusLabelAr: Record<ReportStatus, string> = { ready: "جاهز", "needs-data": "يحتاج بيانات", "coming-soon": "قريبًا" };
-const statusLabelEn: Record<ReportStatus, string> = { ready: "Ready", "needs-data": "Needs Data", "coming-soon": "Coming Soon" };
-
-const sectionLabelAr: Record<SectionFilter, string> = { all: "الكل", admin: "إداري", educational: "التعليمية والتربوية", attendance: "حضور", exams: "اختبارات", golden: "سجل ذهبي", finance: "مالي", official: "رسمي", "financial-reports": "التقارير المالية", "audit-reports": "الرقابة والمراجعة", "operational-sheets": "الكشوف التشغيلية", "donors-reports": "التبرعات والداعمين", "receipts-reports": "الإيصالات والسندات" };
-const sectionLabelEn: Record<SectionFilter, string> = { all: "All", admin: "Admin", educational: "Educational", attendance: "Attendance", exams: "Exams", golden: "Golden", finance: "Finance", official: "Official", "financial-reports": "Financial", "audit-reports": "Audit", "operational-sheets": "Operational", "donors-reports": "Donors", "receipts-reports": "Receipts" };
-const statusFilterAr: Record<StatusFilter, string> = { all: "الكل", ready: "جاهز", "coming-soon": "قريبًا", "needs-data": "يحتاج ربط" };
-const statusFilterEn: Record<StatusFilter, string> = { all: "All", ready: "Ready", "coming-soon": "Soon", "needs-data": "Needs Data" };
-const outputFilterAr: Record<OutputFilter, string> = { all: "الكل", screen: "شاشة", print: "طباعة", pdf: "PDF", excel: "Excel" };
-const outputFilterEn: Record<OutputFilter, string> = { all: "All", screen: "Screen", print: "Print", pdf: "PDF", excel: "Excel" };
-const scopeLabelAr: Record<ScopeTag, string> = { org: "جمعية", center: "مركز", circle: "حلقة", student: "طالب", finance: "مالي" };
-
-const financeSections = ["finance", "financial-reports", "audit-reports", "operational-sheets", "donors-reports", "receipts-reports"];
-
-const canSeeCard = (card: ReportCardDef, role: string | undefined): boolean => {
-  if (role === "ACCOUNTANT") return financeSections.includes(card.section);
-  if (card.visibility === "all") return true;
-  if (card.visibility === "super" && role === "SUPER_ADMIN") return true;
-  if (card.visibility === "center" && role === "CENTER_ADMIN") return true;
-  return false;
-};
 
 export default function ReportsPage() {
   const { language } = useI18n();
@@ -306,63 +215,63 @@ export default function ReportsPage() {
     rating: ar ? "التقييم" : "Rating", notes: ar ? "ملاحظات" : "Notes"
   };
 
-  /* تعريف أعمدة ثابتة لكل نوع ملخص (بدلاً من الديناميكية) */
+  /* تعريف أعمدة ثابتة لكل نوع ملخص — بعرض نسبي متوازن (نسب % تملأ المساحة بدون فراغات) */
   const SUMMARY_COLUMNS: Record<string, DataTableColumn<Record<string, any>>[]> = {
     centers: [
-      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+      { id: "index", header: ar ? "م" : "#", width: "5%", align: "center", headerClassName: "text-center",
         cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
-      { id: "name", header: ar ? "اسم المركز" : "Center Name",
-        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
-      { id: "code", header: ar ? "الكود" : "Code", width: 80, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">{r.code}</span> },
-      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
-      { id: "circlesCount", header: ar ? "الحلقات" : "Circles", width: 80, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums">{r.circlesCount}</span> },
-      { id: "staffCount", header: ar ? "الموظفين" : "Staff", width: 80, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums">{r.staffCount}</span> },
+      { id: "name", header: ar ? "اسم المركز" : "Center Name", width: "30%",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{r.name}</span> },
+      { id: "code", header: ar ? "الكود" : "Code", width: "11%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded whitespace-nowrap">{r.code}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: "18%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"} whitespace-nowrap`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
+      { id: "circlesCount", header: ar ? "الحلقات" : "Circles", width: "18%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums whitespace-nowrap">{r.circlesCount}</span> },
+      { id: "staffCount", header: ar ? "الموظفين" : "Staff", width: "18%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="font-bold text-gray-700 dark:text-gray-300 tabular-nums whitespace-nowrap">{r.staffCount}</span> },
     ],
     circles: [
-      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+      { id: "index", header: ar ? "م" : "#", width: "5%", align: "center", headerClassName: "text-center",
         cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
-      { id: "name", header: ar ? "اسم الحلقة" : "Circle Name",
-        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
-      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشطة" : "Active") : (ar ? "غير نشطة" : "Inactive")}</span> },
-      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
-      { id: "teacherName", header: ar ? "المعلم" : "Teacher", width: 150,
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.teacherName}</span> },
-      { id: "studentCount", header: ar ? "الطلاب" : "Students", width: 80, align: "center", headerClassName: "text-center",
-        cell: (r) => <Badge variant="default" className="font-bold tabular-nums">{r.studentCount}</Badge> },
+      { id: "name", header: ar ? "اسم الحلقة" : "Circle Name", width: "26%",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{r.name}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: "14%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"} whitespace-nowrap`}>{r.isActive ? (ar ? "نشطة" : "Active") : (ar ? "غير نشطة" : "Inactive")}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: "20%",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.centerName}</span> },
+      { id: "teacherName", header: ar ? "المعلم" : "Teacher", width: "22%",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.teacherName}</span> },
+      { id: "studentCount", header: ar ? "الطلاب" : "Students", width: "13%", align: "center", headerClassName: "text-center",
+        cell: (r) => <Badge variant="default" className="font-bold tabular-nums whitespace-nowrap">{r.studentCount}</Badge> },
     ],
     students: [
-      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+      { id: "index", header: ar ? "م" : "#", width: "5%", align: "center", headerClassName: "text-center",
         cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
-      { id: "name", header: ar ? "اسم الطالب" : "Student Name",
-        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.name}</span> },
-      { id: "isActive", header: ar ? "الحالة" : "Status", width: 100, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"}`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
-      { id: "level", header: ar ? "المستوى" : "Level", width: 100, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm">{r.level}</span> },
-      { id: "circleName", header: ar ? "الحلقة" : "Circle", width: 150,
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.circleName}</span> },
-      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
+      { id: "name", header: ar ? "اسم الطالب" : "Student Name", width: "22%",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{r.name}</span> },
+      { id: "isActive", header: ar ? "الحالة" : "Status", width: "14%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className={`fin-status-pill ${r.isActive ? "fin-status--success" : "fin-status--error"} whitespace-nowrap`}>{r.isActive ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}</span> },
+      { id: "level", header: ar ? "المستوى" : "Level", width: "14%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm whitespace-nowrap">{r.level}</span> },
+      { id: "circleName", header: ar ? "الحلقة" : "Circle", width: "22%",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.circleName}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: "23%",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.centerName}</span> },
     ],
     "golden-records": [
-      { id: "index", header: ar ? "م" : "#", width: 40, align: "center", headerClassName: "text-center",
+      { id: "index", header: ar ? "م" : "#", width: "5%", align: "center", headerClassName: "text-center",
         cell: (_, i) => <span className="text-gray-400 text-xs font-bold tabular-nums">{i + 1 + (page - 1) * pageSize}</span> },
-      { id: "studentName", header: ar ? "اسم الطالب" : "Student Name",
-        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200">{r.studentName}</span> },
-      { id: "type", header: ar ? "النوع" : "Type", width: 120, align: "center", headerClassName: "text-center",
-        cell: (r) => <Badge variant="success">{r.type}</Badge> },
-      { id: "narration", header: ar ? "الرواية" : "Narration", width: 120, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400 font-medium">{r.narration}</span> },
-      { id: "centerName", header: ar ? "المركز" : "Center", width: 150,
-        cell: (r) => <span className="text-gray-600 dark:text-gray-400">{r.centerName}</span> },
-      { id: "completionDate", header: ar ? "تاريخ الإتمام" : "Completion Date", width: 120, align: "center", headerClassName: "text-center",
-        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm">{r.completionDate}</span> },
+      { id: "studentName", header: ar ? "اسم الطالب" : "Student Name", width: "24%",
+        cell: (r) => <span className="font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">{r.studentName}</span> },
+      { id: "type", header: ar ? "النوع" : "Type", width: "16%", align: "center", headerClassName: "text-center",
+        cell: (r) => <Badge variant="success" className="whitespace-nowrap">{r.type}</Badge> },
+      { id: "narration", header: ar ? "الرواية" : "Narration", width: "16%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">{r.narration}</span> },
+      { id: "centerName", header: ar ? "المركز" : "Center", width: "22%",
+        cell: (r) => <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{r.centerName}</span> },
+      { id: "completionDate", header: ar ? "تاريخ الإتمام" : "Completion Date", width: "17%", align: "center", headerClassName: "text-center",
+        cell: (r) => <span className="text-gray-500 dark:text-gray-400 text-sm whitespace-nowrap">{r.completionDate}</span> },
     ],
   };
 
@@ -393,52 +302,6 @@ export default function ReportsPage() {
       },
     }));
   }, [activeSummary, headers, sortKey, sortDir, page, pageSize, ar]);
-
-  const reportTotals = useMemo(() => {
-    if (!sortedRows || sortedRows.length === 0) return null;
-    const totals: Record<string, number> = {};
-    const count = sortedRows.length;
-    let hasNumeric = false;
-
-    const numericKeys = ["studentCount", "circlesCount", "staffCount", "score", "pagesCount", "ayahCount", "amount", "total", "count", "present", "absent", "late", "excused", "studentsCount"];
-
-    if (activeSummary && SUMMARY_COLUMNS[activeSummary]) {
-      /* summary totals: sum numeric fields from rows */
-      const fieldMap: Record<string, string> = {
-        centers: "circlesCount",
-        circles: "studentCount",
-      };
-      const key = fieldMap[activeSummary];
-      if (key) {
-        const sum = sortedRows.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
-        totals[key] = sum;
-        if (sum > 0) hasNumeric = true;
-      }
-    } else {
-      headers.forEach(h => {
-        if (numericKeys.some(k => h.toLowerCase().includes(k.toLowerCase()))) {
-          const sum = sortedRows.reduce((acc, row) => acc + (Number(row[h]) || 0), 0);
-          totals[h] = sum;
-          hasNumeric = true;
-        }
-      });
-    }
-
-    if (!hasNumeric && count === 0) return null;
-
-    return (
-      <tr>
-        {(activeSummary && SUMMARY_COLUMNS[activeSummary]
-          ? SUMMARY_COLUMNS[activeSummary].map((c) => c.id)
-          : headers
-        ).map((h: string, i: number) => {
-          if (i === 0) return <td key={h} className="app-data-table__cell font-bold text-teal-700 dark:text-teal-400">{ar ? `الإجمالي (${count})` : `Total (${count})`}</td>;
-          if (totals[h] !== undefined) return <td key={h} className="app-data-table__cell font-bold text-teal-700 dark:text-teal-400">{totals[h]}</td>;
-          return <td key={h} className="app-data-table__cell text-gray-400">-</td>;
-        })}
-      </tr>
-    );
-  }, [sortedRows, headers, activeSummary, ar]);
 
   /* handlers */
   const handleBack = () => { setViewLevel("CATALOG"); setActiveSummary(null); };
@@ -638,31 +501,12 @@ export default function ReportsPage() {
   /* عرض بطاقات KPI حسب نوع الملخص */
   const renderSummaryKpis = () => {
     if (activeSummary === "centers" && centersSumQ.data?.kpis) {
-      const k = centersSumQ.data.kpis;
-      return (
-        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-          {[
-            { label: ar ? "إجمالي المراكز" : "Total Centers", value: k.totalCenters, icon: Building2, cls: "blue" },
-            { label: ar ? "نشطة" : "Active", value: k.activeCenters, icon: Building2, cls: "emerald" },
-            { label: ar ? "غير نشطة" : "Inactive", value: k.inactiveCenters, icon: Building2, cls: "rose" },
-            { label: ar ? "الحلقات" : "Circles", value: k.totalCircles, icon: CircleDot, cls: "blue" },
-            { label: ar ? "الموظفين" : "Staff", value: k.totalStaff, icon: Users, cls: "amber" },
-          ].map((card) => (
-            <div key={card.label} className="fin-kpi-card">
-              <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
-              <div className="fin-kpi-card__content">
-                <span className="fin-kpi-card__value">{card.value}</span>
-                <span className="fin-kpi-card__label">{card.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
+      return <OrganizationOverviewSummary data={centersSumQ.data} ar={ar} />;
     }
     if (activeSummary === "circles" && circlesSumQ.data?.kpis) {
       const k = circlesSumQ.data.kpis;
       return (
-        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div className="fin-premium-kpis mb-0" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 0 }}>
           {[
             { label: ar ? "إجمالي الحلقات" : "Total Circles", value: k.totalCircles, icon: CircleDot, cls: "blue" },
             { label: ar ? "نشطة" : "Active", value: k.activeCircles, icon: CircleDot, cls: "emerald" },
@@ -682,7 +526,7 @@ export default function ReportsPage() {
     if (activeSummary === "students" && studentsSumQ.data?.kpis) {
       const k = studentsSumQ.data.kpis;
       return (
-        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div className="fin-premium-kpis mb-0" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 0 }}>
           {[
             { label: ar ? "إجمالي الطلاب" : "Total Students", value: k.totalStudents, icon: Users, cls: "blue" },
             { label: ar ? "نشط" : "Active", value: k.activeStudents, icon: Users, cls: "emerald" },
@@ -703,7 +547,7 @@ export default function ReportsPage() {
       const k = goldenSumQ.data.kpis;
       const byTypeEntries = Object.entries(k.byType || {});
       return (
-        <div className="fin-premium-kpis mb-6" style={{ gridTemplateColumns: `repeat(${Math.min(byTypeEntries.length + 1, 5)}, 1fr)` }}>
+        <div className="fin-premium-kpis mb-0" style={{ gridTemplateColumns: `repeat(${Math.min(byTypeEntries.length + 1, 5)}, 1fr)`, marginBottom: 0 }}>
           {[
             { label: ar ? "إجمالي السجلات" : "Total Records", value: k.totalRecords, icon: Award, cls: "blue" },
             ...byTypeEntries.map(([type, count]) => ({
@@ -879,18 +723,26 @@ export default function ReportsPage() {
             )}
           </motion.div>
         ) : viewLevel === "STAFF" ? (
-          <motion.div key="staff" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col" style={{ gap: "var(--rcc-gap)" }}>
-            <div className="flex items-center gap-3">
-              <Button variant="secondary" size="sm" leftIcon={<ChevronLeft className={`w-4 h-4 ${ar ? "rotate-180" : ""}`} />} onClick={handleBack}>
-                {ar ? "رجوع للفهرس" : "Back to Catalog"}
-              </Button>
-              <h2 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{ar ? "تقرير حضور الكادر" : "Staff Attendance Report"}</h2>
+          <motion.div key="staff" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-5 mx-auto" style={{ maxWidth: 1120, width: "100%" }}>
+            <div>
+              <button
+                onClick={handleBack}
+                className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 mb-6"
+              >
+                <ChevronLeft className={`w-4 h-4 ${ar ? "rotate-180 ml-1 mr-0" : "mr-1"}`} />
+                {ar ? "العودة للتقارير" : "Back to Reports"}
+              </button>
+              <PageHeader
+                title={ar ? "تقرير حضور الكادر" : "Staff Attendance Report"}
+                description={ar ? "حضور الموظفين والإجازات والخصومات" : "Staff attendance, leaves and deductions"}
+                icon={<Users className="w-6 h-6 text-indigo-600" />}
+              />
             </div>
             <MonthlyStaffReportView />
           </motion.div>
         ) : (
-          <motion.div key="unified" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-5">
-            {/* ── 1. UNIFIED HEADER (FINANCIAL POSITION STYLE) ── */}
+          <motion.div key="unified" variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-5 mx-auto" style={{ maxWidth: 1120, width: "100%" }}>
+            {/* ── 1. UNIFIED HEADER ── */}
             <div>
               <button
                 onClick={handleBack}
@@ -933,11 +785,15 @@ export default function ReportsPage() {
               />
             </div>
 
-            {/* ── 2. UNIFIED FILTERS (Premium style, contextual) ── */}
+            {/* ── 2. UNIFIED FILTERS — البحث أولاً وأوسع ── */}
             <div className="fin-filters-container">
               <div className="fin-filters-scroll">
-                {canLoadCenters && (
-                  <div className="fin-filter-item">
+                <div className="fin-filter-item" style={{ flex: 1, minWidth: 260 }}>
+                  <Search className="fin-filter-icon" size={18} />
+                  <input type="text" placeholder={ar ? "ابحث في الجدول..." : "Search table..."} value={filters.search} onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setPage(1); }} style={{ fontWeight: 500 }} />
+                </div>
+                {canLoadCenters && activeSummary !== "centers" && (
+                  <div className="fin-filter-item" style={{ minWidth: 160 }}>
                     <Building2 className="fin-filter-icon" size={16} />
                     <select value={filters.centerId || ""} onChange={(e) => { setFilters({ ...filters, centerId: Number(e.target.value) || undefined, circleId: undefined }); setPage(1); }}>
                       <option value="">{ar ? "المركز: الكل" : "Center: All"}</option>
@@ -946,7 +802,7 @@ export default function ReportsPage() {
                   </div>
                 )}
                 {filters.centerId && activeSummary !== "centers" && (
-                  <div className="fin-filter-item">
+                  <div className="fin-filter-item" style={{ minWidth: 160 }}>
                     <CircleDot className="fin-filter-icon" size={16} />
                     <select value={filters.circleId || ""} onChange={(e) => { setFilters({ ...filters, circleId: Number(e.target.value) || undefined }); setPage(1); }}>
                       <option value="">{ar ? "الحلقة: الكل" : "Circle: All"}</option>
@@ -966,10 +822,6 @@ export default function ReportsPage() {
                     </div>
                   </>
                 )}
-                <div className="fin-filter-item" style={{ minWidth: 200 }}>
-                  <Search className="fin-filter-icon" size={16} />
-                  <input type="text" placeholder={ar ? "بحث..." : "Search..."} value={filters.search} onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setPage(1); }} />
-                </div>
               </div>
               {((filters.centerId || filters.circleId || filters.search) || (!activeSummary && (filters.from !== defaultFrom || filters.to !== defaultTo))) && (
                 <button className="fin-filter-reset" onClick={() => { setFilters({ from: defaultFrom, to: defaultTo, search: "", centerId: undefined, circleId: undefined }); setPage(1); }}>
@@ -993,7 +845,6 @@ export default function ReportsPage() {
                   columns={columns}
                   rows={pagedRows}
                   rowKey={(_, i) => i}
-                  footer={reportTotals}
                   emptyState={
                     <div className="rcc-empty !py-16">
                       <div className="rcc-empty__ico !w-16 !h-16 !bg-gray-50 !text-gray-300"><Search size={32} /></div>
@@ -1001,15 +852,28 @@ export default function ReportsPage() {
                       <p className="rcc-empty__desc">{ar ? "حاول تغيير فلاتر البحث أو النطاق الزمني." : "Try adjusting the search filters or date range."}</p>
                     </div>
                   }
-                  pagination={{
-                    totalItems: sortedRows.length,
-                    pageSize,
-                    currentPage: page,
-                    totalPages: Math.max(1, Math.ceil(sortedRows.length / pageSize)),
-                    onPageChange: setPage,
-                    onPageSizeChange: setPageSize,
-                  }}
                 />
+                {sortedRows.length > 0 && (
+                  <div className="ctr-footer">
+                    <div className="ctr-page-size">
+                      <span>{ar ? "الصفوف:" : "Rows:"}</span>
+                      <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+                        {[5, 10, 20, 50].map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                    <div className="ctr-page-info">
+                      {ar ? `عرض ${(page - 1) * pageSize + 1} - ${Math.min(page * pageSize, sortedRows.length)} من ${sortedRows.length}` : `Showing ${(page - 1) * pageSize + 1} - ${Math.min(page * pageSize, sortedRows.length)} of ${sortedRows.length}`}
+                    </div>
+                    <div className="ctr-page-controls">
+                      <button type="button" className="ctr-page-btn" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                        {ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                      </button>
+                      <button type="button" className="ctr-page-btn" disabled={page >= Math.ceil(sortedRows.length / pageSize)} onClick={() => setPage((p) => p + 1)}>
+                        {ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

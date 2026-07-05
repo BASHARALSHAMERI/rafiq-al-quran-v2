@@ -137,10 +137,13 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
       if (data is List) {
         return _ensureMapList(data, operation: operation);
       }
-      if (data is Map<String, dynamic> && data.containsKey('items')) {
-        final items = data['items'];
-        if (items is List) {
-          return _ensureMapList(items, operation: operation);
+      
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('data') && data['data'] is List) {
+          return _ensureMapList(data['data'] as List, operation: operation);
+        }
+        if (data.containsKey('items') && data['items'] is List) {
+          return _ensureMapList(data['items'] as List, operation: operation);
         }
       }
     }

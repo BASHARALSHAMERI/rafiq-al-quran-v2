@@ -97,7 +97,7 @@ class AttendanceLocalDataSource {
       mutationId: mutationId,
       entity: 'ATTENDANCE',
       method: 'POST',
-      endpoint: '/attendance/submit',
+      endpoint: '/attendance/bulk',
       payload: request.toJson(),
       idempotencyKey: mutationId,
     );

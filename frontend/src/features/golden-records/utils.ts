@@ -218,3 +218,129 @@ export const canApproveRecord = (item: GoldenRecordItem) =>
   item.status === "SUBMITTED" &&
   hasCompleteRecordDocumentation(item) &&
   (item.source === "MANUAL" || hasOperationalCandidateProof(item));
+
+export const escapeCsvCell = (value: unknown) => {
+  const text = String(value ?? "");
+  if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+    return `"${text.replaceAll("\"", "\"\"")}"`;
+  }
+  return text;
+};
+
+export const downloadRecordsCsv = (rows: GoldenRecordItem[], ar: boolean) => {
+  const headers = [
+    ar ? "الطالب" : "Student",
+    ar ? "السنة" : "Year",
+    ar ? "المركز" : "Center",
+    ar ? "الحلقة" : "Halaqa",
+    ar ? "النوع" : "Type",
+    ar ? "الرواية" : "Riwaya",
+    ar ? "الدرجة" : "Grade",
+    ar ? "المتوسط" : "Average",
+    ar ? "التقدير" : "Appreciation",
+    ar ? "تاريخ الاختبار" : "Exam Date",
+    ar ? "الحالة" : "Status",
+    ar ? "الرقم التسلسلي" : "Registry Serial"
+  ];
+
+  const lines = rows.map((row) =>
+    [
+      row.studentName,
+      row.year,
+      row.centerName,
+      row.circleName ?? "",
+      goldenRecordTypeLabel(row.type, ar),
+      riwayaLabel(row.riwaya, ar),
+      row.grade,
+      formatAverageLabel(row.average, ar),
+      row.appreciation,
+      row.examDate ?? "",
+      goldenRecordStatusLabel(row.status, ar),
+      row.registrySerial ?? ""
+    ]
+      .map(escapeCsvCell)
+      .join(",")
+  );
+
+  const blob = new Blob([[headers.map(escapeCsvCell).join(","), ...lines].join("\n")], {
+    type: "text/csv;charset=utf-8"
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `golden-records-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
+export const printRecordsTable = (rows: GoldenRecordItem[], ar: boolean) => {
+  const printWindow = window.open("about:blank", "_blank", "width=1200,height=900");
+  if (!printWindow) {
+    throw new Error(ar ? "تعذر فتح نافذة الطباعة" : "Unable to open print window");
+  }
+
+  const tableRows = rows
+    .map(
+      (row) => `
+        <tr>
+          <td>${row.studentName}</td>
+          <td>${row.year}</td>
+          <td>${row.centerName}</td>
+          <td>${row.circleName ?? "-"}</td>
+          <td>${goldenRecordTypeLabel(row.type, ar)}</td>
+          <td>${riwayaLabel(row.riwaya, ar)}</td>
+          <td>${row.grade}</td>
+          <td>${formatAverageLabel(row.average, ar)}</td>
+          <td>${row.appreciation}</td>
+          <td>${row.examDate ?? "-"}</td>
+          <td>${goldenRecordStatusLabel(row.status, ar)}</td>
+          <td>${row.registrySerial ?? "-"}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <html dir="${ar ? "rtl" : "ltr"}" lang="${ar ? "ar" : "en"}">
+      <head>
+        <title>${ar ? "السجل الذهبي النهائي" : "Final Golden Records"}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+          h1 { margin: 0 0 12px; font-size: 22px; }
+          p { margin: 0 0 24px; color: #4b5563; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #d1d5db; padding: 10px; text-align: ${ar ? "right" : "left"}; font-size: 12px; }
+          th { background: #f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>${ar ? "السجل الذهبي النهائي" : "Final Golden Records"}</h1>
+        <p>${ar ? "طباعة الصفحة الحالية من نتائج السجل الذهبي" : "Current page printout of final golden records"}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>${ar ? "الطالب" : "Student"}</th>
+              <th>${ar ? "السنة" : "Year"}</th>
+              <th>${ar ? "المركز" : "Center"}</th>
+              <th>${ar ? "الحلقة" : "Halaqa"}</th>
+              <th>${ar ? "النوع" : "Type"}</th>
+              <th>${ar ? "الرواية" : "Riwaya"}</th>
+              <th>${ar ? "الدرجة" : "Grade"}</th>
+              <th>${ar ? "المتوسط" : "Average"}</th>
+              <th>${ar ? "التقدير" : "Appreciation"}</th>
+              <th>${ar ? "تاريخ الاختبار" : "Exam Date"}</th>
+              <th>${ar ? "الحالة" : "Status"}</th>
+              <th>${ar ? "الرقم التسلسلي" : "Registry Serial"}</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};

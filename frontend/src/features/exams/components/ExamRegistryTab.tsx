@@ -28,11 +28,6 @@ import "../../../styles/features/exam-registry.css";
 type CenterOption = { id: number; name: string };
 type CircleOption = { id: number; name: string; centerId: number };
 
-const dateFormatter = new Intl.DateTimeFormat("ar-SA-u-nu-latn", {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric'
-});
 
 const formatDate = (value?: string | null) => {
   if (!value) return "?";

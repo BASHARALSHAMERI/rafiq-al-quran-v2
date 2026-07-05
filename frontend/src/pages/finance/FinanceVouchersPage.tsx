@@ -143,10 +143,9 @@ export default function FinanceVouchersPage() {
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
   const canCreateVoucher =
-    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
+    user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
   const canApproveVoucher = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
-  const canPostVoucher =
-    canCreateVoucher || user?.role === "TREASURER";
+  const canPostVoucher = canCreateVoucher;
 
   const brandingQ = useOrgBrandingQuery();
 
@@ -1118,7 +1117,11 @@ export default function FinanceVouchersPage() {
           onClose={closeConfirmModal}
           onConfirm={async () => {
             if (confirmModal.reasonRequired && !reasonValue.trim()) return;
-            await confirmModal.action(reasonValue);
+            try {
+              await confirmModal.action(reasonValue);
+            } catch (err) {
+              notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "حدث خطأ أثناء تنفيذ العملية" : "An error occurred during the operation" }));
+            }
           }}
           title={confirmModal.title}
           message={confirmModal.message}

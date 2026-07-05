@@ -100,6 +100,10 @@ export default function FinanceInvoicesPage() {
   const isFinanceManager = role === "FINANCE_MANAGER";
   const isAccountant = role === "ACCOUNTANT";
   const isTreasurer = role === "TREASURER";
+  const canPrepareInvoice = isSuperAdmin || isFinanceManager || isAccountant;
+  const canCollectPayment = isSuperAdmin || isTreasurer;
+  const canAssignStudentFees = canPrepareInvoice;
+  const canManageTuitionPlans = isSuperAdmin || isFinanceManager;
 
   const policyQ = useFinanceV2PolicyQuery(centerId);
   const feesEnabled = policyQ.data?.effective?.feesEnabled ?? false;
@@ -179,7 +183,7 @@ export default function FinanceInvoicesPage() {
                   >
                     {ar ? "تحديث" : "Refresh"}
                   </Button>
-                  {feesEnabled ? (
+                  {feesEnabled && canPrepareInvoice ? (
                     <Button
                       variant="primary"
                       size="sm"
@@ -193,7 +197,7 @@ export default function FinanceInvoicesPage() {
                 </div>
               ) : activeTab === "payments" ? (
                 <div className="flex items-center gap-3">
-                  {(isSuperAdmin || isFinanceManager || isAccountant || isTreasurer) ? (
+                  {canCollectPayment ? (
                     <Button
                       variant="primary"
                       size="sm"
@@ -307,12 +311,12 @@ export default function FinanceInvoicesPage() {
               month={month}
               year={year}
               status={status}
-              isAdmin={isSuperAdmin || isFinanceManager || isAccountant}
+              isAdmin={canPrepareInvoice}
               ar={ar}
               centers={centers}
               onSelectInvoice={handleSelectInvoice}
               statusLabels={statusLabels}
-              externalShowForm={showNewInvoiceModal}
+              externalShowForm={canPrepareInvoice && showNewInvoiceModal}
               onExternalFormClose={() => setShowNewInvoiceModal(false)}
               feesEnabled={feesEnabled}
             />
@@ -322,24 +326,24 @@ export default function FinanceInvoicesPage() {
           <Suspense fallback={<LoadingState />}>
             <FinancePaymentsTab
               centerId={centerId}
-              isAdmin={isSuperAdmin || isFinanceManager || isAccountant || isTreasurer}
+              isAdmin={canCollectPayment}
               isSuperAdmin={isSuperAdmin}
               ar={ar}
               initialInvoiceId={selectedInvoiceId}
-              externalShowPaymentForm={showNewPaymentModal}
+              externalShowPaymentForm={canCollectPayment && showNewPaymentModal}
               onExternalPaymentFormClose={() => setShowNewPaymentModal(false)}
             />
           </Suspense>
         ) : null}
         {activeTab === "subscriptions" && feesEnabled ? (
           <Suspense fallback={<LoadingState />}>
-            <FinanceSubscriptionTab centerId={centerId} isAdmin={isSuperAdmin || isFinanceManager} ar={ar} />
+            <FinanceSubscriptionTab centerId={centerId} isAdmin={canAssignStudentFees} ar={ar} />
           </Suspense>
         ) : null}
 
         {activeTab === "tuition-plans" && feesEnabled ? (
           <Suspense fallback={<LoadingState />}>
-            <FinanceTuitionPlansTab centerId={centerId} isAdmin={isSuperAdmin || isFinanceManager} ar={ar} />
+            <FinanceTuitionPlansTab centerId={centerId} isAdmin={canManageTuitionPlans} ar={ar} />
           </Suspense>
         ) : null}
       </div>

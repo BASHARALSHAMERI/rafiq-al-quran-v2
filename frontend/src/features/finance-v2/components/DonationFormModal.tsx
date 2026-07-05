@@ -162,13 +162,7 @@ export default function DonationFormModal({
         id="donation-form"
         className="circlemod-form"
         noValidate
-        onSubmit={(event) => {
-          if (focusFirstInvalidField(event.currentTarget, event)) {
-            notifyRequiredFields(ar);
-            return;
-          }
-          onSave(event);
-        }}
+        onSubmit={onSave}
       >
 
         {/* Section 1: Donor & Center */}
@@ -233,17 +227,6 @@ export default function DonationFormModal({
                 onChange={(e) => handleChange("originalAmount", e.target.value)}
                 placeholder={ar ? "المبلغ" : "Amount"}
                 required
-                onInvalid={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  if (target.validity.rangeUnderflow) {
-                    target.setCustomValidity(ar ? "يجب أن يكون المبلغ أكبر من 0" : "Amount must be greater than 0");
-                  } else if (target.validity.rangeOverflow) {
-                    target.setCustomValidity(ar ? "المبلغ يتجاوز الحد المسموح به" : "Amount exceeds max limit");
-                  } else if (target.validity.valueMissing) {
-                    target.setCustomValidity(ar ? "المبلغ مطلوب" : "Amount is required");
-                  }
-                }}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--sm">
@@ -387,13 +370,6 @@ export default function DonationFormModal({
                 onChange={(e) => handleChange("purpose", e.target.value)}
                 placeholder={ar ? "الغرض من التبرع (مطلوب)" : "Donation Purpose (Required)"}
                 required
-                onInvalid={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  if (target.validity.valueMissing) {
-                    target.setCustomValidity(ar ? "الغرض من التبرع مطلوب" : "Donation purpose is required");
-                  }
-                }}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
           </div>

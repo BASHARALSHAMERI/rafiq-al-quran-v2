@@ -31,6 +31,7 @@ import goldenRecordsRouter from "../modules/golden-records/golden-records.routes
 import groupActivitiesRouter from "../modules/group-activities/group-activities.routes";
 import monthlyPlansRouter from "../modules/monthly-plans/monthly-plans.routes";
 import remoteRecitationRouter from "../modules/remote-recitation/remote-recitation.routes";
+import publicCertificatesRouter from "../modules/certificates/certificates.public.routes";
 
 const router = Router();
 
@@ -45,6 +46,7 @@ if (env.METRICS_ENABLED) {
 router.use(healthRouter());
 
 router.use(systemRouter);
+router.use(publicCertificatesRouter);
 
 router.use("/auth", authRouter);
 router.use("/org", orgRouter);

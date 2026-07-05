@@ -23,7 +23,7 @@ import {
 
 type FindUsersInput = {
   organizationId: number;
-  role?: Role;
+  role?: Role | Role[];
   userIds?: number[];
   includeInactive?: boolean;
 };
@@ -133,6 +133,7 @@ type UpdateUserWithDetailsInput = {
   userId: number;
   email?: string;
   username?: string | null;
+  role?: Role;
   fullName?: string;
   profile?: UserCommonProfileUpdateInput;
   teacherProfile?: TeacherProfileWriteInput;
@@ -1034,7 +1035,7 @@ export const usersRepository = {
     const where = activeUserWhere(
       {
         organizationId: input.organizationId,
-        ...(input.role ? { role: input.role } : {}),
+        ...(input.role ? (Array.isArray(input.role) ? { role: { in: input.role } } : { role: input.role }) : {}),
         ...(input.userIds
           ? {
               id: {
@@ -1235,14 +1236,18 @@ export const usersRepository = {
 
   async updateUserWithDetails(input: UpdateUserWithDetailsInput) {
     return prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: input.userId },
-        data: {
-          ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
-          ...(input.email !== undefined ? { email: input.email } : {}),
-          ...(input.username !== undefined ? { username: input.username ?? null } : {})
-        }
-      });
+      const userUpdateData: Prisma.UserUpdateInput = {};
+      if (input.fullName !== undefined) userUpdateData.fullName = input.fullName;
+      if (input.email !== undefined) userUpdateData.email = input.email;
+      if (input.username !== undefined) userUpdateData.username = input.username ?? null;
+      if (input.role !== undefined) userUpdateData.role = input.role;
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await tx.user.update({
+          where: { id: input.userId },
+          data: userUpdateData
+        });
+      }
 
       const currentUser = await tx.user.findUniqueOrThrow({
         where: { id: input.userId },
@@ -1633,6 +1638,7 @@ export const usersRepository = {
           }
         },
         followUpsAsStudent: {
+          where: { status: "FINAL" },
           orderBy: { recordDate: "desc" },
           take: 120,
           select: {

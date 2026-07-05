@@ -10,6 +10,7 @@ void main() {
       RouteNames.teacherHome,
       RouteNames.teacherHalqa,
       RouteNames.teacherPreparation,
+      RouteNames.homeExams,
       RouteNames.profile,
     ]);
     expect(
@@ -24,6 +25,10 @@ void main() {
     expect(
       navigationIndexForLocation(items, RouteNames.teacherPreparation),
       2,
+    );
+    expect(
+      navigationIndexForLocation(items, RouteNames.homeExams),
+      3,
     );
   });
 

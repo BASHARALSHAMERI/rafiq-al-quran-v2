@@ -1,4 +1,4 @@
-import type { AttemptStatus, ExamCommitteeRole, ExamType } from "../types";
+import type { AttemptStatus, ExamCommitteeRole, ExamType, ExamPurpose } from "../types";
 
 export const JUZ_BRANCH_OPTIONS = [
   "الجزء 1",
@@ -48,6 +48,20 @@ export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
   OTHER: "اختبار آخر",
   JUZ_RANGE: "فئات أجزاء"
 };
+
+export const EXAM_PURPOSE_LABELS: Record<ExamPurpose, string> = {
+  NORMAL: "اختبار عادي",
+  MONTHLY: "اختبار شهري",
+  LEVEL: "اختبار مرحلي",
+  GOLDEN_RECORD_MUSHAF: "مصحف السجل الذهبي"
+};
+
+export const EXAM_PURPOSE_OPTIONS: Array<{ value: ExamPurpose; label: string }> = [
+  { value: "NORMAL", label: "اختبار عادي" },
+  { value: "MONTHLY", label: "اختبار شهري" },
+  { value: "LEVEL", label: "اختبار مرحلي" },
+  { value: "GOLDEN_RECORD_MUSHAF", label: "مصحف السجل الذهبي" }
+];
 
 export const EXAM_STATUS_LABELS: Record<string, string> = {
   DRAFT: "مسودة",

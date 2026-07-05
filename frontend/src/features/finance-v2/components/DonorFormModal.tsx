@@ -84,7 +84,7 @@ export default function DonorFormModal({
         </div>
       }
     >
-      <form id="finance-donor-form" className="circlemod-form" onSubmit={onSave}>
+      <form id="finance-donor-form" className="circlemod-form" noValidate onSubmit={onSave}>
         {/* Section 1: Identity */}
         <div className="circlemod-section">
           <div className="circlemod-section-head">
@@ -102,8 +102,6 @@ export default function DonorFormModal({
                 placeholder={ar ? "الاسم الكامل" : "Full Name"}
                 pattern="^[\p{L}]+(?:\s+[\p{L}]+){2,}.*$"
                 title={ar ? "الاسم يجب أن يكون ثلاثياً على الأقل ويحتوي على أحرف فقط" : "Name must be at least 3 parts and contain only letters"}
-                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(ar ? "الاسم يجب أن يكون ثلاثياً على الأقل ويحتوي على أحرف فقط" : "Name must be at least 3 parts and contain only letters")}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
                 required
               />
             </div>
@@ -187,15 +185,6 @@ export default function DonorFormModal({
                 pattern="^\+?[0-9]{8,15}$"
                 title={ar ? "رقم الهاتف يجب أن يحتوي على أرقام فقط (8 إلى 15 رقماً)، يمكن أن يبدأ بـ +" : "Phone must contain digits only (8-15 digits), can start with +"}
                 required
-                onInvalid={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  if (target.validity.patternMismatch) {
-                    target.setCustomValidity(ar ? "رقم الهاتف يجب أن يحتوي على أرقام فقط (8 إلى 15 رقماً)" : "Phone must contain digits only (8-15 digits)");
-                  } else if (target.validity.valueMissing) {
-                    target.setCustomValidity(ar ? "رقم الهاتف مطلوب" : "Phone number is required");
-                  }
-                }}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--lg">
@@ -210,13 +199,6 @@ export default function DonorFormModal({
                 value={form.email}
                 onChange={(e) => handleChange("email", e.target.value)}
                 placeholder={ar ? "البريد الإلكتروني" : "Email Address"}
-                onInvalid={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  if (target.validity.typeMismatch) {
-                    target.setCustomValidity(ar ? "صيغة البريد الإلكتروني غير صحيحة" : "Invalid email format");
-                  }
-                }}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
           </div>
@@ -233,8 +215,6 @@ export default function DonorFormModal({
                 onChange={(e) => handleChange("address", e.target.value)}
                 placeholder={ar ? "العنوان" : "Address"}
                 required
-                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity(ar ? "العنوان مطلوب" : "Address is required")}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity("")}
               />
             </div>
             <div className="circlemod-field circlemod-field--lg">

@@ -32,6 +32,7 @@ const READ_ROLES: Role[] = [
   Role.SUPERVISOR
 ];
 const WRITE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ACCOUNTANT, Role.FINANCE_MANAGER];
+const EXECUTE_ROLES: Role[] = [Role.SUPER_ADMIN, Role.TREASURER];
 const APPROVAL_ROLES: Role[] = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
 
 const VOUCHER_TRANSITIONS: Record<VoucherStatus, VoucherStatus[]> = {
@@ -140,6 +141,18 @@ export const financeV2Domain = {
 
   assertCanWrite(scope: ScopeContext) {
     if (!WRITE_ROLES.includes(scope.role)) {
+      throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
+    }
+  },
+
+  assertCanExecute(scope: ScopeContext) {
+    if (!EXECUTE_ROLES.includes(scope.role)) {
+      throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
+    }
+  },
+
+  assertCanManageSettings(scope: ScopeContext) {
+    if (!APPROVAL_ROLES.includes(scope.role)) {
       throw financeError("Finance scope denied", 403, "FINANCE_SCOPE_DENIED");
     }
   },

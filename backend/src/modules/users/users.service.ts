@@ -33,7 +33,7 @@ type InvitationDelivery = {
   issuedAt: Date;
 };
 
-type ListUsersQuery = { role?: Role; centerId?: number; circleId?: number };
+type ListUsersQuery = { role?: Role | Role[]; centerId?: number; circleId?: number };
 
 type CreateUserInput = {
   fullName?: string;
@@ -86,6 +86,7 @@ type UpdateUserInput = {
   fullName?: string;
   email?: string;
   username?: string | null;
+  role?: Role;
   profile?: {
     fullName?: string;
     gender?: Gender;
@@ -535,6 +536,7 @@ const normalizeUpdateUserPayload = (input: UpdateUserInput) => {
   return {
     email: input.email !== undefined ? normalizeEmail(input.email) : undefined,
     username: input.username !== undefined ? normalizeOptionalString(input.username) : undefined,
+    role: input.role,
     fullName: input.fullName !== undefined ? normalizeRequiredString(input.fullName, "fullName") : undefined,
     profile: mergedProfilePatch && Object.keys(mergedProfilePatch).length ? mergedProfilePatch : undefined,
     teacherProfile: input.teacherProfile
@@ -860,6 +862,15 @@ export const usersService = {
 
     const normalized = normalizeUpdateUserPayload(input);
 
+    if (normalized.role && normalized.role !== existingUser.role) {
+      const financeRoles: Role[] = [Role.FINANCE_MANAGER, Role.ACCOUNTANT, Role.TREASURER];
+      if (financeRoles.includes(existingUser.role) && financeRoles.includes(normalized.role)) {
+        // Safe to change among finance roles
+      } else {
+        throw new AppError("لا يمكن تغيير الدور لهذا المستخدم", 400);
+      }
+    }
+
     if (existingUser.role !== Role.STUDENT && normalized.profile && normalized.profile.phone === null) {
       throw new AppError("رقم الهاتف مطلوب لهذا الدور.", 400);
     }
@@ -879,6 +890,7 @@ export const usersService = {
         fullName: normalized.fullName,
         email: normalized.email,
         username: normalized.username,
+        role: normalized.role,
         profile: normalized.profile,
         teacherProfile: normalized.teacherProfile,
         supervisorProfile: normalized.supervisorProfile,

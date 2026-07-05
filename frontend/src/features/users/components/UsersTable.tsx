@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import type { UserListItem } from "../types";
+import { roleLabel } from "../users.helpers";
 
 interface UsersTableProps {
   users: UserListItem[];
@@ -19,6 +20,7 @@ interface UsersTableProps {
   onEdit: (user: UserListItem) => void;
   onDelete: (user: UserListItem) => void;
   canManage?: boolean;
+  showRoleColumn?: boolean;
   emptyTitle: string;
   emptyDescription: string;
 }
@@ -30,6 +32,7 @@ export function UsersTable({
   onEdit,
   onDelete,
   canManage = true,
+  showRoleColumn = false,
   emptyTitle,
   emptyDescription
 }: UsersTableProps) {
@@ -97,6 +100,15 @@ export function UsersTable({
                   </div>
                 )}
               </div>
+
+              {showRoleColumn && (
+                <div className="user-scope-sig" style={{ flex: 1 }}>
+                  <div className="user-scope-pill" style={{ backgroundColor: "#e2e8f0", color: "#475569", borderColor: "#cbd5e1" }}>
+                    <Sliders size={14} />
+                    <span>{user.role ? roleLabel(user.role, ar) : (ar ? "غير محدد" : "N/A")}</span>
+                  </div>
+                </div>
+              )}
 
                {/* Actions & Status Unit */}
               <div className="user-actions-sig">

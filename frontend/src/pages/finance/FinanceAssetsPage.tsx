@@ -72,8 +72,10 @@ export default function FinanceAssetsPage() {
   const canManageAssetSettings = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const canRegisterAsset =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
-  const canPostAsset =
-    canRegisterAsset || user?.role === "TREASURER";
+  const canAcquireAsset =
+    user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
+  const canDepreciateAsset =
+    user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const [activeTab, setActiveTab] = useState<TabId>("assets");
 
   // Lifted Modal States
@@ -161,7 +163,8 @@ export default function FinanceAssetsPage() {
                 modalOpen={assetModalOpen} 
                 setModalOpen={setAssetModalOpen} 
                 canRegister={canRegisterAsset}
-                canPost={canPostAsset}
+                canAcquire={canAcquireAsset}
+                canDepreciate={canDepreciateAsset}
               />
             ) : null}
             {activeTab === "custody" ? (
@@ -427,13 +430,15 @@ function AssetRegisterTab({
   modalOpen, 
   setModalOpen,
   canRegister = true,
-  canPost = true
+  canAcquire = true,
+  canDepreciate = true
 }: { 
   ar: boolean; 
   modalOpen: boolean; 
   setModalOpen: (open: boolean) => void; 
   canRegister?: boolean;
-  canPost?: boolean;
+  canAcquire?: boolean;
+  canDepreciate?: boolean;
 }) {
   const categoriesQ = useAssetCategoriesQuery();
   const assetsQ = useFixedAssetsQuery();
@@ -614,7 +619,7 @@ function AssetRegisterTab({
                       <Badge variant="warning" size="sm">
                         {ar ? "فاتورة" : "Invoice"}
                       </Badge>
-                    ) : canPost && !row.acquisitionJournalEntryId ? (
+                    ) : canAcquire && !row.acquisitionJournalEntryId ? (
                       <Button
                         size="sm"
                         variant="primary"
@@ -631,7 +636,7 @@ function AssetRegisterTab({
                         {ar ? "مرحل" : "Posted"}
                       </Badge>
                     )}
-                    {canPost && row.acquisitionJournalEntryId && (
+                    {canDepreciate && row.acquisitionJournalEntryId && (
                       <Button
                         size="sm"
                         variant="secondary"
@@ -852,7 +857,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={Boolean(acqModal && canPost)}
+        isOpen={Boolean(acqModal && canAcquire)}
         onClose={() => setAcqModal(null)}
         title={ar ? "إنشاء قيد اقتناء الأصل" : "Post Asset Acquisition"}
         titleIcon={
@@ -930,7 +935,7 @@ function AssetRegisterTab({
       </Modal>
 
       <Modal
-        isOpen={Boolean(depModal && canPost)}
+        isOpen={Boolean(depModal && canDepreciate)}
         onClose={() => setDepModal(null)}
         title={ar ? "إهلاك الأصل للشهر" : "Run Asset Depreciation"}
         titleIcon={

@@ -1,6 +1,6 @@
 /**
  * Admin Layout V3 Premium - Islamic Elegance
- * التخطيط الإداري الفاخر
+   *التخطيط الإداري 
  */
 
 import { Outlet } from "react-router-dom";

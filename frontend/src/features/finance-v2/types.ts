@@ -348,12 +348,21 @@ export type PayrollBatchV2 = {
   status: PayrollBatchStatusV2;
   totalItems: number;
   totalNetAmount: number;
+  approvedById?: number | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  closedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   items?: PayrollItemV2[];
   center?: {
     id: number;
     name: string;
     code: string;
   };
+  approvedBy?: { id: number; fullName: string; role: string } | null;
 };
 
 export type PayrollItemV2 = {
@@ -368,6 +377,7 @@ export type PayrollItemV2 = {
   paymentMethod?: PaymentMethodV2 | null;
   paymentReference?: string | null;
   failureReason?: string | null;
+  notes?: string | null;
   voucherId?: number | null;
   paidAt?: string | null;
   beneficiary?: {
@@ -422,12 +432,21 @@ export type RewardBatchV2 = {
   status: RewardBatchStatusV2;
   totalItems: number;
   totalAmount: number;
+  approvedById?: number | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  closedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   items?: RewardItemV2[];
   center?: {
     id: number;
     name: string;
     code: string;
   };
+  approvedBy?: { id: number; fullName: string; role: string } | null;
 };
 
 export type RewardItemV2 = {
@@ -443,6 +462,7 @@ export type RewardItemV2 = {
   paymentMethod?: PaymentMethodV2 | null;
   paymentReference?: string | null;
   failureReason?: string | null;
+  notes?: string | null;
   voucherId?: number | null;
   paidAt?: string | null;
   beneficiary?: {
@@ -860,6 +880,9 @@ export type UpdatePayrollProfileV2Payload = {
   monthlyBaseAmount?: number;
   salaryCurrencyCode?: string;
   paymentMethodDefault?: PaymentMethodV2;
+  bankAccountNumber?: string | null;
+  bankName?: string | null;
+  iban?: string | null;
   effectiveFrom?: string;
   effectiveTo?: string | null;
   isActive?: boolean;
@@ -895,6 +918,8 @@ export type ExpenseInvoiceV2 = {
   dueDate?: string | null;
   description: string;
   amount: number;
+  paidAmount?: number;
+  remainingAmount?: number;
   status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "PARTIALLY_PAID" | "PAID" | "VOIDED";
   supplier?: SupplierV2 | null;
   category?: ExpenseCategoryV2 | null;

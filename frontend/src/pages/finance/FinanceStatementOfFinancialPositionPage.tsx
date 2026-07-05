@@ -1,15 +1,21 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Scale, ShieldCheck, Wallet2 } from "lucide-react";
+import {
+  AlertCircle, ArrowLeft, Building2, CalendarDays,
+  FileDown, Printer, RefreshCw, RotateCcw, Scale,
+  Search, ShieldCheck, Wallet2
+} from "lucide-react";
 import { useI18n } from "../../app/i18n";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { useOrgBrandingQuery, useCentersQuery } from "../../features/org/org.hooks";
 import { canReadCenters } from "../../features/org/org.permissions";
 import { useFinanceV2ReportFinancialPositionQuery } from "../../features/finance-v2/finance-v2.hooks";
-import { ReportLayout } from "../../features/reports/components/ReportLayout";
 import { FinancialStatementTree } from "../../features/reports/components/FinancialStatementTree";
-import { ReportsSummaryCards } from "../../features/reports/components/ReportsSummaryCards";
 import { useReportUrlFilters } from "../../features/reports/reports.hooks";
 import { REPORT_CATALOG } from "../../features/reports/reportCatalog";
 import {
@@ -18,6 +24,14 @@ import {
   type FinanceReportColumn,
 } from "../../features/accounting/printAccounting";
 import type { FinancialPositionItemV2 } from "../../features/finance-v2/types";
+import "../../styles/pages/centers-modern.css";
+import "../../styles/pages/finance-premium.css";
+import "../../styles/pages/finance-v4.css";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
+};
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
@@ -51,6 +65,8 @@ export default function FinanceStatementOfFinancialPositionPage() {
     ? centersQ.data?.items.find((center: { id: number }) => center.id === centerId)?.name
     : undefined;
 
+  const [searchQ, setSearchQ] = useState("");
+
   const centerOptions = canLoadCenters && centersQ.data?.items
     ? centersQ.data.items.map((center: { id: number; name: string }) => ({ value: center.id, label: center.name }))
     : [];
@@ -58,6 +74,10 @@ export default function FinanceStatementOfFinancialPositionPage() {
   const totalLiabilitiesAndNet = data
     ? data.liabilities.totalLiabilities + data.netAssets.totalNetAssets
     : 0;
+
+  const hasActiveFilters = activeCount > 0 || !!searchQ;
+  const handleBack = useCallback(() => navigate("/reports"), [navigate]);
+  const handleRefresh = useCallback(() => { void reportQ.refetch(); }, [reportQ]);
 
   const amountColumn: FinanceReportColumn<FinancialPositionItemV2> = {
     label: ar ? "المبلغ" : "Amount",
@@ -161,6 +181,13 @@ export default function FinanceStatementOfFinancialPositionPage() {
     });
   }, [ar, asOf, csvColumns, csvRows, data, totalLiabilitiesAndNet]);
 
+  const kpiCards = data ? [
+    { label: ar ? "إجمالي الأصول" : "Total Assets", value: formatCurrency(data.assets.totalAssets), icon: Scale, cls: "blue" },
+    { label: ar ? "إجمالي الخصوم" : "Total Liabilities", value: formatCurrency(data.liabilities.totalLiabilities), icon: AlertCircle, cls: "amber" },
+    { label: ar ? "صافي الأصول" : "Net Assets", value: formatCurrency(data.netAssets.totalNetAssets), icon: Wallet2, cls: "emerald" },
+    { label: ar ? "الخصوم + صافي الأصول" : "Liabilities + Net Assets", value: formatCurrency(totalLiabilitiesAndNet), icon: ShieldCheck, cls: data.isBalanced ? "emerald" : "rose" },
+  ] : [];
+
   const balanceBadge = data ? (
     data.isBalanced ? (
       <Badge variant="success" className="px-3 py-1 flex gap-1 items-center">
@@ -176,35 +203,110 @@ export default function FinanceStatementOfFinancialPositionPage() {
   ) : null;
 
   return (
-    <ReportLayout
-      definition={FINANCIAL_POSITION_DEF}
-      filters={{ ...values, toDate: values.toDate ?? asOf }}
-      optionsMap={{ centerId: centerOptions }}
-      onFilterChange={setFilter}
-      onResetFilters={resetFilters}
-      activeFilterCount={activeCount}
-      onRefresh={() => void reportQ.refetch()}
-      onBack={() => navigate("/reports")}
-      onPrint={handlePrint}
-      onExportPdf={handlePrint}
-      onExportExcel={handleExportExcel}
-      isLoading={reportQ.isLoading}
-      isRefreshing={reportQ.isFetching}
-      error={reportQ.error as Error | null}
-      isEmpty={!reportQ.isLoading && !reportQ.isError && !data}
-      actions={balanceBadge}
-      summary={data ? (
-        <ReportsSummaryCards
-          cards={[
-            { label: ar ? "إجمالي الأصول" : "Total Assets", value: formatCurrency(data.assets.totalAssets), icon: Scale, cls: "emerald" },
-            { label: ar ? "إجمالي الخصوم" : "Total Liabilities", value: formatCurrency(data.liabilities.totalLiabilities), icon: AlertCircle, cls: "amber" },
-            { label: ar ? "صافي الأصول" : "Net Assets", value: formatCurrency(data.netAssets.totalNetAssets), icon: Wallet2, cls: "brand" },
-            { label: ar ? "إجمالي الخصوم وصافي الأصول" : "Liabilities + Net Assets", value: formatCurrency(totalLiabilitiesAndNet), icon: ShieldCheck, cls: data.isBalanced ? "emerald" : "rose" },
-          ]}
-        />
-      ) : null}
-    >
-      {data && <FinancialStatementTree data={data} />}
-    </ReportLayout>
+    <div className="fin-premium-container ctr-page-modern p-4" dir={ar ? "rtl" : "ltr"}>
+      <motion.div variants={fadeUp} initial="hidden" animate="visible" className="flex flex-col gap-5 mx-auto" style={{ maxWidth: 1120, width: "100%" }}>
+        {/* 1. Back + Header */}
+        <div>
+          <button
+            onClick={handleBack}
+            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 mb-6"
+          >
+            <ArrowLeft className={`w-4 h-4 ${ar ? "rotate-180 ml-1 mr-0" : "mr-1"}`} />
+            {ar ? "العودة للتقارير" : "Back to Reports"}
+          </button>
+
+          <PageHeader
+            title={ar ? "قائمة المركز المالي" : "Statement of Financial Position"}
+            description={ar ? "الأصول والخصوم وصافي الأصول" : "Assets, liabilities and net assets"}
+            icon={<Scale className="w-6 h-6 text-indigo-600" />}
+            actions={
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<RefreshCw className={reportQ.isFetching ? "animate-spin" : ""} />} onClick={handleRefresh}>
+                  {ar ? "تحديث" : "Refresh"}
+                </Button>
+                <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<Printer className="text-teal-600" />} onClick={handlePrint}>
+                  {ar ? "طباعة" : "Print"}
+                </Button>
+                <Button variant="secondary" className="glass-btn" size="sm" leftIcon={<FileDown className="text-emerald-600" />} onClick={handleExportExcel}>
+                  {ar ? "تصدير Excel" : "Export Excel"}
+                </Button>
+                {balanceBadge}
+              </div>
+            }
+          />
+        </div>
+
+        {/* 2. Filters */}
+        <div className="fin-filters-container">
+          <div className="fin-filters-scroll">
+            <div className="fin-filter-item" style={{ flex: 1, minWidth: 260 }}>
+              <Search className="fin-filter-icon" size={18} />
+              <input
+                type="text"
+                placeholder={ar ? "ابحث في الجدول..." : "Search table..."}
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                style={{ fontWeight: 500 }}
+              />
+            </div>
+            {canLoadCenters && (
+              <div className="fin-filter-item" style={{ minWidth: 160 }}>
+                <Building2 className="fin-filter-icon" size={16} />
+                <select value={values.centerId || ""} onChange={(e) => setFilter("centerId", e.target.value || undefined)}>
+                  <option value="">{ar ? "المركز: الكل" : "Center: All"}</option>
+                  {centerOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="fin-filter-item" style={{ minWidth: 160 }}>
+              <CalendarDays className="fin-filter-icon" size={16} />
+              <input type="date" value={asOf} onChange={(e) => setFilter("toDate", e.target.value)} title={ar ? "تاريخ التقرير" : "As of date"} />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <button className="fin-filter-reset" onClick={() => { resetFilters(); setSearchQ(""); }}>
+              <RotateCcw size={14} />
+              {ar ? "إعادة ضبط" : "Reset"}
+            </button>
+          )}
+        </div>
+
+        {/* 3. KPI Cards */}
+        {kpiCards.length > 0 && (
+          <div className="fin-premium-kpis mb-0" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 0 }}>
+            {kpiCards.map((card) => (
+              <div key={card.label} className="fin-kpi-card">
+                <div className={`fin-kpi-card__icon fin-kpi-icon--${card.cls}`}><card.icon size={20} /></div>
+                <div className="fin-kpi-card__content">
+                  <span className="fin-kpi-card__value">{card.value}</span>
+                  <span className="fin-kpi-card__label">{card.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 4. Content */}
+        {reportQ.isLoading ? (
+          <div className="flex flex-col gap-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            {[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-100 animate-pulse rounded-xl" />)}
+          </div>
+        ) : reportQ.isError ? (
+          <ErrorState title={ar ? "تعذر تحميل بيانات التقرير" : "Unable to load report data"} onRetry={() => void reportQ.refetch()} />
+        ) : (
+          <div className="fin-premium-panel">
+            {data ? (
+              <FinancialStatementTree data={data} search={searchQ} />
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center border border-gray-100 dark:border-gray-700">
+                <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">
+                  {ar ? "لا توجد بيانات ضمن الفلاتر المحددة" : "No data found for the selected filters"}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </motion.div>
+    </div>
   );
 }

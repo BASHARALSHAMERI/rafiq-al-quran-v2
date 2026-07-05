@@ -114,6 +114,19 @@ class AttendanceRemoteDataSource {
             .whereType<Map<String, dynamic>>()
             .toList(growable: false);
       }
+      
+      if (payload is Map<String, dynamic>) {
+        if (payload.containsKey('data') && payload['data'] is List) {
+          return (payload['data'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false);
+        }
+        if (payload.containsKey('items') && payload['items'] is List) {
+          return (payload['items'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false);
+        }
+      }
     }
 
     return const [];

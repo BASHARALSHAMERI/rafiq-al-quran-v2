@@ -814,6 +814,10 @@ export interface StaffScheduleAssignment {
   circleId?: number | null;
   effectiveFrom: string;
   effectiveTo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
+  locationText?: string | null;
   isActive: boolean;
   createdAt: string;
   slots: StaffScheduleSlot[];
@@ -829,11 +833,19 @@ export type CreateSchedulePayload = {
   circleId?: number | null;
   effectiveFrom: string;
   effectiveTo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
+  locationText?: string | null;
   slots: Omit<StaffScheduleSlot, "id">[];
 };
 
 export type UpdateSchedulePayload = {
   effectiveTo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
+  locationText?: string | null;
   slots?: Omit<StaffScheduleSlot, "id">[];
 };
 

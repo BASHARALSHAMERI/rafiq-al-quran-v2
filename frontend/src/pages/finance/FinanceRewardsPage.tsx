@@ -20,6 +20,7 @@ import {
   FinanceMoney 
 } from "../../features/finance-v2/design";
 import { useFinanceV2RewardBatchesQuery } from "../../features/finance-v2/finance-v2.hooks";
+import type { RewardBatchStatusV2 } from "../../features/finance-v2/types";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -62,7 +63,7 @@ export default function FinanceRewardsPage() {
   const canCreateRewardBatch =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
   const canPayReward =
-    canCreateRewardBatch || user?.role === "TREASURER";
+    user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultYear = now.getFullYear();
@@ -70,23 +71,38 @@ export default function FinanceRewardsPage() {
   const [centerId, setCenterId] = useState<number | undefined>();
   const [year, setYear] = useState(defaultYear);
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [status, setStatus] = useState<any>("");
+  const [status, setStatus] = useState<RewardBatchStatusV2 | "">("");
   const [showBatchModal, setShowBatchModal] = useState(false);
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
 
   const batchesQ = useFinanceV2RewardBatchesQuery(centerId, year);
-  const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
+  const batches = useMemo(
+    () => (batchesQ.data?.rows ?? []).filter((batch) =>
+      (!status || batch.status === status) &&
+      (batch.cycle !== "MONTHLY" || batch.periodMonth === month)
+    ),
+    [batchesQ.data?.rows, month, status]
+  );
 
   const stats = useMemo(() => {
     let total = 0;
+    let approved = 0;
+    let pending = 0;
+
     for (const batch of batches) {
+      const isApproved = ["APPROVED", "IN_PROGRESS", "PARTIALLY_PAID", "PAID", "CLOSED"].includes(batch.status);
       for (const item of (batch.items ?? [])) {
         total += item.amount;
+        if (isApproved) {
+          approved += item.amount;
+          if (item.status !== "PAID" && item.status !== "VOIDED") pending += item.amount;
+        }
       }
     }
-    return { total };
+
+    return { total, approved, pending };
   }, [batches]);
 
   return (
@@ -137,13 +153,13 @@ export default function FinanceRewardsPage() {
           <RewardKpi
             icon={ArrowUpRight}
             cls="emerald"
-            val={<FinanceMoney amount={stats.total} baseCurrency="YER" />}
+            val={<FinanceMoney amount={stats.approved} baseCurrency="YER" />}
             label={ar ? "مكافآت معتمدة" : "Approved Rewards"}
           />
           <RewardKpi
             icon={ArrowDownLeft}
             cls="blue"
-            val={<FinanceMoney amount={0} baseCurrency="YER" />}
+            val={<FinanceMoney amount={stats.pending} baseCurrency="YER" />}
             label={ar ? "بانتظار الصرف" : "Pending Payout"}
           />
         </div>
@@ -157,6 +173,7 @@ export default function FinanceRewardsPage() {
           month={month}
           status={status}
           statusLabels={statusLabels}
+          statusList={["PENDING", "APPROVED", "PAID"]}
           onCenterChange={setCenterId}
           onYearChange={setYear}
           onMonthChange={setMonth}
@@ -176,6 +193,7 @@ export default function FinanceRewardsPage() {
             centerId={centerId}
             year={year}
             month={month}
+            status={status}
             isAdmin={canPayReward}
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
             canCreateBatch={canCreateRewardBatch}

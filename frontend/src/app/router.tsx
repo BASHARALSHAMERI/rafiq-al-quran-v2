@@ -21,14 +21,13 @@ const CenterAdminsPage = React.lazy(() => import("../pages/CenterAdminsPage"));
 const TeachersPage = React.lazy(() => import("../pages/TeachersPage"));
 const ParentsPage = React.lazy(() => import("../pages/ParentsPage"));
 const SupervisorsPage = React.lazy(() => import("../pages/SupervisorsPage"));
-const AccountantsPage = React.lazy(() => import("../pages/AccountantsPage"));
+const AccountantsPage = React.lazy(() => import("../pages/FinanceTeamPage"));
 const StaffOperationsPage = React.lazy(() => import("../pages/StaffOperationsPage"));
 const SelfAttendancePage = React.lazy(() => import("../pages/SelfAttendancePage"));
 const ExamsPage = React.lazy(() => import("../pages/ExamsPage"));
 const GoldenRecordsPage = React.lazy(() => import("../pages/GoldenRecordsPage"));
 const LibraryPage = React.lazy(() => import("../pages/LibraryPage"));
 const FinanceInvoicesPage = React.lazy(() => import("../pages/finance/FinanceInvoicesPage"));
-const FinancePaymentsPage = React.lazy(() => import("../pages/finance/FinancePaymentsPage"));
 const FinanceVouchersPage = React.lazy(() => import("../pages/finance/FinanceVouchersPage"));
 const FinanceDonorsPage = React.lazy(() => import("../pages/finance/FinanceDonorsPage"));
 const FinanceTreasuryPage = React.lazy(() => import("../pages/finance/FinanceTreasuryPage"));
@@ -54,6 +53,7 @@ const SettingsPage = React.lazy(() => import("../pages/SettingsPage"));
 const ForgotPasswordPage = React.lazy(() => import("../pages/ForgotPasswordPage"));
 const ResetPasswordPage = React.lazy(() => import("../pages/ResetPasswordPage"));
 const ActivateAccountPage = React.lazy(() => import("../pages/ActivateAccountPage"));
+const CertificateVerificationPage = React.lazy(() => import("../pages/CertificateVerificationPage"));
 
 const RouteFallback = () => {
   const message =
@@ -91,7 +91,6 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   library: <LibraryPage />,
   finance_dashboard: <Navigate to="/finance/invoices" replace />,
   finance_invoices: <FinanceInvoicesPage />,
-  finance_payments: <FinancePaymentsPage />,
   finance_vouchers: <FinanceVouchersPage />,
   finance_donors: <FinanceDonorsPage />,
   finance_treasury: <FinanceTreasuryPage />,
@@ -135,6 +134,7 @@ function AppRouter() {
         <Route path="/forgot-password" element={withRouteFallback(<ForgotPasswordPage />)} />
         <Route path="/reset-password" element={withRouteFallback(<ResetPasswordPage />)} />
         <Route path="/activate" element={withRouteFallback(<ActivateAccountPage />)} />
+        <Route path="/verify/certificate/:token" element={withRouteFallback(<CertificateVerificationPage />)} />
         <Route path="/403" element={<ForbiddenPage />} />
 
         <Route element={<RequireAuth />}>

@@ -609,7 +609,12 @@ export const financeV2Api = {
 
   async listExpenseInvoices(params: { centerId?: number; supplierId?: number; status?: string }): Promise<ExpenseInvoiceV2[]> {
     const response = await apiClient.get<ApiResponse<ExpenseInvoiceV2[]>>("/finance/v2/expenses", { params });
-    return response.data.data.map((inv: ExpenseInvoiceV2) => ({ ...inv, amount: Number(inv.amount) }));
+    return response.data.data.map((inv: ExpenseInvoiceV2) => ({
+      ...inv,
+      amount: Number(inv.amount),
+      paidAmount: Number(inv.paidAmount ?? 0),
+      remainingAmount: Number(inv.remainingAmount ?? inv.amount)
+    }));
   },
 
   async createExpenseInvoice(payload: { centerId?: number; supplierId?: number; categoryId: number; invoiceNo?: string; invoiceDate: string; dueDate?: string; description: string; amount: number; }): Promise<ExpenseInvoiceV2> {
@@ -678,6 +683,10 @@ export const financeV2Api = {
       payload
     );
     return normalizeDonor(response.data.data);
+  },
+
+  async deleteDonor(donorId: number): Promise<void> {
+    await apiClient.delete(`/finance/donors/${donorId}`);
   },
 
   async getDonations(params: FinanceDonationsV2Query = {}): Promise<PaginatedRows<FinanceDonationV2>> {

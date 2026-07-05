@@ -148,6 +148,15 @@ const serializeGeoCheck = (input: {
   };
 };
 
+const isGeoBlocked = (
+  geoEnforcement: "REQUIRED" | "OPTIONAL",
+  geoCheck: { isWithinRange: boolean | null; state: string }
+) => {
+  if (geoEnforcement !== "REQUIRED") return false;
+  if (geoCheck.state === "unavailable") return false;
+  return geoCheck.isWithinRange !== true;
+};
+
 const mapAttendanceSourceToApi = (source: AttendanceSource | null | undefined): "MANUAL" | "SYSTEM" | "MOBILE" | "IMPORT" => {
   switch (source) {
     case AttendanceSource.SYSTEM:
@@ -265,7 +274,7 @@ const buildSelfAttendanceEligibility = (input: {
     reasons.push("يوجد طلب عذر مرتبط بهذا اليوم.");
   }
 
-  if (input.policy.geoEnforcement === "REQUIRED" && input.geoCheck.isWithinRange !== true) {
+  if (isGeoBlocked(input.policy.geoEnforcement, input.geoCheck)) {
     reasons.push(input.geoCheck.message);
   } else if (input.geoCheck.isWithinRange === false) {
     warnings.push(input.geoCheck.message);
@@ -295,7 +304,7 @@ const buildSelfAttendanceEligibility = (input: {
   if (input.todayStatus === "on_leave") {
     checkOutReasons.push("لديك إجازة معتمدة لهذا اليوم.");
   }
-  if (input.policy.geoEnforcement === "REQUIRED" && input.geoCheck.isWithinRange !== true) {
+  if (isGeoBlocked(input.policy.geoEnforcement, input.geoCheck)) {
     checkOutReasons.push(input.geoCheck.message);
   }
 
@@ -1081,7 +1090,7 @@ export const staffOperationsService = {
       longitude: input.longitude
     });
 
-    if (policy.geoEnforcement === "REQUIRED" && geoCheck.isWithinRange !== true) {
+    if (isGeoBlocked(policy.geoEnforcement, geoCheck)) {
       throw new AppError(geoCheck.message, 403, undefined, "GEO_OUT_OF_RANGE");
     }
 
@@ -1227,7 +1236,7 @@ export const staffOperationsService = {
       longitude: input.longitude
     });
 
-    if (policy.geoEnforcement === "REQUIRED" && geoCheck.isWithinRange !== true) {
+    if (isGeoBlocked(policy.geoEnforcement, geoCheck)) {
       throw new AppError(geoCheck.message, 403, undefined, "GEO_OUT_OF_RANGE");
     }
 
@@ -2161,6 +2170,39 @@ async function resolveSelfAttendanceTarget(
   scope: ScopeContext,
   input: { centerId?: number; circleId?: number }
 ) {
+  const now = new Date();
+  const activeAssignment = await prisma.staffScheduleAssignment.findFirst({
+    where: {
+      userId: scope.userId,
+      organizationId: scope.organizationId,
+      isActive: true,
+      effectiveFrom: { lte: now },
+      OR: [
+        { effectiveTo: null },
+        { effectiveTo: { gte: now } }
+      ],
+      latitude: { not: null },
+      longitude: { not: null },
+      allowedRadiusMeters: { not: null }
+    },
+    include: {
+      center: { select: { id: true, name: true, timezone: true } }
+    }
+  });
+
+  if (activeAssignment) {
+    return {
+      id: activeAssignment.circleId ?? activeAssignment.centerId,
+      centerId: activeAssignment.centerId,
+      latitude: activeAssignment.latitude,
+      longitude: activeAssignment.longitude,
+      allowedRadiusMeters: activeAssignment.allowedRadiusMeters,
+      name: activeAssignment.center.name,
+      locationText: activeAssignment.locationText ?? activeAssignment.center.name,
+      timezone: activeAssignment.center.timezone
+    };
+  }
+
   if (scope.role === Role.CENTER_ADMIN) {
     return resolveCenterAdminAttendanceCenter(scope, input.centerId);
   }

@@ -17,18 +17,22 @@ import {
   EXAM_STATUS_LABELS,
   EXAM_TYPE_LABELS,
   EXAM_TYPE_OPTIONS,
-  JUZ_BRANCH_OPTIONS
+  JUZ_BRANCH_OPTIONS,
+  EXAM_PURPOSE_LABELS,
+  EXAM_PURPOSE_OPTIONS
 } from "../constants/exam-templates";
 import type {
   ExamCriteriaPayload,
   ExamListItem,
-  SupportedExamTemplateType
+  SupportedExamTemplateType,
+  ExamPurpose
 } from "../types";
 import "../../../styles/features/exam-types.css";
 
 type FormState = {
   title: string;
   type: SupportedExamTemplateType;
+  purpose: ExamPurpose;
   examBranch: string;
   fromJuz: number;
   toJuz: number;
@@ -51,6 +55,7 @@ const JUZ_NUMBERS = Array.from({ length: 30 }, (_, i) => i + 1);
 const emptyForm = (): FormState => ({
   title: "",
   type: "JUZ",
+  purpose: "NORMAL",
   examBranch: JUZ_BRANCH_OPTIONS[0],
   fromJuz: 1,
   toJuz: 5,
@@ -91,6 +96,7 @@ const toFormState = (exam: ExamListItem): FormState => {
   return {
     title: exam.title,
     type: exam.type === "FULL_QURAN" ? "FULL_QURAN" : exam.type === "JUZ_RANGE" ? "JUZ_RANGE" : "JUZ",
+    purpose: exam.purpose ?? "NORMAL",
     examBranch:
       exam.type === "JUZ"
         ? exam.examBranch?.trim() || JUZ_BRANCH_OPTIONS[0]
@@ -286,6 +292,7 @@ export function ExamTypesTab() {
     const payload = {
       title: form.title.trim(),
       type: form.type,
+      purpose: form.purpose,
       examBranch: buildExamBranch(),
       maxScore: form.maxScore,
       passScore: form.passScore,
@@ -308,7 +315,7 @@ export function ExamTypesTab() {
 
       closeModal();
     } catch (error) {
-      toast.error(getLocalizedApiErrorMessage(error, "تعذّر حفظ قالب الاختبار. حاول مرة أخرى."));
+      toast.error(getLocalizedApiErrorMessage(error, { ar: true, fallback: "تعذّر حفظ قالب الاختبار. حاول مرة أخرى." }));
     }
   };
 
@@ -320,7 +327,7 @@ export function ExamTypesTab() {
       setDeleteTarget(null);
       toast.success("تم حذف القالب بنجاح");
     } catch (error) {
-      toast.error(getLocalizedApiErrorMessage(error, "تعذّر حذف قالب الاختبار."));
+      toast.error(getLocalizedApiErrorMessage(error, { ar: true, fallback: "تعذّر حذف قالب الاختبار." }));
     }
   };
 
@@ -329,7 +336,7 @@ export function ExamTypesTab() {
       await publishMutation.mutateAsync(exam.id);
       toast.success("تم نشر قالب الاختبار بنجاح");
     } catch (error) {
-      toast.error(getLocalizedApiErrorMessage(error, "تعذّر نشر قالب الاختبار."));
+      toast.error(getLocalizedApiErrorMessage(error, { ar: true, fallback: "تعذّر نشر قالب الاختبار." }));
     }
   };
 
@@ -389,6 +396,7 @@ export function ExamTypesTab() {
                       <strong className="et-title" style={{ fontSize: '0.88rem' }}>{exam.title}</strong>
                       <div className="et-badges">
                         <Badge variant="secondary" size="sm" className="text-[0.6rem]">{EXAM_TYPE_LABELS[exam.type]}</Badge>
+                        <Badge variant="secondary" size="sm" className="text-[0.6rem]">{EXAM_PURPOSE_LABELS[exam.purpose] ?? "اختبار عادي"}</Badge>
                         {exam.examBranch && <Badge variant="info" size="sm" className="text-[0.6rem]">{exam.examBranch}</Badge>}
                       </div>
                     </div>
@@ -562,6 +570,12 @@ export function ExamTypesTab() {
                   }));
                 }}>
                   {EXAM_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </label>
+              <label className="et-field">
+                <span style={{ fontSize: '0.75rem' }}>الغرض من الاختبار</span>
+                <select disabled={isLocked} style={{ height: '38px', fontSize: '0.85rem', opacity: isLocked ? 0.7 : 1 }} value={form.purpose} onChange={(e) => setField("purpose", e.target.value as ExamPurpose)}>
+                  {EXAM_PURPOSE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
               </label>
             </div>

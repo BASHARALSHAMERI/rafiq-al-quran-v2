@@ -177,6 +177,21 @@ export function StaffSchedulesView() {
                       </span>
                     </div>
                   )}
+                  {sched.latitude != null && sched.longitude != null ? (
+                    <div className="ctr-card-detail-row">
+                      <span className="ctr-card-detail-label text-[11px]">{ar ? "الموقع" : "Location"}</span>
+                      <span className="ctr-card-detail-val text-[12px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded" title={`${Number(sched.latitude).toFixed(5)}, ${Number(sched.longitude).toFixed(5)}`}>
+                        📍 {sched.locationText || (ar ? "موقع مخصص" : "Custom Location")}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="ctr-card-detail-row">
+                      <span className="ctr-card-detail-label text-[11px]">{ar ? "الموقع" : "Location"}</span>
+                      <span className="ctr-card-detail-val text-[12px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        🏢 {ar ? "موقع المركز" : "Center Location"}
+                      </span>
+                    </div>
+                  )}
                   <div className="ctr-card-detail-row">
                     <span className="ctr-card-detail-label text-[11px]">{ar ? "أيام الدوام" : "Work Days"}</span>
                     <span className="ctr-card-detail-val text-[12px] font-semibold text-teal-700">

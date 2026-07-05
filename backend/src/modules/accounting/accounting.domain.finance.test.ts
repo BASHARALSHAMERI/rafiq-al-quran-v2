@@ -92,5 +92,12 @@ describe("finance/accounting domain safety net", () => {
     expect(() => financeV2Domain.assertCanApprove(scope(Role.FINANCE_MANAGER))).not.toThrow();
     expect(() => financeV2Domain.assertCanApprove(scope(Role.ACCOUNTANT))).toThrow("Finance scope denied");
   });
+    expect(() => financeV2Domain.assertCanManageSettings(scope(Role.FINANCE_MANAGER))).not.toThrow();
+    expect(() => financeV2Domain.assertCanManageSettings(scope(Role.ACCOUNTANT))).toThrow("Finance scope denied");
+    expect(() => financeV2Domain.assertCanExecute(scope(Role.TREASURER))).not.toThrow();
+    expect(() => financeV2Domain.assertCanExecute(scope(Role.ACCOUNTANT))).toThrow("Finance scope denied");
+    expect(() => financeV2Domain.assertCanExecute(scope(Role.FINANCE_MANAGER))).toThrow(
+      "Finance scope denied"
+    );
 });
 

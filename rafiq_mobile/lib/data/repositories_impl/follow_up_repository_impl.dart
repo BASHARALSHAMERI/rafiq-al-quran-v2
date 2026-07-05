@@ -103,7 +103,7 @@ class FollowUpRepositoryImpl implements FollowUpRepository {
     } on DioException catch (error) {
       if (_isOfflineError(error)) {
         await _enqueueSyncTask(
-          'PUT',
+          'PATCH',
           '/follow-ups/$followUpId',
           request.toJson(),
         );
@@ -129,7 +129,7 @@ class FollowUpRepositoryImpl implements FollowUpRepository {
       return await remoteDataSource.finalizeFollowUp(followUpId);
     } on DioException catch (error) {
       if (_isOfflineError(error)) {
-        await _enqueueSyncTask('PUT', '/follow-ups/$followUpId/finalize', {});
+        await _enqueueSyncTask('PATCH', '/follow-ups/$followUpId/finalize', {});
         return FollowUpRecordDto(
           id: followUpId,
           studentId: 0,

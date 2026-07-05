@@ -1,6 +1,5 @@
 import { CalendarDays, Filter, RefreshCcw } from "lucide-react";
 import type { Center } from "../../../org/types";
-import type { InvoiceStatusV2 } from "../../types";
 
 type Props = {
   ar: boolean;
@@ -8,14 +7,15 @@ type Props = {
   centerId: number | undefined;
   month: number;
   year: number;
-  status: InvoiceStatusV2 | "";
-  statusLabels: Record<InvoiceStatusV2, string>;
+  status: string;
+  statusLabels: Record<string, string>;
   onCenterChange: (value: number | undefined) => void;
   onMonthChange: (value: number) => void;
   onYearChange: (value: number) => void;
-  onStatusChange: (value: InvoiceStatusV2 | "") => void;
+  onStatusChange: (value: any) => void;
   onReset: () => void;
   activeFiltersCount?: number;
+  statusList?: string[];
 };
 
 export function FinancePageFilters({
@@ -30,7 +30,8 @@ export function FinancePageFilters({
   onMonthChange,
   onYearChange,
   onStatusChange,
-  onReset
+  onReset,
+  statusList
 }: Props) {
   return (
     <div className="fin-filters-container" dir={ar ? "rtl" : "ltr"}>
@@ -89,10 +90,10 @@ export function FinancePageFilters({
           <Filter className="fin-filter-icon" />
           <select
             value={status}
-            onChange={(event) => onStatusChange(event.target.value as InvoiceStatusV2 | "")}
+            onChange={(event) => onStatusChange(event.target.value)}
           >
             <option value="">{ar ? "كل الحالات" : "All Statuses"}</option>
-            {(["PENDING", "PARTIAL", "PAID", "CANCELLED"] as const).map((state) => (
+            {(statusList || ["PENDING", "PARTIAL", "PAID", "CANCELLED"]).map((state) => (
               <option key={state} value={state}>
                 {statusLabels[state]}
               </option>

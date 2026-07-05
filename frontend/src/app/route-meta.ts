@@ -73,7 +73,6 @@ export type AdminRouteId =
   | "library"
   | "finance_dashboard"
   | "finance_invoices"
-  | "finance_payments"
   | "finance_vouchers"
   | "finance_donors"
   | "finance_treasury"
@@ -185,7 +184,6 @@ export const ADMIN_SECTIONS: AdminSectionMeta[] = [
     icon: TrendingUp,
     routeIds: [
       "finance_invoices",
-      "finance_payments",
       "finance_vouchers",
       "finance_donors",
     ],
@@ -411,16 +409,6 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     path: "/finance/invoices",
     get label() { return labels.nav.financeInvoices; },
     routeIcon: FileText,
-    section: "financeRevenue",
-    allowedRoles: FINANCE_WEB_ROLES,
-    sidebar: true,
-  },
-  {
-    // UI-NAV-FINANCE-SIDEBAR-RESTRUCTURE-2B: → financeRevenue
-    id: "finance_payments",
-    path: "/finance/payments",
-    get label() { return labels.nav.financePayments; },
-    routeIcon: Wallet,
     section: "financeRevenue",
     allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,

@@ -131,7 +131,7 @@ describe("free default and optional student fees policy", () => {
     });
 
     const invoice = await billingService.createInvoice(
-      context.scopes.manager,
+      context.scopes.accountant,
       invoiceInput(context)
     );
     expect(invoice.amount).toBe(5000);
@@ -156,20 +156,26 @@ describe("free default and optional student fees policy", () => {
       context.scopes.manager,
       invoiceInput(context)
     );
-    const payment = await billingService.createPayment(context.scopes.manager, {
+    const payment = await billingService.createPayment(context.scopes.treasurer, {
       invoiceId: invoice.id,
       amount: 5000,
       method: PaymentMethod.CASH,
       receivedAt: TAIZ_FINANCE_FIXTURE.dates.openPeriod
     });
-    const journal = await financeTestPrisma.journalEntry.findFirstOrThrow({
+    const invoiceJournal = await financeTestPrisma.journalEntry.findFirstOrThrow({
+      where: { sourceType: "INVOICE", sourceId: invoice.id },
+      include: { lines: { include: { account: true } } }
+    });
+    const paymentJournal = await financeTestPrisma.journalEntry.findFirstOrThrow({
       where: { sourceType: "PAYMENT", sourceId: payment.payment.id },
-      include: { lines: true }
+      include: { lines: { include: { account: true } } }
     });
 
     expect(invoice.amount).toBe(5000);
-    expect(journal.lines.reduce((sum, line) => sum + line.debit.toNumber(), 0)).toBe(5000);
-    expect(journal.lines.reduce((sum, line) => sum + line.credit.toNumber(), 0)).toBe(5000);
+    expect(invoiceJournal.lines.find((line) => line.account.systemKey === "STUDENT_RECEIVABLES")?.debit.toNumber()).toBe(5000);
+    expect(invoiceJournal.lines.find((line) => line.account.systemKey === "STUDENT_CONTRIBUTIONS_REVENUE")?.credit.toNumber()).toBe(5000);
+    expect(paymentJournal.lines.find((line) => line.account.systemKey === "CENTER_FUNDS")?.debit.toNumber()).toBe(5000);
+    expect(paymentJournal.lines.find((line) => line.account.systemKey === "STUDENT_RECEIVABLES")?.credit.toNumber()).toBe(5000);
   });
 
   test("rejects fee creation in a closed fiscal period without financial side effects", async () => {
@@ -226,7 +232,7 @@ describe("free default and optional student fees policy", () => {
 
     expect(await financeTestPrisma.invoice.count()).toBe(1);
     expect(await financeTestPrisma.financeVoucher.count()).toBe(0);
-    expect(await financeTestPrisma.journalEntry.count()).toBe(0);
+    expect(await financeTestPrisma.journalEntry.count()).toBe(1);
   });
 
   test("rejects a symbolic fee when symbolic fees are not explicitly allowed", async () => {
@@ -294,5 +300,104 @@ describe("free default and optional student fees policy", () => {
       })
     );
     expect(invoice.amount).toBe(3000);
+  });
+
+  test("posts invoice reversal in the current open period after the original period closes", async () => {
+    const context = await createTaizFinanceContext();
+    await prepareEnrollment(context);
+    await enableOrganizationFees(context);
+    await financeTestPrisma.studentFeeProfile.create({
+      data: {
+        organizationId: context.organization.id,
+        centerId: context.centers[0].id,
+        studentId: context.users.student.id,
+        feeMode: FeeMode.SYMBOLIC_ONE_TIME,
+        symbolicAmount: 5000,
+        startDate: new Date("2030-01-01")
+      }
+    });
+
+    const invoice = await billingService.createInvoice(context.scopes.manager, invoiceInput(context));
+    await financeTestPrisma.fiscalPeriod.update({
+      where: { id: context.periods.openPeriod.id },
+      data: {
+        status: "CLOSED",
+        startDate: new Date("2030-01-01"),
+        endDate: new Date("2099-12-31"),
+        closedAt: new Date(),
+        closedById: context.users.financeManager.id
+      }
+    });
+    const reversalDay = new Date();
+    const currentPeriod = await financeTestPrisma.fiscalPeriod.create({
+      data: {
+        organizationId: context.organization.id,
+        fiscalYearId: context.periods.fiscalYear.id,
+        periodNumber: 3,
+        periodName: "Current reversal period",
+        startDate: new Date(Date.UTC(reversalDay.getUTCFullYear(), reversalDay.getUTCMonth(), 1)),
+        endDate: new Date(Date.UTC(reversalDay.getUTCFullYear(), reversalDay.getUTCMonth() + 1, 0))
+      }
+    });
+    await billingService.cancelInvoice(context.scopes.manager, invoice.id, { reason: "test cancellation" });
+
+    const reversal = await financeTestPrisma.journalEntry.findFirstOrThrow({
+      where: { sourceType: "INVOICE", sourceId: -invoice.id },
+      include: { lines: { include: { account: true } } }
+    });
+
+    expect(reversal.fiscalPeriodId).toBe(currentPeriod.id);
+    expect(reversal.entryDate.toISOString().slice(0, 10)).toBe(reversalDay.toISOString().slice(0, 10));
+    expect(reversal.postedAt?.toISOString().slice(0, 10)).toBe(reversalDay.toISOString().slice(0, 10));
+    expect(reversal.lines.find((line) => line.account.systemKey === "STUDENT_CONTRIBUTIONS_REVENUE")?.debit.toNumber()).toBe(5000);
+    expect(reversal.lines.find((line) => line.account.systemKey === "STUDENT_RECEIVABLES")?.credit.toNumber()).toBe(5000);
+  });
+
+  test("rejects overlapping active student fee profiles", async () => {
+    const context = await createTaizFinanceContext();
+
+    await billingService.createStudentFeeProfile(context.scopes.accountant, {
+      centerId: context.centers[0].id,
+      studentId: context.users.student.id,
+      feeMode: FeeMode.FREE,
+      startDate: "2030-01-01"
+    });
+
+    await expect(
+      billingService.createStudentFeeProfile(context.scopes.manager, {
+        centerId: context.centers[0].id,
+        studentId: context.users.student.id,
+        feeMode: FeeMode.SYMBOLIC_ONE_TIME,
+        symbolicAmount: 5000,
+        startDate: "2030-06-01"
+      })
+    ).rejects.toMatchObject({ code: "STUDENT_FEE_PROFILE_OVERLAP" });
+  });
+
+  test("allows only one of two concurrent overlapping fee profiles", async () => {
+    const context = await createTaizFinanceContext();
+    const baseInput = {
+      centerId: context.centers[0].id,
+      studentId: context.users.student.id,
+      feeMode: FeeMode.FREE,
+      startDate: "2030-01-01"
+    } as const;
+
+    const results = await Promise.allSettled([
+      billingService.createStudentFeeProfile(context.scopes.manager, baseInput),
+      billingService.createStudentFeeProfile(context.scopes.manager, baseInput)
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+    expect(rejected?.reason).toMatchObject({ code: "STUDENT_FEE_PROFILE_OVERLAP" });
+    expect(await financeTestPrisma.studentFeeProfile.count({
+      where: {
+        organizationId: context.organization.id,
+        centerId: context.centers[0].id,
+        studentId: context.users.student.id,
+        isActive: true
+      }
+    })).toBe(1);
   });
 });

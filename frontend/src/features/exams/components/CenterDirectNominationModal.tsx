@@ -79,9 +79,8 @@ export function CenterDirectNominationModal({
     [circles, selectedCenterId]
   );
 
-  const regularPublishedExams = useMemo(
-    () =>
-      (examsQuery.data ?? []).filter((exam) => exam.purpose !== "GOLDEN_RECORD_MUSHAF"),
+  const publishedExams = useMemo(
+    () => examsQuery.data ?? [],
     [examsQuery.data]
   );
 
@@ -235,7 +234,7 @@ export function CenterDirectNominationModal({
           </label>
 
           <label className="exam-field">
-            <span>قالب الاختبار (اختبارات عادية)</span>
+            <span>قالب الاختبار</span>
             <select
               value={examId}
               onChange={(event) => setExamId(event.target.value)}
@@ -244,7 +243,7 @@ export function CenterDirectNominationModal({
               <option value="">
                 {examsQuery.isLoading ? "جارٍ تحميل القوالب..." : "اختر قالب الاختبار"}
               </option>
-              {regularPublishedExams.map((exam) => (
+              {publishedExams.map((exam) => (
                 <option key={exam.id} value={exam.id}>
                   {exam.title} ({EXAM_TYPE_LABELS[exam.type]})
                 </option>

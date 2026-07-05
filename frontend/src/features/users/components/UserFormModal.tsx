@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { AlertCircle, User, Briefcase, Link as LinkIcon, Building2, CheckCircle2 } from "lucide-react";
+import { User, Briefcase, Link as LinkIcon, Building2, CheckCircle2 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import ImageUploadField from "../../../components/ui/ImageUploadField";
@@ -45,19 +45,20 @@ export function RoleAwareUserFormModal({
   open,
   mode,
   role,
+  allowedRoles,
   ar,
   initialUser,
   centers,
   circles,
   students,
   busy,
-  error,
   onClose,
   onSubmit
 }: {
   open: boolean;
   mode: UserFormMode;
   role: Role;
+  allowedRoles?: Role[];
   ar: boolean;
   initialUser?: UserListItem;
   centers: Array<{ id: number; name: string }>;
@@ -68,6 +69,7 @@ export function RoleAwareUserFormModal({
   onClose: () => void;
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
 }) {
+  const [selectedRole, setSelectedRole] = useState<Role>(() => role);
   const [state, setState] = useState<RoleAwareUserFormState>(() =>
     buildRoleAwareInitialState(role, mode, initialUser)
   );
@@ -80,6 +82,7 @@ export function RoleAwareUserFormModal({
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => {
+      setSelectedRole(role);
       setState(buildRoleAwareInitialState(role, mode, initialUser));
     }, 0);
     return () => clearTimeout(t);
@@ -114,6 +117,19 @@ export function RoleAwareUserFormModal({
       return ar ? "رقم الهاتف يجب أن يكون 9 أرقام ويبدأ بـ 7" : "Phone number must be 9 digits and start with 7";
     }
 
+    if (!state.profile.birthDate) {
+      return ar ? "تاريخ الميلاد مطلوب" : "Birth Date is required";
+    }
+
+    if (role === "STUDENT") {
+      if (!state.studentProfile.joinDate) {
+        return ar ? "تاريخ الالتحاق بالمركز مطلوب" : "Center Join date is required";
+      }
+      if (supportsEnrollments && state.links.enrollmentCircleIds.length > 0 && !state.links.enrollmentStartDate) {
+        return ar ? "تاريخ بداية الالتحاق بالحلقة مطلوب" : "Circle Enrollment Start Date is required";
+      }
+    }
+
     return null;
   }, [state.account, state.profile, ar, role]);
 
@@ -127,8 +143,9 @@ export function RoleAwareUserFormModal({
     const payload: Record<string, unknown> = {
       email: state.account.email.trim(),
       ...(state.account.username.trim() ? { username: state.account.username.trim() } : { username: null }),
-      ...(mode === "create" ? { role } : {}),
+      role: selectedRole,
       ...(mode === "create" ? { isActive: state.account.isActive } : {}),
+      ...(mode === "create" ? { sendInvitation: state.account.sendInvitation } : {}),
       profile: {
         fullName: state.account.fullName.trim(),
         gender: state.profile.gender,
@@ -263,6 +280,22 @@ export function RoleAwareUserFormModal({
           </div>
 
           <div className="flex flex-col gap-5">
+            {allowedRoles && allowedRoles.length > 0 && (
+              <div className="ctr-fg animate-in fade-in duration-300 bg-slate-50/50 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                <label className="text-emerald-700 font-semibold mb-2 block">{ar ? "الدور المالي *" : "Financial Role *"}</label>
+                <select
+                  className="ctr-form-input glass-input"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as Role)}
+                >
+                  {allowedRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {roleLabel(r, ar)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {/* Avatar and Name/Email Unit */}
             <div className="flex flex-col sm:flex-row gap-6 items-start">
               <div className="w-24 h-24 flex-shrink-0 mx-auto sm:mx-0">
@@ -676,7 +709,7 @@ export function RoleAwareUserFormModal({
                 </div>
                 <div className="grid gap-4">
                   <div className="ctr-fg md:w-1/2">
-                    <label>{ar ? "تاريخ بداية الالتحاق (اختياري)" : "Enrollment Start Date (optional)"}</label>
+                    <label>{ar ? "تاريخ بداية الالتحاق بالحلقة" : "Enrollment Start Date"}</label>
                     <input
                       className="ctr-form-input glass-input"
                       type="date"

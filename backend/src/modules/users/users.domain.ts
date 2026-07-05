@@ -18,12 +18,13 @@ const FINANCE_VISIBLE_USER_ROLES = new Set<Role>([
 ]);
 
 export const usersDomain = {
-  assertFinanceUserReadFilter(scope: ScopeContext, role?: Role) {
+  assertFinanceUserReadFilter(scope: ScopeContext, role?: Role | Role[]) {
     if (scope.role !== Role.FINANCE_MANAGER) {
       return;
     }
 
-    if (!role || !FINANCE_VISIBLE_USER_ROLES.has(role)) {
+    const roles = role ? (Array.isArray(role) ? role : [role]) : [];
+    if (roles.length === 0 || roles.some((r) => !FINANCE_VISIBLE_USER_ROLES.has(r))) {
       throw new AppError(
         "يجب تحديد دور مستخدم مطلوب للعمل المالي.",
         403,

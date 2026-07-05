@@ -62,8 +62,7 @@ export default function FinanceTreasuryPage() {
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
   const canCreateTransfer =
-    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
-  const canOperateTreasury = canCreateTransfer || user?.role === "TREASURER";
+    user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -181,7 +180,7 @@ export default function FinanceTreasuryPage() {
         <Suspense fallback={<LoadingState />}>
           <FinanceTreasuryTab
             centerId={centerId}
-            isAdmin={canOperateTreasury}
+            isAdmin={canCreateTransfer}
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
             canEditLedgerAccount={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
             ar={ar}

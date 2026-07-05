@@ -964,6 +964,17 @@ export const reportsRepository = {
 
   /** REPORTS-1: Student summary with enrollment info */
   async studentsSummary(input: { organizationId: number; centerIds?: number[]; circleIds?: number[]; activeOnly?: boolean }) {
+    const enrollmentWhere = {
+      status: "ACTIVE" as const,
+      circle: {
+        ...(input.circleIds?.length ? { id: { in: input.circleIds } } : {}),
+        center: {
+          organizationId: input.organizationId,
+          ...(input.centerIds?.length ? { id: { in: input.centerIds } } : {})
+        }
+      }
+    };
+
     return prisma.user.findMany({
       where: {
         organizationId: input.organizationId,
@@ -971,7 +982,7 @@ export const reportsRepository = {
         ...(input.activeOnly !== undefined ? { isActive: input.activeOnly } : {}),
         ...(input.centerIds?.length || input.circleIds?.length
           ? {
-              studentProfile: { isNot: null }
+              studentEnrollments: { some: enrollmentWhere }
             }
           : {})
       },
@@ -981,7 +992,7 @@ export const reportsRepository = {
         isActive: true,
         createdAt: true,
         studentEnrollments: {
-          where: { status: "ACTIVE" },
+          where: enrollmentWhere,
           select: {
             circle: {
               select: {

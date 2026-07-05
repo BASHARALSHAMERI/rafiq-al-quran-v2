@@ -20,6 +20,13 @@ import {
   createDonorBodySchema,
   createInvoiceV2BodySchema,
   createPaymentV2BodySchema,
+  createSupplierBodySchema,
+  updateSupplierBodySchema,
+  createExpenseCategoryBodySchema,
+  updateExpenseCategoryBodySchema,
+  cancelExpenseInvoiceBodySchema,
+  createExpenseInvoiceBodySchema,
+  payExpenseInvoiceBodySchema,
   createPayrollBatchBodySchema,
   createPayrollProfileBodySchema,
   createRewardBatchBodySchema,
@@ -30,6 +37,7 @@ import {
   createVoucherBodySchema,
   financeV2EntityIdParamSchema,
   invoiceAgingReportQuerySchema,
+  listExpenseInvoicesQuerySchema,
   listAccountMovementsQuerySchema,
   listAccountsQuerySchema,
   listDonationsQuerySchema,
@@ -104,12 +112,11 @@ const financeDraftWriteRoles = [
 ];
 const financeCashWriteRoles = [
   Role.SUPER_ADMIN,
-  Role.ACCOUNTANT,
-  Role.FINANCE_MANAGER,
   Role.TREASURER
 ];
 const financeApprovalRoles = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
 const financeSettingsWriteRoles = [Role.SUPER_ADMIN, Role.FINANCE_MANAGER];
+const financeDonationWriteRoles = [...financeDraftWriteRoles, Role.TREASURER];
 
 financeV2Router.use(authGuard, attachScope);
 
@@ -144,14 +151,14 @@ financeV2Router.get(
 
 financeV2Router.post(
   "/finance/v2/student-fee-profiles",
-  requireRoles(financeSettingsWriteRoles),
+  requireRoles(financeDraftWriteRoles),
   validateBody(createStudentFeeProfileBodySchema),
   financeV2Controller.createStudentFeeProfile
 );
 
 financeV2Router.patch(
   "/finance/v2/student-fee-profiles/:id",
-  requireRoles(financeSettingsWriteRoles),
+  requireRoles(financeDraftWriteRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateBody(updateStudentFeeProfileBodySchema),
   financeV2Controller.updateStudentFeeProfile
@@ -224,14 +231,14 @@ financeV2Router.get(
 
 financeV2Router.post(
   "/finance/v2/vouchers",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeCashWriteRoles),
   validateBody(createVoucherBodySchema),
   financeV2Controller.createVoucher
 );
 
 financeV2Router.post(
   "/finance/v2/vouchers/:id/submit",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeCashWriteRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateBody(transitionCommentBodySchema),
   financeV2Controller.submitVoucher
@@ -263,7 +270,7 @@ financeV2Router.post(
 
 financeV2Router.post(
   "/finance/v2/vouchers/:id/void-request",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeCashWriteRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateBody(transitionCommentBodySchema),
   financeV2Controller.requestVoucherVoid
@@ -306,6 +313,13 @@ financeV2Router.patch(
   financeV2Controller.updateDonor
 );
 
+financeV2Router.delete(
+  "/finance/donors/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  financeV2Controller.deleteDonor
+);
+
 financeV2Router.get(
   "/finance/donations",
   requireRoles(financeAdminReadRoles),
@@ -315,7 +329,7 @@ financeV2Router.get(
 
 financeV2Router.post(
   "/finance/donations",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeDonationWriteRoles),
   validateBody(createDonationBodySchema),
   financeV2Controller.createDonation
 );
@@ -360,14 +374,14 @@ financeV2Router.get(
 
 financeV2Router.post(
   "/finance/v2/fund-transfers",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeApprovalRoles),
   validateBody(createFundTransferBodySchema),
   financeV2Controller.createFundTransfer
 );
 
 financeV2Router.post(
   "/finance/v2/fund-transfers/:id/submit",
-  requireRoles(financeDraftWriteRoles),
+  requireRoles(financeApprovalRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateBody(transitionCommentBodySchema),
   financeV2Controller.submitFundTransfer
@@ -383,7 +397,7 @@ financeV2Router.post(
 
 financeV2Router.post(
   "/finance/v2/fund-transfers/:id/post",
-  requireRoles([Role.SUPER_ADMIN, Role.FINANCE_MANAGER, Role.TREASURER]),
+  requireRoles(financeCashWriteRoles),
   validateParams(financeV2EntityIdParamSchema),
   validateBody(transitionCommentBodySchema),
   financeV2Controller.postFundTransfer
@@ -722,7 +736,16 @@ financeV2Router.get(
 financeV2Router.post(
   "/finance/v2/suppliers",
   requireRoles(financeDraftWriteRoles),
+  validateBody(createSupplierBodySchema),
   expensesController.createSupplier
+);
+
+financeV2Router.patch(
+  "/finance/v2/suppliers/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(updateSupplierBodySchema),
+  expensesController.updateSupplier
 );
 
 financeV2Router.get(
@@ -734,31 +757,53 @@ financeV2Router.get(
 financeV2Router.post(
   "/finance/v2/expense-categories",
   requireRoles(financeSettingsWriteRoles),
+  validateBody(createExpenseCategoryBodySchema),
   expensesController.createExpenseCategory
+);
+
+financeV2Router.patch(
+  "/finance/v2/expense-categories/:id",
+  requireRoles(financeSettingsWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(updateExpenseCategoryBodySchema),
+  expensesController.updateExpenseCategory
 );
 
 financeV2Router.get(
   "/finance/v2/expenses",
   requireRoles(financeReadRoles),
+  validateQuery(listExpenseInvoicesQuerySchema),
   expensesController.listExpenseInvoices
 );
 
 financeV2Router.post(
   "/finance/v2/expenses",
   requireRoles(financeDraftWriteRoles),
+  validateBody(createExpenseInvoiceBodySchema),
   expensesController.createExpenseInvoice
 );
 
 financeV2Router.post(
   "/finance/v2/expenses/:id/approve",
   requireRoles(financeApprovalRoles),
+  validateParams(financeV2EntityIdParamSchema),
   expensesController.approveExpenseInvoice
 );
 
 financeV2Router.post(
   "/finance/v2/expenses/:id/pay",
   requireRoles(financeCashWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(payExpenseInvoiceBodySchema),
   expensesController.payExpenseInvoice
+);
+
+financeV2Router.post(
+  "/finance/v2/expenses/:id/cancel",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(cancelExpenseInvoiceBodySchema),
+  expensesController.cancelExpenseInvoice
 );
 
 // FA-ASSETS-1: Fixed assets and custody register
@@ -806,7 +851,7 @@ financeV2Router.post(
 
 financeV2Router.post(
   "/finance/v2/assets/:id/post-depreciation",
-  requireRoles(financeCashWriteRoles),
+  requireRoles(financeApprovalRoles),
   assetsController.postAssetDepreciation
 );
 
@@ -818,7 +863,7 @@ financeV2Router.post(
 
 financeV2Router.post(
   "/finance/v2/assets/:id/depreciate",
-  requireRoles(financeCashWriteRoles),
+  requireRoles(financeApprovalRoles),
   assetsController.postAssetDepreciation
 );
 

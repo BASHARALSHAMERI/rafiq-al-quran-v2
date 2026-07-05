@@ -9,8 +9,10 @@ import {
 import { prisma } from "../../shared/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
 import type { ScopeContext } from "../../shared/types/auth.types";
+import { encryptToken, decryptToken } from "../../shared/utils/crypto";
+import { env } from "../../config/env";
 
-type CertificateKind = "EXAM" | "FULL_QURAN_COMPLETION";
+type CertificateKind = "EXAM" | "FULL_QURAN_COMPLETION" | "IJAZAH";
 
 type SignatureSlot = {
   role: string;
@@ -36,6 +38,7 @@ export type CertificateTemplateData = {
   riwaya: string | null;
   certificateSerial: string;
   detailLine: string;
+  verifyUrl: string;
   signatures: [SignatureSlot, SignatureSlot, SignatureSlot];
 };
 
@@ -274,6 +277,10 @@ export const certificatesService = {
       finalRangeLabel = finalRangeLabel.replace(/^[(\s-]+/, "").replace(/[)\s-]+$/, "").trim();
     }
 
+    const token = encryptToken(`EXAM:${attempt.id}`);
+    const frontendBase = env.FRONTEND_BASE_URL || env.CORS_ORIGIN || "http://localhost:5173";
+    const verifyUrl = `${frontendBase}/verify/certificate/${token}`;
+
     return {
       kind: "EXAM",
       associationName,
@@ -293,6 +300,7 @@ export const certificatesService = {
       riwaya: null,
       certificateSerial: `EX-${year}-${padded(attempt.id)}`,
       detailLine: `تاريخ الاختبار: ${examDate ?? "-"} | الحلقة: ${attempt.circle.name} | ${examCategory}`,
+      verifyUrl,
       signatures: [
         {
           role: "رئيس لجنة الاختبار",
@@ -386,8 +394,8 @@ export const certificatesService = {
       throw new AppError("شهادة الإتمام متاحة فقط للسجلات الذهبية النهائية المعتمدة", 409);
     }
 
-    if (record.type !== GoldenRecordType.KHATEM) {
-      throw new AppError("شهادة الإتمام متاحة لسجلات إتمام القرآن كاملاً", 409);
+    if (record.type !== GoldenRecordType.KHATEM && record.type !== GoldenRecordType.IJAZAH) {
+      throw new AppError("شهادة الإتمام متاحة لسجلات إتمام القرآن كاملاً أو الإجازة فقط", 409);
     }
 
     const riwaya = riwayaLabel(record.riwaya);
@@ -405,26 +413,35 @@ export const certificatesService = {
       (member) => member.committeeRole === CommitteeRole.CHAIR
     );
 
+    const token = encryptToken(`GOLDEN:${record.id}`);
+    const frontendBase = env.FRONTEND_BASE_URL || env.CORS_ORIGIN || "http://localhost:5173";
+    const verifyUrl = `${frontendBase}/verify/certificate/${token}`;
+
+    const isIjazah = record.type === GoldenRecordType.IJAZAH;
+
     return {
-      kind: "FULL_QURAN_COMPLETION",
+      kind: isIjazah ? "IJAZAH" : "FULL_QURAN_COMPLETION",
       associationName: record.center.organization.name,
       associationLogoUrl: record.center.organization.logoUrl,
       centerName: record.centerNameSnapshot || record.center.name,
       centerLogoUrl: record.center.logoUrl,
-      certificateTitle: "شهادة إتمام حفظ القرآن الكريم",
-      certificateSubtitle: "لوثائق الختم والإتقان والحفظ المبارك",
+      certificateTitle: isIjazah ? "شهادة إجازة قرآنية" : "شهادة إتمام حفظ القرآن الكريم",
+      certificateSubtitle: isIjazah ? "وثيقة إجازة وتثبيت بالسند المتصل" : "لوثائق الختم والإتقان والحفظ المبارك",
       studentName: record.studentNameSnapshot,
       circleName: record.circleNameSnapshot,
-      examTitle: "ختم القرآن الكريم كاملًا",
-      examCategory: "إتمام حفظ القرآن الكريم",
-      rangeLabel: "كامل القرآن الكريم",
+      examTitle: isIjazah ? "الإجازة بالسند المتصل" : "ختم القرآن الكريم كاملًا",
+      examCategory: isIjazah ? "إجازة قرآنية" : "إتمام حفظ القرآن الكريم",
+      rangeLabel: isIjazah ? `رواية ${riwaya}` : "كامل القرآن الكريم",
       gradeLabel: record.appreciation || record.grade,
       examDate: null,
       completionDate,
       riwaya,
       certificateSerial:
         record.registrySerial ?? `GR-${record.year}-${record.center.organization.id}-${padded(record.id)}`,
-      detailLine: `تاريخ الختم/الاعتماد: ${completionDate} | الحلقة: ${record.circleNameSnapshot ?? "-"} | الرواية: ${riwaya}`,
+      detailLine: isIjazah
+        ? `تاريخ الإجازة/الاعتماد: ${completionDate} | الحلقة: ${record.circleNameSnapshot ?? "-"} | الرواية: ${riwaya}`
+        : `تاريخ الختم/الاعتماد: ${completionDate} | الحلقة: ${record.circleNameSnapshot ?? "-"} | الرواية: ${riwaya}`,
+      verifyUrl,
       signatures: [
         {
           role: "رئيس لجنة الاعتماد",
@@ -440,5 +457,133 @@ export const certificatesService = {
         }
       ]
     };
+  },
+
+  async verifyCertificate(token: string) {
+    const decrypted = decryptToken(token);
+    if (!decrypted) {
+      throw new AppError("رمز تحقق غير صالح أو تالف", 400);
+    }
+
+    const [type, idStr] = decrypted.split(":");
+    const id = parseInt(idStr, 10);
+    if (isNaN(id)) {
+      throw new AppError("رمز تحقق غير صالح أو تالف", 400);
+    }
+
+    if (type === "EXAM") {
+      const attempt = await prisma.examAttempt.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          examDate: true,
+          totalScore: true,
+          gradeLabel: true,
+          status: true,
+          student: {
+            select: {
+              fullName: true
+            }
+          },
+          circle: {
+            select: {
+              name: true,
+              center: {
+                select: {
+                  name: true,
+                  organization: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          exam: {
+            select: {
+              title: true,
+              type: true,
+              maxScore: true,
+              passScore: true
+            }
+          }
+        }
+      });
+
+      if (!attempt) {
+        throw new AppError("الشهادة المطلوبة غير موجودة", 404);
+      }
+
+      const isValid = attempt.status === AttemptStatus.APPROVED || attempt.status === AttemptStatus.PUBLISHED;
+      const examDate = dateOnly(attempt.examDate);
+      const year = examDate?.slice(0, 4) ?? new Date().getFullYear();
+
+      return {
+        isValid,
+        kind: "EXAM",
+        studentName: attempt.student.fullName,
+        certificateTitle: "شهادة شكر وتقدير",
+        examTitle: attempt.exam.title,
+        examCategory: examTypeLabel(attempt.exam.type),
+        gradeLabel: attempt.gradeLabel ?? "ناجح",
+        examDate,
+        associationName: attempt.circle.center.organization.name,
+        centerName: attempt.circle.center.name,
+        certificateSerial: `EX-${year}-${padded(attempt.id)}`
+      };
+    } else if (type === "GOLDEN") {
+      const record = await prisma.goldenRecord.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          year: true,
+          type: true,
+          status: true,
+          registrySerial: true,
+          studentNameSnapshot: true,
+          centerNameSnapshot: true,
+          grade: true,
+          appreciation: true,
+          examDate: true,
+          riwaya: true,
+          center: {
+            select: {
+              name: true,
+              organization: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!record) {
+        throw new AppError("الشهادة المطلوبة غير موجودة", 404);
+      }
+
+      const isValid = record.status === GoldenRecordStatus.APPROVED;
+      const completionDate = dateOnly(record.examDate);
+      const riwaya = riwayaLabel(record.riwaya);
+
+      return {
+        isValid,
+        kind: record.type, // "KHATEM" or "IJAZAH"
+        studentName: record.studentNameSnapshot,
+        certificateTitle: record.type === GoldenRecordType.KHATEM ? "شهادة إتمام حفظ القرآن الكريم" : "شهادة إجازة قرآنية",
+        examTitle: record.type === GoldenRecordType.KHATEM ? "ختم القرآن الكريم كاملًا" : "الإجازة بالسند المتصل",
+        gradeLabel: record.appreciation || record.grade,
+        examDate: completionDate,
+        associationName: record.center.organization.name,
+        centerName: record.centerNameSnapshot || record.center.name,
+        riwaya,
+        certificateSerial: record.registrySerial ?? `GR-${record.year}-${record.center.organization.id}-${padded(record.id)}`
+      };
+    }
+
+    throw new AppError("نوع رمز تحقق غير معروف", 400);
   }
 };

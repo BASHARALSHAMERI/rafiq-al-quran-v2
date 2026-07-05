@@ -214,7 +214,23 @@ export const getLocalizedApiErrorMessage = (
   const normalized = normalizeApiError(error, fallback);
   let message = normalized.message?.trim() || fallback;
 
-  if (axios.isAxiosError<ApiErrorResponse>(error) && !error.response) {
+  if (normalized.code === "INSUFFICIENT_FUNDS") {
+    message = ar ? "عذراً، لا يوجد رصيد كافٍ في الصندوق/الحساب لإتمام العملية." : "Insufficient funds in the account to complete the operation.";
+  } else if (normalized.code === "APPROVAL_REQUIRED") {
+    message = ar ? "لا يمكن تنفيذ العملية لأنها تتطلب موافقة الإدارة مسبقاً." : "Operation requires approval as per center policy.";
+  } else if (normalized.code === "CANNOT_DELETE_DONOR") {
+    message = ar ? "لا يمكن حذف متبرع لديه تبرعات مسجلة في النظام." : "Cannot delete a donor with registered donations.";
+  } else if (normalized.code === "FINANCE_ACCOUNT_MISSING") {
+    message = ar ? "حساب الصندوق المالي غير موجود. يرجى مراجعة إعدادات النظام المالي." : "Finance account is missing. Please check finance settings.";
+  } else if (normalized.code === "INVALID_STATE_TRANSITION") {
+    message = ar ? "إجراء غير صالح: السجل إما قيد المعالجة أو تم الانتهاء منه مسبقاً، ولا يمكن تغيير حالته." : "Invalid action: State transition not allowed because the record is already processed.";
+  } else if (normalized.code === "POLICY_VIOLATION") {
+    message = ar ? "تعارض مع السياسة المالية: يرجى التحقق من تواريخ السجلات المفتوحة أو الصلاحيات المتداخلة." : "Policy violation: Please check for overlapping dates or conflicting permissions.";
+  } else if (normalized.code === "FINANCE_SCOPE_DENIED") {
+    message = ar ? "ليس لديك صلاحية الوصول أو التعديل على هذا المركز المالي." : "You do not have permission to access or modify this financial center.";
+  } else if (normalized.code === "ENTITY_NOT_FOUND") {
+    message = ar ? "العنصر المطلوب غير موجود أو تم حذفه مسبقاً." : "The requested entity was not found or has been deleted.";
+  } else if (axios.isAxiosError<ApiErrorResponse>(error) && !error.response) {
     message = localizedTransportFallback(ar);
   } else if (looksTechnical(message) || (ar && looksLikeEnglishBackendMessage(message))) {
     message = localizedStatusFallback(normalized.status, ar, fallback);

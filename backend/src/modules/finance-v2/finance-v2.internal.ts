@@ -792,6 +792,7 @@ export const ensureOrgFundAccountTx = async (tx: Tx, organizationId: number) => 
     where: {
       organizationId,
       centerId: null,
+      code: "MAIN_ORG_FUND_DEFAULT",
       accountType: FinanceAccountType.ORG_FUND,
       isActive: true
     },
@@ -810,6 +811,8 @@ export const ensureOrgFundAccountTx = async (tx: Tx, organizationId: number) => 
       centerId: null,
       accountingAccountId,
       accountType: FinanceAccountType.ORG_FUND,
+      code: "MAIN_ORG_FUND_DEFAULT",
+      name: "الصندوق الرئيسي للجمعية",
       openingBalance: new Prisma.Decimal(0),
       currentBalance: new Prisma.Decimal(0),
       currencyCode: "YER",

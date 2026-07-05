@@ -20,6 +20,7 @@ import {
   FinanceMoney 
 } from "../../features/finance-v2/design";
 import { useFinanceV2PayrollBatchesQuery } from "../../features/finance-v2/finance-v2.hooks";
+import type { PayrollBatchStatusV2 } from "../../features/finance-v2/types";
 
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
@@ -64,7 +65,7 @@ export default function FinancePayrollPage() {
   const canCreatePayrollBatch =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
   const canPayPayroll =
-    canCreatePayrollBatch || user?.role === "TREASURER";
+    user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -73,7 +74,7 @@ export default function FinancePayrollPage() {
   const [centerId, setCenterId] = useState<number | undefined>();
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
-  const [status, setStatus] = useState<any>("");
+  const [status, setStatus] = useState<PayrollBatchStatusV2 | "">("");
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
@@ -83,22 +84,27 @@ export default function FinancePayrollPage() {
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
 
   const batchesQ = useFinanceV2PayrollBatchesQuery(centerId, year, month);
-  const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
+  const batches = useMemo(
+    () => (batchesQ.data?.rows ?? []).filter((batch) => !status || batch.status === status),
+    [batchesQ.data?.rows, status]
+  );
 
   const stats = useMemo(() => {
     let totalBase = 0;
+    let totalBonus = 0;
     let totalDeduction = 0;
     let totalNet = 0;
 
     for (const batch of batches) {
       for (const item of (batch.items ?? [])) {
         totalBase += item.baseAmount;
+        totalBonus += item.bonusAmount;
         totalDeduction += item.deductionAmount;
         totalNet += item.netAmount;
       }
     }
 
-    return { totalBase, totalDeduction, totalNet };
+    return { totalBase, totalBonus, totalDeduction, totalNet };
   }, [batches]);
 
   return (
@@ -201,6 +207,12 @@ export default function FinancePayrollPage() {
             label={ar ? "إجمالي الأساسي" : "Total Base"}
           />
           <PayrollKpi
+            icon={ArrowUpRight}
+            cls="blue"
+            val={<FinanceMoney amount={stats.totalBonus} baseCurrency="YER" />}
+            label={ar ? "إجمالي البدلات" : "Total Bonuses"}
+          />
+          <PayrollKpi
             icon={ArrowDownLeft}
             cls="rose"
             val={<FinanceMoney amount={stats.totalDeduction} baseCurrency="YER" />}
@@ -223,6 +235,7 @@ export default function FinancePayrollPage() {
           year={year}
           status={status}
           statusLabels={statusLabels}
+          statusList={["PENDING", "APPROVED", "PAID"]}
           onCenterChange={setCenterId}
           onMonthChange={setMonth}
           onYearChange={setYear}
@@ -243,6 +256,7 @@ export default function FinancePayrollPage() {
               centerId={centerId}
               year={year}
               month={month}
+              status={status}
               isAdmin={canPayPayroll}
               isSuperAdmin={user?.role === "SUPER_ADMIN"}
               canCreateBatch={canCreatePayrollBatch}

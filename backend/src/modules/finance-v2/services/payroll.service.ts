@@ -143,7 +143,7 @@ export const payrollService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     if (input.centerId) {
       await ensureFinanceCenter(scope, input.centerId);
@@ -257,7 +257,7 @@ export const payrollService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     const existing = await prisma.payrollProfile.findFirst({
       where: { id: profileId, organizationId: scope.organizationId },
@@ -739,7 +739,7 @@ export const payrollService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     try {
       const result = await prisma.$transaction(async (tx) => {
@@ -888,7 +888,7 @@ export const payrollService = {
 
   async failPayrollItem(scope: ScopeContext, itemId: number, input: { failureReason: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const result = await prisma.$transaction(async (tx) => {
       const item = await tx.payrollItem.findFirst({
@@ -995,7 +995,7 @@ export const payrollService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     if (input.centerId) {
       await ensureFinanceCenter(scope, input.centerId);
@@ -1052,7 +1052,7 @@ export const payrollService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     const existing = await prisma.salaryGrade.findFirst({
       where: { id: gradeId, organizationId: scope.organizationId }

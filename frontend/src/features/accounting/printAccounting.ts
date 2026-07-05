@@ -1182,6 +1182,12 @@ export function printSummaryReport(options: {
   const accentLight = "#E4F4EE";
   const accentBg = "#F2FAF6";
 
+  const printColor = (hex?: string) => {
+    if (!hex || hex === accentColor) return accentColor;
+    if (hex === "#E85858") return "#B04444";
+    return accentColor;
+  };
+
   const tableHead = columns
     .map((col) => {
       const align = col.align ?? "right";
@@ -1205,11 +1211,14 @@ export function printSummaryReport(options: {
 
   const kpiCards = kpis
     .map(
-      (kpi) => `
-        <div class="kpi-card" style="background: ${kpi.color || accentBg}; border-color: ${kpi.color ? kpi.color + "44" : accentLight};">
-          <div class="kpi-value" style="color: ${kpi.color || accentColor};">${escapeHtml(kpi.value)}</div>
+      (kpi) => {
+        const pc = printColor(kpi.color);
+        return `
+        <div class="kpi-card" style="background: ${kpi.color ? pc + "0D" : accentBg}; border-color: ${kpi.color ? pc + "44" : accentLight};">
+          <div class="kpi-value" style="color: ${pc};">${escapeHtml(kpi.value)}</div>
           <div class="kpi-label">${escapeHtml(kpi.label)}</div>
-        </div>`
+        </div>`;
+      }
     )
     .join("");
 

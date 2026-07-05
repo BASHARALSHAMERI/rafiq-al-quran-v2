@@ -88,10 +88,15 @@ export default function StudentMonthlyReportPage() {
   const studentOptions = (studentsQ.data?.rows ?? []) as { id: number; name: string }[];
 
   /* ─── استدعاء التقرير الحقيقي ─── */
-  const reportEnabled = !!studentId && !!month && !!year;
+  const reportEnabled =
+    !!studentId &&
+    !!month &&
+    !!year &&
+    circleOptions.some((circle) => circle.id === halqahId) &&
+    studentOptions.some((student) => student.id === studentId);
   const reportQ = useStudentReportQuery(
     studentId ?? null,
-    { from: "", to: "", month, year },
+    { from: "", to: "", centerId, circleId: halqahId, month, year },
     reportEnabled
   );
 

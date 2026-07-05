@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../application/context/context_controller.dart';
 import '../../../../application/context/context_state.dart';
@@ -49,6 +50,12 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     FollowUpSessionSection.memorization: const [],
     FollowUpSessionSection.review: const [],
     FollowUpSessionSection.matn: const [],
+  };
+
+  final Map<FollowUpSessionSection, String> _idempotencyKeys = {
+    FollowUpSessionSection.memorization: const Uuid().v4(),
+    FollowUpSessionSection.review: const Uuid().v4(),
+    FollowUpSessionSection.matn: const Uuid().v4(),
   };
 
   QuranSurah? _newFromSurah;
@@ -743,11 +750,16 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             type: 'NEW_MEMORIZATION',
             status: mode == _SubmissionMode.draft ? 'DRAFT' : 'FINAL',
             surah: range.surah,
+            fromSurah: _newFromSurah?.number,
+            toSurah: _newToSurah?.number ?? _newFromSurah?.number,
             fromAyah: range.fromAyah,
             toAyah: range.toAyah,
+            fromPage: QuranData.getPageNumber(_newFromSurah!.number, range.fromAyah),
+            toPage: QuranData.getPageNumber((_newToSurah ?? _newFromSurah)!.number, range.toAyah),
             pagesCount: range.pagesCount,
             rating: _newRating,
             notes: notes,
+            idempotencyKey: _idempotencyKeys[FollowUpSessionSection.memorization],
           ),
         );
       case FollowUpSessionSection.review:
@@ -775,11 +787,16 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             type: 'REVIEW',
             status: mode == _SubmissionMode.draft ? 'DRAFT' : 'FINAL',
             surah: range.surah,
+            fromSurah: _reviewFromSurah?.number,
+            toSurah: _reviewToSurah?.number ?? _reviewFromSurah?.number,
             fromAyah: range.fromAyah,
             toAyah: range.toAyah,
+            fromPage: QuranData.getPageNumber(_reviewFromSurah!.number, range.fromAyah),
+            toPage: QuranData.getPageNumber((_reviewToSurah ?? _reviewFromSurah)!.number, range.toAyah),
             pagesCount: range.pagesCount,
             rating: _reviewRating,
             notes: notes,
+            idempotencyKey: _idempotencyKeys[FollowUpSessionSection.review],
           ),
         );
       case FollowUpSessionSection.matn:
@@ -808,6 +825,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             notes: notes == null
                 ? 'الدرس: $lesson'
                 : 'الدرس: $lesson\nملاحظات: $notes',
+            idempotencyKey: _idempotencyKeys[FollowUpSessionSection.matn],
           ),
         );
     }

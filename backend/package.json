@@ -38,10 +38,15 @@
         "db:migrate:deploy": "prisma migrate deploy",
         "db:migrate:status": "prisma migrate status",
         "db:seed": "prisma db seed",
+        "db:backup": "node -e \"const d=new Date().toISOString().replace(/[:.]/g,'-');const f=`backup-${d}.dump`;require('child_process').execSync(`\\\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\pg_dump.exe\\\" -U postgres -h localhost -Fc rafiq_v2 -f ${f}`,{env:{...process.env,PGPASSWORD:'Rafiq@2026!'},stdio:'inherit'});console.log('✅ تم حفظ النسخة الاحتياطية في: '+f)\"",
+        "db:restore": "node -e \"const f=process.argv[2];if(!f){console.error('استخدم: npm run db:restore -- backup-file.dump');process.exit(1);}require('child_process').execSync(`\\\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\pg_restore.exe\\\" -U postgres -h localhost -d rafiq_v2 --clean --if-exists ${f}`,{env:{...process.env,PGPASSWORD:'Rafiq@2026!'},stdio:'inherit'});console.log('✅ تم استعادة النسخة الاحتياطية')\"",
         "db:backfill:profiles": "tsx scripts/backfill-user-profiles.ts",
         "db:backfill:phone-normalized": "tsx scripts/backfill-phone-normalized.ts",
         "db:backfill:finance-v2": "tsx scripts/backfill-finance-v2.ts",
-        "db:reset": "node -e \"if(process.env.NODE_ENV==='production'){throw new Error('db:reset disabled in production')}\" && prisma migrate reset --force"
+        "db:reset": "node -e \"throw new Error('db:reset is strictly disabled to protect data. Use db:migrate and db:seed instead.')\"",
+        "db:seed:demo": "tsx prisma/seed-demo.ts",
+        "db:safety-check": "tsx scripts/safety-check.ts"
+
     },
     "keywords": [],
     "author": "",
@@ -61,9 +66,9 @@
         "jsonwebtoken": "^9.0.3",
         "multer": "^2.0.2",
         "nodemailer": "^8.0.7",
-        "pdfkit": "^0.17.2",
         "pg": "^8.20.0",
         "pino": "^10.3.1",
+        "puppeteer": "^25.3.0",
         "swagger-ui-express": "^5.0.1",
         "yaml": "^2.8.2",
         "zod": "^4.3.6"
@@ -80,7 +85,6 @@
         "@types/multer": "^2.0.0",
         "@types/node": "^25.2.3",
         "@types/nodemailer": "^8.0.0",
-        "@types/pdfkit": "^0.17.3",
         "@types/supertest": "^7.2.0",
         "@types/swagger-ui-express": "^4.1.8",
         "jest": "^30.4.2",

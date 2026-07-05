@@ -60,10 +60,12 @@ const stagger = {
 
 export default function UserRolePage({
   role,
+  allowedRoles,
   title,
   description
 }: {
   role: Role;
+  allowedRoles?: Role[];
   title?: string;
   description: string;
 }) {
@@ -90,7 +92,9 @@ export default function UserRolePage({
   const canCreate = authUser?.role === "SUPER_ADMIN" || authUser?.role === "CENTER_ADMIN";
   const canManage = authUser?.role === "SUPER_ADMIN" || authUser?.role === "CENTER_ADMIN";
 
-  const usersQ = useUsersQuery({ role, centerId, circleId });
+  const [filterRole, setFilterRole] = useState<Role | "">("");
+
+  const usersQ = useUsersQuery({ role: filterRole || allowedRoles || role, centerId, circleId });
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
   const circlesQ = useCirclesQuery(centerId ?? undefined, { enabled: canLoadCircles });
   const studentsQ = useUsersQuery({ role: "STUDENT" }, role === "PARENT" || role === "STUDENT");
@@ -340,6 +344,21 @@ export default function UserRolePage({
                 />
               </div>
 
+              {allowedRoles && allowedRoles.length > 0 && (
+                <div className="grade-scales-filter-wrap">
+                  <select
+                    className="grade-scales-filter-select"
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value as Role | "")}
+                  >
+                    <option value="">{ar ? "جميع الأدوار" : "All Roles"}</option>
+                    {allowedRoles.map(r => (
+                      <option key={r} value={r}>{roleLabel(r, ar)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grade-scales-stats-pills">
                 <div className="grade-scales-pill">
                   {ar ? "الإجمالي:" : "Total:"} <strong>{totalCount}</strong>
@@ -418,6 +437,7 @@ export default function UserRolePage({
                   canManage={canManage}
                   emptyTitle={emptyTitle}
                   emptyDescription={emptyDescription}
+                  showRoleColumn={!!allowedRoles && allowedRoles.length > 0}
                 />
               )}
             </div>
@@ -490,9 +510,10 @@ export default function UserRolePage({
         <AnimatePresence>
           {formModal ? (
             <RoleAwareUserFormModal
-              open
+              open={!!formModal}
               mode={formModal.mode}
-              role={role}
+              role={formModal.mode === "edit" && formModal.user?.role ? formModal.user.role : role}
+              allowedRoles={allowedRoles}
               ar={ar}
               initialUser={formModal.user}
               centers={centers}

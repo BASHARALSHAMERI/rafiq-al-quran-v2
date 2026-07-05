@@ -76,7 +76,8 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
     }
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
       const pCenterId = profileForm.centerId ? Number(profileForm.centerId) : centerId;
       if (!pCenterId) { notifyError(ar ? "المركز مطلوب" : "Center is required"); return; }
@@ -166,10 +167,10 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
       <Modal isOpen={Boolean(profileModal)} onClose={() => setProfileModal(null)} title={profileModal?.mode === "create" ? (ar ? "تعيين اشتراك طالب" : "Assign Subscription") : (ar ? "تعديل الاشتراك" : "Edit Subscription")} size="lg" panelClassName="circlemod-panel" bodyClassName="circlemod-body" footerClassName="circlemod-footer-wrap" footer={
         <div className="circlemod-footer">
           <Button variant="secondary" onClick={() => setProfileModal(null)} disabled={createProfileM.isPending || updateProfileM.isPending}>{ar ? "إلغاء" : "Cancel"}</Button>
-          <Button onClick={handleSaveProfile} isLoading={createProfileM.isPending || updateProfileM.isPending}>{ar ? "حفظ" : "Save"}</Button>
+          <Button type="submit" form="finance-sub-form" isLoading={createProfileM.isPending || updateProfileM.isPending}>{ar ? "حفظ" : "Save"}</Button>
         </div>
       }>
-        <div className="circlemod-form">
+        <form id="finance-sub-form" className="circlemod-form" onSubmit={handleSaveProfile}>
           <div className="circlemod-section">
             <div className="circlemod-section-head">
               <User size={15} className="circlemod-section-icon" />
@@ -229,7 +230,7 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--sm">
                 <label><Calendar size={12} className="inline-block ml-1 opacity-60" />{ar ? "تاريخ البدء" : "Start Date"}</label>
-                <input className="circlemod-input" type="date" value={profileForm.startDate} onChange={(e) => setProfileForm(p => ({ ...p, startDate: e.target.value }))} />
+                <input className="circlemod-input" type="date" value={profileForm.startDate} onChange={(e) => setProfileForm(p => ({ ...p, startDate: e.target.value }))} required />
               </div>
               <div className="circlemod-field circlemod-field--sm">
                 <label><Calendar size={12} className="inline-block ml-1 opacity-60" />{ar ? "تاريخ الانتهاء" : "End Date"}</label>
@@ -246,7 +247,7 @@ export default function FinanceSubscriptionTab({ centerId, isAdmin, ar }: Props)
               </div>
             </div>
           </div>
-        </div>
+        </form>
       </Modal>
     </div>
   );

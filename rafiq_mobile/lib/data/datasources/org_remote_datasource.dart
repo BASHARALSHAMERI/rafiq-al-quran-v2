@@ -27,6 +27,19 @@ class OrgRemoteDataSourceImpl implements OrgRemoteDataSource {
       if (data is List) {
         return data.whereType<Map<String, dynamic>>().toList(growable: false);
       }
+      
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('data') && data['data'] is List) {
+          return (data['data'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false);
+        }
+        if (data.containsKey('items') && data['items'] is List) {
+          return (data['items'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false);
+        }
+      }
     }
     if (responseData is List) {
       return responseData

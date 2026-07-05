@@ -86,6 +86,15 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
   const [userId, setUserId] = useState<number | "">(existing?.userId ?? "");
   const [effectiveFrom, setEffectiveFrom] = useState(existing?.effectiveFrom?.slice(0, 10) ?? "");
   const [effectiveTo, setEffectiveTo] = useState(existing?.effectiveTo?.slice(0, 10) ?? "");
+  const [useCustomLocation, setUseCustomLocation] = useState(
+    existing?.latitude != null && existing?.longitude != null
+  );
+  const [latitude, setLatitude] = useState<number | "">(existing?.latitude ?? "");
+  const [longitude, setLongitude] = useState<number | "">(existing?.longitude ?? "");
+  const [allowedRadiusMeters, setAllowedRadiusMeters] = useState<number | "">(
+    existing?.allowedRadiusMeters ?? 100
+  );
+  const [locationText, setLocationText] = useState(existing?.locationText ?? "");
   
   const [rows, setRows] = useState<CircleScheduleDraftRow[]>(() => {
     const emptyRows = createEmptyScheduleDraftRows();
@@ -127,6 +136,12 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
       setUserId(existing?.userId ?? "");
       setEffectiveFrom(existing?.effectiveFrom?.slice(0, 10) ?? "");
       setEffectiveTo(existing?.effectiveTo?.slice(0, 10) ?? "");
+      const hasCoords = existing?.latitude != null && existing?.longitude != null;
+      setUseCustomLocation(hasCoords);
+      setLatitude(existing?.latitude ?? "");
+      setLongitude(existing?.longitude ?? "");
+      setAllowedRadiusMeters(existing?.allowedRadiusMeters ?? 100);
+      setLocationText(existing?.locationText ?? "");
       
       const emptyRows = createEmptyScheduleDraftRows();
       if (existing?.slots?.length) {
@@ -169,7 +184,17 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
 
     if (existing) {
       updateM.mutate(
-        { id: existing.id, payload: { effectiveTo: effectiveTo || null, slots } },
+        {
+          id: existing.id,
+          payload: {
+            effectiveTo: effectiveTo || null,
+            latitude: useCustomLocation ? Number(latitude) : null,
+            longitude: useCustomLocation ? Number(longitude) : null,
+            allowedRadiusMeters: useCustomLocation ? Number(allowedRadiusMeters) : null,
+            locationText: useCustomLocation ? locationText || null : null,
+            slots
+          }
+        },
         { onSuccess: onClose }
       );
     } else {
@@ -180,15 +205,19 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
         centerId: Number(centerId),
         effectiveFrom,
         effectiveTo: effectiveTo || null,
+        latitude: useCustomLocation ? Number(latitude) : null,
+        longitude: useCustomLocation ? Number(longitude) : null,
+        allowedRadiusMeters: useCustomLocation ? Number(allowedRadiusMeters) : null,
+        locationText: useCustomLocation ? locationText || null : null,
         slots,
       };
       createM.mutate(payload, { onSuccess: onClose });
     }
   };
 
-  const isFormValid = existing 
-    ? true 
-    : (staffRole && centerId && userId && effectiveFrom);
+  const isFormValid = existing
+    ? (useCustomLocation ? (latitude !== "" && longitude !== "" && allowedRadiusMeters !== "") : true)
+    : (staffRole && centerId && userId && effectiveFrom && (useCustomLocation ? (latitude !== "" && longitude !== "" && allowedRadiusMeters !== "") : true));
 
   const modalFooter = useMemo(
     () => (
@@ -350,6 +379,78 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
                 disabled={isPending}
               />
             </div>
+          </div>
+
+          {/* Custom Geo Location checkbox & inputs */}
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <label className="flex items-center gap-2 cursor-pointer font-semibold text-text-secondary text-sm">
+              <input
+                type="checkbox"
+                className="circlemod-checkbox rounded text-brand-600 focus:ring-brand-500"
+                checked={useCustomLocation}
+                onChange={(e) => setUseCustomLocation(e.target.checked)}
+                disabled={isPending}
+              />
+              <span>{ar ? "تحديد موقع جغرافي مخصص (مستقل) لهذا الموظف" : "Define a custom GPS location for this employee"}</span>
+            </label>
+
+            {useCustomLocation && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="circlemod-field">
+                  <label htmlFor="sched-lat">{ar ? "خط العرض (Latitude) *" : "Latitude *"}</label>
+                  <input
+                    id="sched-lat"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 15.35222"
+                    className="circlemod-input"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value ? Number(e.target.value) : "")}
+                    required
+                    disabled={isPending}
+                  />
+                </div>
+                <div className="circlemod-field">
+                  <label htmlFor="sched-lng">{ar ? "خط الطول (Longitude) *" : "Longitude *"}</label>
+                  <input
+                    id="sched-lng"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 44.20911"
+                    className="circlemod-input"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value ? Number(e.target.value) : "")}
+                    required
+                    disabled={isPending}
+                  />
+                </div>
+                <div className="circlemod-field">
+                  <label htmlFor="sched-radius">{ar ? "نطاق السماح الجغرافي (بالمتر) *" : "Allowed Radius (meters) *"}</label>
+                  <input
+                    id="sched-radius"
+                    type="number"
+                    placeholder="e.g. 100"
+                    className="circlemod-input"
+                    value={allowedRadiusMeters}
+                    onChange={(e) => setAllowedRadiusMeters(e.target.value ? Number(e.target.value) : "")}
+                    required
+                    disabled={isPending}
+                  />
+                </div>
+                <div className="circlemod-field">
+                  <label htmlFor="sched-loc-text">{ar ? "اسم/وصف الموقع (مثال: البيت، المكتب)" : "Location Description (e.g. Home, Office)"}</label>
+                  <input
+                    id="sched-loc-text"
+                    type="text"
+                    placeholder={ar ? "أدخل اسم الموقع المخصص" : "Enter location name"}
+                    className="circlemod-input"
+                    value={locationText}
+                    onChange={(e) => setLocationText(e.target.value)}
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

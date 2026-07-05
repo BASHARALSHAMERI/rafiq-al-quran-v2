@@ -40,11 +40,19 @@ type CreateManualInput = {
   circleId?: number | null;
   effectiveFrom: Date;
   effectiveTo?: Date | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
+  locationText?: string | null;
   slots: SlotInput[];
 };
 
 type UpdateInput = {
   effectiveTo?: Date | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowedRadiusMeters?: number | null;
+  locationText?: string | null;
   slots?: SlotInput[];
 };
 
@@ -142,6 +150,10 @@ throw new AppError(
         isActive: true,
         effectiveFrom: input.effectiveFrom,
         effectiveTo: input.effectiveTo ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        allowedRadiusMeters: input.allowedRadiusMeters ?? null,
+        locationText: input.locationText ?? null,
         slots: {
           create: input.slots.map((slot) => ({
             dayOfWeek: slot.dayOfWeek,
@@ -190,6 +202,10 @@ throw new AppError(
       // Update assignment fields
       const updateData: Record<string, unknown> = {};
       if (input.effectiveTo !== undefined) updateData.effectiveTo = input.effectiveTo;
+      if (input.latitude !== undefined) updateData.latitude = input.latitude;
+      if (input.longitude !== undefined) updateData.longitude = input.longitude;
+      if (input.allowedRadiusMeters !== undefined) updateData.allowedRadiusMeters = input.allowedRadiusMeters;
+      if (input.locationText !== undefined) updateData.locationText = input.locationText;
 
       if (Object.keys(updateData).length > 0) {
         await tx.staffScheduleAssignment.update({

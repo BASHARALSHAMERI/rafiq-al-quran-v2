@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Receipt, ArrowRight, Printer, FileText, AlertCircle, User, Calendar, DollarSign, StickyNote, Wallet } from "lucide-react";
+import { Receipt, ArrowRight, Printer, FileText, AlertCircle, User, Calendar, DollarSign, StickyNote } from "lucide-react";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { ErrorState } from "../../../../components/ui/ErrorState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";

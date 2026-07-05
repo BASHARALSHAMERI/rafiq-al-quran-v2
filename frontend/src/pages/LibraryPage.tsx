@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Archive, BookOpen, ChevronLeft, ChevronRight, Download, FileText, PencilLine,
-  RefreshCw, Search, Upload, X, Library as LibraryIcon, FolderOpen, Eye,
+  RefreshCw, Search, Upload, Library as LibraryIcon, FolderOpen, Eye,
   FileImage, FilePlus2, Headphones, PlayCircle
 } from "lucide-react";
 import { Badge } from "../components/ui/Badge";

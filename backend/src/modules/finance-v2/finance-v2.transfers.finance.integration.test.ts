@@ -25,7 +25,7 @@ describe("fund transfer workflow integration", () => {
   test("posts matching outgoing/incoming movements and one balanced journal", async () => {
     const context = await createTaizFinanceContext();
     const transfer = await approve(context, 250000);
-    const result = await financeAccountingService.postFundTransfer(context.scopes.manager, transfer.id, {});
+    const result = await financeAccountingService.postFundTransfer(context.scopes.treasurer, transfer.id, {});
 
     expect(result.transfer.status).toBe(FundTransferStatus.POSTED);
     expect(result.movementOut.amount).toBe(250000);
@@ -43,7 +43,7 @@ describe("fund transfer workflow integration", () => {
     });
     expect(journal.lines.reduce((sum, line) => sum + line.debit.toNumber(), 0)).toBe(250000);
     expect(journal.lines.reduce((sum, line) => sum + line.credit.toNumber(), 0)).toBe(250000);
-    await expect(financeAccountingService.postFundTransfer(context.scopes.manager, transfer.id, {})).rejects.toMatchObject({
+    await expect(financeAccountingService.postFundTransfer(context.scopes.treasurer, transfer.id, {})).rejects.toMatchObject({
       code: "INVALID_STATE_TRANSITION"
     });
   });
@@ -59,13 +59,13 @@ describe("fund transfer workflow integration", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
 
     const tooLarge = await approve(context, 1000001);
-    await expect(financeAccountingService.postFundTransfer(context.scopes.manager, tooLarge.id, {})).rejects.toThrow();
+    await expect(financeAccountingService.postFundTransfer(context.scopes.treasurer, tooLarge.id, {})).rejects.toThrow();
 
     const first = await approve(context, 700000);
     const second = await approve(context, 700000);
     const results = await Promise.allSettled([
-      financeAccountingService.postFundTransfer(context.scopes.manager, first.id, {}),
-      financeAccountingService.postFundTransfer(context.scopes.manager, second.id, {})
+      financeAccountingService.postFundTransfer(context.scopes.treasurer, first.id, {}),
+      financeAccountingService.postFundTransfer(context.scopes.treasurer, second.id, {})
     ]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(

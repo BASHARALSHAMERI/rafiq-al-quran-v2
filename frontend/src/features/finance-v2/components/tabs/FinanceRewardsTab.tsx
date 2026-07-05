@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Gift, ArrowRight, Printer, AlertCircle, Calendar, StickyNote, Eye, CreditCard, Receipt, RefreshCcw, User } from "lucide-react";
+import { Gift, ArrowRight, Printer, Calendar, Eye, CreditCard, Receipt, RefreshCcw, User } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
@@ -33,6 +33,7 @@ type Props = {
   centerId: number | undefined;
   year: number;
   month: number;
+  status?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   canCreateBatch?: boolean;
@@ -90,7 +91,9 @@ export default function FinanceRewardsTab({
   centerId, 
   year, 
   month,
+  status,
   isAdmin,
+  isSuperAdmin,
   canCreateBatch = isAdmin,
   ar, 
   externalShowBatchForm, 
@@ -105,7 +108,6 @@ export default function FinanceRewardsTab({
     reference: string;
     failureReason: string;
   } | null>(null);
-  const [rewardError, setRewardError] = useState("");
 
   useEffect(() => {
     if (externalShowBatchForm) {
@@ -117,21 +119,22 @@ export default function FinanceRewardsTab({
     cycle: "MONTHLY" as RewardCycleV2,
     rewardType: "GENERAL" as RewardTypeV2,
     periodMonth: month,
-    periodQuarter: 1,
-    description: ""
+    periodQuarter: 1
   });
 
   useEffect(() => {
-    setBatchForm(prev => ({ 
-      ...prev, 
-      periodMonth: month,
-      description: ar ? `مكافآت شهر ${month} - ${year}` : `Rewards for ${month}/${year}`
-    }));
-  }, [month, year, ar]);
+    setBatchForm(prev => ({ ...prev, periodMonth: month }));
+  }, [month]);
 
   const brandingQ = useOrgBrandingQuery();
   const batchesQ = useFinanceV2RewardBatchesQuery(centerId, year);
-  const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
+  const batches = useMemo(
+    () => (batchesQ.data?.rows ?? []).filter((batch) =>
+      (!status || batch.status === status) &&
+      (batch.cycle !== "MONTHLY" || batch.periodMonth === month)
+    ),
+    [batchesQ.data?.rows, month, status]
+  );
   const pagination = useClientPagination(batches, { initialPageSize: 10 });
 
   const createBatchM = useCreateFinanceV2RewardBatchMutation();
@@ -143,15 +146,13 @@ export default function FinanceRewardsTab({
   const closeBatchModal = () => {
     if (createBatchM.isPending) return;
     setShowBatchForm(false);
-    setRewardError("");
     onExternalBatchFormClose?.();
   };
 
   const handleCreateBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!centerId) {
-      setRewardError(ar ? "المركز مطلوب لإنشاء دفعة المكافآت." : "A center is required to create a reward batch.");
-      notifyRequiredFields(ar);
+    if (!centerId && !isSuperAdmin) {
+      notifyError(ar ? "المركز مطلوب لإنشاء دفعة المكافآت." : "A center is required to create a reward batch.");
       return;
     }
 
@@ -171,7 +172,6 @@ export default function FinanceRewardsTab({
         ar,
         fallback: ar ? "تعذر إنشاء دفعة المكافآت." : "Unable to create the reward batch."
       });
-      setRewardError(message);
       notifyError(message);
     }
   };
@@ -233,11 +233,11 @@ export default function FinanceRewardsTab({
   const handleSubmitBatch = async (batchId: number) => {
     try {
       await submitBatchM.mutateAsync({ batchId });
-      notifySuccess(ar ? "تم اعتماد دفعة المكافآت بنجاح" : "Reward batch approved successfully");
+      notifySuccess(ar ? "تم إرسال دفعة المكافآت للاعتماد" : "Reward batch submitted for approval");
     } catch (error) {
       notifyError(getLocalizedApiErrorMessage(error, {
         ar,
-        fallback: ar ? "تعذر اعتماد دفعة المكافآت." : "Unable to approve the reward batch."
+        fallback: ar ? "تعذر إرسال دفعة المكافآت للاعتماد." : "Unable to submit the reward batch for approval."
       }));
     }
   };
@@ -356,33 +356,6 @@ export default function FinanceRewardsTab({
             </div>
           </div>
 
-          {/* Section 2: Description */}
-          <div className="circlemod-section">
-            <div className="circlemod-section-head">
-              <StickyNote size={15} className="circlemod-section-icon" />
-              <span>{ar ? "الوصف" : "Description"}</span>
-              <span className="circlemod-section-hint">{ar ? "للعرض فقط" : "Display only"}</span>
-            </div>
-            <div className="circlemod-row">
-              <div className="circlemod-field circlemod-field--lg">
-                <label htmlFor="rw-desc">{ar ? "وصف الدفعة" : "Batch Description"}</label>
-                <input
-                  id="rw-desc"
-                  className="circlemod-input"
-                  value={batchForm.description}
-                  onChange={(e) => setBatchForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={ar ? "وصف الدفعة" : "Batch Description"}
-                />
-              </div>
-            </div>
-          </div>
-
-          {rewardError ? (
-            <div className="circlemod-error" role="alert">
-              <AlertCircle size={14} className="flex-shrink-0" />
-              <span>{rewardError}</span>
-            </div>
-          ) : null}
         </form>
       </Modal>
 
@@ -626,7 +599,7 @@ export default function FinanceRewardsTab({
                             onClick={() => void handleSubmitBatch(b.id)}
                             isLoading={submitBatchM.isPending}
                           >
-                            {ar ? "اعتماد وصرف" : "Approve & Pay"}
+                            {ar ? "إرسال للاعتماد" : "Submit for approval"}
                           </Button>
                         )}
                         <button 

@@ -948,7 +948,7 @@ export const reportsService = {
   async student(
     scope: ScopeContext,
     studentId: number,
-    query?: { month?: number; year?: number }
+    query?: { centerId?: number; circleId?: number; month?: number; year?: number }
   ) {
     const student = await reportsRepository.findStudentById({
       organizationId: scope.organizationId,
@@ -974,8 +974,26 @@ export const reportsService = {
       }
     }
 
-    if (!scope.allAccess && scope.role !== Role.PARENT && scope.role !== Role.STUDENT) {
-      if (scope.centerIds.length === 0 && scope.circleIds.length === 0) {
+    if (query?.centerId && scope.role !== Role.PARENT && scope.role !== Role.STUDENT) {
+      ensureCenterAllowed(scope, query.centerId);
+    }
+
+    if (query?.circleId && scope.role !== Role.PARENT && scope.role !== Role.STUDENT) {
+      ensureCircleAllowed(scope, query.circleId);
+    }
+
+    if (
+      query?.centerId ||
+      query?.circleId ||
+      (!scope.allAccess && scope.role !== Role.PARENT && scope.role !== Role.STUDENT)
+    ) {
+      if (
+        !scope.allAccess &&
+        scope.role !== Role.PARENT &&
+        scope.role !== Role.STUDENT &&
+        scope.centerIds.length === 0 &&
+        scope.circleIds.length === 0
+      ) {
         throw new AppError("تقرير الطالب خارج نطاق صلاحياتك", 403);
       }
       
@@ -984,12 +1002,18 @@ export const reportsService = {
           studentId,
           circle: {
             center: {
-              organizationId: scope.organizationId
+              organizationId: scope.organizationId,
+              ...(query?.centerId ? { id: query.centerId } : {})
             },
-            OR: [
-              ...(scope.circleIds.length > 0 ? [{ id: { in: scope.circleIds } }] : []),
-              ...(scope.centerIds.length > 0 ? [{ centerId: { in: scope.centerIds } }] : [])
-            ]
+            ...(query?.circleId ? { id: query.circleId } : {}),
+            ...(!scope.allAccess && scope.role !== Role.PARENT && scope.role !== Role.STUDENT
+              ? {
+                  OR: [
+                    ...(scope.circleIds.length > 0 ? [{ id: { in: scope.circleIds } }] : []),
+                    ...(scope.centerIds.length > 0 ? [{ centerId: { in: scope.centerIds } }] : [])
+                  ]
+                }
+              : {})
           }
         }
       });
@@ -999,12 +1023,16 @@ export const reportsService = {
       }
     }
 
-    const centerScope = scope.allAccess || scope.role === Role.PARENT || scope.role === Role.STUDENT
-      ? undefined
-      : scope.centerIds;
-    const circleScope = scope.allAccess || scope.role === Role.PARENT || scope.role === Role.STUDENT
-      ? undefined
-      : scope.circleIds;
+    const centerScope = query?.centerId
+      ? [query.centerId]
+      : scope.allAccess || scope.role === Role.PARENT || scope.role === Role.STUDENT
+        ? undefined
+        : scope.centerIds;
+    const circleScope = query?.circleId
+      ? [query.circleId]
+      : scope.allAccess || scope.role === Role.PARENT || scope.role === Role.STUDENT
+        ? undefined
+        : scope.circleIds;
     const window = resolveMonthWindow(query?.month, query?.year);
 
     const [attendanceRows, followUpRows, examRows, monthlyPlan, activities] = await Promise.all([
@@ -1035,6 +1063,7 @@ export const reportsService = {
           studentId,
           month: window.month,
           year: window.year,
+          ...(centerScope?.length ? { centerId: { in: centerScope } } : {}),
           ...(circleScope?.length ? { circleId: { in: circleScope } } : {})
         },
         select: {
@@ -1094,7 +1123,7 @@ export const reportsService = {
       return acc;
     }, {});
     const attendanceTotal = attendanceRows.length;
-    const attendancePresent = attendanceCounts.PRESENT ?? 0;
+    const attendancePresent = (attendanceCounts.PRESENT ?? 0) + (attendanceCounts.LATE ?? 0);
 
     const followUpFinal = followUpRows.filter((item) => item.status === "FINAL").length;
     const ratedFollowUps = followUpRows.filter((item) => typeof item.rating === "number");

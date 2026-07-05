@@ -29,14 +29,21 @@ mixin _$FollowUpRecordDto {
   String get type => throw _privateConstructorUsedError; // RECITE, REVIEW, BOTH
   String get status => throw _privateConstructorUsedError; // DRAFT, FINAL
   String? get surah => throw _privateConstructorUsedError;
+  int? get fromSurah => throw _privateConstructorUsedError;
+  int? get toSurah => throw _privateConstructorUsedError;
   int? get fromAyah => throw _privateConstructorUsedError;
   int? get toAyah => throw _privateConstructorUsedError;
+  int? get fromPage => throw _privateConstructorUsedError;
+  int? get toPage => throw _privateConstructorUsedError;
   double? get pagesCount => throw _privateConstructorUsedError;
   int? get rating => throw _privateConstructorUsedError;
+  int? get matnId => throw _privateConstructorUsedError;
   String? get matnName => throw _privateConstructorUsedError;
   String? get matnStatus =>
       throw _privateConstructorUsedError; // PENDING, COMPLETED, FAILED
-  String? get notes =>
+  String? get notes => throw _privateConstructorUsedError;
+  String? get idempotencyKey => throw _privateConstructorUsedError;
+  int? get lockVersion =>
       throw _privateConstructorUsedError; // Joined standard fields might exist but we map what we need
   Map<String, dynamic>? get student => throw _privateConstructorUsedError;
   Map<String, dynamic>? get teacher => throw _privateConstructorUsedError;
@@ -62,13 +69,20 @@ abstract class $FollowUpRecordDtoCopyWith<$Res> {
       String type,
       String status,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
       String? notes,
+      String? idempotencyKey,
+      int? lockVersion,
       Map<String, dynamic>? student,
       Map<String, dynamic>? teacher});
 }
@@ -94,13 +108,20 @@ class _$FollowUpRecordDtoCopyWithImpl<$Res, $Val extends FollowUpRecordDto>
     Object? type = null,
     Object? status = null,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? idempotencyKey = freezed,
+    Object? lockVersion = freezed,
     Object? student = freezed,
     Object? teacher = freezed,
   }) {
@@ -137,6 +158,14 @@ class _$FollowUpRecordDtoCopyWithImpl<$Res, $Val extends FollowUpRecordDto>
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -145,6 +174,14 @@ class _$FollowUpRecordDtoCopyWithImpl<$Res, $Val extends FollowUpRecordDto>
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -152,6 +189,10 @@ class _$FollowUpRecordDtoCopyWithImpl<$Res, $Val extends FollowUpRecordDto>
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -165,6 +206,14 @@ class _$FollowUpRecordDtoCopyWithImpl<$Res, $Val extends FollowUpRecordDto>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      idempotencyKey: freezed == idempotencyKey
+          ? _value.idempotencyKey
+          : idempotencyKey // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lockVersion: freezed == lockVersion
+          ? _value.lockVersion
+          : lockVersion // ignore: cast_nullable_to_non_nullable
+              as int?,
       student: freezed == student
           ? _value.student
           : student // ignore: cast_nullable_to_non_nullable
@@ -194,13 +243,20 @@ abstract class _$$FollowUpRecordDtoImplCopyWith<$Res>
       String type,
       String status,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
       String? notes,
+      String? idempotencyKey,
+      int? lockVersion,
       Map<String, dynamic>? student,
       Map<String, dynamic>? teacher});
 }
@@ -224,13 +280,20 @@ class __$$FollowUpRecordDtoImplCopyWithImpl<$Res>
     Object? type = null,
     Object? status = null,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? idempotencyKey = freezed,
+    Object? lockVersion = freezed,
     Object? student = freezed,
     Object? teacher = freezed,
   }) {
@@ -267,6 +330,14 @@ class __$$FollowUpRecordDtoImplCopyWithImpl<$Res>
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -275,6 +346,14 @@ class __$$FollowUpRecordDtoImplCopyWithImpl<$Res>
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -282,6 +361,10 @@ class __$$FollowUpRecordDtoImplCopyWithImpl<$Res>
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -295,6 +378,14 @@ class __$$FollowUpRecordDtoImplCopyWithImpl<$Res>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      idempotencyKey: freezed == idempotencyKey
+          ? _value.idempotencyKey
+          : idempotencyKey // ignore: cast_nullable_to_non_nullable
+              as String?,
+      lockVersion: freezed == lockVersion
+          ? _value.lockVersion
+          : lockVersion // ignore: cast_nullable_to_non_nullable
+              as int?,
       student: freezed == student
           ? _value._student
           : student // ignore: cast_nullable_to_non_nullable
@@ -319,13 +410,20 @@ class _$FollowUpRecordDtoImpl implements _FollowUpRecordDto {
       required this.type,
       required this.status,
       this.surah,
+      this.fromSurah,
+      this.toSurah,
       this.fromAyah,
       this.toAyah,
+      this.fromPage,
+      this.toPage,
       this.pagesCount,
       this.rating,
+      this.matnId,
       this.matnName,
       this.matnStatus,
       this.notes,
+      this.idempotencyKey,
+      this.lockVersion,
       final Map<String, dynamic>? student,
       final Map<String, dynamic>? teacher})
       : _student = student,
@@ -354,13 +452,23 @@ class _$FollowUpRecordDtoImpl implements _FollowUpRecordDto {
   @override
   final String? surah;
   @override
+  final int? fromSurah;
+  @override
+  final int? toSurah;
+  @override
   final int? fromAyah;
   @override
   final int? toAyah;
   @override
+  final int? fromPage;
+  @override
+  final int? toPage;
+  @override
   final double? pagesCount;
   @override
   final int? rating;
+  @override
+  final int? matnId;
   @override
   final String? matnName;
   @override
@@ -368,6 +476,10 @@ class _$FollowUpRecordDtoImpl implements _FollowUpRecordDto {
 // PENDING, COMPLETED, FAILED
   @override
   final String? notes;
+  @override
+  final String? idempotencyKey;
+  @override
+  final int? lockVersion;
 // Joined standard fields might exist but we map what we need
   final Map<String, dynamic>? _student;
 // Joined standard fields might exist but we map what we need
@@ -392,7 +504,7 @@ class _$FollowUpRecordDtoImpl implements _FollowUpRecordDto {
 
   @override
   String toString() {
-    return 'FollowUpRecordDto(id: $id, studentId: $studentId, circleId: $circleId, teacherId: $teacherId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromAyah: $fromAyah, toAyah: $toAyah, pagesCount: $pagesCount, rating: $rating, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, student: $student, teacher: $teacher)';
+    return 'FollowUpRecordDto(id: $id, studentId: $studentId, circleId: $circleId, teacherId: $teacherId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, fromPage: $fromPage, toPage: $toPage, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, idempotencyKey: $idempotencyKey, lockVersion: $lockVersion, student: $student, teacher: $teacher)';
   }
 
   @override
@@ -412,42 +524,61 @@ class _$FollowUpRecordDtoImpl implements _FollowUpRecordDto {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.surah, surah) || other.surah == surah) &&
+            (identical(other.fromSurah, fromSurah) ||
+                other.fromSurah == fromSurah) &&
+            (identical(other.toSurah, toSurah) || other.toSurah == toSurah) &&
             (identical(other.fromAyah, fromAyah) ||
                 other.fromAyah == fromAyah) &&
             (identical(other.toAyah, toAyah) || other.toAyah == toAyah) &&
+            (identical(other.fromPage, fromPage) ||
+                other.fromPage == fromPage) &&
+            (identical(other.toPage, toPage) || other.toPage == toPage) &&
             (identical(other.pagesCount, pagesCount) ||
                 other.pagesCount == pagesCount) &&
             (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.matnId, matnId) || other.matnId == matnId) &&
             (identical(other.matnName, matnName) ||
                 other.matnName == matnName) &&
             (identical(other.matnStatus, matnStatus) ||
                 other.matnStatus == matnStatus) &&
             (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.idempotencyKey, idempotencyKey) ||
+                other.idempotencyKey == idempotencyKey) &&
+            (identical(other.lockVersion, lockVersion) ||
+                other.lockVersion == lockVersion) &&
             const DeepCollectionEquality().equals(other._student, _student) &&
             const DeepCollectionEquality().equals(other._teacher, _teacher));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      studentId,
-      circleId,
-      teacherId,
-      recordDate,
-      type,
-      status,
-      surah,
-      fromAyah,
-      toAyah,
-      pagesCount,
-      rating,
-      matnName,
-      matnStatus,
-      notes,
-      const DeepCollectionEquality().hash(_student),
-      const DeepCollectionEquality().hash(_teacher));
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        studentId,
+        circleId,
+        teacherId,
+        recordDate,
+        type,
+        status,
+        surah,
+        fromSurah,
+        toSurah,
+        fromAyah,
+        toAyah,
+        fromPage,
+        toPage,
+        pagesCount,
+        rating,
+        matnId,
+        matnName,
+        matnStatus,
+        notes,
+        idempotencyKey,
+        lockVersion,
+        const DeepCollectionEquality().hash(_student),
+        const DeepCollectionEquality().hash(_teacher)
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -474,13 +605,20 @@ abstract class _FollowUpRecordDto implements FollowUpRecordDto {
       required final String type,
       required final String status,
       final String? surah,
+      final int? fromSurah,
+      final int? toSurah,
       final int? fromAyah,
       final int? toAyah,
+      final int? fromPage,
+      final int? toPage,
       final double? pagesCount,
       final int? rating,
+      final int? matnId,
       final String? matnName,
       final String? matnStatus,
       final String? notes,
+      final String? idempotencyKey,
+      final int? lockVersion,
       final Map<String, dynamic>? student,
       final Map<String, dynamic>? teacher}) = _$FollowUpRecordDtoImpl;
 
@@ -504,19 +642,33 @@ abstract class _FollowUpRecordDto implements FollowUpRecordDto {
   @override // DRAFT, FINAL
   String? get surah;
   @override
+  int? get fromSurah;
+  @override
+  int? get toSurah;
+  @override
   int? get fromAyah;
   @override
   int? get toAyah;
   @override
+  int? get fromPage;
+  @override
+  int? get toPage;
+  @override
   double? get pagesCount;
   @override
   int? get rating;
+  @override
+  int? get matnId;
   @override
   String? get matnName;
   @override
   String? get matnStatus;
   @override // PENDING, COMPLETED, FAILED
   String? get notes;
+  @override
+  String? get idempotencyKey;
+  @override
+  int? get lockVersion;
   @override // Joined standard fields might exist but we map what we need
   Map<String, dynamic>? get student;
   @override
@@ -541,13 +693,19 @@ mixin _$CreateFollowUpRequestDto {
   String? get status =>
       throw _privateConstructorUsedError; // DRAFT, FINAL (default FINAL usually if not draft)
   String? get surah => throw _privateConstructorUsedError;
+  int? get fromSurah => throw _privateConstructorUsedError;
+  int? get toSurah => throw _privateConstructorUsedError;
   int? get fromAyah => throw _privateConstructorUsedError;
   int? get toAyah => throw _privateConstructorUsedError;
+  int? get fromPage => throw _privateConstructorUsedError;
+  int? get toPage => throw _privateConstructorUsedError;
   double? get pagesCount => throw _privateConstructorUsedError;
   int? get rating => throw _privateConstructorUsedError;
+  int? get matnId => throw _privateConstructorUsedError;
   String? get matnName => throw _privateConstructorUsedError;
   String? get matnStatus => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  String? get idempotencyKey => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -568,13 +726,19 @@ abstract class $CreateFollowUpRequestDtoCopyWith<$Res> {
       String type,
       String? status,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
-      String? notes});
+      String? notes,
+      String? idempotencyKey});
 }
 
 /// @nodoc
@@ -597,13 +761,19 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
     Object? type = null,
     Object? status = freezed,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? idempotencyKey = freezed,
   }) {
     return _then(_value.copyWith(
       studentId: null == studentId
@@ -630,6 +800,14 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -638,6 +816,14 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -645,6 +831,10 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -657,6 +847,10 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
       notes: freezed == notes
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
+      idempotencyKey: freezed == idempotencyKey
+          ? _value.idempotencyKey
+          : idempotencyKey // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -678,13 +872,19 @@ abstract class _$$CreateFollowUpRequestDtoImplCopyWith<$Res>
       String type,
       String? status,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
-      String? notes});
+      String? notes,
+      String? idempotencyKey});
 }
 
 /// @nodoc
@@ -706,13 +906,19 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
     Object? type = null,
     Object? status = freezed,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? idempotencyKey = freezed,
   }) {
     return _then(_$CreateFollowUpRequestDtoImpl(
       studentId: null == studentId
@@ -739,6 +945,14 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -747,6 +961,14 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -754,6 +976,10 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -766,6 +992,10 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
       notes: freezed == notes
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
+      idempotencyKey: freezed == idempotencyKey
+          ? _value.idempotencyKey
+          : idempotencyKey // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -781,13 +1011,19 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
       required this.type,
       this.status,
       this.surah,
+      this.fromSurah,
+      this.toSurah,
       this.fromAyah,
       this.toAyah,
+      this.fromPage,
+      this.toPage,
       this.pagesCount,
       this.rating,
+      this.matnId,
       this.matnName,
       this.matnStatus,
-      this.notes});
+      this.notes,
+      this.idempotencyKey});
 
   factory _$CreateFollowUpRequestDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$CreateFollowUpRequestDtoImplFromJson(json);
@@ -808,23 +1044,35 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
   @override
   final String? surah;
   @override
+  final int? fromSurah;
+  @override
+  final int? toSurah;
+  @override
   final int? fromAyah;
   @override
   final int? toAyah;
   @override
+  final int? fromPage;
+  @override
+  final int? toPage;
+  @override
   final double? pagesCount;
   @override
   final int? rating;
+  @override
+  final int? matnId;
   @override
   final String? matnName;
   @override
   final String? matnStatus;
   @override
   final String? notes;
+  @override
+  final String? idempotencyKey;
 
   @override
   String toString() {
-    return 'CreateFollowUpRequestDto(studentId: $studentId, circleId: $circleId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromAyah: $fromAyah, toAyah: $toAyah, pagesCount: $pagesCount, rating: $rating, matnName: $matnName, matnStatus: $matnStatus, notes: $notes)';
+    return 'CreateFollowUpRequestDto(studentId: $studentId, circleId: $circleId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, fromPage: $fromPage, toPage: $toPage, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, idempotencyKey: $idempotencyKey)';
   }
 
   @override
@@ -841,36 +1089,52 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.surah, surah) || other.surah == surah) &&
+            (identical(other.fromSurah, fromSurah) ||
+                other.fromSurah == fromSurah) &&
+            (identical(other.toSurah, toSurah) || other.toSurah == toSurah) &&
             (identical(other.fromAyah, fromAyah) ||
                 other.fromAyah == fromAyah) &&
             (identical(other.toAyah, toAyah) || other.toAyah == toAyah) &&
+            (identical(other.fromPage, fromPage) ||
+                other.fromPage == fromPage) &&
+            (identical(other.toPage, toPage) || other.toPage == toPage) &&
             (identical(other.pagesCount, pagesCount) ||
                 other.pagesCount == pagesCount) &&
             (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.matnId, matnId) || other.matnId == matnId) &&
             (identical(other.matnName, matnName) ||
                 other.matnName == matnName) &&
             (identical(other.matnStatus, matnStatus) ||
                 other.matnStatus == matnStatus) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.idempotencyKey, idempotencyKey) ||
+                other.idempotencyKey == idempotencyKey));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      studentId,
-      circleId,
-      recordDate,
-      type,
-      status,
-      surah,
-      fromAyah,
-      toAyah,
-      pagesCount,
-      rating,
-      matnName,
-      matnStatus,
-      notes);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        studentId,
+        circleId,
+        recordDate,
+        type,
+        status,
+        surah,
+        fromSurah,
+        toSurah,
+        fromAyah,
+        toAyah,
+        fromPage,
+        toPage,
+        pagesCount,
+        rating,
+        matnId,
+        matnName,
+        matnStatus,
+        notes,
+        idempotencyKey
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -895,13 +1159,19 @@ abstract class _CreateFollowUpRequestDto implements CreateFollowUpRequestDto {
       required final String type,
       final String? status,
       final String? surah,
+      final int? fromSurah,
+      final int? toSurah,
       final int? fromAyah,
       final int? toAyah,
+      final int? fromPage,
+      final int? toPage,
       final double? pagesCount,
       final int? rating,
+      final int? matnId,
       final String? matnName,
       final String? matnStatus,
-      final String? notes}) = _$CreateFollowUpRequestDtoImpl;
+      final String? notes,
+      final String? idempotencyKey}) = _$CreateFollowUpRequestDtoImpl;
 
   factory _CreateFollowUpRequestDto.fromJson(Map<String, dynamic> json) =
       _$CreateFollowUpRequestDtoImpl.fromJson;
@@ -919,19 +1189,31 @@ abstract class _CreateFollowUpRequestDto implements CreateFollowUpRequestDto {
   @override // DRAFT, FINAL (default FINAL usually if not draft)
   String? get surah;
   @override
+  int? get fromSurah;
+  @override
+  int? get toSurah;
+  @override
   int? get fromAyah;
   @override
   int? get toAyah;
   @override
+  int? get fromPage;
+  @override
+  int? get toPage;
+  @override
   double? get pagesCount;
   @override
   int? get rating;
+  @override
+  int? get matnId;
   @override
   String? get matnName;
   @override
   String? get matnStatus;
   @override
   String? get notes;
+  @override
+  String? get idempotencyKey;
   @override
   @JsonKey(ignore: true)
   _$$CreateFollowUpRequestDtoImplCopyWith<_$CreateFollowUpRequestDtoImpl>
@@ -948,13 +1230,19 @@ mixin _$UpdateFollowUpRequestDto {
   String? get recordDate => throw _privateConstructorUsedError;
   String? get type => throw _privateConstructorUsedError;
   String? get surah => throw _privateConstructorUsedError;
+  int? get fromSurah => throw _privateConstructorUsedError;
+  int? get toSurah => throw _privateConstructorUsedError;
   int? get fromAyah => throw _privateConstructorUsedError;
   int? get toAyah => throw _privateConstructorUsedError;
+  int? get fromPage => throw _privateConstructorUsedError;
+  int? get toPage => throw _privateConstructorUsedError;
   double? get pagesCount => throw _privateConstructorUsedError;
   int? get rating => throw _privateConstructorUsedError;
+  int? get matnId => throw _privateConstructorUsedError;
   String? get matnName => throw _privateConstructorUsedError;
   String? get matnStatus => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  int? get lockVersion => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -972,13 +1260,19 @@ abstract class $UpdateFollowUpRequestDtoCopyWith<$Res> {
       {String? recordDate,
       String? type,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
-      String? notes});
+      String? notes,
+      int? lockVersion});
 }
 
 /// @nodoc
@@ -998,13 +1292,19 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
     Object? recordDate = freezed,
     Object? type = freezed,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? lockVersion = freezed,
   }) {
     return _then(_value.copyWith(
       recordDate: freezed == recordDate
@@ -1019,6 +1319,14 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -1027,6 +1335,14 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -1034,6 +1350,10 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -1047,6 +1367,10 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      lockVersion: freezed == lockVersion
+          ? _value.lockVersion
+          : lockVersion // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 }
@@ -1064,13 +1388,19 @@ abstract class _$$UpdateFollowUpRequestDtoImplCopyWith<$Res>
       {String? recordDate,
       String? type,
       String? surah,
+      int? fromSurah,
+      int? toSurah,
       int? fromAyah,
       int? toAyah,
+      int? fromPage,
+      int? toPage,
       double? pagesCount,
       int? rating,
+      int? matnId,
       String? matnName,
       String? matnStatus,
-      String? notes});
+      String? notes,
+      int? lockVersion});
 }
 
 /// @nodoc
@@ -1089,13 +1419,19 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
     Object? recordDate = freezed,
     Object? type = freezed,
     Object? surah = freezed,
+    Object? fromSurah = freezed,
+    Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
+    Object? fromPage = freezed,
+    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
+    Object? matnId = freezed,
     Object? matnName = freezed,
     Object? matnStatus = freezed,
     Object? notes = freezed,
+    Object? lockVersion = freezed,
   }) {
     return _then(_$UpdateFollowUpRequestDtoImpl(
       recordDate: freezed == recordDate
@@ -1110,6 +1446,14 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.surah
           : surah // ignore: cast_nullable_to_non_nullable
               as String?,
+      fromSurah: freezed == fromSurah
+          ? _value.fromSurah
+          : fromSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toSurah: freezed == toSurah
+          ? _value.toSurah
+          : toSurah // ignore: cast_nullable_to_non_nullable
+              as int?,
       fromAyah: freezed == fromAyah
           ? _value.fromAyah
           : fromAyah // ignore: cast_nullable_to_non_nullable
@@ -1118,6 +1462,14 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
+      fromPage: freezed == fromPage
+          ? _value.fromPage
+          : fromPage // ignore: cast_nullable_to_non_nullable
+              as int?,
+      toPage: freezed == toPage
+          ? _value.toPage
+          : toPage // ignore: cast_nullable_to_non_nullable
+              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -1125,6 +1477,10 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
       rating: freezed == rating
           ? _value.rating
           : rating // ignore: cast_nullable_to_non_nullable
+              as int?,
+      matnId: freezed == matnId
+          ? _value.matnId
+          : matnId // ignore: cast_nullable_to_non_nullable
               as int?,
       matnName: freezed == matnName
           ? _value.matnName
@@ -1138,6 +1494,10 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      lockVersion: freezed == lockVersion
+          ? _value.lockVersion
+          : lockVersion // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -1149,13 +1509,19 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
       {this.recordDate,
       this.type,
       this.surah,
+      this.fromSurah,
+      this.toSurah,
       this.fromAyah,
       this.toAyah,
+      this.fromPage,
+      this.toPage,
       this.pagesCount,
       this.rating,
+      this.matnId,
       this.matnName,
       this.matnStatus,
-      this.notes});
+      this.notes,
+      this.lockVersion});
 
   factory _$UpdateFollowUpRequestDtoImpl.fromJson(Map<String, dynamic> json) =>
       _$$UpdateFollowUpRequestDtoImplFromJson(json);
@@ -1167,23 +1533,35 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
   @override
   final String? surah;
   @override
+  final int? fromSurah;
+  @override
+  final int? toSurah;
+  @override
   final int? fromAyah;
   @override
   final int? toAyah;
   @override
+  final int? fromPage;
+  @override
+  final int? toPage;
+  @override
   final double? pagesCount;
   @override
   final int? rating;
+  @override
+  final int? matnId;
   @override
   final String? matnName;
   @override
   final String? matnStatus;
   @override
   final String? notes;
+  @override
+  final int? lockVersion;
 
   @override
   String toString() {
-    return 'UpdateFollowUpRequestDto(recordDate: $recordDate, type: $type, surah: $surah, fromAyah: $fromAyah, toAyah: $toAyah, pagesCount: $pagesCount, rating: $rating, matnName: $matnName, matnStatus: $matnStatus, notes: $notes)';
+    return 'UpdateFollowUpRequestDto(recordDate: $recordDate, type: $type, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, fromPage: $fromPage, toPage: $toPage, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, lockVersion: $lockVersion)';
   }
 
   @override
@@ -1195,23 +1573,48 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
                 other.recordDate == recordDate) &&
             (identical(other.type, type) || other.type == type) &&
             (identical(other.surah, surah) || other.surah == surah) &&
+            (identical(other.fromSurah, fromSurah) ||
+                other.fromSurah == fromSurah) &&
+            (identical(other.toSurah, toSurah) || other.toSurah == toSurah) &&
             (identical(other.fromAyah, fromAyah) ||
                 other.fromAyah == fromAyah) &&
             (identical(other.toAyah, toAyah) || other.toAyah == toAyah) &&
+            (identical(other.fromPage, fromPage) ||
+                other.fromPage == fromPage) &&
+            (identical(other.toPage, toPage) || other.toPage == toPage) &&
             (identical(other.pagesCount, pagesCount) ||
                 other.pagesCount == pagesCount) &&
             (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.matnId, matnId) || other.matnId == matnId) &&
             (identical(other.matnName, matnName) ||
                 other.matnName == matnName) &&
             (identical(other.matnStatus, matnStatus) ||
                 other.matnStatus == matnStatus) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.lockVersion, lockVersion) ||
+                other.lockVersion == lockVersion));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, recordDate, type, surah,
-      fromAyah, toAyah, pagesCount, rating, matnName, matnStatus, notes);
+  int get hashCode => Object.hash(
+      runtimeType,
+      recordDate,
+      type,
+      surah,
+      fromSurah,
+      toSurah,
+      fromAyah,
+      toAyah,
+      fromPage,
+      toPage,
+      pagesCount,
+      rating,
+      matnId,
+      matnName,
+      matnStatus,
+      notes,
+      lockVersion);
 
   @JsonKey(ignore: true)
   @override
@@ -1233,13 +1636,19 @@ abstract class _UpdateFollowUpRequestDto implements UpdateFollowUpRequestDto {
       {final String? recordDate,
       final String? type,
       final String? surah,
+      final int? fromSurah,
+      final int? toSurah,
       final int? fromAyah,
       final int? toAyah,
+      final int? fromPage,
+      final int? toPage,
       final double? pagesCount,
       final int? rating,
+      final int? matnId,
       final String? matnName,
       final String? matnStatus,
-      final String? notes}) = _$UpdateFollowUpRequestDtoImpl;
+      final String? notes,
+      final int? lockVersion}) = _$UpdateFollowUpRequestDtoImpl;
 
   factory _UpdateFollowUpRequestDto.fromJson(Map<String, dynamic> json) =
       _$UpdateFollowUpRequestDtoImpl.fromJson;
@@ -1251,19 +1660,31 @@ abstract class _UpdateFollowUpRequestDto implements UpdateFollowUpRequestDto {
   @override
   String? get surah;
   @override
+  int? get fromSurah;
+  @override
+  int? get toSurah;
+  @override
   int? get fromAyah;
   @override
   int? get toAyah;
   @override
+  int? get fromPage;
+  @override
+  int? get toPage;
+  @override
   double? get pagesCount;
   @override
   int? get rating;
+  @override
+  int? get matnId;
   @override
   String? get matnName;
   @override
   String? get matnStatus;
   @override
   String? get notes;
+  @override
+  int? get lockVersion;
   @override
   @JsonKey(ignore: true)
   _$$UpdateFollowUpRequestDtoImplCopyWith<_$UpdateFollowUpRequestDtoImpl>

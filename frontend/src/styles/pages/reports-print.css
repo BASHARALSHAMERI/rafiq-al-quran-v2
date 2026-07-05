@@ -156,6 +156,40 @@
     color: #047857 !important;
   }
 
+  /* ─── Soft colors for status badges (printing economy) ─── */
+  .fin-status-pill,
+  [class*="fin-status--"] {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+    border: 1px solid #d1d5db !important;
+  }
+  .badge,
+  [class*="Badge"],
+  [class*="badge"] {
+    background: #f3f4f6 !important;
+    color: #4b5563 !important;
+    border: 1px solid #d1d5db !important;
+  }
+  .fin-kpi-card__icon,
+  .fin-kpi-icon--emerald,
+  .fin-kpi-icon--blue,
+  .fin-kpi-icon--amber,
+  .fin-kpi-icon--rose {
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+  }
+  .text-indigo-600,
+  .text-emerald-600,
+  .text-amber-700,
+  .text-amber-600,
+  .text-teal-600 {
+    color: #6b7280 !important;
+  }
+  .bg-amber-100,
+  .bg-teal-100 {
+    background: #f3f4f6 !important;
+  }
+
   /* ─── KPIs grid ─── */
   .ctr-kpis-modern {
     display: grid !important;

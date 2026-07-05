@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Check, CreditCard, FileText } from "lucide-react";
 import { useExpenseInvoicesQuery, useApproveExpenseInvoiceMutation, usePayExpenseInvoiceMutation, useFinanceV2AccountsQuery, useCreateExpenseInvoiceMutation, useSuppliersQuery, useExpenseCategoriesQuery } from "../../features/finance-v2/finance-v2.hooks";
+import { useCentersQuery } from "../../features/org/org.hooks";
 import { FinanceDataTable, FinanceTableFooter } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
@@ -14,7 +15,23 @@ import {
 } from "../../shared/ui/feedback";
 import useClientPagination from "../../shared/ui/useClientPagination";
 
-export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", externalShowForm, onExternalFormClose }: { ar: boolean; canManage?: boolean; searchTerm?: string; externalShowForm?: boolean; onExternalFormClose?: () => void }) {
+export function FinanceExpensesTab({
+  ar,
+  canCreate = true,
+  canApprove = true,
+  canPay = true,
+  searchTerm = "",
+  externalShowForm,
+  onExternalFormClose
+}: {
+  ar: boolean;
+  canCreate?: boolean;
+  canApprove?: boolean;
+  canPay?: boolean;
+  searchTerm?: string;
+  externalShowForm?: boolean;
+  onExternalFormClose?: () => void;
+}) {
   const [centerId] = useState<number>();
   const [supplierId] = useState<number>();
   const [status] = useState<string>();
@@ -40,6 +57,10 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
 
   const suppliersQ = useSuppliersQuery();
   const categoriesQ = useExpenseCategoriesQuery();
+  const suppliers = useMemo(() => (suppliersQ.data ?? []).filter((supplier) => supplier.isActive !== false), [suppliersQ.data]);
+  const categories = useMemo(() => (categoriesQ.data ?? []).filter((category) => category.isActive !== false), [categoriesQ.data]);
+  const centersQ = useCentersQuery();
+  const centers = useMemo(() => (centersQ.data?.items ?? []).filter((center) => center.isActive !== false), [centersQ.data?.items]);
   const createM = useCreateExpenseInvoiceMutation();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -47,6 +68,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [payErrors, setPayErrors] = useState<Record<string, string>>({});
   const [createForm, setCreateForm] = useState({
+    centerId: "",
     supplierId: "",
     categoryId: "",
     invoiceNo: "",
@@ -59,6 +81,12 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
   useEffect(() => {
     if (externalShowForm) setIsCreateModalOpen(true);
   }, [externalShowForm]);
+
+  useEffect(() => {
+    if (!createForm.centerId && centers.length === 1) {
+      setCreateForm((current) => ({ ...current, centerId: String(centers[0].id) }));
+    }
+  }, [centers, createForm.centerId]);
 
   const handleCreateClose = () => {
     setIsCreateModalOpen(false);
@@ -83,6 +111,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
 
     try {
       await createM.mutateAsync({
+        centerId: createForm.centerId ? Number(createForm.centerId) : undefined,
         supplierId: createForm.supplierId ? Number(createForm.supplierId) : undefined,
         categoryId,
         invoiceNo: createForm.invoiceNo.trim() || undefined,
@@ -94,7 +123,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
       notifySuccess(ar ? "تم إنشاء فاتورة المصروف بنجاح" : "Expense invoice created successfully");
       handleCreateClose();
       setCreateErrors({});
-      setCreateForm({ supplierId: "", categoryId: "", invoiceNo: "", invoiceDate: new Date().toISOString().slice(0, 10), dueDate: "", description: "", amount: "" });
+      setCreateForm({ centerId: centers.length === 1 ? String(centers[0].id) : "", supplierId: "", categoryId: "", invoiceNo: "", invoiceDate: new Date().toISOString().slice(0, 10), dueDate: "", description: "", amount: "" });
     } catch (error) {
       const message = getLocalizedApiErrorMessage(error, {
         ar,
@@ -173,21 +202,22 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
           { id: "supplier", header: ar ? "المورد" : "Supplier", render: (row: any) => row.supplier?.name || "-" },
           { id: "category", header: ar ? "التصنيف" : "Category", render: (row: any) => row.category?.name || "-" },
           { id: "amount", header: ar ? "المبلغ" : "Amount", render: (row: any) => row.amount },
+          { id: "remaining", header: ar ? "المتبقي" : "Remaining", render: (row: any) => row.remainingAmount ?? row.amount },
           { id: "status", header: ar ? "الحالة" : "Status", render: (row: any) => <span className={`fin-badge ${row.status.toLowerCase()}`}>{row.status}</span> },
           {
             id: "actions",
             header: ar ? "إجراءات" : "Actions",
             render: (row: any) => (
               <div className="flex gap-2">
-                {canManage && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
+                {canApprove && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
                   <Button size="sm" variant="secondary" onClick={() => setApproveInvoiceId(row.id)}>
                     <Check className="w-4 h-4 mr-1" /> {ar ? "اعتماد" : "Approve"}
                   </Button>
                 )}
-                {canManage && (row.status === "APPROVED" || row.status === "PARTIALLY_PAID") && (
+                {canPay && (row.status === "APPROVED" || row.status === "PARTIALLY_PAID") && (
                   <Button size="sm" variant="primary" onClick={() => {
                     setSelectedInvoice(row);
-                    setPayAmount(row.amount); // assuming full payment as default
+                    setPayAmount(Number(row.remainingAmount ?? row.amount));
                     setIsPayModalOpen(true);
                   }}>
                     <CreditCard className="w-4 h-4 mr-1" /> {ar ? "دفع" : "Pay"}
@@ -217,7 +247,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
 
       {/* Create Expense Invoice Modal */}
       <Modal
-        isOpen={Boolean(isCreateModalOpen && canManage)}
+        isOpen={Boolean(isCreateModalOpen && canCreate)}
         onClose={handleCreateClose}
         title={ar ? "فاتورة مصروف جديدة" : "New Expense Invoice"}
         titleIcon={
@@ -244,13 +274,24 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
             </div>
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--lg">
+                <label>{ar ? "المركز" : "Center"}</label>
+                <select className="circlemod-select" value={createForm.centerId} onChange={(e) => setCreateForm((p) => ({ ...p, centerId: e.target.value }))}>
+                  <option value="">{ar ? "على مستوى الجمعية" : "Organization level"}</option>
+                  {centers.map((center) => (
+                    <option key={center.id} value={center.id}>{center.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="circlemod-row">
+              <div className="circlemod-field circlemod-field--lg">
                 <label>{ar ? "التصنيف" : "Category"} *</label>
                 <select id="expense-categoryId" className="circlemod-select" aria-invalid={Boolean(createErrors.categoryId)} value={createForm.categoryId} onChange={(e) => {
                   setCreateErrors((current) => ({ ...current, categoryId: "" }));
                   setCreateForm((p) => ({ ...p, categoryId: e.target.value }));
                 }}>
                   <option value="">{ar ? "اختر التصنيف..." : "Select category..."}</option>
-                  {(categoriesQ.data ?? []).map((c: any) => (
+                  {categories.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -270,7 +311,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
                 <label>{ar ? "المورد" : "Supplier"}</label>
                 <select className="circlemod-select" value={createForm.supplierId} onChange={(e) => setCreateForm((p) => ({ ...p, supplierId: e.target.value }))}>
                   <option value="">{ar ? "بدون مورد" : "No supplier"}</option>
-                  {(suppliersQ.data ?? []).map((s: any) => (
+                  {suppliers.map((s: any) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
@@ -309,7 +350,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
       </Modal>
 
       <Modal 
-        isOpen={Boolean(isPayModalOpen && canManage)}
+        isOpen={Boolean(isPayModalOpen && canPay)}
         onClose={() => setIsPayModalOpen(false)} 
         title={ar ? "دفع المصروف" : "Pay Expense"}
         titleIcon={
@@ -337,7 +378,7 @@ export function FinanceExpensesTab({ ar, canManage = true, searchTerm = "", exte
             <div className="circlemod-row">
               <div className="circlemod-field circlemod-field--sm">
                 <label>{ar ? "المبلغ" : "Amount"}</label>
-                <input id="expense-pay-amount" type="number" className="circlemod-input" aria-invalid={Boolean(payErrors.amount)} value={payAmount} onChange={(e) => {
+                <input id="expense-pay-amount" type="number" className="circlemod-input" aria-invalid={Boolean(payErrors.amount)} min="0.01" step="0.01" max={selectedInvoice?.remainingAmount ?? selectedInvoice?.amount} value={payAmount} onChange={(e) => {
                   setPayErrors((current) => ({ ...current, amount: "" }));
                   setPayAmount(Number(e.target.value));
                 }} />

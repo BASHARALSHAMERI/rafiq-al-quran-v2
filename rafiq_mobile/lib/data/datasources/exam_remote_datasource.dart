@@ -301,10 +301,14 @@ class ExamRemoteDataSourceImpl implements ExamRemoteDataSource {
       if (data is List) {
         return data.whereType<Map<String, dynamic>>().toList(growable: false);
       }
-      if (data is Map<String, dynamic> && data.containsKey('items')) {
-        final items = data['items'];
-        if (items is List) {
-          return items
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('data') && data['data'] is List) {
+          return (data['data'] as List)
+              .whereType<Map<String, dynamic>>()
+              .toList(growable: false);
+        }
+        if (data.containsKey('items') && data['items'] is List) {
+          return (data['items'] as List)
               .whereType<Map<String, dynamic>>()
               .toList(growable: false);
         }

@@ -67,11 +67,11 @@ describe("fixed asset workflow integration", () => {
         where: { id: context.accounts.centerFund.id }
       })
     ).currentBalance.toNumber();
-    await assetsService.postAssetAcquisition(context.scopes.manager, asset.id, {
+    await assetsService.postAssetAcquisition(context.scopes.treasurer, asset.id, {
       financeAccountId: context.accounts.centerFund.id
     });
     await expect(
-      assetsService.postAssetAcquisition(context.scopes.manager, asset.id, {
+      assetsService.postAssetAcquisition(context.scopes.treasurer, asset.id, {
         financeAccountId: context.accounts.centerFund.id
       })
     ).rejects.toThrow();

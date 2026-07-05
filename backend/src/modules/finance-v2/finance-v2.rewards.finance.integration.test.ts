@@ -54,24 +54,24 @@ describe("rewards workflow integration", () => {
 
     await rewardsService.submitRewardBatch(context.scopes.manager, batch.id, {});
     await rewardsService.approveRewardBatch(context.scopes.manager, batch.id, {});
-    await rewardsService.failRewardItem(context.scopes.manager, items[0].id, {
+    await rewardsService.failRewardItem(context.scopes.treasurer, items[0].id, {
       failureReason: "تعذر التسليم الاختباري"
     });
     expect((await financeTestPrisma.rewardItem.findUniqueOrThrow({ where: { id: items[0].id } })).status).toBe(
       RewardItemStatus.FAILED
     );
 
-    await rewardsService.payRewardBatch(context.scopes.manager, batch.id, {
+    await rewardsService.payRewardBatch(context.scopes.treasurer, batch.id, {
       payments: [{ itemId: items[1].id, method: PaymentMethod.CASH }]
     });
     expect((await financeTestPrisma.rewardBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
       RewardBatchStatus.PARTIALLY_PAID
     );
-    await rewardsService.payRewardBatch(context.scopes.manager, batch.id, {
+    await rewardsService.payRewardBatch(context.scopes.treasurer, batch.id, {
       payments: [{ itemId: items[0].id, method: PaymentMethod.CASH }]
     });
     await expect(
-      rewardsService.payRewardBatch(context.scopes.manager, batch.id, {
+      rewardsService.payRewardBatch(context.scopes.treasurer, batch.id, {
         payments: [{ itemId: items[0].id, method: PaymentMethod.CASH }]
       })
     ).rejects.toMatchObject({ code: "INVALID_STATE_TRANSITION" });

@@ -61,7 +61,7 @@ const assertNoActiveStudentFeeProfileOverlapTx = async (
   }
 ) => {
   // ponytail: serialize fee-profile writes per student; narrow the lock only if cross-center contention is measured.
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(${scope.organizationId}::integer, ${input.studentId}::integer)`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${scope.organizationId}::integer, ${input.studentId}::integer)`;
 
   const overlapping = await tx.studentFeeProfile.findFirst({
     where: {
@@ -616,7 +616,7 @@ export const billingService = {
 
   async cancelInvoice(scope: ScopeContext, invoiceId: number, input: { reason: string }) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanApprove(scope);
 
     const existing = await prisma.invoice.findFirst({
       where: {
@@ -731,7 +731,7 @@ export const billingService = {
     idempotencyKeyHeader?: string
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanExecute(scope);
 
     const idempotencyKey = parseIdempotencyKey(idempotencyKeyHeader);
 
@@ -905,6 +905,7 @@ export const billingService = {
     query: { centerId?: number; isActive?: boolean }
   ) {
     financeV2Domain.assertReadEnabled();
+    financeV2Domain.assertCanRead(scope);
     const where: Prisma.TuitionPlanWhereInput = {
       organizationId: scope.organizationId,
       ...(query.centerId ? { centerId: query.centerId } : {}),
@@ -932,7 +933,7 @@ export const billingService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
     await ensureFinanceCenter(scope, input.centerId);
 
     const plan = await prisma.tuitionPlan.create({
@@ -970,7 +971,7 @@ export const billingService = {
     }
   ) {
     financeV2Domain.assertWriteEnabled();
-    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.assertCanManageSettings(scope);
 
     const existing = await prisma.tuitionPlan.findFirst({
       where: { id: planId, organizationId: scope.organizationId },

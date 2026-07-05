@@ -9,6 +9,19 @@ COPY package.json package-lock.json ./
 # Copy Prisma schema before npm ci because postinstall runs prisma generate
 COPY prisma ./prisma
 
+# Install chromium and fonts for puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN apk add --no-cache \
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ca-certificates \
+      ttf-freefont \
+      font-noto-arabic
+
 # Install dependencies
 RUN npm ci
 

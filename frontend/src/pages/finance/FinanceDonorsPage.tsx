@@ -366,19 +366,22 @@ export default function FinanceDonorsPage() {
       const currencyCode = (donationForm.originalCurrencyCode || "YER").toUpperCase();
       const isYer = currencyCode === "YER";
       const exchangeRateToBase = isYer ? 1 : Number(donationForm.exchangeRateToBase);
-      if (!donorId) throw new Error(ar ? "اختر المتبرع" : "Select donor");
+      if (!donorId) throw new Error(ar ? "الرجاء تحديد المتبرع" : "Select donor");
       if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
-        throw new Error(ar ? "المبلغ الأصلي غير صحيح" : "Invalid original amount");
+        throw new Error(ar ? "مبلغ التبرع مطلوب ويجب أن يكون رقماً أكبر من الصفر" : "Invalid original amount");
       }
       if (originalAmount > 100000000) {
         throw new Error(ar ? "المبلغ يتجاوز الحد المسموح به (100,000,000)" : "Amount exceeds maximum allowed (100,000,000)");
       }
       if (!isYer && (!Number.isFinite(exchangeRateToBase) || exchangeRateToBase <= 0)) {
-        throw new Error(ar ? "سعر الصرف غير صحيح" : "Invalid exchange rate");
+        throw new Error(ar ? "سعر الصرف مطلوب ويجب أن يكون رقماً أكبر من الصفر" : "Invalid exchange rate");
       }
       if (!donationForm.donationDate) throw new Error(ar ? "تاريخ التبرع مطلوب" : "Donation date is required");
       if (donationForm.mode === "PLEDGED" && !donationForm.pledgeDueDate) {
         throw new Error(ar ? "تاريخ استحقاق التعهد مطلوب" : "Pledge due date is required");
+      }
+      if (!donationForm.purpose.trim()) {
+        throw new Error(ar ? "الغرض من التبرع مطلوب" : "Donation purpose is required");
       }
 
       const created = await createDonationM.mutateAsync({
@@ -467,13 +470,17 @@ export default function FinanceDonorsPage() {
     if (!selectedPledge) return;
     setFormError("");
     try {
+      if (!receiveForm.receivedDate) {
+        throw new Error(ar ? "تاريخ الاستلام مطلوب" : "Received date is required");
+      }
+
       // FA-UX-4B: only forward the rate when the pledge is in a foreign currency.
       const pledgedCode = (selectedPledge.originalCurrencyCode ?? "YER").toUpperCase();
       let exchangeRateToBase: number | undefined;
       if (pledgedCode !== "YER") {
         const parsed = Number(receiveForm.exchangeRateToBase);
         if (!Number.isFinite(parsed) || parsed <= 0) {
-          throw new Error(ar ? "سعر الصرف غير صحيح" : "Invalid exchange rate");
+          throw new Error(ar ? "سعر الصرف مطلوب ويجب أن يكون رقماً أكبر من الصفر" : "Invalid exchange rate");
         }
         exchangeRateToBase = parsed;
       }
@@ -975,7 +982,7 @@ export default function FinanceDonorsPage() {
           </div>
         }
       >
-        <form id="finance-receive-pledge-form" className="fin-form fin-form--modal" onSubmit={handleReceivePledge}>
+        <form id="finance-receive-pledge-form" className="fin-form fin-form--modal" noValidate onSubmit={handleReceivePledge}>
           <div className="mb-4">
             <label className="block text-xs font-bold mb-1 opacity-60">{ar ? "تاريخ الاستلام" : "Received Date"}</label>
             <input className="fin-input" type="date" value={receiveForm.receivedDate} onChange={(event) => setReceiveForm((previous) => ({ ...previous, receivedDate: event.target.value }))} required />

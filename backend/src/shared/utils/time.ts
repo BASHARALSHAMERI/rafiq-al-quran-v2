@@ -31,3 +31,7 @@ export const safeDate = (input: string, fieldName: string): Date => {
 
   return value;
 };
+
+export const toDateOnly = (date: Date): Date => {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+};

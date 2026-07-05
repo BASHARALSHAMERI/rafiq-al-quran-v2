@@ -340,6 +340,19 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  deleteDonor: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await donorsService.deleteDonor(req.scope, params.id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   listDonations: (async (req, res, next) => {
     try {
       if (!req.scope) {

@@ -10,7 +10,7 @@ export const usersController = {
       }
 
       const query = res.locals.validatedQuery as {
-        role?: import("@prisma/client").Role;
+        role?: import("@prisma/client").Role | import("@prisma/client").Role[];
         centerId?: number;
         circleId?: number;
       };

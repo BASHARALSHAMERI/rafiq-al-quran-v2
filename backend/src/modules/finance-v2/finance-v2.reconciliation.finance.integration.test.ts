@@ -21,7 +21,7 @@ describe("finance reconciliation and reports integration", () => {
   test("reconciles voucher, movement, journal, ledger, trial balance, and statements", async () => {
     const context = await createTaizFinanceContext();
     const amount = 75000;
-    const voucher = await financeAccountingService.createVoucher(context.scopes.manager, {
+    const voucher = await financeAccountingService.createVoucher(context.scopes.treasurer, {
       accountId: context.accounts.orgFund.id,
       voucherType: VoucherType.RECEIPT,
       sourceType: VoucherSourceType.MANUAL,
@@ -30,9 +30,9 @@ describe("finance reconciliation and reports integration", () => {
       accountingCategory: VoucherAccountingCategory.DONATION,
       voucherDate: new Date(TAIZ_FINANCE_FIXTURE.dates.openPeriod)
     });
-    await financeAccountingService.submitVoucher(context.scopes.manager, voucher.id, {});
+    await financeAccountingService.submitVoucher(context.scopes.treasurer, voucher.id, {});
     await financeAccountingService.approveVoucher(context.scopes.manager, voucher.id, {});
-    await financeAccountingService.postVoucher(context.scopes.manager, voucher.id, {});
+    await financeAccountingService.postVoucher(context.scopes.treasurer, voucher.id, {});
 
     const movement = await financeTestPrisma.financeAccountMovement.findUniqueOrThrow({
       where: { voucherId: voucher.id }
