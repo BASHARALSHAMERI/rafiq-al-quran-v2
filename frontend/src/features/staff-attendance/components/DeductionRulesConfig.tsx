@@ -5,6 +5,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { Input } from "../../../components/ui/Input";
+import Modal from "../../../components/ui/Modal";
 import { Select } from "../../../components/ui/Select";
 import { notifyError, notifySuccess } from "../../../shared/ui/feedback";
 import type { DeductionCalcType, DeductionRule, DeductionTrigger } from "../staff-attendance.api";
@@ -118,6 +119,8 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
 
   const openEdit = (rule: DeductionRule) => {
     setEditingTrigger(rule.triggerType);
+    setNewTrigger(rule.triggerType);
+    setShowNew(true);
     setEditor(toEditorState(rule));
   };
 
@@ -187,7 +190,6 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
           </div>
         ) : (
           rules.map((rule) => {
-            const isEditing = editingTrigger === rule.triggerType;
             return (
               <div
                 key={rule.id}
@@ -201,18 +203,8 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
                     {getCalcTypeLabel(rule.deductionType, ar)}
                   </Badge>
                 </div>
-
-                {isEditing ? (
-                  <RuleEditor
-                    ar={ar}
-                    editor={editor}
-                    setEditor={setEditor}
-                    onCancel={resetEditor}
-                    onSave={() => saveRule(rule.triggerType)}
-                    isPending={upsertRule.isPending}
-                  />
-                ) : (
-                  <div className="staff-ops-rule-card__detail">
+                
+                <div className="staff-ops-rule-card__detail">
                     <div className="staff-ops-rule-card__field">
                       <span className="staff-ops-person__sub">{ar ? "المبلغ" : "Amount"}</span>
                       <strong className="text-rose-600">{rule.amount.toFixed(2)} YER</strong>
@@ -246,32 +238,58 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
                       </Button>
                     </div>
                   </div>
-                )}
               </div>
             );
           })
         )}
       </div>
 
-      {showNew ? (
-        <div className="staff-ops-modal-overlay" onClick={resetEditor}>
-          <div className="staff-ops-modal staff-ops-modal--deduction-rule" onClick={(event) => event.stopPropagation()}>
-            <div className="staff-ops-modal__header">
-              <h3>{ar ? "قاعدة خصم جديدة" : "New Deduction Rule"}</h3>
-              <button type="button" className="staff-ops-modal__close" onClick={resetEditor}>
-                ×
-              </button>
+      <Modal
+        isOpen={showNew}
+        onClose={resetEditor}
+        size="lg"
+        title={
+          editingTrigger
+            ? ar ? "تعديل قاعدة خصم" : "Edit Deduction Rule"
+            : ar ? "إضافة قاعدة خصم" : "New Deduction Rule"
+        }
+        titleIcon={
+          <div className="ctr-modal-head-icon">
+            <Settings className="w-5 h-5" />
+          </div>
+        }
+        panelClassName="ctr-center-modal-panel lib-style"
+        bodyClassName="ctr-center-modal-body"
+        footerClassName="ctr-center-modal-footer"
+        footer={
+          <>
+            <Button variant="ghost" onClick={resetEditor} disabled={upsertRule.isPending}>
+              {ar ? "إلغاء" : "Cancel"}
+            </Button>
+            <Button variant="primary" isLoading={upsertRule.isPending} onClick={() => saveRule(newTrigger)}>
+              {ar ? "حفظ" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <div className="ctr-center-modal">
+          <div className="glass-form-section mb-6">
+            <div className="ctr-form-section__head mb-4 text-emerald-600 dark:text-emerald-400">
+              <Settings className="w-5 h-5" />
+              <span>{ar ? "تفاصيل القاعدة" : "Rule Details"}</span>
             </div>
-            <div className="staff-ops-modal__body">
-              <div className="staff-ops-modal__field">
-                <label className="input-label">{ar ? "نوع المخالفة" : "Trigger Type"}</label>
+            <div className="flex flex-col gap-5">
+              <div className="ctr-fg">
+                <label className="text-emerald-700 font-semibold mb-2 block">{ar ? "نوع المخالفة *" : "Trigger Type *"}</label>
                 <Select
+                  className="ctr-form-input glass-input w-full"
                   value={newTrigger}
                   onChange={(event) => setNewTrigger(event.target.value as DeductionTrigger)}
                   options={ALL_TRIGGERS.map((trigger) => ({
                     value: trigger,
                     label: getTriggerLabel(trigger, ar)
                   }))}
+                  disabled={!!editingTrigger}
                 />
               </div>
               <RuleEditor
@@ -282,11 +300,12 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
                 onSave={() => saveRule(newTrigger)}
                 isPending={upsertRule.isPending}
                 compact
+                hideActions
               />
             </div>
           </div>
         </div>
-      ) : null}
+      </Modal>
     </section>
   );
 }
@@ -298,7 +317,8 @@ function RuleEditor({
   onCancel,
   onSave,
   isPending,
-  compact = false
+  compact = false,
+  hideActions = false
 }: {
   ar: boolean;
   editor: RuleEditorState;
@@ -307,6 +327,7 @@ function RuleEditor({
   onSave: () => void;
   isPending: boolean;
   compact?: boolean;
+  hideActions?: boolean;
 }) {
   return (
     <div className={compact ? "staff-ops-rule-card__form staff-ops-rule-card__form--compact" : "staff-ops-rule-card__form"}>
@@ -407,21 +428,24 @@ function RuleEditor({
         />
         <span>{ar ? "القاعدة مفعلة" : "Rule is active"}</span>
       </label>
-      <div className="staff-ops-rule-card__actions">
-        <Button
-          type="button"
-          size="sm"
-          variant="success"
-          leftIcon={<Save className="w-3.5 h-3.5" />}
-          onClick={onSave}
-          isLoading={isPending}
-        >
-          {ar ? "حفظ" : "Save"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
-          {ar ? "إلغاء" : "Cancel"}
-        </Button>
-      </div>
+      
+      {!hideActions && (
+        <div className="staff-ops-rule-card__actions">
+          <Button
+            type="button"
+            size="sm"
+            variant="success"
+            leftIcon={<Save className="w-3.5 h-3.5" />}
+            onClick={onSave}
+            isLoading={isPending}
+          >
+            {ar ? "حفظ" : "Save"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            {ar ? "إلغاء" : "Cancel"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
