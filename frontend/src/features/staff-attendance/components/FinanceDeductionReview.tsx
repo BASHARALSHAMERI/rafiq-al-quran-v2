@@ -218,11 +218,20 @@ export function FinanceDeductionReview({
 
   const handleGenerate = () => {
     generateMutation.mutate(
-      { month: Number(filterMonth), year: Number(filterYear) },
+      { 
+        month: Number(filterMonth), 
+        year: Number(filterYear),
+        ...(effectiveCenterId !== undefined ? { centerId: effectiveCenterId } : {})
+      },
       {
         onSuccess: (response) => {
           const generatedCount = response?.data?.generatedCount ?? response?.generatedCount ?? 0;
-          notifySuccess(ar ? `تم توليد أو تحديث ${generatedCount} من أحداث الخصم` : `Generated or updated ${generatedCount} deduction events`);
+          if (generatedCount === 0) {
+            notifySuccess(ar ? "لم يتم توليد خصومات. تأكد من وجود سجلات حضور/زيارات وملفات رواتب نشطة للشهر والمركز المحدد." : "No deductions generated. Ensure there are active payroll profiles and violation records for the selected month and center.");
+          } else {
+            notifySuccess(ar ? `تم توليد أو تحديث ${generatedCount} من أحداث الخصم` : `Generated or updated ${generatedCount} deduction events`);
+          }
+          eventsQuery.refetch();
         },
         onError: (error) => notifyError(getLocalizedApiErrorMessage(error, { ar, fallback: entityFeedback.error(ar, "generate", DEDUCTION_EVENTS_ENTITY) }))
       }

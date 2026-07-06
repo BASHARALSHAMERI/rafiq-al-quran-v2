@@ -27,8 +27,8 @@ export const financeDeductionController = {
   generateDeductions: (async (req, res, next) => {
     try {
       if (!req.scope) throw new AppError("Scope not resolved", 500);
-      const { month, year } = res.locals.validatedBody;
-      const data = await financeDeductionService.generateMonthlyDeductions(req.scope, month, year);
+      const { month, year, centerId } = res.locals.validatedBody;
+      const data = await financeDeductionService.generateMonthlyDeductions(req.scope, month, year, centerId);
       res.json({ ok: true, data });
     } catch (error) {
       next(error);

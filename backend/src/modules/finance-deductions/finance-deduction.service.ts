@@ -9,8 +9,11 @@ import {
   LeaveRequestStatus,
   LeaveType,
   Role,
-  VisitPlanItemStatus
+  VisitPlanItemStatus,
+  AuditAction,
+  AuditEntityType
 } from "@prisma/client";
+import { auditLogger } from "../../shared/audit/audit-log";
 
 const mapDeductionTypeToDb = (value: string | DeductionCalcType): DeductionCalcType => {
   const normalized = String(value).toUpperCase();
@@ -193,7 +196,7 @@ export const financeDeductionService = {
   // ==========================================
   // Event Generation
   // ==========================================
-  async generateMonthlyDeductions(scope: ScopeContext, month: number, year: number) {
+  async generateMonthlyDeductions(scope: ScopeContext, month: number, year: number, centerId?: number) {
     if (scope.role !== Role.SUPER_ADMIN) {
       throw new AppError("فقط مدير النظام يمكنه توليد الاستقطاعات", 403);
     }
@@ -205,13 +208,34 @@ export const financeDeductionService = {
 
     if (rules.length === 0) return { generatedCount: 0, message: "No active deduction rules found" };
 
-    // Get all users in org
-    const staff = await prisma.user.findMany({
-      where: { organizationId: orgId },
-      select: { id: true, role: true }
+    const { startDate, endDate } = getMonthRange(month, year);
+
+    // Get PayrollProfiles matching criteria
+    const payrollProfiles = await prisma.payrollProfile.findMany({
+      where: {
+        organizationId: orgId,
+        isActive: true,
+        effectiveFrom: { lte: endDate },
+        OR: [
+          { effectiveTo: null },
+          { effectiveTo: { gte: startDate } }
+        ],
+        ...(centerId ? { centerId } : {})
+      },
+      select: {
+        userId: true,
+        user: { select: { role: true } }
+      }
     });
 
-    const { startDate, endDate } = getMonthRange(month, year);
+    // Extract unique users
+    const uniqueUserMap = new Map<number, { id: number; role: Role }>();
+    for (const p of payrollProfiles) {
+      if (!uniqueUserMap.has(p.userId)) {
+        uniqueUserMap.set(p.userId, { id: p.userId, role: p.user.role });
+      }
+    }
+    const staff = Array.from(uniqueUserMap.values());
 
     let generatedCount = 0;
 
@@ -283,6 +307,24 @@ export const financeDeductionService = {
         }
       }
     }
+
+    await auditLogger.log({
+      organizationId: orgId,
+      actorUserId: scope.userId,
+      actorRole: scope.role,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.PAYROLL_BATCH,
+      entityId: 0,
+      centerId: centerId ?? undefined,
+      summary: `توليد الاستقطاعات المالية - شهر ${month}/${year}`,
+      metadata: {
+        month,
+        year,
+        centerId: centerId ?? "ALL",
+        profilesChecked: staff.length,
+        generatedCount
+      }
+    });
 
     return { generatedCount, message: `Successfully generated/updated ${generatedCount} deduction events.` };
   },
