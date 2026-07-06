@@ -32,7 +32,7 @@ const deductionEventStatusQuerySchema = z.enum([
 export const upsertRuleSchema = z
   .object({
     triggerType: z.nativeEnum(DeductionTriggerType),
-    thresholdCount: z.number().int().min(1),
+    thresholdCount: z.number().int().min(1).max(31),
     amount: z.number().min(500),
     deductionType: deductionCalcTypeInputSchema,
     isActive: z.boolean().default(true),

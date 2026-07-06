@@ -137,8 +137,8 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
       return;
     }
     
-    if (!editor.thresholdCount || Number(editor.thresholdCount) < 1) {
-      notifyError(ar ? "الحد الأدنى للتفعيل مطلوب ويجب أن يكون 1 على الأقل." : "Threshold count is required and must be at least 1.");
+    if (!editor.thresholdCount || Number(editor.thresholdCount) < 1 || Number(editor.thresholdCount) > 31) {
+      notifyError(ar ? "الحد الأدنى للتفعيل مطلوب ويجب أن يكون بين 1 و 31." : "Threshold count is required and must be between 1 and 31.");
       return;
     }
 
@@ -377,6 +377,7 @@ function RuleEditor({
         <Input
           type="number"
           min={1}
+          max={31}
           step={1}
           required
           value={editor.thresholdCount}
