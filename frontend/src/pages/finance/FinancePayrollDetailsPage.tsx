@@ -118,13 +118,31 @@ export default function FinancePayrollDetailsPage() {
   const summary = useMemo(() => {
     if (!batch) return null;
     let totalBase = 0, totalBonus = 0, totalDeduction = 0, totalNet = 0;
+    let paidCount = 0, paidAmount = 0;
+    let excludedCount = 0, excludedAmount = 0;
     for (const item of batch.items || []) {
       totalBase += item.baseAmount;
       totalBonus += item.bonusAmount;
       totalDeduction += item.deductionAmount;
       totalNet += item.netAmount;
+      if (item._duplicatePaid) {
+        excludedCount++;
+        excludedAmount += item.netAmount;
+      } else if (item.status === "PAID") {
+        paidCount++;
+        paidAmount += item.netAmount;
+      }
     }
-    return { totalBase, totalBonus, totalDeduction, totalNet, count: batch.items?.length || 0 };
+    return { 
+      totalBase, totalBonus, totalDeduction, totalNet, 
+      count: batch.items?.length || 0,
+      paidCount,
+      paidAmount,
+      excludedCount,
+      excludedAmount,
+      remainingCount: (batch.items?.length || 0) - paidCount - excludedCount,
+      remainingAmount: totalNet - paidAmount - excludedAmount
+    };
   }, [batch]);
 
   if (isLoading) {
@@ -176,31 +194,52 @@ export default function FinancePayrollDetailsPage() {
       }
       kpis={
         summary ? (
-          <div className="ctr-kpis-modern">
-            <PayrollKpi 
-              icon={Users} 
-              cls="amber" 
-              val={summary.count} 
-              label={ar ? "الموظفين" : "Employees"} 
-            />
-            <PayrollKpi 
-              icon={Banknote} 
-              cls="brand" 
-              val={<FinanceMoney amount={summary.totalBase + summary.totalBonus} baseCurrency="YER" />} 
-              label={ar ? "إجمالي الاستحقاقات" : "Total Earnings"} 
-            />
-            <PayrollKpi 
-              icon={ShieldMinus} 
-              cls="rose" 
-              val={<FinanceMoney amount={summary.totalDeduction} baseCurrency="YER" />} 
-              label={ar ? "الاستقطاعات" : "Deductions"} 
-            />
-            <PayrollKpi 
-              icon={Coins} 
-              cls="emerald" 
-              val={<FinanceMoney amount={summary.totalNet} baseCurrency="YER" />} 
-              label={ar ? "صافي الصرف" : "Total Net"} 
-            />
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-sm text-blue-800 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <p>
+                {ar ? "تنبيه: الصرف الجزئي يعني صرف رواتب بعض الموظفين من المسير (وتأجيل البقية)، ولا يعني تقسيط راتب الموظف الواحد. يتم صرف صافي الراتب للموظف دفعة واحدة." 
+                    : "Notice: Partial payment means paying some employees from the batch, not paying an installment of one employee's salary. The employee's net salary is paid in full."}
+              </p>
+            </div>
+            <div className="ctr-kpis-modern">
+              <PayrollKpi 
+                icon={Users} 
+                cls="amber" 
+                val={summary.count} 
+                label={ar ? "إجمالي الموظفين" : "Total Employees"} 
+              />
+              <PayrollKpi 
+                icon={Coins} 
+                cls="emerald" 
+                val={<FinanceMoney amount={summary.totalNet} baseCurrency="YER" />} 
+                label={ar ? "إجمالي المسير" : "Total Batch"} 
+              />
+              {(batch.status === "PARTIALLY_PAID" || batch.status === "PAID") && (
+                <PayrollKpi 
+                  icon={Check} 
+                  cls="brand" 
+                  val={<FinanceMoney amount={summary.paidAmount} baseCurrency="YER" />} 
+                  label={ar ? `المصروف فعلياً (${summary.paidCount})` : `Actually Paid (${summary.paidCount})`} 
+                />
+              )}
+              {summary.excludedCount > 0 && (
+                <PayrollKpi 
+                  icon={ShieldMinus} 
+                  cls="rose" 
+                  val={<FinanceMoney amount={summary.excludedAmount} baseCurrency="YER" />} 
+                  label={ar ? `المستبعد/المكرر (${summary.excludedCount})` : `Excluded/Duplicate (${summary.excludedCount})`} 
+                />
+              )}
+              {summary.remainingCount >= 0 && (
+                <PayrollKpi 
+                  icon={Banknote} 
+                  cls="amber" 
+                  val={<FinanceMoney amount={summary.remainingAmount} baseCurrency="YER" />} 
+                  label={ar ? `متبقي لـ ${summary.remainingCount} موظف` : `Remaining for ${summary.remainingCount}`} 
+                />
+              )}
+            </div>
           </div>
         ) : undefined
       }
@@ -237,20 +276,40 @@ export default function FinancePayrollDetailsPage() {
             },
             {
               header: ar ? "الحالة" : "Status",
-              render: (item) => (
-                <div className="flex flex-col gap-1">
-                  <FinanceStatusBadge status={item.status} label={item.status === 'PAID' ? (ar ? 'مصروف' : 'Paid') : item.status === 'FAILED' ? (ar ? 'فشل الصرف' : 'Failed') : (ar ? 'بانتظار الصرف' : 'Pending')} />
-                  {item.failureReason && (
-                    <span className="text-xs text-rose-600 max-w-[150px] truncate" title={item.failureReason}>{item.failureReason}</span>
-                  )}
-                </div>
-              )
+              render: (item) => {
+                if (item._duplicatePaid) {
+                  return (
+                    <div className="flex flex-col gap-1">
+                      <FinanceStatusBadge status="FAILED" label={ar ? "مكرر / مستبعد" : "Duplicate / Excluded"} />
+                      <span className="text-xs text-rose-600 max-w-[150px] truncate" title={ar ? "تم الصرف مسبقاً" : "Already Paid"}>
+                        {ar ? "تم الصرف في مسير آخر" : "Paid in another batch"}
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex flex-col gap-1">
+                    <FinanceStatusBadge status={item.status} label={item.status === 'PAID' ? (ar ? 'مصروف' : 'Paid') : item.status === 'FAILED' ? (ar ? 'فشل الصرف' : 'Failed') : (ar ? 'بانتظار الصرف' : 'Pending')} />
+                    {item.failureReason && (
+                      <span className="text-xs text-rose-600 max-w-[150px] truncate" title={item.failureReason}>
+                        {item.status === 'FAILED' ? (ar ? `فشل: ${item.failureReason}` : `Failed: ${item.failureReason}`) : item.failureReason}
+                      </span>
+                    )}
+                  </div>
+                );
+              }
             },
             {
               header: ar ? "الصرف/السند" : "Payment/Voucher",
               render: (item) => (
                 <div className="flex flex-col gap-1 text-xs">
-                  {item.status === "PAID" && item.voucherId ? (
+                  {item._duplicatePaid ? (
+                    <div className="flex items-center gap-1 font-bold text-slate-500" title={ar ? "لا يدخل هذا المبلغ ضمن المتبقي للصرف" : "This amount is not included in the remaining amount"}>
+                      <Receipt size={14} />
+                      {ar ? `صُرف سابقاً في مسير #${item._duplicatePaid.batchId}` : `Paid previously in batch #${item._duplicatePaid.batchId}`}
+                      {item._duplicatePaid.voucherId ? ` — السند #${item._duplicatePaid.voucherId}` : ''}
+                    </div>
+                  ) : item.status === "PAID" && item.voucherId ? (
                     <div className="flex items-center gap-1 font-bold text-emerald-600">
                       <Receipt size={14} />
                       {item.voucher?.voucherNo ?? `#${item.voucherId}`}
@@ -264,30 +323,39 @@ export default function FinancePayrollDetailsPage() {
             },
             {
               header: ar ? "الإجراءات" : "Actions",
-              render: (item) => (
-                <div className="flex items-center gap-2">
-                  {isAdmin && PAYABLE_BATCH_STATUSES.has(batch.status) && (item.status === "PENDING" || item.status === "FAILED") && (
-                    <>
-                      <button
-                        type="button"
-                        className="fin-action-btn approve"
-                        title={ar ? "صرف الراتب" : "Pay Salary"}
-                        onClick={() => setPaymentDraft({ item, method: "TRANSFER", reference: "" })}
-                      >
-                        <CreditCard size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="fin-action-btn delete"
-                        title={ar ? "تسجيل فشل الصرف" : "Mark as Failed"}
-                        onClick={() => setFailureDraft({ item, reason: "" })}
-                      >
-                        <AlertCircle size={16} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )
+              render: (item) => {
+                if (item._duplicatePaid) {
+                  return (
+                    <div className="text-xs text-slate-500 font-medium">
+                      {ar ? `مكرر (مسير #${item._duplicatePaid.batchId})` : `Duplicate (Batch #${item._duplicatePaid.batchId})`}
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex items-center gap-2">
+                    {isAdmin && PAYABLE_BATCH_STATUSES.has(batch.status) && (item.status === "PENDING" || item.status === "FAILED") && (
+                      <>
+                        <button
+                          type="button"
+                          className="fin-action-btn approve"
+                          title={ar ? "صرف الراتب" : "Pay Salary"}
+                          onClick={() => setPaymentDraft({ item, method: "TRANSFER", reference: "" })}
+                        >
+                          <CreditCard size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="fin-action-btn delete"
+                          title={ar ? "تسجيل فشل الصرف" : "Mark as Failed"}
+                          onClick={() => setFailureDraft({ item, reason: "" })}
+                        >
+                          <AlertCircle size={16} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              }
             }
           ]}
           rowKey="id"

@@ -409,11 +409,41 @@ export const payrollService = {
       throw financeV2Domain.financeError("Payroll batch not found", 404, "NOT_FOUND");
     }
 
-    if (!scope.allAccess && batch.centerId && batch.centerId !== scope.centerId) {
-      throw financeV2Domain.financeError("Access denied", 403, "ACCESS_DENIED");
+    financeV2Domain.ensureCenterAllowed(scope, batch.centerId);
+
+    const userIds = batch.items.map((i) => i.beneficiaryUserId);
+    const duplicates = await prisma.payrollItem.findMany({
+      where: {
+        batchId: { not: batchId },
+        beneficiaryUserId: { in: userIds },
+        status: "PAID",
+        batch: {
+          periodYear: batch.periodYear,
+          periodMonth: batch.periodMonth,
+          organizationId: scope.organizationId,
+          status: { notIn: ["REJECTED", "CANCELLED"] }
+        }
+      },
+      select: { beneficiaryUserId: true, batchId: true, voucherId: true }
+    });
+
+    const duplicateMap = new Map<number, { batchId: number; voucherId: number | null }>();
+    for (const dup of duplicates) {
+      duplicateMap.set(dup.beneficiaryUserId, { batchId: dup.batchId, voucherId: dup.voucherId });
     }
 
-    return batch;
+    const modifiedBatch = {
+      ...batch,
+      items: batch.items.map((item) => {
+        const dup = duplicateMap.get(item.beneficiaryUserId);
+        if (dup) {
+          return { ...item, _duplicatePaid: dup };
+        }
+        return item;
+      })
+    };
+
+    return modifiedBatch;
   },
 
   async createPayrollBatch(
@@ -443,7 +473,7 @@ export const payrollService = {
         centerId: input.centerId ?? null,
         periodYear: input.periodYear,
         periodMonth: input.periodMonth,
-        status: { in: ["DRAFT", "SUBMITTED", "APPROVED", "IN_PROGRESS", "PARTIALLY_PAID", "PAID"] }
+        status: { in: ["DRAFT", "SUBMITTED", "APPROVED", "IN_PROGRESS", "PARTIALLY_PAID", "PAID", "CLOSED"] }
       }
     });
 
@@ -823,13 +853,36 @@ export const payrollService = {
               originalCurrencyCode: true,
               exchangeRateToBase: true,
               status: true,
-              voucherId: true
+              voucherId: true,
+              beneficiaryUserId: true
             }
           });
           if (!item) throw financeV2Domain.financeError("Payroll item not found", 404, "ENTITY_NOT_FOUND");
           
           if (item.status === PayrollItemStatus.PAID || item.voucherId) {
             continue;
+          }
+
+          const duplicatePaid = await tx.payrollItem.findFirst({
+            where: {
+              batchId: { not: batch.id },
+              beneficiaryUserId: item.beneficiaryUserId,
+              status: "PAID",
+              batch: {
+                periodYear: batch.periodYear,
+                periodMonth: batch.periodMonth,
+                organizationId: scope.organizationId,
+                status: { notIn: ["REJECTED", "CANCELLED"] }
+              }
+            }
+          });
+
+          if (duplicatePaid) {
+            throw financeV2Domain.financeError(
+              "تم صرف راتب هذا الموظف مسبقاً في مسير آخر لنفس الفترة.",
+              409,
+              "DUPLICATE_PAYROLL_PAID"
+            );
           }
 
           assertTransferAttachment({

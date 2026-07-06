@@ -383,6 +383,7 @@ export type PayrollItemV2 = {
   notes?: string | null;
   voucherId?: number | null;
   paidAt?: string | null;
+  _duplicatePaid?: { batchId: number; voucherId?: number | null } | null;
   beneficiary?: {
     id: number;
     fullName: string;

@@ -193,7 +193,8 @@
   /* ─── KPIs grid ─── */
   .ctr-kpis-modern {
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: column !important;
     gap: 8px !important;
     margin-bottom: 12px !important;
   }
