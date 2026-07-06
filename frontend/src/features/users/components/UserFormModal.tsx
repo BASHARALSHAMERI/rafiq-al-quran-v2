@@ -145,7 +145,6 @@ export function RoleAwareUserFormModal({
       ...(state.account.username.trim() ? { username: state.account.username.trim() } : { username: null }),
       role: selectedRole,
       ...(mode === "create" ? { isActive: state.account.isActive } : {}),
-      ...(mode === "create" ? { sendInvitation: state.account.sendInvitation } : {}),
       profile: {
         fullName: state.account.fullName.trim(),
         gender: state.profile.gender,

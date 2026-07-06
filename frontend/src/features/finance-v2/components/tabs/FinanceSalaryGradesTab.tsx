@@ -31,15 +31,10 @@ const DEFAULT_JOB_TITLES = [
   "إداري",
 ];
 
-const DEFAULT_GRADE_LEVELS = [
-  "درجة A",
-  "درجة B",
-  "درجة C",
+const ALLOWED_GRADE_LEVELS = [
   "درجة أولى",
   "درجة ثانية",
   "درجة ثالثة",
-  "متعاون",
-  "مكافأة شهرية",
 ];
 
 type Props = {
@@ -87,10 +82,7 @@ export default function FinanceSalaryGradesTab({
     return Array.from(new Set([...DEFAULT_JOB_TITLES, ...fromDb]));
   }, [grades]);
 
-  const gradeLevelOptions = useMemo(() => {
-    const fromDb = grades.map((g) => g.gradeLevel).filter(Boolean);
-    return Array.from(new Set([...DEFAULT_GRADE_LEVELS, ...fromDb]));
-  }, [grades]);
+  const gradeLevelOptions = ALLOWED_GRADE_LEVELS;
 
   const openNew = useCallback(() => {
     if (!canManage) return;
@@ -125,6 +117,20 @@ export default function FinanceSalaryGradesTab({
     if (!formState.jobTitle.trim() || !formState.gradeLevel.trim()) {
       focusFirstInvalidField(e.currentTarget);
       notifyRequiredFields(ar);
+      return;
+    }
+    if (formState.baseSalary <= 0) {
+      notifyError(ar ? "الراتب الأساسي يجب أن يكون أكبر من صفر" : "Base salary must be greater than zero");
+      return;
+    }
+    const isDuplicate = grades.some(g => 
+      g.id !== editingGrade?.id && 
+      g.jobTitle.trim() === formState.jobTitle.trim() && 
+      g.gradeLevel === formState.gradeLevel && 
+      (g.currencyCode || "YER") === (formState.currencyCode || "YER")
+    );
+    if (isDuplicate) {
+      notifyError(ar ? "يوجد درجة رواتب مطابقة مسبقاً بنفس المسمى والمرتبة والعملة" : "A salary grade with the same title, level, and currency already exists");
       return;
     }
     try {
@@ -323,21 +329,18 @@ export default function FinanceSalaryGradesTab({
                 <label htmlFor="gradeLevel">
                   {ar ? "المرتبة / الدرجة" : "Grade Level"} <span className="text-red-500">*</span>
                 </label>
-                <input
+                <select
                   id="gradeLevel"
-                  type="text"
-                  list="gradeLevelList"
                   className="circlemod-input"
                   value={formState.gradeLevel}
                   onChange={(e) => setFormState((p) => ({ ...p, gradeLevel: e.target.value }))}
-                  placeholder={ar ? "اختر أو أدخل مرتبة..." : "Select or enter grade level..."}
                   required
-                />
-                <datalist id="gradeLevelList">
+                >
+                  <option value="">{ar ? "اختر المرتبة..." : "Select grade level..."}</option>
                   {gradeLevelOptions.map((opt) => (
-                    <option key={opt} value={opt} />
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
             </div>
 

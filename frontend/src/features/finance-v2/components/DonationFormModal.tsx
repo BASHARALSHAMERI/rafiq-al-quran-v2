@@ -13,9 +13,7 @@ import {
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import {
-  focusFirstInvalidField,
-  notifyInfo,
-  notifyRequiredFields
+  notifyInfo
 } from "../../../shared/ui/feedback";
 import type { CurrencyV2, PaymentMethodV2 } from "../types";
 import { useLatestExchangeRateQuery } from "../finance-v2.hooks";

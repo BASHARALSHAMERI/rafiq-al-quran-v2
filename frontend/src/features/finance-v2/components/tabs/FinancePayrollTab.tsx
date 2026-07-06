@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calculator, Printer, Users, Eye, TrendingDown, TrendingUp, User, Calendar, CreditCard, Receipt, RefreshCcw, Check, X, Send, CheckCircle, XCircle } from "lucide-react";
+import { Calculator, Printer, Users, Eye, TrendingDown, Calendar, Receipt, RefreshCcw, Send, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import {
   entityFeedback,
   notifyError,
-  notifyRequiredFields,
   notifySuccess,
   type LocalizedLabel
 } from "../../../../shared/ui/feedback";
 import { 
   useCreateFinanceV2PayrollBatchMutation,
-  useFailFinanceV2PayrollItemMutation,
   useFinanceV2PayrollBatchesQuery,
-  usePayFinanceV2PayrollBatchMutation,
   useSubmitFinanceV2PayrollBatchMutation,
   useApproveFinanceV2PayrollBatchMutation,
   useRejectFinanceV2PayrollBatchMutation
@@ -51,8 +48,6 @@ type Props = {
 };
 
 const PAYROLL_BATCH_ENTITY: LocalizedLabel = { ar: "دفعة الرواتب", en: "payroll batch" };
-
-const PAYABLE_BATCH_STATUSES = new Set(["APPROVED", "IN_PROGRESS", "PARTIALLY_PAID"]);
 
 const getPayrollItemStatusLabel = (status: PayrollItemV2["status"], ar: boolean) => {
   if (!ar) return status;
@@ -255,25 +250,18 @@ export default function FinancePayrollTab({
   year: propYear, 
   month: propMonth,
   status,
-  isAdmin,
   isSuperAdmin,
   canCreateBatch,
   canApproveBatch,
   ar, 
   methodLabels,
+  centers,
   externalShowBatchForm, 
   onExternalBatchFormClose 
 }: Props) {
   const navigate = useNavigate();
   const [showBatchForm, setShowBatchForm] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<PayrollBatchV2 | null>(null);
-  const [paymentDraft, setPaymentDraft] = useState<{
-    batch: PayrollBatchV2;
-    item: PayrollItemV2;
-    method: PaymentMethodV2;
-    reference: string;
-    failureReason: string;
-  } | null>(null);
+  const [selectedBatch] = useState<PayrollBatchV2 | null>(null);
   
   const [batchForm, setBatchForm] = useState({
     year: propYear,
@@ -338,9 +326,6 @@ export default function FinancePayrollTab({
   const submitBatchM = useSubmitFinanceV2PayrollBatchMutation();
   const approveBatchM = useApproveFinanceV2PayrollBatchMutation();
   const rejectBatchM = useRejectFinanceV2PayrollBatchMutation();
-  const payBatchM = usePayFinanceV2PayrollBatchMutation();
-  const failItemM = useFailFinanceV2PayrollItemMutation();
-  const selectedBatchSummary = useMemo(() => getPayrollSummary(selectedBatch), [selectedBatch]);
 
   const closeBatchModal = () => {
     if (createBatchM.isPending) return;
@@ -377,60 +362,6 @@ export default function FinancePayrollTab({
       }
       
       notifyError(message);
-    }
-  };
-
-  const handleOpenPayment = (batch: PayrollBatchV2, item: PayrollItemV2) => {
-    setPaymentDraft({
-      batch,
-      item,
-      method: item.paymentMethod ?? "CASH",
-      reference: item.paymentReference ?? "",
-      failureReason: item.failureReason ?? ""
-    });
-  };
-
-  const handlePayItem = async () => {
-    if (!paymentDraft) return;
-    try {
-      const updated = await payBatchM.mutateAsync({
-        batchId: paymentDraft.batch.id,
-        payments: [{
-          itemId: paymentDraft.item.id,
-          method: paymentDraft.method,
-          manualReferenceNo: paymentDraft.reference || undefined,
-          externalTransferRef: paymentDraft.method === "TRANSFER" ? paymentDraft.reference || undefined : undefined
-        }]
-      });
-      setSelectedBatch(updated);
-      setPaymentDraft(null);
-      notifySuccess(ar ? "تم صرف راتب الموظف" : "Employee salary paid");
-    } catch (error) {
-      notifyError(getLocalizedApiErrorMessage(error, {
-        ar,
-        fallback: ar ? "تعذر صرف راتب الموظف." : "Unable to pay the employee salary."
-      }));
-    }
-  };
-
-  const handleFailItem = async () => {
-    if (!paymentDraft || !paymentDraft.failureReason.trim()) {
-      notifyRequiredFields(ar);
-      return;
-    }
-    try {
-      const updated = await failItemM.mutateAsync({
-        itemId: paymentDraft.item.id,
-        failureReason: paymentDraft.failureReason
-      });
-      setSelectedBatch(updated);
-      setPaymentDraft(null);
-      notifySuccess(ar ? "تم تسجيل فشل الصرف" : "Payment failure recorded");
-    } catch (error) {
-      notifyError(getLocalizedApiErrorMessage(error, {
-        ar,
-        fallback: ar ? "تعذر تسجيل فشل صرف الراتب." : "Unable to record the payroll payment failure."
-      }));
     }
   };
 

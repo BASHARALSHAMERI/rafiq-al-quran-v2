@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
@@ -67,7 +67,37 @@ function getStatusBadge(status: DeductionEventStatus, ar: boolean) {
   }
 }
 
-export function FinanceDeductionReview() {
+// ─── Props Interface ──────────────────────────────────────────────────────────
+export interface FinanceDeductionReviewProps {
+  /** When true, hides the internal KPI bar (the parent page supplies its own). */
+  hideKpis?: boolean;
+  /** When true, hides the internal filter bar (the parent page controls filters). */
+  hideFilters?: boolean;
+  /** When true, hides the sub-tab bar (events / rules) and action buttons. */
+  hideSubTabs?: boolean;
+  /**
+   * When embedded inside another page (e.g. FinancePayrollPage), set this to
+   * true.  The component removes its outer <section> padding / workspace class
+   * so it blends seamlessly into the parent layout.
+   */
+  embedded?: boolean;
+  /** Override the internally managed month filter (1-12). */
+  externalMonth?: number;
+  /** Override the internally managed year filter. */
+  externalYear?: number;
+  /** Override the internally managed center filter. */
+  externalCenterId?: number | null;
+}
+
+export function FinanceDeductionReview({
+  hideKpis = false,
+  hideFilters = false,
+  hideSubTabs = false,
+  embedded = false,
+  externalMonth,
+  externalYear,
+  externalCenterId,
+}: FinanceDeductionReviewProps) {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
@@ -85,10 +115,28 @@ export function FinanceDeductionReview() {
   const [reviewNote, setReviewNote] = useState("");
   const [rulesNewSignal, setRulesNewSignal] = useState(0);
 
+  // ── Sync external filters when provided ───────────────────────────────────
+  useEffect(() => {
+    if (externalMonth !== undefined) {
+      setFilterMonth(String(externalMonth));
+    }
+  }, [externalMonth]);
+
+  useEffect(() => {
+    if (externalYear !== undefined) {
+      setFilterYear(String(externalYear));
+    }
+  }, [externalYear]);
+
+  // centerId is passed to the API query directly — no local state needed for it
+  const effectiveCenterId =
+    externalCenterId !== undefined ? (externalCenterId ?? undefined) : undefined;
+
   const eventsQuery = useDeductionEvents({
     month: Number(filterMonth),
     year: Number(filterYear),
-    status: filterStatus === "ALL" ? undefined : filterStatus
+    status: filterStatus === "ALL" ? undefined : filterStatus,
+    ...(effectiveCenterId !== undefined ? { centerId: effectiveCenterId } : {})
   });
   const generateMutation = useGenerateDeductions();
   const reviewMutation = useReviewDeduction();
@@ -221,11 +269,15 @@ export function FinanceDeductionReview() {
     }
   ];
 
+  const sectionClass = embedded
+    ? "w-full"
+    : "staff-ops-view ctr-workspace";
+
   return (
-    <section className="staff-ops-view ctr-workspace">
-      {/* ── Sub-Tabs ── */}
-      {isSuperAdmin && (
-        <div className="staff-ops-finance-topbar mb-6">
+    <section className={sectionClass}>
+      {/* ── Sub-Tabs (events / rules) ── visible only for SUPER_ADMIN and when not hidden */}
+      {isSuperAdmin && !hideSubTabs && (
+        <div className="staff-ops-finance-topbar mb-4">
           <div className="staff-ops-finance-tabs" role="tablist" aria-label={ar ? "تبويبات الخصومات" : "Finance deduction tabs"}>
             <button
               type="button"
@@ -278,79 +330,96 @@ export function FinanceDeductionReview() {
         <DeductionRulesConfig openNewSignal={rulesNewSignal} />
       ) : (
         <>
-          {/* ── KPIs ── */}
-          <div className="ctr-kpis-modern mb-6" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {stats.map((stat) => (
-              <div key={stat.label} className={`ctr-kpi-modern ${stat.cls}`}>
-                <div className="ctr-kpi-icon-wrap">
-                  <stat.icon size={22} />
+          {/* ── KPIs ── conditionally rendered */}
+          {!hideKpis && (
+            <div className="ctr-kpis-modern mb-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              {stats.map((stat) => (
+                <div key={stat.label} className={`ctr-kpi-modern ${stat.cls}`}>
+                  <div className="ctr-kpi-icon-wrap">
+                    <stat.icon size={22} />
+                  </div>
+                  <div className="ctr-kpi-content">
+                    <div className="ctr-kpi-val">{stat.value}</div>
+                    <div className="ctr-kpi-label">{stat.label}</div>
+                  </div>
                 </div>
-                <div className="ctr-kpi-content">
-                  <div className="ctr-kpi-val">{stat.value}</div>
-                  <div className="ctr-kpi-label">{stat.label}</div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Filters ── conditionally rendered */}
+          {!hideFilters && (
+            <div className="fin-filters-container mb-4" dir={ar ? "rtl" : "ltr"}>
+              <div className="fin-filters-scroll">
+                {/* Search */}
+                <div className="fin-filter-item min-w-[220px] flex-1">
+                  <Search size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    className="bg-transparent border-none outline-none w-full text-sm"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={ar ? "ابحث بالاسم أو المركز..." : "Search by staff or center..."}
+                  />
+                </div>
+
+                {/* Month */}
+                <div className="fin-filter-item min-w-[140px]">
+                  <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                      const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                      return (
+                        <option key={i + 1} value={String(i + 1)}>
+                          {ar ? arabicMonths[i] : englishMonths[i]}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Year */}
+                <div className="fin-filter-item w-28">
+                  <input
+                    type="number"
+                    min={2000}
+                    max={2100}
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    className="w-full text-center bg-transparent border-none outline-none"
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="fin-filter-item min-w-[160px]">
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
+                    <option value="ALL">{ar ? "كل الحالات" : "All Status"}</option>
+                    <option value="PENDING">{ar ? "قيد المراجعة" : "Pending"}</option>
+                    <option value="APPROVED">{ar ? "معتمدة" : "Approved"}</option>
+                    <option value="REJECTED">{ar ? "مرفوضة" : "Rejected"}</option>
+                    <option value="WAIVED">{ar ? "معفى" : "Waived"}</option>
+                    <option value="INCLUDED_IN_PAYROLL">{ar ? "في المسير" : "In Payroll"}</option>
+                  </select>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* ── Controls ── */}
-          <div className="ctr-controls mb-6">
-            <div className="ctr-search-wrap">
-              <Search className="ctr-search-icon" size={16} />
-              <input
-                type="text"
-                className="ctr-search-input"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={ar ? "ابحث بالاسم أو المركز..." : "Search by staff or center..."}
-              />
-            </div>
-
-            <div className="ctr-filters-group">
-              <div className="flex gap-2 items-center bg-slate-50 p-1 rounded-lg border border-slate-100">
-                <select
-                  className="ctr-search-input !h-8 !w-24 !bg-transparent !border-none !p-0 text-center text-[12px] font-semibold cursor-pointer"
-                  value={filterMonth}
-                  onChange={(e) => setFilterMonth(e.target.value)}
+              {/* View Toggle */}
+              <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
+                <button 
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === "grid" ? "bg-white shadow-sm text-brand-600" : "text-slate-500 hover:text-slate-700"}`}
+                  onClick={() => setViewMode("grid")}
                 >
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-                    const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                    return (
-                      <option key={i + 1} value={String(i + 1)}>
-                        {ar ? arabicMonths[i] : englishMonths[i]}
-                      </option>
-                    );
-                  })}
-                </select>
-                <span className="text-slate-300">/</span>
-                <input
-                  type="number"
-                  className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-[12px] font-mono"
-                  value={filterYear}
-                  onChange={(e) => setFilterYear(e.target.value)}
-                />
-              </div>
-
-              <select
-                className="ctr-search-input !w-[140px]"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-              >
-                <option value="ALL">{ar ? "كل الحالات" : "All Status"}</option>
-                <option value="PENDING">{ar ? "قيد المراجعة" : "Pending"}</option>
-                <option value="APPROVED">{ar ? "معتمدة" : "Approved"}</option>
-                <option value="REJECTED">{ar ? "مرفوضة" : "Rejected"}</option>
-                <option value="WAIVED">{ar ? "معفى" : "Waived"}</option>
-                <option value="INCLUDED_IN_PAYROLL">{ar ? "في المسير" : "In Payroll"}</option>
-              </select>
-
-              <div className="ctr-view-toggle">
-                <button className={`ctr-view-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}><LayoutGrid size={18} /></button>
-                <button className={`ctr-view-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}><List size={18} /></button>
+                  <LayoutGrid size={16} />
+                </button>
+                <button 
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-white shadow-sm text-brand-600" : "text-slate-500 hover:text-slate-700"}`}
+                  onClick={() => setViewMode("list")}
+                >
+                  <List size={16} />
+                </button>
               </div>
             </div>
-          </div>
+          )}
 
           {/* ── Content ── */}
           <AnimatePresence mode="wait">
@@ -477,11 +546,11 @@ export function FinanceDeductionReview() {
                 </div>
                 <div className="space-y-2">
                   <label className="staff-ops-modal__note-label ps-1">{ar ? "ملاحظة المراجعة" : "Reviewer Note"}</label>
-                  <textarea 
-                    value={reviewNote} 
-                    onChange={e => setReviewNote(e.target.value)} 
+                  <textarea
+                    value={reviewNote}
+                    onChange={e => setReviewNote(e.target.value)}
                     maxLength={500}
-                    className="staff-ops-modal__textarea staff-ops-modal__textarea--review" 
+                    className="staff-ops-modal__textarea staff-ops-modal__textarea--review"
                     placeholder={ar ? "أدخل سببا للاعتماد أو الإعفاء..." : "Enter reason for approval or waiver..."}
                   />
                 </div>

@@ -50,6 +50,9 @@ export const voucherStatusLabels: Record<string, string> = {
   REJECTED: "مرفوض",
   CANCELLED: "ملغى",
   PAID: "مدفوع",
+  PARTIALLY_PAID: "مدفوع جزئياً",
+  IN_PROGRESS: "قيد التنفيذ",
+  CLOSED: "مغلق",
 };
 
 export const getYemenModeStatus = (status: string, ar: boolean) => {
