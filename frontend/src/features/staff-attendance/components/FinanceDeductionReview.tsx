@@ -72,6 +72,7 @@ export function FinanceDeductionReview() {
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const canReview = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
   const [subTab, setSubTab] = useState<"events" | "rules">("events");
 
   const now = new Date();
@@ -397,7 +398,7 @@ export function FinanceDeductionReview() {
                       </div>
 
                       <div className="ctr-card-actions mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-                        {isPending && isSuperAdmin ? (
+                        {isPending && canReview ? (
                           <Button size="sm" className="h-8 px-4 text-[11px]" onClick={() => setReviewModal(event)}>
                             {ar ? "مراجعة الخصم" : "Review Deduction"}
                           </Button>

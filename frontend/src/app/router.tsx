@@ -32,6 +32,7 @@ const FinanceVouchersPage = React.lazy(() => import("../pages/finance/FinanceVou
 const FinanceDonorsPage = React.lazy(() => import("../pages/finance/FinanceDonorsPage"));
 const FinanceTreasuryPage = React.lazy(() => import("../pages/finance/FinanceTreasuryPage"));
 const FinancePayrollPage = React.lazy(() => import("../pages/finance/FinancePayrollPage"));
+const FinancePayrollDetailsPage = React.lazy(() => import("../pages/finance/FinancePayrollDetailsPage"));
 const FinanceRewardsPage = React.lazy(() => import("../pages/finance/FinanceRewardsPage"));
 const FinanceCurrenciesPage = React.lazy(() => import("../pages/finance/FinanceCurrenciesPage"));
 const FinanceExpensesPage = React.lazy(() => import("../pages/finance/FinanceExpensesPage"));
@@ -95,6 +96,7 @@ const routeElements: Record<AdminRouteId, ReactElement> = {
   finance_donors: <FinanceDonorsPage />,
   finance_treasury: <FinanceTreasuryPage />,
   finance_payroll: <FinancePayrollPage />,
+  finance_payroll_details: <FinancePayrollDetailsPage />,
   finance_rewards: <FinanceRewardsPage />,
   finance_currencies: <FinanceCurrenciesPage />,
   finance_expenses: <FinanceExpensesPage />,

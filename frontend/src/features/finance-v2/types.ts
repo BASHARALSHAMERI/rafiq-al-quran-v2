@@ -373,6 +373,9 @@ export type PayrollItemV2 = {
   deductionAmount: number;
   deductionEventIds?: number[] | null;
   netAmount: number;
+  originalAmount?: number | null;
+  originalCurrencyCode?: string | null;
+  exchangeRateToBase?: number | null;
   status: PayrollItemStatusV2;
   paymentMethod?: PaymentMethodV2 | null;
   paymentReference?: string | null;

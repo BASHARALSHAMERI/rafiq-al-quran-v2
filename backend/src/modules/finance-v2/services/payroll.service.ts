@@ -394,6 +394,28 @@ export const payrollService = {
     });
   },
 
+  async getPayrollBatch(scope: ScopeContext, batchId: number) {
+    financeV2Domain.assertReadEnabled();
+
+    const batch = await prisma.payrollBatch.findUnique({
+      where: {
+        id: batchId,
+        organizationId: scope.organizationId
+      },
+      select: payrollBatchSelect
+    });
+
+    if (!batch) {
+      throw financeV2Domain.financeError("Payroll batch not found", 404, "NOT_FOUND");
+    }
+
+    if (!scope.allAccess && batch.centerId && batch.centerId !== scope.centerId) {
+      throw financeV2Domain.financeError("Access denied", 403, "ACCESS_DENIED");
+    }
+
+    return batch;
+  },
+
   async createPayrollBatch(
     scope: ScopeContext,
     input: {
@@ -412,6 +434,24 @@ export const payrollService = {
         "centerId is required for non-super-admin payroll batch creation",
         400,
         "VALIDATION_ERROR"
+      );
+    }
+
+    const existingBatch = await prisma.payrollBatch.findFirst({
+      where: {
+        organizationId: scope.organizationId,
+        centerId: input.centerId ?? null,
+        periodYear: input.periodYear,
+        periodMonth: input.periodMonth,
+        status: { in: ["DRAFT", "SUBMITTED", "APPROVED", "IN_PROGRESS", "PARTIALLY_PAID", "PAID"] }
+      }
+    });
+
+    if (existingBatch) {
+      throw financeV2Domain.financeError(
+        "يوجد مسير رواتب نشط لنفس المركز والشهر. لا يمكن إنشاء أكثر من مسير واحد لنفس الفترة.",
+        400,
+        "DUPLICATE_PAYROLL_BATCH"
       );
     }
 

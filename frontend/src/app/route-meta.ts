@@ -97,7 +97,8 @@ export type AdminRouteId =
   | "audit"
   | "settings"
   | "graduation_candidates"
-  | "accountants";
+  | "accountants"
+  | "finance_payroll_details";
 
 /* ─── Meta Types ─── */
 
@@ -462,6 +463,15 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     section: "financeExpenditure",
     allowedRoles: FINANCE_WEB_ROLES,
     sidebar: true,
+  },
+  {
+    id: "finance_payroll_details",
+    path: "/finance/payroll/batches/:id",
+    get label() { return document.documentElement.lang === "ar" ? "تفاصيل مسير الرواتب" : "Payroll Batch Details"; },
+    routeIcon: Receipt,
+    section: "financeExpenditure",
+    allowedRoles: FINANCE_WEB_ROLES,
+    sidebar: false,
   },
   {
     // UI-NAV-FINANCE-SIDEBAR-RESTRUCTURE-2B: → financeLedger (أداة تشغيل للمدفوعات والرواتب)

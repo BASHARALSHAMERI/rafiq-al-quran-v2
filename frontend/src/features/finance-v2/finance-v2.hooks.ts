@@ -601,6 +601,14 @@ export const useFinanceV2PayrollBatchesQuery = (
     placeholderData: keepPreviousData
   });
 
+export const useFinanceV2PayrollBatchQuery = (batchId?: number) =>
+  useQuery({
+    queryKey: [...FINANCE_V2_QUERY_KEYS.all, "payroll-batches", batchId],
+    queryFn: () => financeV2Api.getPayrollBatch(batchId!),
+    enabled: Boolean(batchId),
+    staleTime: 20_000,
+  });
+
 export const useFinanceV2PayrollProfilesQuery = (centerId?: number) =>
   useQuery({
     queryKey: FINANCE_V2_QUERY_KEYS.payrollProfiles(centerId),

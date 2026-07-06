@@ -432,6 +432,13 @@ financeV2Router.get(
   financeV2Controller.listPayrollBatches
 );
 
+financeV2Router.get(
+  "/finance/v2/payroll/batches/:id",
+  requireRoles(financeReadRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  financeV2Controller.getPayrollBatch
+);
+
 financeV2Router.post(
   "/finance/v2/payroll/batches",
   requireRoles(financeDraftWriteRoles),

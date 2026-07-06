@@ -3,7 +3,8 @@ import {
   RefreshCw,
   Plus,
   ArrowUpRight,
-  ArrowDownLeft
+  ArrowDownLeft,
+  Shield
 } from "lucide-react";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -25,10 +26,12 @@ import type { PayrollBatchStatusV2 } from "../../features/finance-v2/types";
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
 import "../../styles/pages/finance-v4.css";
+import "../../styles/pages/vouchers-premium.css";
 
 const FinancePayrollTab = lazy(() => import("../../features/finance-v2/components/tabs/FinancePayrollTab"));
 const FinanceSalaryGradesTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceSalaryGradesTab"));
 const FinancePayrollProfilesTab = lazy(() => import("../../features/finance-v2/components/tabs/FinancePayrollProfilesTab"));
+const FinanceDeductionReview = lazy(() => import("../../features/staff-attendance/components/FinanceDeductionReview").then(m => ({ default: m.FinanceDeductionReview })));
 
 function PayrollKpi({
   icon: Icon,
@@ -66,6 +69,8 @@ export default function FinancePayrollPage() {
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
   const canPayPayroll =
     user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
+  const canApproveBatch = 
+    user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
@@ -78,7 +83,9 @@ export default function FinancePayrollPage() {
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<"batches" | "profiles" | "grades">("batches");
+  const [activeTab, setActiveTab] = useState<"batches" | "profiles" | "grades" | "deductions">("batches");
+
+  const canViewDeductions = user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER" || user?.role === "ACCOUNTANT";
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
@@ -136,7 +143,7 @@ export default function FinancePayrollPage() {
                     leftIcon={<Plus className="w-4 h-4" />}
                     onClick={() => setShowBatchModal(true)}
                   >
-                    {ar ? "صرف جديد" : "New Disbursement"}
+                    {ar ? "إنشاء مسير" : "New Batch"}
                   </Button>
                 )}
                 {activeTab === "profiles" && (user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && (
@@ -173,7 +180,7 @@ export default function FinancePayrollPage() {
               onClick={() => setActiveTab("batches")}
             >
               <Wallet size={16} />
-              <span>{ar ? "الرواتب والبدلات" : "Payroll Batches"}</span>
+              <span>{ar ? "مسيرات الرواتب" : "Payroll Batches"}</span>
             </button>
             <button
               type="button"
@@ -195,6 +202,18 @@ export default function FinancePayrollPage() {
               <ArrowDownLeft size={16} />
               <span>{ar ? "سلم الرواتب" : "Salary Scales"}</span>
             </button>
+            {canViewDeductions && (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "deductions"}
+                className={`exams-tab-btn ${activeTab === "deductions" ? "exams-tab-btn--active" : ""}`}
+                onClick={() => setActiveTab("deductions")}
+              >
+                <Shield size={16} />
+                <span>{ar ? "الخصومات المالية" : "Finance Deductions"}</span>
+              </button>
+            )}
           </nav>
         </div>
       }
@@ -260,6 +279,7 @@ export default function FinancePayrollPage() {
               isAdmin={canPayPayroll}
               isSuperAdmin={user?.role === "SUPER_ADMIN"}
               canCreateBatch={canCreatePayrollBatch}
+              canApproveBatch={canApproveBatch}
               ar={ar}
               methodLabels={methodLabels}
               centers={centers}
@@ -285,6 +305,11 @@ export default function FinancePayrollPage() {
               externalShowForm={(user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER") && showGradeModal}
               onExternalFormClose={() => setShowGradeModal(false)}
             />
+          )}
+          {activeTab === "deductions" && canViewDeductions && (
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+              <FinanceDeductionReview />
+            </div>
           )}
         </Suspense>
       </div>

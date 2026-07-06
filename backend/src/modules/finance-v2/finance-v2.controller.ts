@@ -560,6 +560,19 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  getPayrollBatch: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await payrollService.getPayrollBatch(req.scope, params.id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   createPayrollBatch: (async (req, res, next) => {
     try {
       if (!req.scope) {

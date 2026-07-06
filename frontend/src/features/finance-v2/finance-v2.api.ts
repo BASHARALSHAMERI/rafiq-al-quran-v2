@@ -919,6 +919,13 @@ export const financeV2Api = {
     };
   },
 
+  async getPayrollBatch(batchId: number): Promise<PayrollBatchV2> {
+    const response = await apiClient.get<ApiResponse<PayrollBatchV2>>(
+      `/finance/v2/payroll/batches/${batchId}`
+    );
+    return normalizePayrollBatch(response.data.data);
+  },
+
   async getPayrollProfiles(params: {
     centerId?: number;
     userId?: number;

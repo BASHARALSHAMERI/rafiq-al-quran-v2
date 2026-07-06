@@ -506,3 +506,5 @@ export const writeCertificateToWindow = async (printWindow: Window, data: Certif
   printWindow.focus();
   setTimeout(() => printWindow.print(), 250);
 };
+
+

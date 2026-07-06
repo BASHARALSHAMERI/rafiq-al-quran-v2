@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, Printer, Users, Eye, TrendingDown, TrendingUp, User, Calendar, CreditCard, Receipt, RefreshCcw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Calculator, Printer, Users, Eye, TrendingDown, TrendingUp, User, Calendar, CreditCard, Receipt, RefreshCcw, Check, X, Send, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
@@ -15,7 +16,9 @@ import {
   useFailFinanceV2PayrollItemMutation,
   useFinanceV2PayrollBatchesQuery,
   usePayFinanceV2PayrollBatchMutation,
-  useSubmitFinanceV2PayrollBatchMutation
+  useSubmitFinanceV2PayrollBatchMutation,
+  useApproveFinanceV2PayrollBatchMutation,
+  useRejectFinanceV2PayrollBatchMutation
 } from "../../finance-v2.hooks";
 import type { PaymentMethodV2, PayrollBatchV2, PayrollItemV2 } from "../../types";
 import { FinSkeleton, voucherStatusLabels, FinancePaginationFooter } from "../FinanceShared";
@@ -39,6 +42,7 @@ type Props = {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   canCreateBatch?: boolean;
+  canApproveBatch?: boolean;
   ar: boolean;
   methodLabels: Record<PaymentMethodV2, string>;
   centers: { id: number; name: string }[];
@@ -253,12 +257,14 @@ export default function FinancePayrollTab({
   status,
   isAdmin,
   isSuperAdmin,
-  canCreateBatch = isAdmin,
+  canCreateBatch,
+  canApproveBatch,
   ar, 
   methodLabels,
   externalShowBatchForm, 
   onExternalBatchFormClose 
 }: Props) {
+  const navigate = useNavigate();
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<PayrollBatchV2 | null>(null);
   const [paymentDraft, setPaymentDraft] = useState<{
@@ -330,6 +336,8 @@ export default function FinancePayrollTab({
 
   const createBatchM = useCreateFinanceV2PayrollBatchMutation();
   const submitBatchM = useSubmitFinanceV2PayrollBatchMutation();
+  const approveBatchM = useApproveFinanceV2PayrollBatchMutation();
+  const rejectBatchM = useRejectFinanceV2PayrollBatchMutation();
   const payBatchM = usePayFinanceV2PayrollBatchMutation();
   const failItemM = useFailFinanceV2PayrollItemMutation();
   const selectedBatchSummary = useMemo(() => getPayrollSummary(selectedBatch), [selectedBatch]);
@@ -355,11 +363,19 @@ export default function FinancePayrollTab({
       });
       notifySuccess(entityFeedback.success(ar, "create", PAYROLL_BATCH_ENTITY));
       closeBatchModal();
-    } catch (err) {
-      const message = getLocalizedApiErrorMessage(err, {
+    } catch (err: any) {
+      let message = getLocalizedApiErrorMessage(err, {
         ar,
-        fallback: ar ? "تعذر إنشاء دفعة الرواتب." : "Unable to create the payroll batch."
+        fallback: ar ? "تعذر إنشاء مسير الرواتب." : "Unable to create the payroll batch."
       });
+      
+      const rawMessage = err?.response?.data?.message || err?.response?.data?.error?.message || err?.message || message;
+      if (typeof rawMessage === "string" && rawMessage.includes("PENDING_DEDUCTIONS_EXIST")) {
+        message = ar 
+          ? "لا يمكن إنشاء مسير الرواتب لوجود خصومات مالية معلقة. يرجى مراجعة تبويب الخصومات المالية واعتمادها أو رفضها أولاً." 
+          : "Cannot create payroll batch due to pending finance deductions. Please review the Finance Deductions tab and approve or reject them first.";
+      }
+      
       notifyError(message);
     }
   };
@@ -426,6 +442,37 @@ export default function FinancePayrollTab({
       notifyError(getLocalizedApiErrorMessage(error, {
         ar,
         fallback: ar ? "تعذر إرسال دفعة الرواتب للاعتماد." : "Unable to submit the payroll batch for approval."
+      }));
+    }
+  };
+
+  const handleApproveBatch = async (batchId: number) => {
+    try {
+      await approveBatchM.mutateAsync({ batchId });
+      notifySuccess(ar ? "تم اعتماد مسير الرواتب بنجاح" : "Payroll batch approved successfully");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر اعتماد مسير الرواتب." : "Unable to approve the payroll batch."
+      }));
+    }
+  };
+
+  const handleRejectBatch = async (batchId: number) => {
+    const reason = window.prompt(ar ? "يرجى إدخال سبب الرفض:" : "Please enter the rejection reason:");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      notifyError(ar ? "سبب الرفض مطلوب" : "Rejection reason is required");
+      return;
+    }
+    
+    try {
+      await rejectBatchM.mutateAsync({ batchId, reason });
+      notifySuccess(ar ? "تم رفض مسير الرواتب" : "Payroll batch rejected");
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar ? "تعذر رفض مسير الرواتب." : "Unable to reject the payroll batch."
       }));
     }
   };
@@ -502,264 +549,7 @@ export default function FinancePayrollTab({
         </form>
       </Modal>
 
-      {/* Batch Details Modal (The "Inspection" Modal) */}
-      <Modal
-        isOpen={!!selectedBatch}
-        onClose={() => setSelectedBatch(null)}
-        title={ar ? "فحص تفاصيل الرواتب" : "Payroll Inspection"}
-        description={ar ? `كشف تفصيلي للدفعة #${selectedBatch?.id} - ${selectedBatch?.periodMonth}/${selectedBatch?.periodYear}` : `Detailed breakdown for batch #${selectedBatch?.id}`}
-        size="lg"
-        footer={
-          <div className="flex w-full flex-wrap justify-end gap-2">
-            {selectedBatch ? (
-              <Button
-                variant="secondary"
-                leftIcon={<Printer className="w-4 h-4" />}
-                onClick={() => printPayrollReport(selectedBatch, ar, methodLabels, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
-              >
-                {ar ? "طباعة كشف الرواتب" : "Print payroll report"}
-              </Button>
-            ) : null}
-            <Button variant="ghost" onClick={() => setSelectedBatch(null)}>
-            {ar ? "إغلاق" : "Close"}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-xs font-bold text-text-tertiary uppercase block mb-1">{ar ? "إجمالي الأساسي" : "Total Base"}</span>
-              <FinanceMoney amount={(selectedBatch?.items || []).reduce((acc, i) => acc + i.baseAmount, 0)} baseCurrency="YER" className="text-lg font-black text-text-primary" />
-            </div>
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100">
-              <span className="text-xs font-bold text-rose-600 uppercase block mb-1">{ar ? "إجمالي الاستقطاعات" : "Total Deductions"}</span>
-              <FinanceMoney amount={(selectedBatch?.items || []).reduce((acc, i) => acc + i.deductionAmount, 0)} baseCurrency="YER" className="text-lg font-black text-rose-700" />
-            </div>
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-              <span className="text-xs font-bold text-emerald-600 uppercase block mb-1">{ar ? "صافي الصرف" : "Net Payable"}</span>
-              <FinanceMoney amount={(selectedBatch?.items || []).reduce((acc, i) => acc + i.netAmount, 0)} baseCurrency="YER" className="text-lg font-black text-emerald-700" />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <div className="rounded-lg border border-slate-100 bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-text-tertiary">{ar ? "إجمالي الرواتب" : "Gross payroll"}</span>
-              <FinanceMoney amount={selectedBatchSummary.totalBase + selectedBatchSummary.totalBonus} baseCurrency="YER" className="text-sm font-black text-text-primary" />
-            </div>
-            <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-emerald-700">{ar ? "المصروف" : "Paid"}</span>
-              <FinanceMoney amount={selectedBatchSummary.paidAmount} baseCurrency="YER" className="text-sm font-black text-emerald-700" />
-            </div>
-            <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-amber-700">{ar ? "المتبقي" : "Remaining"}</span>
-              <FinanceMoney amount={selectedBatchSummary.remainingAmount} baseCurrency="YER" className="text-sm font-black text-amber-700" />
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-white p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-text-tertiary">{ar ? "تم الصرف / الكل" : "Paid / all"}</span>
-              <strong className="text-lg text-text-primary">{selectedBatchSummary.paidCount}/{selectedBatchSummary.totalCount}</strong>
-            </div>
-            <div className="rounded-lg border border-rose-100 bg-rose-50 p-3">
-              <span className="block text-[0.68rem] font-bold uppercase text-rose-700">{ar ? "فشل الصرف" : "Failed"}</span>
-              <strong className="text-lg text-rose-700">{selectedBatchSummary.failedCount}</strong>
-            </div>
-          </div>
-
-          <FinanceDataTable<any>
-            rows={selectedBatch?.items || []}
-                columns={[
-                  {
-                    header: ar ? "الموظف" : "Employee",
-                    render: (item) => (
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                          <User size={14} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm text-text-primary">{item.beneficiary?.fullName}</span>
-                          <span className="text-[0.65rem] text-text-tertiary font-medium">{item.beneficiary?.role}</span>
-                        </div>
-                      </div>
-                    )
-                  },
-                  {
-                    header: ar ? "الأساسي" : "Base",
-                    render: (item) => <FinanceMoney amount={item.baseAmount} baseCurrency="YER" className="text-sm font-semibold" />
-                  },
-                  {
-                    header: ar ? "إضافي" : "Bonus",
-                    render: (item) => (
-                      <div className="flex items-center gap-1 text-emerald-600 font-bold">
-                        <TrendingUp size={12} />
-                        <FinanceMoney amount={item.bonusAmount} baseCurrency="YER" className="text-sm" />
-                      </div>
-                    )
-                  },
-                  {
-                    header: ar ? "خصومات الحضور" : "Attendance deductions",
-                    render: (item) => (
-                      <div
-                        className="flex flex-col gap-0.5"
-                        title={
-                          item.deductionEventIds?.length
-                            ? ar
-                              ? "تم جلب هذا الخصم تلقائيًا من أحداث حضور الموظف المعتمدة."
-                              : "This deduction was pulled automatically from approved employee attendance deduction events."
-                            : ar
-                              ? "لا توجد خصومات حضور مرتبطة."
-                              : "No linked attendance deduction events."
-                        }
-                      >
-                        <div className="flex items-center gap-1 text-rose-600 font-bold">
-                          <TrendingDown size={12} />
-                          <FinanceMoney amount={item.deductionAmount} baseCurrency="YER" className="text-sm" />
-                        </div>
-                        {item.deductionEventIds?.length ? (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedDeductionItem(item)}
-                            className="text-[0.65rem] font-bold text-rose-500 hover:underline hover:text-rose-700 text-start flex items-center gap-0.5"
-                          >
-                            <span>{ar ? "تفاصيل الخصم" : "Deduction details"} ({item.deductionEventIds.length})</span>
-                          </button>
-                        ) : null}
-                      </div>
-                    )
-                  },
-                  {
-                    header: ar ? "الصافي" : "Net",
-                    render: (item) => <FinanceMoney amount={item.netAmount} baseCurrency="YER" className="text-sm font-black text-brand-600" />
-                  },
-                  {
-                    header: ar ? "الحالة" : "Status",
-                    render: (item) => (
-                      <div className="flex flex-col gap-1">
-                        <FinanceStatusBadge status={item.status} label={getPayrollItemStatusLabel(item.status, ar)} />
-                        {item.failureReason ? (
-                          <span className="max-w-[140px] truncate text-[0.65rem] font-semibold text-rose-500" title={item.failureReason}>
-                            {item.failureReason}
-                          </span>
-                        ) : null}
-                      </div>
-                    )
-                  },
-                  {
-                    header: ar ? "طريقة الصرف" : "Payment method",
-                    render: (item) => (
-                      <span className="text-xs font-bold text-text-secondary">
-                        {item.paymentMethod ? methodLabels[item.paymentMethod as PaymentMethodV2] : "-"}
-                      </span>
-                    )
-                  },
-                  {
-                    header: ar ? "المرجع/الحوالة" : "Reference",
-                    render: (item) => (
-                      <span className="max-w-[120px] truncate text-xs font-semibold text-text-secondary" title={item.paymentReference ?? undefined}>
-                        {item.paymentReference || "-"}
-                      </span>
-                    )
-                  },
-                  {
-                    header: ar ? "السند" : "Voucher",
-                    render: (item) => item.voucherId ? (
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:underline hover:text-brand-800"
-                        onClick={() => setSelectedVoucherItem(item)}
-                        title={ar ? "عرض السند والقيود" : "View voucher & journal"}
-                      >
-                        <Receipt size={13} />
-                        {item.voucher?.voucherNo ?? `#${item.voucherId}`}
-                      </button>
-                    ) : <span className="text-xs font-semibold text-text-tertiary">-</span>
-                  },
-                  {
-                    header: ar ? "الإجراء" : "Action",
-                    render: (item) => (
-                      <div className="flex items-center gap-2">
-                        {isAdmin && selectedBatch && PAYABLE_BATCH_STATUSES.has(selectedBatch.status) && item.status !== "PAID" ? (
-                          <Button
-                            size="sm"
-                            variant={item.status === "FAILED" ? "secondary" : "primary"}
-                            leftIcon={item.status === "FAILED" ? <RefreshCcw className="w-3.5 h-3.5" /> : <CreditCard className="w-3.5 h-3.5" />}
-                            onClick={() => selectedBatch && handleOpenPayment(selectedBatch, item)}
-                          >
-                            {item.status === "FAILED" ? (ar ? "إعادة محاولة" : "Retry") : (ar ? "صرف" : "Pay")}
-                          </Button>
-                        ) : null}
-                        {item.voucherId ? (
-                          <Button size="sm" variant="ghost" onClick={() => setSelectedVoucherItem(item)}>
-                            {ar ? "عرض السند والقيود" : "View voucher & journal"}
-                          </Button>
-                        ) : null}
-                      </div>
-                    )
-                  }
-                ]}
-                rowKey="id"
-                className="fin-premium-table--compact"
-              />
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={Boolean(paymentDraft && isAdmin)}
-        onClose={() => setPaymentDraft(null)}
-        title={ar ? "صرف راتب موظف" : "Pay employee salary"}
-        description={paymentDraft?.item.beneficiary?.fullName}
-        size="md"
-        footer={
-          <div className="flex w-full flex-wrap justify-end gap-2">
-            <Button variant="ghost" onClick={() => setPaymentDraft(null)} disabled={payBatchM.isPending || failItemM.isPending}>
-              {ar ? "إلغاء" : "Cancel"}
-            </Button>
-            <Button variant="danger" onClick={handleFailItem} isLoading={failItemM.isPending} disabled={!paymentDraft?.failureReason.trim()}>
-              {ar ? "تسجيل فشل" : "Mark failed"}
-            </Button>
-            <Button onClick={handlePayItem} isLoading={payBatchM.isPending} leftIcon={<CreditCard className="w-4 h-4" />}>
-              {ar ? "صرف" : "Pay"}
-            </Button>
-          </div>
-        }
-      >
-        {paymentDraft ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-              <span className="text-xs font-bold text-text-tertiary">{ar ? "صافي الصرف" : "Net amount"}</span>
-              <FinanceMoney amount={paymentDraft.item.netAmount} baseCurrency="YER" className="block text-lg font-black text-brand-600" />
-            </div>
-            <label className="circlemod-field">
-              <span>{ar ? "طريقة الصرف" : "Payment method"}</span>
-              <select
-                className="circlemod-select"
-                value={paymentDraft.method}
-                onChange={(event) => setPaymentDraft((current) => current ? { ...current, method: event.target.value as PaymentMethodV2 } : current)}
-              >
-                <option value="CASH">{methodLabels.CASH}</option>
-                <option value="TRANSFER">{methodLabels.TRANSFER}</option>
-              </select>
-            </label>
-            <label className="circlemod-field">
-              <span>{ar ? "المرجع/رقم الحوالة" : "Reference / transfer no."}</span>
-              <input
-                className="circlemod-input"
-                value={paymentDraft.reference}
-                onChange={(event) => setPaymentDraft((current) => current ? { ...current, reference: event.target.value } : current)}
-                placeholder={ar ? "اختياري" : "Optional"}
-              />
-            </label>
-            <label className="circlemod-field">
-              <span>{ar ? "سبب فشل الصرف" : "Failure reason"}</span>
-              <textarea
-                className="circlemod-input min-h-[80px]"
-                value={paymentDraft.failureReason}
-                onChange={(event) => setPaymentDraft((current) => current ? { ...current, failureReason: event.target.value } : current)}
-                placeholder={ar ? "يستخدم فقط عند تسجيل الفشل" : "Used only when marking this payment as failed"}
-              />
-            </label>
-          </div>
-        ) : null}
-      </Modal>
 
       {batchesQ.isLoading ? <FinSkeleton rows={5} /> : null}
 
@@ -783,6 +573,10 @@ export default function FinancePayrollTab({
                   {
                     header: ar ? "الفترة" : "Period",
                     render: (b) => <span className="font-semibold">{b.periodMonth}/{b.periodYear}</span>
+                  },
+                  {
+                    header: ar ? "المركز" : "Center",
+                    render: (b) => <span className="font-semibold">{b.centerId ? centers.find(c => c.id === b.centerId)?.name || `Center #${b.centerId}` : (ar ? "عام" : "General")}</span>
                   },
                   {
                     header: ar ? "الموظفين" : "Staff",
@@ -822,31 +616,51 @@ export default function FinancePayrollTab({
                     render: (b) => (
                       <div className="flex items-center gap-2">
                         {canCreateBatch && b.status === "DRAFT" && (
-                          <Button 
-                            size="sm" 
-                            variant="primary" 
-                            className="shadow-sm"
-                            leftIcon={<Calculator className="w-4 h-4" />}
+                          <button
+                            className="fin-action-btn submit"
+                            title={ar ? "إرسال للاعتماد" : "Submit for approval"}
                             onClick={() => void handleSubmitBatch(b.id)}
-                            isLoading={submitBatchM.isPending}
+                            disabled={submitBatchM.isPending}
                           >
-                            {ar ? "إرسال للاعتماد" : "Submit for approval"}
-                          </Button>
+                            <Send size={18} />
+                          </button>
+                        )}
+                        {canApproveBatch && b.status === "SUBMITTED" && (
+                          <>
+                            <button
+                              className="fin-action-btn approve"
+                              title={ar ? "اعتماد" : "Approve"}
+                              onClick={() => void handleApproveBatch(b.id)}
+                              disabled={approveBatchM.isPending || rejectBatchM.isPending}
+                            >
+                              <CheckCircle size={18} />
+                            </button>
+                            <button
+                              className="fin-action-btn delete"
+                              title={ar ? "رفض" : "Reject"}
+                              onClick={() => void handleRejectBatch(b.id)}
+                              disabled={rejectBatchM.isPending || approveBatchM.isPending}
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          </>
                         )}
                         <button 
                           className="fin-action-btn view" 
-                          onClick={() => setSelectedBatch(b)}
+                          onClick={() => navigate(`/finance/payroll/batches/${b.id}`)}
                           title={ar ? "فحص التفاصيل" : "Inspect Details"}
                         >
-                          <Eye size={16} />
+                          <Eye size={18} />
                         </button>
-                        <button 
-                          className="fin-action-btn view" 
-                          onClick={() => printPayrollReport(b, ar, methodLabels, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
-                          title={ar ? "طباعة الكشف" : "Print Payroll"}
-                        >
-                          <Printer size={16} />
-                        </button>
+                        {["APPROVED", "PARTIALLY_PAID", "PAID"].includes(b.status) && (
+                          <button 
+                            className="fin-action-btn print" 
+                            onClick={() => printPayrollReport(b, ar, methodLabels, brandingQ.data?.logoUrl || undefined, brandingQ.data?.name || undefined)}
+                            title={ar ? "طباعة الكشف" : "Print Payroll"}
+                          >
+                            <Printer size={18} />
+                          </button>
+                        )}
                       </div>
                     )
                   }
