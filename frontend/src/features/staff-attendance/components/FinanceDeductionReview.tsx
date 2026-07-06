@@ -42,7 +42,7 @@ function getTriggerLabel(trigger: DeductionTrigger, ar: boolean) {
     case "EARLY_DEPARTURE":
       return ar ? "انصراف مبكر" : "Early Departure";
     case "UNPAID_LEAVE":
-      return ar ? "إجازة غير مدفوعة" : "Unpaid Leave";
+      return ar ? "غياب بعذر غير مدفوع" : "Unpaid Leave";
     case "MISSED_VISIT":
       return ar ? "زيارة فائتة" : "Missed Visit";
     default:

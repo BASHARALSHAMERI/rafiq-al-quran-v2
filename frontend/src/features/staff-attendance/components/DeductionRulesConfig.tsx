@@ -30,7 +30,7 @@ const getTriggerLabel = (trigger: DeductionTrigger, ar: boolean) => {
     case "EARLY_DEPARTURE":
       return ar ? "انصراف مبكر" : "Early Departure";
     case "UNPAID_LEAVE":
-      return ar ? "إجازة غير مدفوعة" : "Unpaid Leave";
+      return ar ? "غياب بعذر غير مدفوع" : "Unpaid Leave";
     case "MISSED_VISIT":
       return ar ? "زيارة فائتة" : "Missed Visit";
     default:
@@ -132,8 +132,18 @@ export function DeductionRulesConfig({ openNewSignal = 0 }: { openNewSignal?: nu
   };
 
   const saveRule = (triggerType: DeductionTrigger) => {
-    if (!editor.amount || Number(editor.amount) < 0) {
-      notifyError(ar ? "قيمة الخصم مطلوبة ويجب أن تكون موجبة." : "Deduction amount is required and must be positive.");
+    if (!editor.amount || Number(editor.amount) < 500) {
+      notifyError(ar ? "قيمة الخصم مطلوبة ويجب ألا تقل عن 500 ريال." : "Deduction amount is required and must be at least 500.");
+      return;
+    }
+    
+    if (!editor.thresholdCount || Number(editor.thresholdCount) < 1) {
+      notifyError(ar ? "الحد الأدنى للتفعيل مطلوب ويجب أن يكون 1 على الأقل." : "Threshold count is required and must be at least 1.");
+      return;
+    }
+
+    if (!editor.description || editor.description.trim() === "") {
+      notifyError(ar ? "الوصف التوضيحي مطلوب." : "Description is required.");
       return;
     }
 
@@ -344,8 +354,9 @@ function RuleEditor({
         />
         <Input
           type="number"
-          min={0}
+          min={500}
           step="any"
+          required
           value={editor.amount}
           onChange={(event) =>
             setEditor((current) => ({ ...current, amount: event.target.value }))
@@ -359,14 +370,15 @@ function RuleEditor({
           label={ar ? "الحد الأدنى للتفعيل" : "Threshold Count"}
           hint={
             ar
-              ? "عدد الحالات المسموح بها مجاناً قبل تفعيل الخصم. مثال: إذا كان الحد = 2 وغاب الموظف 3 أيام، يُخصم 3−2 = يوم واحد فقط. اتركه فارغاً لتطبيق الخصم من أول حالة."
-              : "Number of free occurrences before deduction starts. Example: threshold=2, absences=3 → only 1 day deducted. Leave empty to deduct from the first occurrence."
+              ? "عدد الحالات المسموح بها مجاناً قبل تفعيل الخصم. أدخل 1 لتطبيق الخصم من أول حالة."
+              : "Number of free occurrences before deduction starts. Enter 1 to deduct from the first occurrence."
           }
         />
         <Input
           type="number"
           min={1}
           step={1}
+          required
           value={editor.thresholdCount}
           onChange={(event) =>
             setEditor((current) => ({ ...current, thresholdCount: event.target.value }))
@@ -405,12 +417,14 @@ function RuleEditor({
           label={ar ? "وصف توضيحي" : "Description"}
           hint={
             ar
-              ? "اختياري. يظهر للمراجع المالي عند دراسة حدث الخصم لتسهيل اتخاذ قرار الاعتماد أو الإعفاء."
-              : "Optional. Shown to the finance reviewer when studying the deduction event to help decide approval or waiver."
+              ? "مطلوب. يظهر للمراجع المالي عند دراسة حدث الخصم لتسهيل اتخاذ قرار الاعتماد أو الإعفاء."
+              : "Required. Shown to the finance reviewer when studying the deduction event to help decide approval or waiver."
           }
         />
         <Input
+          type="text"
           maxLength={255}
+          required
           value={editor.description}
           onChange={(event) =>
             setEditor((current) => ({ ...current, description: event.target.value }))
