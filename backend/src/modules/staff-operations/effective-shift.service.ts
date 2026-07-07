@@ -114,7 +114,7 @@ export const effectiveShiftService = {
   async resolveEffectiveShift(
     userId: number,
     date: Date,
-    centerId: number,
+    centerId: number | null,
     organizationId: number,
     timeZone?: string
   ): Promise<EffectiveShift | null> {
@@ -190,8 +190,13 @@ export const effectiveShiftService = {
         } else if (slot.mode === "PRAYER") {
           // Prayer-based resolution
           if (!slot.fromPrayer) continue;
-
+          
           const resolvedCenter = assignment.centerId || centerId;
+          if (!resolvedCenter) {
+            console.warn(`[resolveEffectiveShift] PRAYER mode used but no centerId available for user ${userId}`);
+            continue;
+          }
+
           const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.fromPrayer, policy.prayerApiSource);
           if (!fromHHmm) continue; // Center has no GPS / prayer times unavailable
 

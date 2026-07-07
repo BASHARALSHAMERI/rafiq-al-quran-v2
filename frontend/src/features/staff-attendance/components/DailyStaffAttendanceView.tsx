@@ -83,9 +83,45 @@ const getStatusBadge = (status: string, ar: boolean) => {
           {ar ? "إجازة" : "On Leave"}
         </Badge>
       );
+    case "WAITING":
+      return (
+        <Badge variant="secondary" size="sm">
+          {ar ? "بانتظار الدوام" : "Waiting for shift"}
+        </Badge>
+      );
     default:
       return null;
   }
+};
+
+const getDerivedStatus = (record: StaffAttendanceRecord, dateStr: string, scheduledTimeStr: string) => {
+  if (record.status !== "ABSENT") return record.status;
+  if (record.checkInTime) return record.status;
+
+  const now = new Date();
+  const targetDate = new Date(dateStr);
+  const isToday = now.toISOString().slice(0, 10) === dateStr;
+  const isFutureDate = targetDate > now && !isToday;
+
+  if (isFutureDate) return "WAITING";
+
+  if (isToday) {
+    if (record.effectiveShiftStart) {
+      const shiftStart = new Date(record.effectiveShiftStart);
+      if (now < shiftStart) return "WAITING";
+    } else if (scheduledTimeStr) {
+      const firstSlot = scheduledTimeStr.split(",")[0]?.trim();
+      if (firstSlot) {
+        const startStr = firstSlot.split("-")[0].trim();
+        const [hh, mm] = startStr.split(":").map(Number);
+        const shiftStartToday = new Date();
+        shiftStartToday.setHours(hh, mm, 0, 0);
+        if (now < shiftStartToday) return "WAITING";
+      }
+    }
+  }
+
+  return record.status;
 };
 
 const getGeoStateBadge = (state: string | null | undefined, ar: boolean) => {
@@ -173,12 +209,17 @@ export function DailyStaffAttendanceView() {
   const pagination = useClientPagination(filteredRecords, { initialPageSize: 15 });
 
   const stats = useMemo(() => {
-    const present = filteredRecords.filter((record) => record.status === "PRESENT").length;
-    const late = filteredRecords.filter((record) => record.status === "LATE").length;
-    const absent = filteredRecords.filter((record) => record.status === "ABSENT").length;
-    const excused = filteredRecords.filter(
-      (record) => record.status === "EXCUSED" || record.status === "ON_LEAVE"
-    ).length;
+    let present = 0, late = 0, absent = 0, excused = 0, waiting = 0;
+
+    filteredRecords.forEach((record) => {
+      const { scheduledTime } = getScheduleDetails(record, date, hour12);
+      const derived = getDerivedStatus(record, date, scheduledTime);
+      if (derived === "PRESENT") present++;
+      else if (derived === "LATE") late++;
+      else if (derived === "ABSENT") absent++;
+      else if (derived === "EXCUSED" || derived === "ON_LEAVE") excused++;
+      else if (derived === "WAITING") waiting++;
+    });
 
     return [
       {
@@ -198,6 +239,12 @@ export function DailyStaffAttendanceView() {
         value: late,
         icon: Clock,
         cls: "amber"
+      },
+      {
+        label: ar ? "بانتظار الدوام" : "Waiting",
+        value: waiting,
+        icon: Clock,
+        cls: "slate"
       },
       {
         label: ar ? "غائب" : "Absent",
@@ -302,6 +349,7 @@ export function DailyStaffAttendanceView() {
           <div className="ctr-grid-modern">
             {pagination.pagedRows.map((record) => {
               const { expectedHours, scheduledTime } = getScheduleDetails(record, date, hour12);
+              const derivedStatus = getDerivedStatus(record, date, scheduledTime);
               const lateMinutes = record.lateMinutes ?? 0;
               const actualHours =
                 record.checkInTime && record.checkOutTime
@@ -320,8 +368,10 @@ export function DailyStaffAttendanceView() {
                 >
                   <div className="ctr-card-header">
                     <div className={`ctr-card-icon-box ${
-                      record.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-600' : 
-                      record.status === 'ABSENT' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                      derivedStatus === 'PRESENT' ? 'bg-emerald-50 text-emerald-600' : 
+                      derivedStatus === 'ABSENT' ? 'bg-rose-50 text-rose-600' : 
+                      derivedStatus === 'WAITING' ? 'bg-slate-50 text-slate-500' :
+                      'bg-amber-50 text-amber-600'
                     }`}>
                       <UserCheck size={22} />
                     </div>
@@ -333,7 +383,7 @@ export function DailyStaffAttendanceView() {
                       </div>
                     </div>
                     <div className="ctr-card-status-row">
-                      {getStatusBadge(record.status, ar)}
+                      {getStatusBadge(derivedStatus, ar)}
                     </div>
                   </div>
 

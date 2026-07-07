@@ -108,25 +108,25 @@ export async function runAutoAbsenceJob() {
 
       // Check for approved excuse
       if (excuseSet.has(userId)) {
-        await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.EXCUSED, sched.user.role as any);
+        await upsertAttendance(org.id, userId, sched.centerId ?? null, sched.isHeadquarters, today, AttendanceStatus.EXCUSED, sched.user.role as any);
         continue;
       }
 
       // Check for approved leave
       if (leaveSet.has(userId)) {
-        await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ON_LEAVE, sched.user.role as any);
+        await upsertAttendance(org.id, userId, sched.centerId ?? null, sched.isHeadquarters, today, AttendanceStatus.ON_LEAVE, sched.user.role as any);
         continue;
       }
 
       // Mark ABSENT
-      const wasNew = await upsertAttendance(org.id, userId, sched.centerId, today, AttendanceStatus.ABSENT, sched.user.role as any);
+      const wasNew = await upsertAttendance(org.id, userId, sched.centerId ?? null, sched.isHeadquarters, today, AttendanceStatus.ABSENT, sched.user.role as any);
       if (wasNew) {
         markedAbsences++;
         const absenceDate = today.toISOString().slice(0, 10);
         const absenceMarker = `${absenceDate}:${userId}:absence`;
         notificationsService.notifyStaffAbsence({
           organizationId: org.id,
-          centerId: sched.centerId,
+          centerId: sched.centerId ?? 0,
           circleId: sched.circleId ?? null,
           recipientUserId: userId,
           absenceDate,
@@ -143,7 +143,7 @@ export async function runAutoAbsenceJob() {
   logger.info({ job: "auto-absence" }, "Auto-absence job completed");
 }
 
-async function upsertAttendance(orgId: number, userId: number, centerId: number, date: Date, status: AttendanceStatus, role: any): Promise<boolean> {
+async function upsertAttendance(orgId: number, userId: number, centerId: number | null, isHeadquarters: boolean, date: Date, status: AttendanceStatus, role: any): Promise<boolean> {
   const existing = await prisma.staffAttendanceRecord.findUnique({
     where: { userId_attendanceDate: { userId, attendanceDate: date } },
     select: { id: true }
@@ -155,6 +155,7 @@ async function upsertAttendance(orgId: number, userId: number, centerId: number,
       organizationId: orgId,
       userId,
       centerId,
+      isHeadquarters,
       attendanceDate: date,
       status,
       source: AttendanceSource.SYSTEM,

@@ -19,6 +19,11 @@ model Organization {
   address                  String?                   @db.VarChar(255)
   phone                    String?                   @db.VarChar(32)
   email                    String?                   @db.VarChar(191)
+  associationLocationName  String?                   @map("association_location_name") @db.VarChar(255)
+  associationAddress       String?                   @map("association_address") @db.VarChar(255)
+  associationLatitude      Decimal?                  @map("association_latitude") @db.Decimal(10, 7)
+  associationLongitude     Decimal?                  @map("association_longitude") @db.Decimal(10, 7)
+  associationGeoRadiusMeters Int?                    @map("association_geo_radius_meters")
   activityLogs             ActivityLog[]
   accountingAccounts       AccountingAccount[]
   journalEntries           JournalEntry[]
@@ -676,7 +681,8 @@ model AttendanceRecord {
 model StaffAttendanceRecord {
   id                    Int              @id @default(autoincrement())
   organizationId        Int              @map("organization_id")
-  centerId              Int              @map("center_id")
+  centerId              Int?             @map("center_id")
+  isHeadquarters        Boolean          @default(false) @map("is_headquarters")
   userId                Int              @map("user_id")
   attendanceDate        DateTime         @map("attendance_date") @db.Date
   status                AttendanceStatus
@@ -690,7 +696,7 @@ model StaffAttendanceRecord {
   lateMinutes           Int?             @map("late_minutes")
   source                AttendanceSource @default(MANUAL)
   staffRole             StaffRoleType    @default(TEACHER) @map("staff_role")
-  center                Center           @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center                Center?          @relation(fields: [centerId], references: [id], onDelete: Cascade)
   markedBy              User?            @relation("StaffAttendanceMarkedBy", fields: [markedById], references: [id])
   organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user                  User             @relation("StaffAttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -704,7 +710,8 @@ model StaffAttendanceRecord {
 model StaffExcuseRequest {
   id             Int                 @id @default(autoincrement())
   organizationId Int                 @map("organization_id")
-  centerId       Int                 @map("center_id")
+  centerId       Int?                @map("center_id")
+  isHeadquarters Boolean             @default(false) @map("is_headquarters")
   userId         Int                 @map("user_id")
   absenceDate    DateTime            @map("absence_date") @db.Date
   reason         String              @db.VarChar(1000)
@@ -714,7 +721,7 @@ model StaffExcuseRequest {
   responseNote   String?             @map("response_note") @db.VarChar(500)
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
-  center         Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center         Center?             @relation(fields: [centerId], references: [id], onDelete: Cascade)
   handledBy      User?               @relation("StaffExcuseHandledBy", fields: [handledById], references: [id])
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User                @relation("StaffExcuseUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -749,7 +756,8 @@ model StaffScheduleAssignment {
   organizationId Int                 @map("organization_id")
   userId         Int                 @map("user_id")
   staffRole      StaffRoleType       @map("staff_role")
-  centerId       Int                 @map("center_id")
+  centerId       Int?                @map("center_id")
+  isHeadquarters Boolean             @default(false) @map("is_headquarters")
   circleId       Int?                @map("circle_id")
   sourceType     ScheduleSourceType  @default(MANUAL) @map("source_type")
   isActive       Boolean             @default(true) @map("is_active")
@@ -761,7 +769,7 @@ model StaffScheduleAssignment {
   locationText   String?             @map("location_text") @db.VarChar(255)
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
-  center         Center              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center         Center?             @relation(fields: [centerId], references: [id], onDelete: Cascade)
   circle         Circle?             @relation(fields: [circleId], references: [id])
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User                @relation("StaffSchedules", fields: [userId], references: [id], onDelete: Cascade)
@@ -797,7 +805,8 @@ model StaffLeaveRequest {
   id             Int                @id @default(autoincrement())
   organizationId Int                @map("organization_id")
   userId         Int                @map("user_id")
-  centerId       Int                @map("center_id")
+  centerId       Int?               @map("center_id")
+  isHeadquarters Boolean            @default(false) @map("is_headquarters")
   leaveType      LeaveType          @map("leave_type")
   startDate      DateTime           @map("start_date") @db.Date
   endDate        DateTime           @map("end_date") @db.Date
@@ -810,7 +819,7 @@ model StaffLeaveRequest {
   responseNote   String?            @map("response_note") @db.VarChar(500)
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
-  center         Center             @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center         Center?            @relation(fields: [centerId], references: [id], onDelete: Cascade)
   handledBy      User?              @relation("StaffLeavesHandled", fields: [handledById], references: [id])
   organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User               @relation("StaffLeaves", fields: [userId], references: [id], onDelete: Cascade)
@@ -921,7 +930,8 @@ model FinanceDeductionEvent {
   id                  Int                  @id @default(autoincrement())
   organizationId      Int                  @map("organization_id")
   userId              Int                  @map("user_id")
-  centerId            Int                  @map("center_id")
+  centerId            Int?                 @map("center_id")
+  isHeadquarters      Boolean              @default(false) @map("is_headquarters")
   ruleId              Int                  @map("rule_id")
   month               Int
   year                Int
@@ -936,7 +946,7 @@ model FinanceDeductionEvent {
   details             Json?
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
-  center              Center               @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  center              Center?              @relation(fields: [centerId], references: [id], onDelete: Cascade)
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   reviewedBy          User?                @relation("DeductionsReviewed", fields: [reviewedById], references: [id])
   rule                FinanceDeductionRule @relation(fields: [ruleId], references: [id])

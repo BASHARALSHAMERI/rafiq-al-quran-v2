@@ -58,6 +58,11 @@ type UpdateOrgBrandingInput = {
   address?: string | null;
   phone?: string | null;
   email?: string | null;
+  associationLocationName?: string | null;
+  associationAddress?: string | null;
+  associationLatitude?: number | null;
+  associationLongitude?: number | null;
+  associationGeoRadiusMeters?: number | null;
 };
 
 type UpdateStatusInput = {
@@ -469,6 +474,11 @@ export const orgService = {
     const address = input.address !== undefined ? normalizeOptionalString(input.address) ?? null : undefined;
     const phone = input.phone !== undefined ? normalizeOptionalString(input.phone) ?? null : undefined;
     const email = input.email !== undefined ? normalizeOptionalString(input.email) ?? null : undefined;
+    const associationLocationName = input.associationLocationName !== undefined ? normalizeOptionalString(input.associationLocationName) ?? null : undefined;
+    const associationAddress = input.associationAddress !== undefined ? normalizeOptionalString(input.associationAddress) ?? null : undefined;
+    const associationLatitude = input.associationLatitude !== undefined ? input.associationLatitude ?? null : undefined;
+    const associationLongitude = input.associationLongitude !== undefined ? input.associationLongitude ?? null : undefined;
+    const associationGeoRadiusMeters = input.associationGeoRadiusMeters !== undefined ? input.associationGeoRadiusMeters ?? null : undefined;
 
     const branding = await orgRepository.updateOrganizationBranding({
       organizationId: scope.organizationId,
@@ -477,7 +487,12 @@ export const orgService = {
       description,
       address,
       phone,
-      email
+      email,
+      associationLocationName,
+      associationAddress,
+      associationLatitude,
+      associationLongitude,
+      associationGeoRadiusMeters
     });
 
     await auditLogger.log({
@@ -496,7 +511,9 @@ export const orgService = {
           description: existing.description,
           address: existing.address,
           phone: existing.phone,
-          email: existing.email
+          email: existing.email,
+          associationLocationName: existing.associationLocationName,
+          associationAddress: existing.associationAddress
         },
         after: {
           name: branding.name,
@@ -504,7 +521,9 @@ export const orgService = {
           description: branding.description,
           address: branding.address,
           phone: branding.phone,
-          email: branding.email
+          email: branding.email,
+          associationLocationName: branding.associationLocationName,
+          associationAddress: branding.associationAddress
         }
       }
     });

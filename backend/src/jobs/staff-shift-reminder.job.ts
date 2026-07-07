@@ -121,7 +121,7 @@ export async function runStaffShiftReminderJob() {
       if (now >= leadWindowStart && now < effectiveShift.start) {
         await notificationsService.notifyStaffShiftReminder({
           organizationId: org.id,
-          centerId: schedule.centerId,
+          centerId: schedule.centerId ?? 0,
           circleId: schedule.circleId ?? effectiveShift.assignments.find((item) => item.circleId)?.circleId ?? null,
           recipientUserId: schedule.userId,
           recipientName: schedule.user.fullName,
@@ -129,7 +129,7 @@ export async function runStaffShiftReminderJob() {
           shiftStartIso: effectiveShift.start.toISOString(),
           shiftEndIso: effectiveShift.end.toISOString(),
           scheduleKey,
-          centerName: schedule.center.name,
+          centerName: schedule.center?.name ?? "المقر الرئيسي",
           circleName: schedule.circle?.name ?? null
         });
       }
@@ -143,14 +143,14 @@ export async function runStaffShiftReminderJob() {
       if (lateMinutes > 0) {
         await notificationsService.notifyStaffLateAlert({
           organizationId: org.id,
-          centerId: schedule.centerId,
+          centerId: schedule.centerId ?? 0,
           circleId: schedule.circleId ?? effectiveShift.assignments.find((item) => item.circleId)?.circleId ?? null,
           recipientUserId: schedule.userId,
           shiftDate,
           shiftStartIso: effectiveShift.start.toISOString(),
           lateMarker: scheduleKey,
           lateMinutes,
-          centerName: schedule.center.name,
+          centerName: schedule.center?.name ?? "المقر الرئيسي",
           circleName: schedule.circle?.name ?? null
         });
       }

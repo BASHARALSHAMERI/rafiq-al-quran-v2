@@ -28,6 +28,7 @@ type SlotInput = {
 
 type ListFilters = {
   centerId?: number;
+  isHeadquarters?: boolean;
   staffRole?: StaffRoleType;
   isActive?: boolean;
   userId?: number;
@@ -36,7 +37,8 @@ type ListFilters = {
 type CreateManualInput = {
   userId: number;
   staffRole: StaffRoleType;
-  centerId: number;
+  centerId?: number | null;
+  isHeadquarters?: boolean;
   circleId?: number | null;
   effectiveFrom: Date;
   effectiveTo?: Date | null;
@@ -64,7 +66,7 @@ type SyncCenterAdminInput = {
   effectiveFrom?: Date;
 };
 
-const FIELD_STAFF_SCHEDULE_ROLES: StaffRoleType[] = [StaffRoleType.TEACHER, StaffRoleType.SUPERVISOR];
+const FIELD_STAFF_SCHEDULE_ROLES: StaffRoleType[] = [StaffRoleType.SUPERVISOR];
 
 function isFieldStaffScheduleRole(role: StaffRoleType) {
   return FIELD_STAFF_SCHEDULE_ROLES.includes(role);
@@ -81,6 +83,7 @@ export const staffScheduleService = {
     };
 
     if (filters.centerId) where.centerId = filters.centerId;
+    if (filters.isHeadquarters !== undefined) where.isHeadquarters = filters.isHeadquarters;
     if (filters.staffRole) {
       if (isFieldStaffScheduleRole(filters.staffRole)) {
         return [];
@@ -92,8 +95,9 @@ export const staffScheduleService = {
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
     if (filters.userId) where.userId = filters.userId;
 
-    // Scope center access
+    // Scope center access — HQ employees are visible to SUPER_ADMIN only via allAccess
     if (!scope.allAccess && scope.centerIds?.length) {
+      // Show center-scoped assignments OR isHeadquarters assignments if SUPER_ADMIN
       where.centerId = { in: scope.centerIds };
     }
 
@@ -133,18 +137,21 @@ export const staffScheduleService = {
 
   async createManualAssignment(scope: ScopeContext, input: CreateManualInput) {
     if (isFieldStaffScheduleRole(input.staffRole)) {
-throw new AppError(
+      throw new AppError(
         "جداول المعلمين والمشرفين لا تُدار من هنا",
         400
       );
     }
+
+    const isHQ = input.isHeadquarters === true;
 
     return prisma.staffScheduleAssignment.create({
       data: {
         organizationId: scope.organizationId,
         userId: input.userId,
         staffRole: input.staffRole,
-        centerId: input.centerId,
+        centerId: isHQ ? null : (input.centerId ?? null),
+        isHeadquarters: isHQ,
         circleId: input.circleId ?? null,
         sourceType: ScheduleSourceType.MANUAL,
         isActive: true,

@@ -162,6 +162,11 @@ export type OrganizationBranding = {
   email?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  associationLocationName?: string | null;
+  associationAddress?: string | null;
+  associationLatitude?: number | null;
+  associationLongitude?: number | null;
+  associationGeoRadiusMeters?: number | null;
 };
 
 export type UpdateOrganizationBrandingPayload = {
@@ -171,6 +176,11 @@ export type UpdateOrganizationBrandingPayload = {
   address?: string | null;
   phone?: string | null;
   email?: string | null;
+  associationLocationName?: string | null;
+  associationAddress?: string | null;
+  associationLatitude?: number | null;
+  associationLongitude?: number | null;
+  associationGeoRadiusMeters?: number | null;
 };
 
 export type CreateCirclePayload = {

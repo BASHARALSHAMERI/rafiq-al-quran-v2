@@ -918,10 +918,19 @@
   z-index: 30;
 }
 
+[dir="rtl"] .staff-ops-policy-tooltip__bubble {
+  transform: translateX(50%) translateY(4px);
+}
+
 .staff-ops-policy-tooltip:hover .staff-ops-policy-tooltip__bubble,
 .staff-ops-policy-tooltip:focus-within .staff-ops-policy-tooltip__bubble {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+[dir="rtl"] .staff-ops-policy-tooltip:hover .staff-ops-policy-tooltip__bubble,
+[dir="rtl"] .staff-ops-policy-tooltip:focus-within .staff-ops-policy-tooltip__bubble {
+  transform: translateX(50%) translateY(0);
 }
 
 .staff-ops-policy-empty {

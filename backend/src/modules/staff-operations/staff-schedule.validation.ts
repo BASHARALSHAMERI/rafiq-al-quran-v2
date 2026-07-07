@@ -36,7 +36,8 @@ export const createAssignmentSchema = z
   .object({
     userId: positiveId,
     staffRole: z.nativeEnum(StaffRoleType),
-    centerId: positiveId,
+    centerId: positiveId.optional().nullable(),
+    isHeadquarters: z.boolean().optional().default(false),
     circleId: positiveId.optional().nullable(),
     effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
@@ -52,6 +53,23 @@ export const createAssignmentSchema = z
         code: z.ZodIssueCode.custom,
         path: ["staffRole"],
         message: "جداول المشرفين لا تُدار من هنا"
+      });
+    }
+    // Must have either centerId or isHeadquarters — not neither, not both
+    const hasCenter = value.centerId !== undefined && value.centerId !== null;
+    const isHQ = value.isHeadquarters === true;
+    if (!hasCenter && !isHQ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["centerId"],
+        message: "يجب تحديد مركز أو تفعيل خيار المقر الرئيسي للجمعية"
+      });
+    }
+    if (hasCenter && isHQ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["isHeadquarters"],
+        message: "لا يمكن تحديد مركز وتفعيل المقر الرئيسي في نفس الوقت"
       });
     }
     const hasLat = value.latitude !== undefined && value.latitude !== null;
@@ -91,6 +109,7 @@ export const updateAssignmentSchema = z
 export const listAssignmentsQuerySchema = z
   .object({
     centerId: positiveId.optional(),
+    isHeadquarters: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
     staffRole: z.nativeEnum(StaffRoleType).optional(),
     isActive: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
     userId: positiveId.optional()

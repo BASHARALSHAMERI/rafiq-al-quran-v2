@@ -810,7 +810,8 @@ export interface StaffScheduleAssignment {
   id: number;
   userId: number;
   staffRole: string;
-  centerId: number;
+  centerId?: number | null;
+  isHeadquarters?: boolean;
   circleId?: number | null;
   effectiveFrom: string;
   effectiveTo?: string | null;
@@ -822,14 +823,15 @@ export interface StaffScheduleAssignment {
   createdAt: string;
   slots: StaffScheduleSlot[];
   user: { id: number; fullName: string; role: string };
-  center: { id: number; name: string };
+  center?: { id: number; name: string } | null;
   circle?: { id: number; name: string } | null;
 }
 
 export type CreateSchedulePayload = {
   userId: number;
   staffRole: string;
-  centerId: number;
+  centerId?: number | null;
+  isHeadquarters?: boolean;
   circleId?: number | null;
   effectiveFrom: string;
   effectiveTo?: string | null;

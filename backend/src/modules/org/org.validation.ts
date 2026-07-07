@@ -295,7 +295,12 @@ export const orgBrandingUpdateBodySchema = z
     description: z.string().trim().max(500).optional().nullable(),
     address: z.string().trim().max(255).optional().nullable(),
     phone: z.string().trim().max(32).optional().nullable(),
-    email: z.union([z.string().trim().email("البريد الإلكتروني غير صالح"), z.literal("")]).optional().nullable()
+    email: z.union([z.string().trim().email("البريد الإلكتروني غير صالح"), z.literal("")]).optional().nullable(),
+    associationLocationName: z.string().trim().max(255).optional().nullable(),
+    associationAddress: z.string().trim().max(255).optional().nullable(),
+    associationLatitude: latitudeSchema.optional().nullable(),
+    associationLongitude: longitudeSchema.optional().nullable(),
+    associationGeoRadiusMeters: positiveInt.optional().nullable()
   })
   .strict()
   .refine(
@@ -305,7 +310,12 @@ export const orgBrandingUpdateBodySchema = z
       value.description !== undefined ||
       value.address !== undefined ||
       value.phone !== undefined ||
-      value.email !== undefined,
+      value.email !== undefined ||
+      value.associationLocationName !== undefined ||
+      value.associationAddress !== undefined ||
+      value.associationLatitude !== undefined ||
+      value.associationLongitude !== undefined ||
+      value.associationGeoRadiusMeters !== undefined,
     {
       message: "حقل واحد على الأقل مطلوب"
     }

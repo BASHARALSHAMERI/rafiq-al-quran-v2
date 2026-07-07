@@ -21,6 +21,7 @@ const SCHEDULABLE_ROLES = [
   { value: "FINANCE_MANAGER", labelAr: "مدير مالي",   labelEn: "Finance Manager" },
   { value: "TREASURER",       labelAr: "أمين صندوق",  labelEn: "Treasurer" },
   { value: "AUDITOR",         labelAr: "مدقق حسابات", labelEn: "Auditor" },
+  { value: "TEACHER",         labelAr: "معلم",        labelEn: "Teacher" },
 ];
 
 const roleLabel = (role: string, ar: boolean) =>
@@ -57,7 +58,7 @@ export function StaffSchedulesView() {
     return schedules.filter(
       (s) =>
         s.user.fullName.toLowerCase().includes(q) ||
-        s.center.name.toLowerCase().includes(q) ||
+        (s.center?.name ?? "المقر الرئيسي").toLowerCase().includes(q) ||
         roleLabel(s.staffRole, ar).toLowerCase().includes(q)
     );
   }, [schedules, search, ar]);
@@ -160,7 +161,7 @@ export function StaffSchedulesView() {
                 <div className="ctr-card-details bg-slate-50/30 p-3 rounded-xl mt-3 space-y-2">
                   <div className="ctr-card-detail-row">
                     <span className="ctr-card-detail-label text-[11px]">{ar ? "المركز" : "Center"}</span>
-                    <span className="ctr-card-detail-val font-medium text-[12px]">{sched.center.name}</span>
+                    <span className="ctr-card-detail-val font-medium text-[12px]">{sched.center?.name ?? "المقر الرئيسي"}</span>
                   </div>
                   <div className="ctr-card-detail-row">
                     <span className="ctr-card-detail-label text-[11px]">{ar ? "تاريخ البدء" : "From"}</span>

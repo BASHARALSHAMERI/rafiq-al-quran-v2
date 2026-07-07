@@ -25,6 +25,7 @@ const SCHEDULABLE_ROLES = [
   { value: "FINANCE_MANAGER", labelAr: "مدير مالي",   labelEn: "Finance Manager" },
   { value: "TREASURER",       labelAr: "أمين صندوق",  labelEn: "Treasurer" },
   { value: "AUDITOR",         labelAr: "مدقق حسابات", labelEn: "Auditor" },
+  { value: "TEACHER",         labelAr: "معلم",        labelEn: "Teacher" },
 ];
 
 const copyByLanguage = {
@@ -82,7 +83,7 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
   const centers = centersQ.data?.items ?? [];
 
   const [staffRole, setStaffRole] = useState(existing?.staffRole ?? "");
-  const [centerId, setCenterId] = useState<number | "">(existing?.centerId ?? "");
+  const [centerId, setCenterId] = useState<number | "hq" | "">(existing?.isHeadquarters ? "hq" : (existing?.centerId ?? ""));
   const [userId, setUserId] = useState<number | "">(existing?.userId ?? "");
   const [effectiveFrom, setEffectiveFrom] = useState(existing?.effectiveFrom?.slice(0, 10) ?? "");
   const [effectiveTo, setEffectiveTo] = useState(existing?.effectiveTo?.slice(0, 10) ?? "");
@@ -192,6 +193,8 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
             longitude: useCustomLocation ? Number(longitude) : null,
             allowedRadiusMeters: useCustomLocation ? Number(allowedRadiusMeters) : null,
             locationText: useCustomLocation ? locationText || null : null,
+            isHeadquarters: centerId === "hq",
+            centerId: centerId === "hq" ? null : Number(centerId),
             slots
           }
         },
@@ -202,7 +205,8 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
       const payload: CreateSchedulePayload = {
         userId: Number(userId),
         staffRole,
-        centerId: Number(centerId),
+        isHeadquarters: centerId === "hq",
+        centerId: centerId === "hq" ? null : Number(centerId),
         effectiveFrom,
         effectiveTo: effectiveTo || null,
         latitude: useCustomLocation ? Number(latitude) : null,
@@ -292,14 +296,17 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
                 id="sched-center"
                 className={`circlemod-select ${existing ? "circlemod-select--readonly" : ""}`}
                 value={centerId}
-                onChange={(e) => setCenterId(Number(e.target.value) || "")}
+                onChange={(e) => setCenterId(e.target.value === "hq" ? "hq" : (Number(e.target.value) || ""))}
                 disabled={!!existing || isPending}
               >
                 {existing ? (
-                  <option value={existing.centerId}>{existing.center.name}</option>
+                  <option value={existing.isHeadquarters ? "hq" : (existing.centerId ?? "")}>
+                    {existing.isHeadquarters ? (ar ? "المقر الرئيسي للجمعية" : "Association Headquarters") : (existing.center?.name ?? "")}
+                  </option>
                 ) : (
                   <>
                     <option value="">{copy.centerPlaceholder}</option>
+                    <option value="hq">{ar ? "المقر الرئيسي للجمعية" : "Association Headquarters"}</option>
                     {centers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </>
                 )}
@@ -309,6 +316,13 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
 
           {/* Location info for selected center */}
           {(() => {
+            if (centerId === "hq") {
+              return (
+                <div className="circlemod-location-bar" style={{ margin: "8px 0 12px", padding: "8px 12px", borderRadius: "6px", background: "#f8fafc", border: `1px solid #e2e8f0`, fontSize: "13px" }}>
+                  <div style={{ fontWeight: 600 }}>{ar ? "المقر الرئيسي (تم ضبط الإحداثيات في إعدادات الجمعية)" : "Headquarters (Coordinates configured in Association Settings)"}</div>
+                </div>
+              );
+            }
             const selectedCenter = centers.find((c) => c.id === centerId);
             if (!selectedCenter) return null;
             const hasCoords = selectedCenter.latitude != null && selectedCenter.longitude != null;

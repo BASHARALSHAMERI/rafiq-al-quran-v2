@@ -83,6 +83,11 @@ type UpdateOrganizationBrandingInput = {
   address?: string | null;
   phone?: string | null;
   email?: string | null;
+  associationLocationName?: string | null;
+  associationAddress?: string | null;
+  associationLatitude?: number | null;
+  associationLongitude?: number | null;
+  associationGeoRadiusMeters?: number | null;
 };
 
 type CreateCircleInput = {
@@ -205,6 +210,11 @@ const organizationBrandingSelect = {
   address: true,
   phone: true,
   email: true,
+  associationLocationName: true,
+  associationAddress: true,
+  associationLatitude: true,
+  associationLongitude: true,
+  associationGeoRadiusMeters: true,
   createdAt: true,
   updatedAt: true
 } satisfies Prisma.OrganizationSelect;
@@ -999,7 +1009,12 @@ export const orgRepository = {
         ...(input.description !== undefined ? { description: input.description ?? null } : {}),
         ...(input.address !== undefined ? { address: input.address ?? null } : {}),
         ...(input.phone !== undefined ? { phone: input.phone ?? null } : {}),
-        ...(input.email !== undefined ? { email: input.email ?? null } : {})
+        ...(input.email !== undefined ? { email: input.email ?? null } : {}),
+        ...(input.associationLocationName !== undefined ? { associationLocationName: input.associationLocationName ?? null } : {}),
+        ...(input.associationAddress !== undefined ? { associationAddress: input.associationAddress ?? null } : {}),
+        ...(input.associationLatitude !== undefined ? { associationLatitude: input.associationLatitude ?? null } : {}),
+        ...(input.associationLongitude !== undefined ? { associationLongitude: input.associationLongitude ?? null } : {}),
+        ...(input.associationGeoRadiusMeters !== undefined ? { associationGeoRadiusMeters: input.associationGeoRadiusMeters ?? null } : {})
       },
       select: organizationBrandingSelect
     });

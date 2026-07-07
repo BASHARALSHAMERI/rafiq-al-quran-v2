@@ -585,13 +585,7 @@ export const staffOperationsService = {
         return false;
       }
 
-      // 3. For today: only mark absent if current time >= shift end
-      if (isToday && now < shift.end) {
-        logger.info({ userId: record.userId, date: targetDateStr, shiftEnd: shift.end.toISOString() }, "[listAttendance] skip virtual — shift not ended yet");
-        return false;
-      }
-
-      // 4. Approved excuse → EXCUSED
+      // 3. Approved excuse → EXCUSED
       if (excuseUserIds.has(record.userId)) {
         record.status = "EXCUSED";
         record.note = "عذر مقبول";
@@ -633,7 +627,7 @@ export const staffOperationsService = {
     };
   },
 
-  async markAttendance(scope: ScopeContext, records: Array<{ userId: number; centerId: number; status: AttendanceStatus; note?: string }>, dateStr: string) {
+  async markAttendance(scope: ScopeContext, records: Array<{ userId: number; centerId?: number | null; status: AttendanceStatus; note?: string }>, dateStr: string) {
     const attendanceDate = new Date(dateStr);
     attendanceDate.setHours(0, 0, 0, 0);
 
@@ -644,9 +638,9 @@ export const staffOperationsService = {
             throw new AppError("المعلم يمكنه تسجيل حضوره فقط", 403);
         }
         records = [myRecord];
-    } else if (!scope.allAccess && scope.centerIds.length > 0) {
+    } else if (!scope.allAccess) {
       // Admin/Supervisor can only mark within their center
-      const invalid = records.find(r => !scope.centerIds.includes(r.centerId));
+      const invalid = records.find(r => r.centerId === null || (r.centerId && !scope.centerIds.includes(r.centerId)));
       if (invalid) {
         throw new AppError("الوصول ممنوع لواحد أو أكثر من المراكز", 403);
       }
@@ -675,7 +669,8 @@ export const staffOperationsService = {
           },
           create: {
             organizationId: scope.organizationId,
-            centerId: record.centerId,
+            centerId: record.centerId ?? null,
+            isHeadquarters: !record.centerId,
             userId: record.userId,
             attendanceDate,
             status: record.status,
@@ -763,7 +758,7 @@ export const staffOperationsService = {
           orderBy: [{ startDate: "desc" }]
         }),
         effectiveShiftService.getActiveCirclesForDay(scope.userId, now, timezone),
-        effectiveShiftService.resolveEffectiveShift(scope.userId, now, circle.centerId, scope.organizationId, timezone)
+        effectiveShiftService.resolveEffectiveShift(scope.userId, now, circle.centerId ?? 0, scope.organizationId, timezone)
       ]);
 
     const activeCircles =
@@ -1024,7 +1019,7 @@ export const staffOperationsService = {
       effectiveShiftService.resolveEffectiveShift(
         scope.userId,
         now,
-        circle.centerId,
+        circle.centerId ?? 0,
         scope.organizationId,
         timezone
       ),
@@ -1115,6 +1110,7 @@ export const staffOperationsService = {
       update: {
         organizationId: scope.organizationId,
         centerId: circle.centerId,
+        isHeadquarters: circle.centerId === null,
         status,
         source: AttendanceSource.SELF_CHECK_IN,
         staffRole: resolveStaffRole(scope.role),
@@ -1126,6 +1122,7 @@ export const staffOperationsService = {
       create: {
         organizationId: scope.organizationId,
         centerId: circle.centerId,
+        isHeadquarters: circle.centerId === null,
         userId: scope.userId,
         attendanceDate,
         status,
@@ -1169,7 +1166,7 @@ export const staffOperationsService = {
       effectiveShiftService.resolveEffectiveShift(
         scope.userId,
         now,
-        circle.centerId,
+        circle.centerId ?? 0,
         scope.organizationId,
         timezone
       ),
@@ -1261,6 +1258,7 @@ export const staffOperationsService = {
       data: {
         organizationId: scope.organizationId,
         centerId: circle.centerId,
+        isHeadquarters: circle.centerId === null,
         source: AttendanceSource.SELF_CHECK_IN,
         staffRole: resolveStaffRole(scope.role),
         markedById: scope.userId,
@@ -1337,8 +1335,14 @@ export const staffOperationsService = {
     };
   },
 
-  async requestExcuse(scope: ScopeContext, data: { centerId: number; date: string | Date; reason: string }) {
-    if (!scope.allAccess && !scope.centerIds.includes(data.centerId) && scope.role !== Role.TEACHER) {
+  async requestExcuse(scope: ScopeContext, data: { centerId?: number | null; date: string | Date; reason: string }) {
+    const isHQ = !data.centerId;
+
+    if (isHQ) {
+      if (!scope.allAccess) {
+        throw new AppError("فقط مدير النظام يمكنه تقديم عذر لموظف مقر الجمعية", 403);
+      }
+    } else if (!scope.allAccess && !scope.centerIds.includes(data.centerId!) && scope.role !== Role.TEACHER) {
        throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
@@ -1364,7 +1368,8 @@ export const staffOperationsService = {
     return prisma.staffExcuseRequest.create({
       data: {
         organizationId: scope.organizationId,
-        centerId: data.centerId,
+        centerId: isHQ ? null : data.centerId,
+        isHeadquarters: isHQ,
         userId: scope.userId,
         absenceDate,
         reason: data.reason,
@@ -1395,8 +1400,12 @@ export const staffOperationsService = {
       throw new AppError("لا يمكن معالجة عذر خاص بك", 403);
     }
 
-    if (!scope.allAccess && !scope.centerIds.includes(excuse.centerId)) {
+    if (!scope.allAccess && excuse.centerId && !scope.centerIds.includes(excuse.centerId)) {
       throw new AppError("ليس لديك صلاحية لتحديث العذر في هذا المركز", 403);
+    }
+    
+    if (excuse.isHeadquarters && !scope.allAccess) {
+      throw new AppError("فقط مدير النظام يمكنه تحديث عذر لموظف مقر الجمعية", 403);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -1429,7 +1438,8 @@ export const staffOperationsService = {
           },
           create: {
             organizationId: excuse.organizationId,
-            centerId: excuse.centerId,
+            centerId: excuse.centerId ?? null,
+            isHeadquarters: excuse.isHeadquarters,
             userId: excuse.userId,
             attendanceDate: excuse.absenceDate,
             status: AttendanceStatus.EXCUSED,
@@ -1875,7 +1885,7 @@ export const staffOperationsService = {
           const effectiveShift = await effectiveShiftService.resolveEffectiveShift(
             record.userId,
             new Date(record.attendanceDate),
-            record.centerId,
+            record.centerId ?? 0,
             scope.organizationId
           );
           const expectedHours = effectiveShift
@@ -2181,25 +2191,44 @@ async function resolveSelfAttendanceTarget(
         { effectiveTo: null },
         { effectiveTo: { gte: now } }
       ],
-      latitude: { not: null },
-      longitude: { not: null },
-      allowedRadiusMeters: { not: null }
+      OR: [
+        { isHeadquarters: true },
+        {
+          latitude: { not: null },
+          longitude: { not: null },
+          allowedRadiusMeters: { not: null }
+        }
+      ]
     },
     include: {
-      center: { select: { id: true, name: true, timezone: true } }
+      center: { select: { id: true, name: true, timezone: true } },
+      organization: { select: { name: true, associationLocationName: true, associationLatitude: true, associationLongitude: true, associationAllowedRadiusMeters: true, timezone: true } }
     }
   });
 
   if (activeAssignment) {
+    if (activeAssignment.isHeadquarters) {
+      return {
+        id: -1,
+        centerId: null,
+        latitude: activeAssignment.latitude ?? activeAssignment.organization?.associationLatitude ?? null,
+        longitude: activeAssignment.longitude ?? activeAssignment.organization?.associationLongitude ?? null,
+        allowedRadiusMeters: activeAssignment.allowedRadiusMeters ?? activeAssignment.organization?.associationAllowedRadiusMeters ?? null,
+        name: activeAssignment.organization?.associationLocationName || activeAssignment.organization?.name || "مقر الجمعية الرئيسي",
+        locationText: activeAssignment.locationText ?? activeAssignment.organization?.associationLocationName ?? "مقر الجمعية الرئيسي",
+        timezone: activeAssignment.organization?.timezone ?? "Asia/Aden"
+      };
+    }
+
     return {
       id: activeAssignment.circleId ?? activeAssignment.centerId,
       centerId: activeAssignment.centerId,
       latitude: activeAssignment.latitude,
       longitude: activeAssignment.longitude,
       allowedRadiusMeters: activeAssignment.allowedRadiusMeters,
-      name: activeAssignment.center.name,
-      locationText: activeAssignment.locationText ?? activeAssignment.center.name,
-      timezone: activeAssignment.center.timezone
+      name: activeAssignment.center?.name ?? "المقر الرئيسي",
+      locationText: activeAssignment.locationText ?? activeAssignment.center?.name ?? null,
+      timezone: activeAssignment.center?.timezone ?? "Asia/Aden"
     };
   }
 

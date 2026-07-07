@@ -49,7 +49,7 @@ const paginationQuerySchema = z.object({
 export const staffAttendanceRecordSchema = z
   .object({
     userId: positiveId,
-    centerId: positiveId,
+    centerId: positiveId.optional().nullable(),
     status: z.nativeEnum(AttendanceStatus),
     note: z.string().max(500).optional().nullable()
   })
@@ -123,7 +123,7 @@ export const listExcusesQuerySchema = z
 
 export const requestExcuseBodySchema = z
   .object({
-    centerId: positiveId,
+    centerId: positiveId.optional().nullable(),
     date: dateStr,
     reason: z.string().trim().min(5).max(1000)
   })
@@ -157,7 +157,7 @@ export const listLeavesQuerySchema = z
 
 export const requestLeaveBodySchema = z
   .object({
-    centerId: positiveId,
+    centerId: positiveId.optional().nullable(),
     leaveType: z.nativeEnum(LeaveType),
     startDate: flexibleDateStr,
     endDate: flexibleDateStr,

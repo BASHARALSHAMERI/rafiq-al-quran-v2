@@ -240,7 +240,7 @@ export const financeDeductionService = {
     let generatedCount = 0;
 
     for (const user of staff) {
-      const [attendance, unpaidLeaves, targetCenterId] = await Promise.all([
+      const [attendance, unpaidLeaves, targetResult] = await Promise.all([
         prisma.staffAttendanceRecord.findMany({
           where: { userId: user.id, organizationId: orgId, attendanceDate: { gte: startDate, lt: endDate } }
         }),
@@ -263,7 +263,8 @@ export const financeDeductionService = {
         this.resolveTargetCenterId(orgId, user.id, startDate, endDate)
       ]);
 
-      if (!targetCenterId) continue;
+      if (!targetResult.found) continue;
+      const targetCenterId = targetResult.centerId;
 
       // 1. Unexcused Absences
       const unexcusedAbsences = attendance.filter(a => a.status === AttendanceStatus.ABSENT).length;
@@ -329,15 +330,15 @@ export const financeDeductionService = {
     return { generatedCount, message: `Successfully generated/updated ${generatedCount} deduction events.` };
   },
 
-  async resolveTargetCenterId(orgId: number, userId: number, startDate: Date, endDate: Date) {
+  async resolveTargetCenterId(orgId: number, userId: number, startDate: Date, endDate: Date): Promise<{ centerId: number | null, found: boolean }> {
     const sampleAttendance = await prisma.staffAttendanceRecord.findFirst({
       where: { userId, organizationId: orgId, attendanceDate: { gte: startDate, lt: endDate } },
       orderBy: { attendanceDate: "desc" },
       select: { centerId: true }
     });
 
-    if (sampleAttendance?.centerId) {
-      return sampleAttendance.centerId;
+    if (sampleAttendance) {
+      return { centerId: sampleAttendance.centerId, found: true };
     }
 
     const approvedLeave = await prisma.staffLeaveRequest.findFirst({
@@ -352,8 +353,8 @@ export const financeDeductionService = {
       select: { centerId: true }
     });
 
-    if (approvedLeave?.centerId) {
-      return approvedLeave.centerId;
+    if (approvedLeave) {
+      return { centerId: approvedLeave.centerId, found: true };
     }
 
     const activeSchedule = await prisma.staffScheduleAssignment.findFirst({
@@ -368,10 +369,14 @@ export const financeDeductionService = {
       select: { centerId: true }
     });
 
-    return activeSchedule?.centerId ?? null;
+    if (activeSchedule) {
+      return { centerId: activeSchedule.centerId, found: true };
+    }
+
+    return { centerId: null, found: false };
   },
 
-  async _evaluateRule(rules: any[], type: DeductionTriggerType, rawCount: number, orgId: number, userId: number, centerId: number, month: number, year: number): Promise<number> {
+  async _evaluateRule(rules: any[], type: DeductionTriggerType, rawCount: number, orgId: number, userId: number, centerId: number | null, month: number, year: number): Promise<number> {
     const rule = rules.find(r => r.triggerType === type);
     if (!rule) return 0;
 

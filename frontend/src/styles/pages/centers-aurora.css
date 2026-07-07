@@ -1356,6 +1356,10 @@
   max-width: 900px;
 }
 
+.ctr-center-modal-panel.lib-style.modal-panel--lg {
+  max-width: 700px;
+}
+
 .ctr-modal-head-icon {
   width: 42px; height: 42px;
   border-radius: 12px;

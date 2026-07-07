@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Building2,
-  Info,
   Save,
   Phone,
   Mail,
@@ -20,9 +19,10 @@ import { useOrgBrandingQuery, useUpdateOrgBrandingMutation } from "../features/o
 import { getLocalizedApiErrorMessage } from "../shared/api/error";
 import { notifyError, notifySuccess } from "../shared/ui/feedback";
 import ForbiddenPage from "./ForbiddenPage";
+import LocationPicker from "../features/org/components/LocationPicker";
 import "../styles/pages/settings-v2.css";
 
-const APP_VERSION = "v2.0.0";
+
 
 type SettingsDraft = {
   name: string;
@@ -31,6 +31,10 @@ type SettingsDraft = {
   address: string;
   phone: string;
   email: string;
+  associationLocationName: string;
+  associationLatitude: number | null;
+  associationLongitude: number | null;
+  associationGeoRadiusMeters: number | null;
 };
 
 const formatDateTime = (value: string | null | undefined, locale: "ar-SA-u-nu-latn" | "en-US"): string => {
@@ -73,7 +77,11 @@ function SettingsPage() {
     description: brandingQ.data?.description ?? "",
     address: brandingQ.data?.address ?? "",
     phone: brandingQ.data?.phone ?? "",
-    email: brandingQ.data?.email ?? ""
+    email: brandingQ.data?.email ?? "",
+    associationLocationName: brandingQ.data?.associationLocationName ?? "",
+    associationLatitude: brandingQ.data?.associationLatitude ?? null,
+    associationLongitude: brandingQ.data?.associationLongitude ?? null,
+    associationGeoRadiusMeters: brandingQ.data?.associationGeoRadiusMeters ?? null
   };
 
   const current = draft ?? baseline;
@@ -85,13 +93,17 @@ function SettingsPage() {
     current.description.trim() !== baseline.description.trim() ||
     current.address.trim() !== baseline.address.trim() ||
     current.phone.trim() !== baseline.phone.trim() ||
-    current.email.trim() !== baseline.email.trim();
+    current.email.trim() !== baseline.email.trim() ||
+    current.associationLocationName.trim() !== baseline.associationLocationName.trim() ||
+    current.associationLatitude !== baseline.associationLatitude ||
+    current.associationLongitude !== baseline.associationLongitude ||
+    current.associationGeoRadiusMeters !== baseline.associationGeoRadiusMeters;
 
-  const handleFieldChange = (key: keyof SettingsDraft, val: string) => {
-    setDraft({
-      ...current,
+  const handleFieldChange = (key: keyof SettingsDraft, val: any) => {
+    setDraft(prev => ({
+      ...(prev ?? baseline),
       [key]: val
-    });
+    }));
   };
 
   // Form Validations
@@ -128,7 +140,11 @@ function SettingsPage() {
         description: current.description.trim() ? current.description.trim() : null,
         address: current.address.trim() ? current.address.trim() : null,
         phone: current.phone.trim() ? current.phone.trim() : null,
-        email: current.email.trim() ? current.email.trim() : null
+        email: current.email.trim() ? current.email.trim() : null,
+        associationLocationName: current.associationLocationName.trim() ? current.associationLocationName.trim() : null,
+        associationLatitude: current.associationLatitude ?? null,
+        associationLongitude: current.associationLongitude ?? null,
+        associationGeoRadiusMeters: current.associationGeoRadiusMeters ?? null
       });
 
       const nextSettings = {
@@ -137,7 +153,11 @@ function SettingsPage() {
         description: updated.description ?? "",
         address: updated.address ?? "",
         phone: updated.phone ?? "",
-        email: updated.email ?? ""
+        email: updated.email ?? "",
+        associationLocationName: updated.associationLocationName ?? "",
+        associationLatitude: updated.associationLatitude ?? null,
+        associationLongitude: updated.associationLongitude ?? null,
+        associationGeoRadiusMeters: updated.associationGeoRadiusMeters ?? null
       };
 
       setSavedSettings(nextSettings);
@@ -165,8 +185,6 @@ function SettingsPage() {
     setDraft(null);
     setValidationError(null);
   };
-
-  const lastUpdated = brandingQ.data?.updatedAt ? formatDateTime(brandingQ.data.updatedAt, locale) : "-";
 
   return (
     <>
@@ -438,26 +456,45 @@ function SettingsPage() {
                 </CardContent>
               </Card>
 
-              {/* Card 4: معلومات النظام (Without Organization Code row) */}
+              {/* Card 4: إعدادات مقر الجمعية (GPS) */}
               <Card className="stg-card glass-panel">
                 <CardHeader
-                  title={ar ? "معلومات النظام" : "System Information"}
-                  subtitle={ar ? "تفاصيل تقنية وعامة عن بيئة تشغيل رفقاء القرآن" : "Technical diagnostics and application meta"}
-                  icon={Info}
+                  title={ar ? "إعدادات مقر الجمعية" : "Headquarters Settings"}
+                  subtitle={ar ? "تحديد الموقع الجغرافي للمقر الرئيسي ونطاق الحضور" : "Define headquarters GPS location and attendance radius"}
+                  icon={MapPin}
                 />
                 <CardContent>
-                  <div className="stg-meta-list">
-                    <div className="stg-meta-row">
-                      <span>{ar ? "اسم النظام" : "System Name"}</span>
-                      <strong>{ar ? "رفيق القرآن" : "Rafiq Al-Quran"}</strong>
+                  <div className="circlemod-row">
+                    <div className="circlemod-field circlemod-field--full">
+                      <label htmlFor="assoc-loc-name">{ar ? "اسم الموقع" : "Location Name"}</label>
+                      <input
+                        id="assoc-loc-name"
+                        type="text"
+                        className="circlemod-input"
+                        value={current.associationLocationName}
+                        onChange={(e) => handleFieldChange("associationLocationName", e.target.value)}
+                        placeholder={ar ? "مثال: مقر الجمعية الرئيسي" : "e.g. Main Headquarters"}
+                      />
                     </div>
-                    <div className="stg-meta-row">
-                      <span>{ar ? "الإصدار الحالي" : "Current Version"}</span>
-                      <strong className="stg-version-badge">{APP_VERSION}</strong>
-                    </div>
-                    <div className="stg-meta-row">
-                      <span>{ar ? "آخر تحديث للبيانات" : "Last Updated"}</span>
-                      <strong>{lastUpdated}</strong>
+                  </div>
+                  
+                  <div className="circlemod-row mt-4">
+                    <div className="circlemod-field circlemod-field--full">
+                      <label>{ar ? "الموقع على الخريطة" : "Location on Map"}</label>
+                      <LocationPicker
+                        active={true}
+                        ar={ar}
+                        pending={updateBrandingM.isPending}
+                        latitude={current.associationLatitude?.toString() ?? ""}
+                        longitude={current.associationLongitude?.toString() ?? ""}
+                        allowedRadiusMeters={current.associationGeoRadiusMeters?.toString() ?? ""}
+                        onChange={(field, value) => {
+                          const targetField =
+                            field === "latitude" ? "associationLatitude" :
+                            field === "longitude" ? "associationLongitude" : "associationGeoRadiusMeters";
+                          handleFieldChange(targetField, value ? Number(value) : null);
+                        }}
+                      />
                     </div>
                   </div>
                 </CardContent>

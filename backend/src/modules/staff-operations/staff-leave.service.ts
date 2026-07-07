@@ -13,9 +13,16 @@ const toStartOfDay = (dateString: string | Date) => {
 export const staffLeaveService = {
   async submitLeaveRequest(
     scope: ScopeContext,
-    input: { centerId: number; leaveType: LeaveType; startDate: string; endDate: string; reason: string; attachmentUrl?: string | null }
+    input: { centerId?: number | null; leaveType: LeaveType; startDate: string; endDate: string; reason: string; attachmentUrl?: string | null }
   ) {
-    if (!scope.allAccess && !scope.centerIds.includes(input.centerId) && scope.role !== Role.TEACHER) {
+    const isHQ = !input.centerId;
+
+    // Scope check: HQ employees must be SUPER_ADMIN or have allAccess
+    if (isHQ) {
+      if (!scope.allAccess) {
+        throw new AppError("فقط مدير النظام يمكنه تقديم إجازة لموظف مقر الجمعية", 403);
+      }
+    } else if (!scope.allAccess && !scope.centerIds.includes(input.centerId!) && scope.role !== Role.TEACHER) {
       throw new AppError("ليس لديك صلاحية الوصول لهذا المركز", 403);
     }
 
@@ -45,7 +52,8 @@ export const staffLeaveService = {
       data: {
         organizationId: scope.organizationId,
         userId: scope.userId,
-        centerId: input.centerId,
+        centerId: isHQ ? null : (input.centerId ?? undefined),
+        isHeadquarters: isHQ,
         leaveType: input.leaveType,
         startDate: start,
         endDate: end,
@@ -155,7 +163,8 @@ export const staffLeaveService = {
             },
             create: {
               organizationId: scope.organizationId,
-              centerId: leave.centerId,
+              centerId: leave.centerId ?? null,
+              isHeadquarters: leave.isHeadquarters,
               userId: leave.userId,
               attendanceDate: current,
               status: AttendanceStatus.ON_LEAVE,
@@ -185,7 +194,8 @@ export const staffLeaveService = {
           data: {
             organizationId: scope.organizationId,
             userId: leave.userId,
-            centerId: leave.centerId,
+            centerId: leave.centerId ?? null,
+            isHeadquarters: leave.isHeadquarters,
             ruleId: rule.id,
             month: leave.startDate.getUTCMonth() + 1,
             year: leave.startDate.getUTCFullYear(),
