@@ -11,12 +11,14 @@ import {
   ChevronLeft,
   CheckCircle,
   FileText,
+  RotateCcw,
 } from "lucide-react";
 import { useI18n } from "../../../app/i18n";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { ErrorState } from "../../../components/ui/ErrorState";
+import { Modal } from "../../../components/ui/Modal";
 import { fadeUp } from "../../../shared/pageAnimations";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import { entityFeedback, type LocalizedLabel } from "../../../shared/ui/feedback";
@@ -36,7 +38,16 @@ export const getVisitStatusBadge = (status: string, ar: boolean) => {
   if (normalized === "COMPLETED" || normalized === "RESOLVED") {
     return <Badge variant="success" size="sm">{ar ? "مكتملة" : "Completed"}</Badge>;
   }
-  return <Badge variant="warning" size="sm">{ar ? "مفتوحة" : "Open"}</Badge>;
+  if (normalized === "MISSED") {
+    return <Badge variant="destructive" size="sm">{ar ? "زيارة فائتة" : "Missed"}</Badge>;
+  }
+  if (normalized === "IN_PROGRESS") {
+    return <Badge variant="warning" size="sm">{ar ? "قيد التنفيذ" : "In Progress"}</Badge>;
+  }
+  if (normalized === "PENDING" || normalized === "SCHEDULED") {
+    return <Badge variant="secondary" size="sm">{ar ? "مجدولة / لم تنفذ" : "Scheduled"}</Badge>;
+  }
+  return <Badge variant="secondary" size="sm">{ar ? "مفتوحة" : "Open"}</Badge>;
 };
 
 
@@ -166,9 +177,9 @@ export function SupervisorVisitsView() {
         ))}
       </div>
 
-      <div className="ctr-controls mb-6">
-        <div className="flex gap-4 items-center flex-1 flex-wrap">
-          <div className="ctr-search-wrap max-w-[280px] w-full">
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-6 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3 flex-1 min-w-[300px]">
+          <div className="ctr-search-wrap flex-1 !max-w-none bg-slate-50/50 border-transparent focus-within:bg-white transition-colors">
             <Search className="ctr-search-icon" size={16} />
             <input
               type="text"
@@ -182,10 +193,10 @@ export function SupervisorVisitsView() {
             />
           </div>
 
-          <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-xl border border-slate-200 max-w-[280px] w-full">
-            <CalendarDays className="text-slate-400 ms-2" size={16} />
+          <div className="flex gap-2 items-center bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <CalendarDays className="text-slate-400 ms-2" size={14} />
             <select
-              className="ctr-search-input !h-8 !w-28 !bg-transparent !border-none !p-0 text-center text-sm font-semibold cursor-pointer"
+              className="ctr-search-input !h-7 w-20 !bg-transparent !border-none !p-0 text-center text-xs font-semibold cursor-pointer"
               value={month}
               onChange={(e) => {
                 setMonthStr(`${year}-${String(e.target.value).padStart(2, "0")}`);
@@ -194,7 +205,7 @@ export function SupervisorVisitsView() {
             >
               {Array.from({ length: 12 }, (_, i) => {
                 const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const englishMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 return (
                   <option key={i + 1} value={i + 1}>
                     {ar ? arabicMonths[i] : englishMonths[i]}
@@ -205,7 +216,7 @@ export function SupervisorVisitsView() {
             <span className="text-slate-300">/</span>
             <input
               type="number"
-              className="ctr-search-input !h-8 !w-20 !bg-transparent !border-none !p-0 text-center text-sm font-semibold font-mono"
+              className="ctr-search-input !h-7 w-12 !bg-transparent !border-none !p-0 text-center text-xs font-semibold font-mono"
               value={year}
               onChange={(e) => {
                 setMonthStr(`${e.target.value}-${String(month).padStart(2, "0")}`);
@@ -213,16 +224,16 @@ export function SupervisorVisitsView() {
               }}
             />
           </div>
-
-          <div className="text-[12px] text-slate-500 italic hidden md:block">
-            {ar ? "يتم تحديث البيانات تلقائياً عند تغيير الشهر" : "Data updates automatically on month change"}
-          </div>
         </div>
         
-        <div className="ctr-filters-group">
+        <div className="flex items-center gap-4">
+          <div className="text-[12px] text-slate-500 italic hidden xl:block">
+            {ar ? "يتم التحديث تلقائياً" : "Auto updates"}
+          </div>
           <Button
             variant="ghost"
-            size="sm"
+            className="hover:bg-slate-100 flex items-center justify-center p-2 rounded-full w-10 h-10 text-slate-500 hover:text-slate-800 border border-transparent hover:border-slate-200 transition-all"
+            title={ar ? "إعادة الضبط" : "Reset"}
             onClick={() => {
               setSearch("");
               setMonthStr(DEFAULT_MONTH);
@@ -230,7 +241,7 @@ export function SupervisorVisitsView() {
             }}
             disabled={!search.trim() && monthStr === DEFAULT_MONTH}
           >
-            {ar ? "إعادة الضبط" : "Reset"}
+            <RotateCcw size={18} strokeWidth={2.5} />
           </Button>
         </div>
       </div>
@@ -291,9 +302,13 @@ export function SupervisorVisitsView() {
                       </div>
                     </div>
                     <div className="ctr-card-status-row">
-                       <Badge variant="secondary" size="sm" className="ctr-card-status bg-slate-100 text-slate-700">
-                         {visit.category || (ar ? "زيارة" : "Visit")}
-                       </Badge>
+                         <Badge variant="secondary" size="sm" className="ctr-card-status bg-slate-100 text-slate-700">
+                           {visit.category === "PLANNED" 
+                             ? (ar ? "مجدولة" : "Planned") 
+                             : visit.category === "EMERGENCY" 
+                             ? (ar ? "طارئة" : "Emergency") 
+                             : visit.category || (ar ? "زيارة" : "Visit")}
+                         </Badge>
                     </div>
                   </div>
 
@@ -383,76 +398,75 @@ export function SupervisorVisitsView() {
         </div>
       )}
 
-      <AnimatePresence>
-        {selectedVisit && (
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="ctr-card-modern mt-8 border-brand/20 bg-brand/[0.02]" 
-            aria-label={ar ? "تفاصيل الزيارة" : "Visit details"}
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-brand text-white rounded-lg shadow-brand/20 shadow-lg">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-slate-800">{ar ? "تقرير الزيارة التفصيلي" : "Detailed Visit Report"}</h3>
-                    <p className="text-sm text-slate-500">{ar ? "ملاحظات المشرف وتقييم البنود" : "Supervisor observations and checklist"}</p>
-                  </div>
+      {selectedVisit && (
+        <Modal
+          isOpen={Boolean(selectedVisitId)}
+          onClose={() => setSelectedVisitId(null)}
+          title={ar ? "تقرير الزيارة التفصيلي" : "Detailed Visit Report"}
+          size="lg"
+          hideFooter
+          panelClassName="users-modal-panel staff-ops-users-modal-panel"
+          bodyClassName="users-modal-body staff-ops-users-modal-body bg-slate-50/30"
+        >
+          <div className="p-2 md:p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand text-white rounded-lg shadow-brand/20 shadow-lg">
+                  <FileText size={20} />
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setSelectedVisitId(null)}
-                  className="text-slate-400 hover:text-red-500"
-                >
-                  {ar ? "إغلاق" : "Close"}
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                    <Star size={16} className="text-amber-500" />
-                    {ar ? "الملاحظات العامة" : "General Observations"}
-                  </h4>
-                  <div className="p-4 bg-white border border-slate-100 rounded-xl text-slate-600 leading-relaxed shadow-sm italic">
-                    {selectedVisit.observations ||
-                      selectedVisit.content ||
-                      (ar
-                        ? "لا توجد ملاحظات مسجلة لهذه الزيارة حالياً."
-                        : "No observations recorded for this visit.")}
-                  </div>
+                <div>
+                  <p className="text-sm text-slate-500">{ar ? "ملاحظات المشرف وقائمة التقييم" : "Supervisor observations and checklist"}</p>
                 </div>
-
-                {selectedVisit.checklist?.length ? (
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-slate-700 flex items-center gap-2">
-                      <CheckCircle size={16} className="text-emerald-500" />
-                      {ar ? "بنود التقييم" : "Evaluation Checklist"}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedVisit.checklist.map((item, index) => (
-                        <div key={`${selectedVisit.id}-${index}`} className="flex items-center justify-between p-3 bg-white border border-slate-50 rounded-lg shadow-sm">
-                          <span className="text-sm text-slate-600 font-medium">
-                            {String(item.label ?? item.key ?? `${ar ? "بند" : "Item"} ${index + 1}`)}
-                          </span>
-                          <Badge variant={item.checked === true ? "success" : "secondary"} size="sm" className="font-bold">
-                            {item.checked === true ? (ar ? "مكتمل" : "Done") : ar ? "مفتوح" : "Open"}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                  <Star size={16} className="text-amber-500" />
+                  {ar ? "الملاحظات العامة" : "General Observations"}
+                </h4>
+                <div className="p-4 bg-white border border-slate-100 rounded-xl text-slate-600 leading-relaxed shadow-sm italic">
+                  {selectedVisit.status?.toUpperCase() === "MISSED" ? (
+                    ar ? "هذه الزيارة فائتة ولم يتم إجراؤها في وقتها المحدد." : "This visit was missed and not performed."
+                  ) : selectedVisit.status?.toUpperCase() === "PENDING" ? (
+                    ar ? "لم تنفذ بعد" : "Not yet performed"
+                  ) : selectedVisit.status?.toUpperCase() === "IN_PROGRESS" ? (
+                    ar ? "جاري التنفيذ حالياً" : "Currently in progress"
+                  ) : (
+                    selectedVisit.observations ||
+                    selectedVisit.content ||
+                    (ar
+                      ? "لا توجد ملاحظات مسجلة لهذه الزيارة حالياً."
+                      : "No observations recorded for this visit.")
+                  )}
+                </div>
+              </div>
+
+              {selectedVisit.checklist?.length ? (
+                <div className="space-y-4">
+                  <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                    <CheckCircle size={16} className="text-emerald-500" />
+                    {ar ? "قائمة التقييم" : "Evaluation Checklist"}
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedVisit.checklist.map((item: any, index: number) => (
+                      <div key={`${selectedVisit.id}-${index}`} className="flex items-center justify-between p-3 bg-white border border-slate-50 rounded-lg shadow-sm">
+                        <span className="text-sm text-slate-600 font-medium">
+                          {String(item.label ?? item.key ?? `${ar ? "بند" : "Item"} ${index + 1}`)}
+                        </span>
+                        <Badge variant={item.checked === true ? "success" : "secondary"} size="sm" className="font-bold">
+                          {item.checked === true ? (ar ? "مكتمل" : "Done") : ar ? "مفتوح" : "Open"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

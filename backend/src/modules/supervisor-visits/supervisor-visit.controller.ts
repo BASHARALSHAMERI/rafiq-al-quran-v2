@@ -118,5 +118,20 @@ export const supervisorVisitController = {
     } catch (error) {
       next(error);
     }
+  }) as RequestHandler,
+
+  listTrackingVisits: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const query = (res.locals.validatedQuery || {}) as any;
+      const data = await supervisorVisitService.listTrackingVisits(req.scope, {
+        supervisorId: query.supervisorId ? Number(query.supervisorId) : undefined,
+        startDate: query.startDate,
+        endDate: query.endDate
+      });
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
   }) as RequestHandler
 };

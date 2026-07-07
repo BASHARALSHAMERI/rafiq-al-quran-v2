@@ -624,7 +624,7 @@ export function useSupervisorVisitLogs(filters?: {
   return useQuery({
     queryKey: staffOpsKeys.visitLogs(filters),
     queryFn: async () => {
-      const res = await apiClient.get<{ data: SupervisorVisitRecord[] }>("/supervisor-visits/logs", {
+      const res = await apiClient.get<{ data: SupervisorVisitRecord[] }>("/supervisor-visits/tracking", {
         params: filters,
       });
       return res.data.data;

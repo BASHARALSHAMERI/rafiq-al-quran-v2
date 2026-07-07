@@ -392,7 +392,28 @@ function PlanItemModal({
         />
         <Select
           value={form.circleId}
-          onChange={(event) => setForm((current) => ({ ...current, circleId: event.target.value }))}
+          onChange={(event) => {
+            const circleId = event.target.value;
+            let recommendedTime = form.plannedTimeWindow;
+            if (circleId) {
+              const circle = circlesQuery.data?.items.find((c) => String(c.id) === circleId);
+              if (circle?.weeklySchedule && circle.weeklySchedule.length > 0) {
+                const dayOfWeekMap = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+                const dateObj = new Date(form.plannedDate);
+                const dayStr = dayOfWeekMap[dateObj.getDay()];
+                const row = circle.weeklySchedule.find((s) => s.dayOfWeek === dayStr) as any;
+                if (row?.startTime && row?.endTime) {
+                  recommendedTime = `${row.startTime} - ${row.endTime}`;
+                } else {
+                  const firstRow = circle.weeklySchedule[0] as any;
+                  if (firstRow?.startTime && firstRow?.endTime) {
+                    recommendedTime = `${firstRow.startTime} - ${firstRow.endTime}`;
+                  }
+                }
+              }
+            }
+            setForm((current) => ({ ...current, circleId, plannedTimeWindow: recommendedTime }));
+          }}
           options={[
             { value: "", label: ar ? "زيارة مركز فقط" : "Center only (no circle)" },
             ...(circlesQuery.data?.items ?? []).map((circle) => ({

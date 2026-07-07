@@ -85,6 +85,13 @@ supervisorVisitRouter.patch(
 );
 
 supervisorVisitRouter.get(
+  "/tracking",
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
+  validateQuery(listVisitLogsQuerySchema),
+  supervisorVisitController.listTrackingVisits
+);
+
+supervisorVisitRouter.get(
   "/logs",
   requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN]),
   validateQuery(listVisitLogsQuerySchema),

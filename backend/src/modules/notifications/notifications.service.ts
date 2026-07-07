@@ -123,6 +123,47 @@ export const notificationsService = {
     return { createdCount: result.count };
   },
 
+  async notifySupervisorVisitMissed(input: {
+    organizationId: number;
+    centerId: number;
+    circleId?: number | null;
+    recipientUserId: number;
+    planItemId: number;
+    plannedDate: string;
+    centerName: string;
+    circleName?: string | null;
+  }) {
+    const targetLabel = input.circleName?.trim() || input.centerName;
+
+    const title = "زيارة إشرافية فائتة";
+    const body = `تم تسجيل زيارة ${targetLabel} بتاريخ ${input.plannedDate} كزيارة فائتة لعدم تنفيذها في موعدها.`;
+
+    const result = await notificationsRepository.createMany({
+      data: [
+        {
+          organizationId: input.organizationId,
+          centerId: input.centerId,
+          circleId: input.circleId ?? null,
+          type: "SUPERVISOR_VISIT_MISSED" as any,
+          title,
+          body,
+          payload: {
+            workflow: "SUPERVISOR_VISIT_PLAN",
+            planItemId: input.planItemId,
+            centerId: input.centerId,
+            circleId: input.circleId ?? null,
+            plannedDate: input.plannedDate,
+            targetLabel
+          },
+          recipientUserId: input.recipientUserId,
+          createdById: null
+        }
+      ]
+    });
+
+    return { createdCount: result.count };
+  },
+
   async notifyStaffShiftReminder(input: {
     organizationId: number;
     centerId: number;

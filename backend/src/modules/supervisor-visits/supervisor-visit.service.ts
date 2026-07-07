@@ -551,5 +551,119 @@ export const supervisorVisitService = {
     });
 
     return logs.map(serializeVisitLog);
+  },
+
+  async listTrackingVisits(scope: ScopeContext, query: { supervisorId?: number; startDate?: string; endDate?: string }) {
+    const planItemWhere: any = {
+      plan: {
+        organizationId: scope.organizationId,
+        ...(query.supervisorId ? { supervisorId: query.supervisorId } : {})
+      },
+      ...(query.startDate || query.endDate
+        ? {
+            plannedDate: {
+              ...(query.startDate ? { gte: toStartOfDay(query.startDate) } : {}),
+              ...(query.endDate ? { lte: toEndOfDay(query.endDate) } : {})
+            }
+          }
+        : {})
+    };
+
+    if (scope.role === "SUPERVISOR") {
+      planItemWhere.plan.supervisorId = scope.userId;
+    } else if (!scope.allAccess && scope.centerIds.length > 0) {
+      planItemWhere.centerId = { in: scope.centerIds };
+    }
+
+    const planItems = await prisma.supervisorVisitPlanItem.findMany({
+      where: planItemWhere,
+      include: {
+        plan: {
+          include: {
+            supervisor: { select: { id: true, fullName: true } }
+          }
+        },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } },
+        logs: {
+          orderBy: { startedAt: "desc" },
+          take: 1
+        }
+      },
+      orderBy: { plannedDate: "desc" }
+    });
+
+    const adhocLogWhere: any = {
+      organizationId: scope.organizationId,
+      planItemId: null,
+      ...(query.supervisorId ? { supervisorId: query.supervisorId } : {}),
+      ...(query.startDate || query.endDate
+        ? {
+            startedAt: {
+              ...(query.startDate ? { gte: toStartOfDay(query.startDate) } : {}),
+              ...(query.endDate ? { lte: toEndOfDay(query.endDate) } : {})
+            }
+          }
+        : {})
+    };
+
+    if (scope.role === "SUPERVISOR") {
+      adhocLogWhere.supervisorId = scope.userId;
+    } else if (!scope.allAccess && scope.centerIds.length > 0) {
+      adhocLogWhere.centerId = { in: scope.centerIds };
+    }
+
+    const adhocLogs = await prisma.supervisorVisitLog.findMany({
+      where: adhocLogWhere,
+      include: {
+        supervisor: { select: { id: true, fullName: true } },
+        center: { select: { id: true, name: true } },
+        circle: { select: { id: true, name: true } }
+      },
+      orderBy: { startedAt: "desc" }
+    });
+
+    const results: any[] = [];
+
+    for (const item of planItems) {
+      const log = item.logs[0];
+      results.push({
+        id: `plan_${item.id}`,
+        planItemId: item.id,
+        planId: item.planId,
+        supervisor: item.plan.supervisor,
+        center: item.center,
+        circle: item.circle,
+        category: "PLANNED",
+        status: log ? (log.endedAt ? "COMPLETED" : "IN_PROGRESS") : mapPlanItemStatusToApi(item.status),
+        createdAt: item.plannedDate.toISOString(),
+        rating: log?.rating ?? null,
+        observations: log?.observations ?? null,
+        checklist: Array.isArray(log?.checklist) ? log.checklist : [],
+        targetLabel: item.circle?.name ?? item.center?.name ?? "General Visit",
+        logId: log?.id ?? null
+      });
+    }
+
+    for (const log of adhocLogs) {
+      results.push({
+        id: `log_${log.id}`,
+        planItemId: null,
+        planId: null,
+        supervisor: log.supervisor,
+        center: log.center,
+        circle: log.circle,
+        category: "EMERGENCY",
+        status: log.endedAt ? "COMPLETED" : "IN_PROGRESS",
+        createdAt: log.startedAt.toISOString(),
+        rating: log.rating ?? null,
+        observations: log.observations ?? null,
+        checklist: Array.isArray(log.checklist) ? log.checklist : [],
+        targetLabel: log.circle?.name ?? log.center?.name ?? "General Visit",
+        logId: log.id
+      });
+    }
+
+    return results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 };
