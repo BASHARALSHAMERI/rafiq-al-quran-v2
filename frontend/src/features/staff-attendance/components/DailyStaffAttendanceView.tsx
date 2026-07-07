@@ -89,6 +89,12 @@ const getStatusBadge = (status: string, ar: boolean) => {
           {ar ? "بانتظار الدوام" : "Waiting for shift"}
         </Badge>
       );
+    case "PENDING_CHECK_IN":
+      return (
+        <Badge variant="warning" size="sm" className="bg-amber-100 text-amber-800">
+          {ar ? "لم يسجل الحضور بعد" : "Not checked in yet"}
+        </Badge>
+      );
     default:
       return null;
   }
@@ -109,6 +115,9 @@ const getDerivedStatus = (record: StaffAttendanceRecord, dateStr: string, schedu
     if (record.effectiveShiftStart) {
       const shiftStart = new Date(record.effectiveShiftStart);
       if (now < shiftStart) return "WAITING";
+      // If the record is virtual (id < 0) and the shift has started, they haven't checked in yet,
+      // but auto-absence hasn't marked them definitively absent yet.
+      if (record.id < 0) return "PENDING_CHECK_IN";
     } else if (scheduledTimeStr) {
       const firstSlot = scheduledTimeStr.split(",")[0]?.trim();
       if (firstSlot) {
@@ -117,6 +126,7 @@ const getDerivedStatus = (record: StaffAttendanceRecord, dateStr: string, schedu
         const shiftStartToday = new Date();
         shiftStartToday.setHours(hh, mm, 0, 0);
         if (now < shiftStartToday) return "WAITING";
+        if (record.id < 0) return "PENDING_CHECK_IN";
       }
     }
   }
@@ -215,7 +225,7 @@ export function DailyStaffAttendanceView() {
   const pagination = useClientPagination(filteredRecords, { initialPageSize: 15 });
 
   const stats = useMemo(() => {
-    let present = 0, late = 0, absent = 0, excused = 0, waiting = 0;
+    let present = 0, late = 0, absent = 0, excused = 0, waiting = 0, pending = 0;
 
     filteredRecords.forEach((record) => {
       const { scheduledTime } = getScheduleDetails(record, date, hour12);
@@ -225,6 +235,7 @@ export function DailyStaffAttendanceView() {
       else if (derived === "ABSENT") absent++;
       else if (derived === "EXCUSED" || derived === "ON_LEAVE") excused++;
       else if (derived === "WAITING") waiting++;
+      else if (derived === "PENDING_CHECK_IN") pending++;
     });
 
     return [
@@ -249,6 +260,12 @@ export function DailyStaffAttendanceView() {
       {
         label: ar ? "بانتظار الدوام" : "Waiting",
         value: waiting,
+        icon: Clock,
+        cls: "slate"
+      },
+      {
+        label: ar ? "لم يسجل بعد" : "Pending",
+        value: pending,
         icon: Clock,
         cls: "slate"
       },
@@ -376,7 +393,7 @@ export function DailyStaffAttendanceView() {
                     <div className={`ctr-card-icon-box ${
                       derivedStatus === 'PRESENT' ? 'bg-emerald-50 text-emerald-600' : 
                       derivedStatus === 'ABSENT' ? 'bg-rose-50 text-rose-600' : 
-                      derivedStatus === 'WAITING' ? 'bg-slate-50 text-slate-500' :
+                      derivedStatus === 'WAITING' || derivedStatus === 'PENDING_CHECK_IN' ? 'bg-slate-50 text-slate-500' :
                       'bg-amber-50 text-amber-600'
                     }`}>
                       <UserCheck size={22} />
@@ -427,7 +444,7 @@ export function DailyStaffAttendanceView() {
 
                   <div className="ctr-card-actions mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-400 uppercase tracking-wider">{ar ? "وقت التأخير" : "Delay Time"}</span>
+                      <span className="text-[9px] text-slate-400 uppercase tracking-wider">{ar ? "التأخير (بعد السماح)" : "Delay (After Grace)"}</span>
                       <span className={`text-[11px] font-bold ${lateMinutes > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
                         {lateMinutes > 0 ? (ar ? `${lateMinutes} دقيقة` : `${lateMinutes} min`) : (ar ? "لا يوجد" : "None")}
                       </span>
