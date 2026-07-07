@@ -21,7 +21,6 @@ type Props = {
   onChange: (rows: CircleScheduleDraftRow[]) => void;
   ar: boolean;
   disabled?: boolean;
-  error?: string | null;
 };
 
 const addTwoHours = (value: string) => {
@@ -36,7 +35,7 @@ const addTwoHours = (value: string) => {
   return `${String(nextHours).padStart(2, "0")}:${String(nextMinutes).padStart(2, "0")}`;
 };
 
-export function CircleScheduleEditor({ rows, onChange, ar, disabled = false, error }: Props) {
+export function CircleScheduleEditor({ rows, onChange, ar, disabled = false }: Props) {
   const [workStartDate, setWorkStartDate] = useState("");
 
   const updateRow = (
@@ -269,12 +268,6 @@ export function CircleScheduleEditor({ rows, onChange, ar, disabled = false, err
         })}
       </div>
 
-      {error ? (
-        <div className="cirsched-error">
-          <div className="cirsched-error-dot" />
-          {error}
-        </div>
-      ) : null}
     </div>
   );
 }

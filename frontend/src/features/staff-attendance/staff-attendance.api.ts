@@ -71,6 +71,14 @@ export interface StaffAttendanceRecord {
         toTime: string | null;
       }>;
     }>;
+    staffSchedules?: Array<{
+      id: number;
+      slots: Array<{
+        dayOfWeek: string;
+        fromTime: string | null;
+        toTime: string | null;
+      }>;
+    }>;
   };
 }
 

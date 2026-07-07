@@ -13,7 +13,7 @@ import { useAuthStore } from "../../auth/auth.store";
 import { useLeaveRequests, useStaffExcuses } from "../staff-attendance.api";
 import { AttendancePolicySettings } from "./AttendancePolicySettings";
 import { DailyStaffAttendanceView } from "./DailyStaffAttendanceView";
-import { FinanceDeductionReview } from "./FinanceDeductionReview";
+
 import { StaffExcusesRequestsView } from "./StaffExcusesRequestsView";
 import { SupervisorVisitsView } from "./SupervisorVisitsView";
 import { VisitPlanManagement } from "./VisitPlanManagement";
@@ -26,7 +26,6 @@ type StaffOpsTabId =
   | "requests"
   | "visits"
   | "plans"
-  | "finance"
   | "policy"
   | "schedules";
 
@@ -58,7 +57,6 @@ export function StaffOperationsDashboard() {
   
   const isOpsAdmin = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const canReviewFinanceDeductions = user?.role === "SUPER_ADMIN";
   const tabs: StaffOpsTab[] = [
     ...(isOpsAdmin
       ? [
@@ -83,11 +81,7 @@ export function StaffOperationsDashboard() {
             label: ar ? "خطط الزيارات" : "Visit Plans",
             icon: <MapPin size={16} />
           },
-          {
-            id: "finance" as const,
-            label: ar ? "الخصومات المالية" : "Finance Deductions",
-            icon: <DollarSign size={16} />
-          },
+
           {
             id: "schedules" as const,
             label: ar ? "جداول الموظفين" : "Staff Schedules",
@@ -117,9 +111,7 @@ export function StaffOperationsDashboard() {
             role="tablist"
             aria-label={ar ? "تبويبات شؤون الموظفين" : "Staff operations tabs"}
           >
-            {tabs
-              .filter((tab) => tab.id !== "finance" || canReviewFinanceDeductions)
-              .map((tab) => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
 
               return (
@@ -157,7 +149,7 @@ export function StaffOperationsDashboard() {
                 {activeTab === "requests" && isOpsAdmin && <StaffExcusesRequestsView />}
                 {activeTab === "visits" && isOpsAdmin && <SupervisorVisitsView />}
                 {activeTab === "plans" && isOpsAdmin && <VisitPlanManagement />}
-                {activeTab === "finance" && canReviewFinanceDeductions && <FinanceDeductionReview />}
+
                 {activeTab === "schedules" && isOpsAdmin && <StaffSchedulesView />}
                 {activeTab === "policy" && isSuperAdmin && <AttendancePolicySettings />}
               </motion.div>

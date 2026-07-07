@@ -19,13 +19,13 @@ import { logger } from "../../shared/logger/logger";
 
 const toStartOfDay = (value: string | Date) => {
   const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
 const toEndOfDay = (value: string | Date) => {
   const date = new Date(value);
-  date.setHours(23, 59, 59, 999);
+  date.setUTCHours(23, 59, 59, 999);
   return date;
 };
 
@@ -421,6 +421,10 @@ export const staffOperationsService = {
           profile: { select: { phone: true, gender: true } },
           taughtCircles: {
             include: { weeklyScheduleSlots: true }
+          },
+          staffSchedules: {
+            where: { isActive: true },
+            include: { slots: true }
           },
           staffAttendances: {
             where: { attendanceDate: targetDate }

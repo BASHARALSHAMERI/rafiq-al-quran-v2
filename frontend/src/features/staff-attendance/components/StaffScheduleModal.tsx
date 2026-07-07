@@ -18,6 +18,8 @@ import {
   type StaffScheduleAssignment,
   type CreateSchedulePayload,
 } from "../staff-attendance.api";
+import { notifyError, notifySuccess } from "../../../shared/ui/feedback";
+import { getLocalizedApiErrorMessage, getApiFieldErrors, translateZodToAr } from "../../../shared/api/error";
 
 const SCHEDULABLE_ROLES = [
   { value: "CENTER_ADMIN",    labelAr: "مدير مركز",    labelEn: "Center Admin" },
@@ -119,7 +121,7 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
     return emptyRows;
   });
   
-  const [slotError, setSlotError] = useState<string | null>(null);
+
 
   const usersQ = useStaffUsersByRole(staffRole || undefined);
   const users = usersQ.data ?? [];
@@ -127,7 +129,6 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
   const createM = useCreateStaffSchedule();
   const updateM = useUpdateStaffSchedule();
   const isPending = createM.isPending || updateM.isPending;
-  const isError = createM.isError || updateM.isError;
 
   // Sync internal state with props when modal opens or existing assignment changes
   useEffect(() => {
@@ -164,14 +165,21 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
       } else {
         setRows(emptyRows);
       }
-      setSlotError(null);
     }
   }, [isOpen, existing]);
 
   const handleSubmit = () => {
+    const enabledRows = rows.filter(r => r.enabled);
+    if (enabledRows.length === 0) {
+      notifyError(ar ? "يجب اختيار يوم دوام واحد على الأقل" : "At least one working day must be selected");
+      return;
+    }
+
     const slotsError = validateScheduleDraftRows(rows, ar);
-    if (slotsError) { setSlotError(slotsError); return; }
-    setSlotError(null);
+    if (slotsError) {
+      notifyError(slotsError);
+      return;
+    }
     
     const circleRows = serializeScheduleDraftRows(rows);
     const slots = circleRows.map((row) => ({
@@ -193,12 +201,30 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
             longitude: useCustomLocation ? Number(longitude) : null,
             allowedRadiusMeters: useCustomLocation ? Number(allowedRadiusMeters) : null,
             locationText: useCustomLocation ? locationText || null : null,
-            isHeadquarters: centerId === "hq",
-            centerId: centerId === "hq" ? null : Number(centerId),
             slots
           }
         },
-        { onSuccess: onClose }
+        {
+          onSuccess: () => {
+            notifySuccess(ar ? "تم تحديث الجدول بنجاح" : "Schedule updated successfully");
+            onClose();
+          },
+          onError: (error) => {
+            const fieldErrors = getApiFieldErrors(error);
+            const fieldErrorMessages = Object.values(fieldErrors);
+            
+            if (fieldErrorMessages.length > 0) {
+              fieldErrorMessages.forEach(msg => notifyError(ar ? translateZodToAr(msg) : msg));
+            } else {
+              notifyError(
+                getLocalizedApiErrorMessage(error, {
+                  ar,
+                  fallback: ar ? "فشل تحديث الجدول. حاول مرة أخرى." : "Failed to update schedule. Please try again."
+                })
+              );
+            }
+          }
+        }
       );
     } else {
       if (!staffRole || !centerId || !userId || !effectiveFrom) return;
@@ -215,7 +241,27 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
         locationText: useCustomLocation ? locationText || null : null,
         slots,
       };
-      createM.mutate(payload, { onSuccess: onClose });
+      createM.mutate(payload, {
+        onSuccess: () => {
+          notifySuccess(ar ? "تم إضافة الجدول بنجاح" : "Schedule created successfully");
+          onClose();
+        },
+        onError: (error) => {
+          const fieldErrors = getApiFieldErrors(error);
+          const fieldErrorMessages = Object.values(fieldErrors);
+          
+          if (fieldErrorMessages.length > 0) {
+            fieldErrorMessages.forEach(msg => notifyError(ar ? translateZodToAr(msg) : msg));
+          } else {
+            notifyError(
+              getLocalizedApiErrorMessage(error, {
+                ar,
+                fallback: ar ? "فشل حفظ الجدول. حاول مرة أخرى." : "Failed to save schedule. Please try again."
+              })
+            );
+          }
+        }
+      });
     }
   };
 
@@ -477,15 +523,9 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
             </div>
           </div>
           <div className="mt-2">
-            <CircleScheduleEditor rows={rows} onChange={setRows} ar={ar} error={slotError} />
+            <CircleScheduleEditor rows={rows} onChange={setRows} ar={ar} />
           </div>
         </div>
-
-        {isError && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-semibold mt-4">
-            {copy.saveFailed}
-          </div>
-        )}
       </div>
     </Modal>
   );

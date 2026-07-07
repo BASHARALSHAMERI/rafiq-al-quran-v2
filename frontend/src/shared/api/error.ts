@@ -254,3 +254,17 @@ export const getLocalizedApiErrorMessage = (
 
   return message;
 };
+
+export const translateZodToAr = (msg: string): string => {
+  if (!msg) return msg;
+  const lower = msg.toLowerCase();
+  if (lower.includes("required")) return "هذا الحقل مطلوب";
+  if (lower.includes("invalid option") || lower.includes("invalid enum value")) return "خيار غير صالح، يرجى التحقق من المدخلات";
+  if (lower.includes("array must contain at least")) return "يجب اختيار عنصر واحد على الأقل";
+  if (lower.includes("string must contain at least")) return "النص المدخل قصير جداً";
+  if (lower.includes("invalid date") || lower.includes("invalid datetime")) return "تاريخ غير صالح";
+  if (lower.includes("invalid time")) return "وقت غير صالح";
+  if (lower.includes("expected number, received nan")) return "قيمة رقمية غير صالحة";
+  if (lower.includes("invalid")) return "بيانات غير صالحة";
+  return msg;
+};

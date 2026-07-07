@@ -153,16 +153,22 @@ const getScheduleDetails = (record: StaffAttendanceRecord, date: string, hour12 
     };
   }
 
-  if (record.user.role !== "TEACHER") {
-    return { scheduledTime: "", expectedHours: 0 };
-  }
-
   const currentDayName = dayNames[new Date(date).getDay()] ?? "SUNDAY";
-  const slots = (record.user.taughtCircles ?? []).flatMap((circle) =>
-    (circle.weeklyScheduleSlots ?? []).filter(
-      (slot) => slot.dayOfWeek === currentDayName && slot.fromTime && slot.toTime
-    )
-  );
+  let slots: Array<{fromTime: string | null; toTime: string | null}> = [];
+
+  if (record.user.role === "TEACHER") {
+    slots = (record.user.taughtCircles ?? []).flatMap((circle) =>
+      (circle.weeklyScheduleSlots ?? []).filter(
+        (slot) => slot.dayOfWeek === currentDayName && slot.fromTime && slot.toTime
+      )
+    );
+  } else {
+    slots = (record.user.staffSchedules ?? []).flatMap((schedule) =>
+      (schedule.slots ?? []).filter(
+        (slot) => slot.dayOfWeek === currentDayName && slot.fromTime && slot.toTime
+      )
+    );
+  }
 
   let expectedHours = 0;
 
