@@ -1,4 +1,4 @@
-import { useState, Suspense, useMemo } from "react";
+import { useState, Suspense } from "react";
 import { 
   FileText, 
   Users, 
@@ -8,8 +8,12 @@ import {
   Wallet,
   TrendingDown,
   UserCheck,
-  Search
+  Search,
+  Check,
+  UserMinus,
+  XCircle
 } from "lucide-react";
+import { useEffect } from "react";
 import { useI18n } from "../../app/i18n";
 import { useAuthStore } from "../../features/auth/auth.store";
 import { LoadingState } from "../../components/ui/LoadingState";
@@ -79,14 +83,65 @@ export default function FinanceExpensesPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showExpenseInvoiceModal, setShowExpenseInvoiceModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  useEffect(() => {
+    setStatusFilter("ALL");
+  }, [activeTab]);
 
   const invoicesQ = useExpenseInvoicesQuery({});
   const suppliersQ = useSuppliersQuery();
   const categoriesQ = useExpenseCategoriesQuery();
 
-  const totalExpenses = useMemo(() => {
-    return (invoicesQ.data ?? []).reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  }, [invoicesQ.data]);
+  const invoices = invoicesQ.data ?? [];
+  const suppliers = suppliersQ.data ?? [];
+  const categories = categoriesQ.data ?? [];
+
+  const renderKpis = () => {
+    if (activeTab === "expenses") {
+      const total = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const paid = invoices.filter((i: any) => i.status === 'PAID').reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const unpaid = total - paid;
+      return (
+        <>
+          <VouchersKpi icon={TrendingDown} cls="brand" val={<FinanceMoney amount={total} baseCurrency="YER" />} label={ar ? "إجمالي المصروفات" : "Total Expenses"} />
+          <VouchersKpi icon={Check} cls="success" val={<FinanceMoney amount={paid} baseCurrency="YER" />} label={ar ? "المصروفات المدفوعة" : "Paid Expenses"} />
+          <VouchersKpi icon={FileText} cls="amber" val={<FinanceMoney amount={unpaid} baseCurrency="YER" />} label={ar ? "المصروفات المتبقية" : "Unpaid Expenses"} />
+        </>
+      );
+    }
+    if (activeTab === "suppliers") {
+      const total = suppliers.length;
+      const active = suppliers.filter((s: any) => s.isActive !== false).length;
+      const inactive = total - active;
+      return (
+        <>
+          <VouchersKpi icon={Users} cls="brand" val={total.toLocaleString()} label={ar ? "إجمالي الموردين" : "Total Suppliers"} />
+          <VouchersKpi icon={UserCheck} cls="success" val={active.toLocaleString()} label={ar ? "الموردين النشطين" : "Active Suppliers"} />
+          <VouchersKpi icon={UserMinus} cls="rose" val={inactive.toLocaleString()} label={ar ? "الغير نشطين" : "Inactive Suppliers"} />
+        </>
+      );
+    }
+    if (activeTab === "categories") {
+      const total = categories.length;
+      const active = categories.filter((c: any) => c.isActive !== false).length;
+      const inactive = total - active;
+      return (
+        <>
+          <VouchersKpi icon={Tag} cls="brand" val={total.toLocaleString()} label={ar ? "إجمالي التصنيفات" : "Total Categories"} />
+          <VouchersKpi icon={Check} cls="success" val={active.toLocaleString()} label={ar ? "التصنيفات النشطة" : "Active Categories"} />
+          <VouchersKpi icon={XCircle} cls="rose" val={inactive.toLocaleString()} label={ar ? "الغير نشطة" : "Inactive Categories"} />
+        </>
+      );
+    }
+    return null;
+  };
+
+  const getSearchPlaceholder = () => {
+    if (activeTab === "expenses") return ar ? "بحث في فواتير المصروفات..." : "Search expense invoices...";
+    if (activeTab === "suppliers") return ar ? "بحث في الموردين..." : "Search suppliers...";
+    return ar ? "بحث في التصنيفات..." : "Search categories...";
+  };
 
   const refreshAll = () => {
     void invoicesQ.refetch();
@@ -176,45 +231,52 @@ export default function FinanceExpensesPage() {
       }
       kpis={
         <div className="ctr-kpis-modern">
-          <VouchersKpi 
-            icon={TrendingDown} 
-            cls="rose" 
-            val={<FinanceMoney amount={totalExpenses} baseCurrency="YER" />} 
-            label={ar ? "إجمالي المصروفات" : "Total Expenses"} 
-          />
-          <VouchersKpi 
-            icon={UserCheck} 
-            cls="brand" 
-            val={(suppliersQ.data ?? []).length.toLocaleString()} 
-            label={ar ? "عدد الموردين" : "Total Suppliers"} 
-          />
-          <VouchersKpi 
-            icon={Tag} 
-            cls="amber" 
-            val={(categoriesQ.data ?? []).length.toLocaleString()} 
-            label={ar ? "تصنيفات النشاط" : "Expense Categories"} 
-          />
+          {renderKpis()}
         </div>
       }
       toolbar={
         <div className="ctr-controls">
-          <div className="ctr-search-wrap">
+          <div className="ctr-search-wrap" style={{ flex: 1, minWidth: "350px", maxWidth: "600px" }}>
             <Search className="ctr-search-icon" size={18} />
             <input
               className="ctr-search-input"
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={ar ? "بحث في المصروفات أو الموردين أو التصنيفات..." : "Search expenses, suppliers, or categories..."}
+              placeholder={getSearchPlaceholder()}
             />
-            <div className="hidden">
-              {ar ? "عرض وإدارة سجلات الإنفاق والموردين" : "View and manage spending logs and suppliers"}
-            </div>
+          </div>
+          <select
+            className="ctr-search-input"
+            style={{ width: "200px" }}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">{ar ? "جميع الحالات" : "All Statuses"}</option>
+            {activeTab === "expenses" && (
+              <>
+                <option value="DRAFT">{ar ? "مسودة" : "Draft"}</option>
+                <option value="PENDING_APPROVAL">{ar ? "بانتظار الاعتماد" : "Pending Approval"}</option>
+                <option value="APPROVED">{ar ? "معتمد" : "Approved"}</option>
+                <option value="PARTIALLY_PAID">{ar ? "مدفوع جزئياً" : "Partially Paid"}</option>
+                <option value="PAID">{ar ? "مدفوع" : "Paid"}</option>
+                <option value="CANCELLED">{ar ? "ملغي" : "Cancelled"}</option>
+              </>
+            )}
+            {(activeTab === "suppliers" || activeTab === "categories") && (
+              <>
+                <option value="ACTIVE">{ar ? "نشط" : "Active"}</option>
+                <option value="INACTIVE">{ar ? "غير نشط" : "Inactive"}</option>
+              </>
+            )}
+          </select>
+          <div className="hidden">
+            {ar ? "عرض وإدارة سجلات الإنفاق والموردين" : "View and manage spending logs and suppliers"}
           </div>
         </div>
       }
     >
-      <div className="mt-6 animate-premium">
+      <div className="mt-2 animate-premium">
         <Suspense fallback={<LoadingState />}>
           {activeTab === "expenses"    && (
             <FinanceExpensesTab
@@ -223,6 +285,7 @@ export default function FinanceExpensesPage() {
               canApprove={canApproveExpenses}
               canPay={canPayExpenses}
               searchTerm={searchTerm}
+              statusFilter={statusFilter}
               externalShowForm={canPrepareExpenses && showExpenseInvoiceModal}
               onExternalFormClose={() => setShowExpenseInvoiceModal(false)}
             />
@@ -232,6 +295,7 @@ export default function FinanceExpensesPage() {
               ar={ar} 
               canManage={canPrepareExpenses}
               searchTerm={searchTerm}
+              statusFilter={statusFilter}
               externalShowForm={canPrepareExpenses && showSupplierModal}
               onExternalFormClose={() => setShowSupplierModal(false)} 
             />
@@ -241,6 +305,7 @@ export default function FinanceExpensesPage() {
               ar={ar} 
               canManage={canManageExpenseCategories}
               searchTerm={searchTerm}
+              statusFilter={statusFilter}
               externalShowForm={canManageExpenseCategories && showCategoryModal}
               onExternalFormClose={() => setShowCategoryModal(false)} 
             />

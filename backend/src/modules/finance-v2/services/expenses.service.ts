@@ -840,5 +840,144 @@ export const expensesService = {
       }
       throw error;
     }
+  },
+
+  async deleteSupplier(scope: ScopeContext, id: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanManageSettings(scope);
+    const supplier = await prisma.supplier.findFirst({
+      where: { id, organizationId: scope.organizationId }
+    });
+    if (!supplier) throw new AppError("المورد غير موجود", 404);
+
+    const invoiceCount = await prisma.expenseInvoice.count({
+      where: { supplierId: id }
+    });
+    if (invoiceCount > 0) {
+      throw new AppError(
+        "لا يمكن حذف المورد لارتباطه بفواتير، يمكنك تعطيله بدلاً من ذلك",
+        400,
+        undefined,
+        "SUPPLIER_HAS_INVOICES",
+        {
+          ar: "لا يمكن حذف المورد لأنه مرتبط بفواتير مصروفات. يمكنك تعطيله بدلاً من الحذف.",
+          en: "Cannot delete supplier because it is linked to expense invoices. You can disable it instead."
+        }
+      );
+    }
+    await prisma.supplier.delete({ where: { id } });
+  },
+
+  async deleteExpenseCategory(scope: ScopeContext, id: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanManageSettings(scope);
+    const category = await prisma.expenseCategory.findFirst({
+      where: { id, organizationId: scope.organizationId }
+    });
+    if (!category) throw new AppError("التصنيف غير موجود", 404);
+
+    const invoiceCount = await prisma.expenseInvoice.count({
+      where: { categoryId: id }
+    });
+    if (invoiceCount > 0) {
+      throw new AppError(
+        "لا يمكن حذف التصنيف لارتباطه بفواتير",
+        400,
+        undefined,
+        "CATEGORY_HAS_INVOICES",
+        {
+          ar: "لا يمكن حذف التصنيف لأنه مرتبط بفواتير مصروفات. يمكنك تعطيله بدلاً من الحذف.",
+          en: "Cannot delete category because it is linked to expense invoices. You can disable it instead."
+        }
+      );
+    }
+    await prisma.expenseCategory.delete({ where: { id } });
+  },
+
+  async updateExpenseInvoice(
+    scope: ScopeContext,
+    id: number,
+    input: {
+      centerId?: number | null;
+      supplierId?: number | null;
+      categoryId?: number;
+      invoiceNo?: string | null;
+      invoiceDate?: string;
+      dueDate?: string | null;
+      description?: string;
+      amount?: number;
+    }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const invoice = await prisma.expenseInvoice.findUnique({
+      where: { id }
+    });
+
+    if (!invoice || invoice.organizationId !== scope.organizationId) {
+      throw new AppError("الفاتورة غير موجودة", 404);
+    }
+    ensureExpenseInvoiceScope(scope, invoice);
+
+    if (invoice.status !== ExpenseInvoiceStatus.DRAFT) {
+      throw new AppError(
+        "لا يمكن تعديل الفاتورة إلا إذا كانت في حالة مسودة",
+        400,
+        undefined,
+        "CANNOT_EDIT_NON_DRAFT",
+        {
+          ar: "لا يمكن تعديل الفاتورة إلا إذا كانت مسودة",
+          en: "Invoice can only be edited when in DRAFT status"
+        }
+      );
+    }
+
+    if (input.centerId !== undefined && input.centerId !== null) {
+      financeV2Domain.ensureScopedCenterRequired(scope, input.centerId);
+    }
+
+    return prisma.expenseInvoice.update({
+      where: { id },
+      data: {
+        ...(input.centerId !== undefined ? { centerId: input.centerId } : {}),
+        ...(input.supplierId !== undefined ? { supplierId: input.supplierId } : {}),
+        ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
+        ...(input.invoiceNo !== undefined ? { invoiceNo: input.invoiceNo?.trim() || null } : {}),
+        ...(input.invoiceDate !== undefined ? { invoiceDate: toDateOnly(safeDate(input.invoiceDate, "invoiceDate")) } : {}),
+        ...(input.dueDate !== undefined ? { dueDate: input.dueDate ? toDateOnly(safeDate(input.dueDate, "dueDate")) : null } : {}),
+        ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+        ...(input.amount !== undefined ? { amount: new Prisma.Decimal(input.amount) } : {})
+      }
+    });
+  },
+
+  async deleteExpenseInvoice(scope: ScopeContext, id: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const invoice = await prisma.expenseInvoice.findUnique({
+      where: { id }
+    });
+
+    if (!invoice || invoice.organizationId !== scope.organizationId) {
+      throw new AppError("الفاتورة غير موجودة", 404);
+    }
+    ensureExpenseInvoiceScope(scope, invoice);
+
+    if (invoice.status !== ExpenseInvoiceStatus.DRAFT) {
+      throw new AppError(
+        "لا يمكن حذف الفاتورة إلا إذا كانت مسودة",
+        400,
+        undefined,
+        "CANNOT_DELETE_NON_DRAFT",
+        {
+          ar: "لا يمكن حذف الفاتورة إلا إذا كانت مسودة. للفواتير الأخرى، استخدم الإلغاء.",
+          en: "Invoice can only be deleted when in DRAFT status. For other statuses, use cancel."
+        }
+      );
+    }
+
+    await prisma.expenseInvoice.delete({ where: { id } });
   }
 };

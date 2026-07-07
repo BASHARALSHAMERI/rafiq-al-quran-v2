@@ -1571,7 +1571,7 @@ export const staffOperationsService = {
       throw new AppError("لا يمكن معالجة طلب إجازة خاص بك", 403);
     }
 
-    if (!scope.allAccess && !scope.centerIds.includes(leave.centerId)) {
+    if (!scope.allAccess && (leave.centerId === null || !scope.centerIds.includes(leave.centerId))) {
       throw new AppError("ليس لديك صلاحية لتحديث طلب الإجازة في هذا المركز", 403);
     }
 
@@ -2191,22 +2191,28 @@ async function resolveSelfAttendanceTarget(
       organizationId: scope.organizationId,
       isActive: true,
       effectiveFrom: { lte: now },
-      OR: [
-        { effectiveTo: null },
-        { effectiveTo: { gte: now } }
-      ],
-      OR: [
-        { isHeadquarters: true },
+      AND: [
         {
-          latitude: { not: null },
-          longitude: { not: null },
-          allowedRadiusMeters: { not: null }
+          OR: [
+            { effectiveTo: null },
+            { effectiveTo: { gte: now } }
+          ]
+        },
+        {
+          OR: [
+            { isHeadquarters: true },
+            {
+              latitude: { not: null },
+              longitude: { not: null },
+              allowedRadiusMeters: { not: null }
+            }
+          ]
         }
       ]
     },
     include: {
       center: { select: { id: true, name: true, timezone: true } },
-      organization: { select: { name: true, associationLocationName: true, associationLatitude: true, associationLongitude: true, associationAllowedRadiusMeters: true, timezone: true } }
+      organization: { select: { name: true, associationLocationName: true, associationLatitude: true, associationLongitude: true, associationGeoRadiusMeters: true } }
     }
   });
 
@@ -2217,10 +2223,10 @@ async function resolveSelfAttendanceTarget(
         centerId: null,
         latitude: activeAssignment.latitude ?? activeAssignment.organization?.associationLatitude ?? null,
         longitude: activeAssignment.longitude ?? activeAssignment.organization?.associationLongitude ?? null,
-        allowedRadiusMeters: activeAssignment.allowedRadiusMeters ?? activeAssignment.organization?.associationAllowedRadiusMeters ?? null,
+        allowedRadiusMeters: activeAssignment.allowedRadiusMeters ?? activeAssignment.organization?.associationGeoRadiusMeters ?? null,
         name: activeAssignment.organization?.associationLocationName || activeAssignment.organization?.name || "مقر الجمعية الرئيسي",
         locationText: activeAssignment.locationText ?? activeAssignment.organization?.associationLocationName ?? "مقر الجمعية الرئيسي",
-        timezone: activeAssignment.organization?.timezone ?? "Asia/Aden"
+        timezone: "Asia/Aden"
       };
     }
 

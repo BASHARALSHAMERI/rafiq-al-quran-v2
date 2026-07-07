@@ -272,6 +272,32 @@ export const createExpenseInvoiceBodySchema = z
     { message: "تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الفاتورة", path: ["dueDate"] }
   );
 
+export const updateExpenseInvoiceBodySchema = z
+  .object({
+    centerId: optionalPositiveInt.nullable().optional(),
+    supplierId: optionalPositiveInt.nullable().optional(),
+    categoryId: positiveInt.optional(),
+    invoiceNo: z.string().trim().max(80).nullable().optional(),
+    invoiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD").optional(),
+    dueDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "صيغة التاريخ يجب أن تكون YYYY-MM-DD").nullable().optional(),
+    description: z.string().trim().min(1, "الوصف مطلوب").max(500).optional(),
+    amount: z.coerce.number().positive("المبلغ يجب أن يكون أكبر من صفر").max(100000000).optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "حقل واحد على الأقل مطلوب للتحديث"
+  })
+  .refine(
+    (data) => {
+      if (data.invoiceDate && data.dueDate) {
+        return data.dueDate >= data.invoiceDate;
+      }
+      return true;
+    },
+    { message: "تاريخ الاستحقاق لا يمكن أن يكون قبل تاريخ الفاتورة", path: ["dueDate"] }
+  );
+
+
 export const payExpenseInvoiceBodySchema = z
   .object({
     amount: z.coerce.number().positive("مبلغ الدفع يجب أن يكون أكبر من صفر").max(100000000),

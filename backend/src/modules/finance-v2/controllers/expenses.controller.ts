@@ -19,6 +19,12 @@ export const expensesController = {
     res.json({ data: supplier });
   },
 
+  async deleteSupplier(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    await expensesService.deleteSupplier(req.scope!, id);
+    res.status(204).send();
+  },
+
   async listExpenseCategories(req: Request, res: Response) {
     const categories = await expensesService.listExpenseCategories(req.scope!);
     res.json({ data: categories });
@@ -35,6 +41,12 @@ export const expensesController = {
     res.json({ data: category });
   },
 
+  async deleteExpenseCategory(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    await expensesService.deleteExpenseCategory(req.scope!, id);
+    res.status(204).send();
+  },
+
   async listExpenseInvoices(req: Request, res: Response) {
     const query = res.locals.validatedQuery as {
       centerId?: number;
@@ -48,6 +60,18 @@ export const expensesController = {
   async createExpenseInvoice(req: Request, res: Response) {
     const invoice = await expensesService.createExpenseInvoice(req.scope!, req.body);
     res.status(201).json({ data: invoice });
+  },
+
+  async updateExpenseInvoice(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    const invoice = await expensesService.updateExpenseInvoice(req.scope!, id, req.body);
+    res.json({ data: invoice });
+  },
+
+  async deleteExpenseInvoice(req: Request, res: Response) {
+    const { id } = res.locals.validatedParams as { id: number };
+    await expensesService.deleteExpenseInvoice(req.scope!, id);
+    res.status(204).send();
   },
 
   async approveExpenseInvoice(req: Request, res: Response) {

@@ -22,8 +22,9 @@ import {
   createPaymentV2BodySchema,
   createSupplierBodySchema,
   updateSupplierBodySchema,
-  createExpenseCategoryBodySchema,
   updateExpenseCategoryBodySchema,
+  updateExpenseInvoiceBodySchema,
+  createExpenseCategoryBodySchema,
   cancelExpenseInvoiceBodySchema,
   createExpenseInvoiceBodySchema,
   payExpenseInvoiceBodySchema,
@@ -755,6 +756,13 @@ financeV2Router.patch(
   expensesController.updateSupplier
 );
 
+financeV2Router.delete(
+  "/finance/v2/suppliers/:id",
+  requireRoles(financeSettingsWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  expensesController.deleteSupplier
+);
+
 financeV2Router.get(
   "/finance/v2/expense-categories",
   requireRoles(financeReadRoles),
@@ -776,6 +784,13 @@ financeV2Router.patch(
   expensesController.updateExpenseCategory
 );
 
+financeV2Router.delete(
+  "/finance/v2/expense-categories/:id",
+  requireRoles(financeSettingsWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  expensesController.deleteExpenseCategory
+);
+
 financeV2Router.get(
   "/finance/v2/expenses",
   requireRoles(financeReadRoles),
@@ -788,6 +803,21 @@ financeV2Router.post(
   requireRoles(financeDraftWriteRoles),
   validateBody(createExpenseInvoiceBodySchema),
   expensesController.createExpenseInvoice
+);
+
+financeV2Router.patch(
+  "/finance/v2/expenses/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(updateExpenseInvoiceBodySchema),
+  expensesController.updateExpenseInvoice
+);
+
+financeV2Router.delete(
+  "/finance/v2/expenses/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  expensesController.deleteExpenseInvoice
 );
 
 financeV2Router.post(

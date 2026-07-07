@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
-import { Check, CreditCard, FileText } from "lucide-react";
-import { useExpenseInvoicesQuery, useApproveExpenseInvoiceMutation, usePayExpenseInvoiceMutation, useFinanceV2AccountsQuery, useCreateExpenseInvoiceMutation, useSuppliersQuery, useExpenseCategoriesQuery } from "../../features/finance-v2/finance-v2.hooks";
+import { Check, CreditCard, FileText, Edit2, Trash2 } from "lucide-react";
+import { useExpenseInvoicesQuery, useApproveExpenseInvoiceMutation, usePayExpenseInvoiceMutation, useFinanceV2AccountsQuery, useCreateExpenseInvoiceMutation, useSuppliersQuery, useExpenseCategoriesQuery, useUpdateExpenseInvoiceMutation, useDeleteExpenseInvoiceMutation } from "../../features/finance-v2/finance-v2.hooks";
 import { useCentersQuery } from "../../features/org/org.hooks";
 import { FinanceDataTable, FinanceTableFooter } from "../../features/finance-v2/design";
 import { Button } from "../../components/ui/Button";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Modal } from "../../components/ui/Modal";
+import { Badge } from "../../components/ui/Badge";
 import { getApiFieldErrors, getLocalizedApiErrorMessage } from "../../shared/api/error";
 import {
   notifyError,
@@ -15,12 +16,25 @@ import {
 } from "../../shared/ui/feedback";
 import useClientPagination from "../../shared/ui/useClientPagination";
 
+const getStatusBadge = (status: string, ar: boolean) => {
+  switch (status) {
+    case "DRAFT": return <Badge variant="secondary">{ar ? "مسودة" : "Draft"}</Badge>;
+    case "PENDING_APPROVAL": return <Badge variant="warning">{ar ? "بانتظار الاعتماد" : "Pending Approval"}</Badge>;
+    case "APPROVED": return <Badge variant="success">{ar ? "معتمد" : "Approved"}</Badge>;
+    case "PARTIALLY_PAID": return <Badge variant="warning">{ar ? "مدفوع جزئياً" : "Partially Paid"}</Badge>;
+    case "PAID": return <Badge variant="success">{ar ? "مدفوع" : "Paid"}</Badge>;
+    case "CANCELLED": return <Badge variant="error">{ar ? "ملغي" : "Cancelled"}</Badge>;
+    default: return <Badge variant="secondary">{status}</Badge>;
+  }
+};
+
 export function FinanceExpensesTab({
   ar,
   canCreate = true,
   canApprove = true,
   canPay = true,
   searchTerm = "",
+  statusFilter = "ALL",
   externalShowForm,
   onExternalFormClose
 }: {
@@ -29,6 +43,7 @@ export function FinanceExpensesTab({
   canApprove?: boolean;
   canPay?: boolean;
   searchTerm?: string;
+  statusFilter?: string;
   externalShowForm?: boolean;
   onExternalFormClose?: () => void;
 }) {
@@ -40,8 +55,12 @@ export function FinanceExpensesTab({
   const invoices = useMemo(() => invoicesQ.data ?? [], [invoicesQ.data]);
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredInvoices = useMemo(() => {
-    if (!normalizedSearch) return invoices;
-    return invoices.filter((invoice: any) =>
+    let result = invoices;
+    if (statusFilter && statusFilter !== "ALL") {
+      result = result.filter((invoice: any) => invoice.status === statusFilter);
+    }
+    if (!normalizedSearch) return result;
+    return result.filter((invoice: any) =>
       String(invoice.id).includes(normalizedSearch) ||
       invoice.invoiceNo?.toLowerCase().includes(normalizedSearch) ||
       invoice.description?.toLowerCase().includes(normalizedSearch) ||
@@ -49,7 +68,7 @@ export function FinanceExpensesTab({
       invoice.category?.name?.toLowerCase().includes(normalizedSearch) ||
       invoice.status?.toLowerCase().includes(normalizedSearch)
     );
-  }, [invoices, normalizedSearch]);
+  }, [invoices, normalizedSearch, statusFilter]);
   const pagination = useClientPagination(filteredInvoices, { initialPageSize: 10, resetKey: normalizedSearch });
   const accountsQ = useFinanceV2AccountsQuery(centerId);
   const approveM = useApproveExpenseInvoiceMutation();
@@ -62,8 +81,12 @@ export function FinanceExpensesTab({
   const centersQ = useCentersQuery();
   const centers = useMemo(() => (centersQ.data?.items ?? []).filter((center) => center.isActive !== false), [centersQ.data?.items]);
   const createM = useCreateExpenseInvoiceMutation();
+  const updateM = useUpdateExpenseInvoiceMutation();
+  const deleteM = useDeleteExpenseInvoiceMutation();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [approveInvoiceId, setApproveInvoiceId] = useState<number | null>(null);
   const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
   const [payErrors, setPayErrors] = useState<Record<string, string>>({});
@@ -110,27 +133,73 @@ export function FinanceExpensesTab({
     }
 
     try {
-      await createM.mutateAsync({
-        centerId: createForm.centerId ? Number(createForm.centerId) : undefined,
-        supplierId: createForm.supplierId ? Number(createForm.supplierId) : undefined,
-        categoryId,
-        invoiceNo: createForm.invoiceNo.trim() || undefined,
-        invoiceDate: createForm.invoiceDate,
-        dueDate: createForm.dueDate || undefined,
-        description: createForm.description.trim(),
-        amount
-      });
-      notifySuccess(ar ? "تم إنشاء فاتورة المصروف بنجاح" : "Expense invoice created successfully");
+      if (editingId) {
+        await updateM.mutateAsync({
+          id: editingId,
+          payload: {
+            centerId: createForm.centerId ? Number(createForm.centerId) : null,
+            supplierId: createForm.supplierId ? Number(createForm.supplierId) : null,
+            categoryId,
+            invoiceNo: createForm.invoiceNo.trim() || null,
+            invoiceDate: createForm.invoiceDate,
+            dueDate: createForm.dueDate || null,
+            description: createForm.description.trim(),
+            amount
+          }
+        });
+        notifySuccess(ar ? "تم تعديل الفاتورة بنجاح" : "Invoice updated successfully");
+      } else {
+        await createM.mutateAsync({
+          centerId: createForm.centerId ? Number(createForm.centerId) : undefined,
+          supplierId: createForm.supplierId ? Number(createForm.supplierId) : undefined,
+          categoryId,
+          invoiceNo: createForm.invoiceNo.trim() || undefined,
+          invoiceDate: createForm.invoiceDate,
+          dueDate: createForm.dueDate || undefined,
+          description: createForm.description.trim(),
+          amount
+        });
+        notifySuccess(ar ? "تم إنشاء فاتورة المصروف بنجاح" : "Expense invoice created successfully");
+      }
       handleCreateClose();
       setCreateErrors({});
       setCreateForm({ centerId: centers.length === 1 ? String(centers[0].id) : "", supplierId: "", categoryId: "", invoiceNo: "", invoiceDate: new Date().toISOString().slice(0, 10), dueDate: "", description: "", amount: "" });
+      setEditingId(null);
     } catch (error) {
       const message = getLocalizedApiErrorMessage(error, {
         ar,
-        fallback: ar ? "تعذر إنشاء فاتورة المصروف." : "Unable to create the expense invoice."
+        fallback: ar ? "تعذر حفظ الفاتورة." : "Unable to save the invoice."
       });
       setCreateErrors(getApiFieldErrors(error));
       notifyError(message);
+    }
+  };
+
+  const handleOpenEdit = (row: any) => {
+    setEditingId(row.id);
+    setCreateForm({
+      centerId: row.centerId ? String(row.centerId) : "",
+      supplierId: row.supplierId ? String(row.supplierId) : "",
+      categoryId: row.categoryId ? String(row.categoryId) : "",
+      invoiceNo: row.invoiceNo || "",
+      invoiceDate: row.invoiceDate ? String(row.invoiceDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+      dueDate: row.dueDate ? String(row.dueDate).slice(0, 10) : "",
+      description: row.description || "",
+      amount: row.amount ? String(row.amount) : ""
+    });
+    setCreateErrors({});
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteM.mutateAsync(deleteConfirmId);
+      notifySuccess(ar ? "تم حذف الفاتورة بنجاح" : "Invoice deleted successfully");
+      setDeleteConfirmId(null);
+    } catch (error) {
+      notifyError(getLocalizedApiErrorMessage(error, { ar, fallback: ar ? "تعذر حذف الفاتورة" : "Unable to delete invoice" }));
+      setDeleteConfirmId(null);
     }
   };
 
@@ -203,28 +272,50 @@ export function FinanceExpensesTab({
           { id: "category", header: ar ? "التصنيف" : "Category", render: (row: any) => row.category?.name || "-" },
           { id: "amount", header: ar ? "المبلغ" : "Amount", render: (row: any) => row.amount },
           { id: "remaining", header: ar ? "المتبقي" : "Remaining", render: (row: any) => row.remainingAmount ?? row.amount },
-          { id: "status", header: ar ? "الحالة" : "Status", render: (row: any) => <span className={`fin-badge ${row.status.toLowerCase()}`}>{row.status}</span> },
+          { id: "status", header: ar ? "الحالة" : "Status", render: (row: any) => getStatusBadge(row.status, ar) },
           {
             id: "actions",
             header: ar ? "إجراءات" : "Actions",
-            render: (row: any) => (
-              <div className="flex gap-2">
-                {canApprove && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL") && (
-                  <Button size="sm" variant="secondary" onClick={() => setApproveInvoiceId(row.id)}>
-                    <Check className="w-4 h-4 mr-1" /> {ar ? "اعتماد" : "Approve"}
-                  </Button>
-                )}
-                {canPay && (row.status === "APPROVED" || row.status === "PARTIALLY_PAID") && (
-                  <Button size="sm" variant="primary" onClick={() => {
-                    setSelectedInvoice(row);
-                    setPayAmount(Number(row.remainingAmount ?? row.amount));
-                    setIsPayModalOpen(true);
-                  }}>
-                    <CreditCard className="w-4 h-4 mr-1" /> {ar ? "دفع" : "Pay"}
-                  </Button>
-                )}
-              </div>
-            )
+            // @ts-expect-error stickyRight is injected internally or not properly typed in the current version
+            stickyRight: true,
+            render: (row: any) => {
+              const showEditDelete = canCreate && row.status === "DRAFT";
+              const showApprove = canApprove && (row.status === "DRAFT" || row.status === "PENDING_APPROVAL");
+              const showPay = canPay && (row.status === "APPROVED" || row.status === "PARTIALLY_PAID");
+              const noActions = !showEditDelete && !showApprove && !showPay;
+              
+              return (
+                <div className="flex gap-2 items-center">
+                  {showEditDelete && (
+                    <>
+                      <Button size="sm" variant="secondary" className="btn-icon" onClick={() => handleOpenEdit(row)} title={ar ? "تعديل" : "Edit"}>
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="danger" className="btn-icon" onClick={() => setDeleteConfirmId(row.id)} title={ar ? "حذف" : "Delete"}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                  {showApprove && (
+                    <Button size="sm" variant="secondary" className="btn-icon" onClick={() => setApproveInvoiceId(row.id)} title={ar ? "اعتماد" : "Approve"}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {showPay && (
+                    <Button size="sm" variant="primary" className="btn-icon" onClick={() => {
+                      setSelectedInvoice(row);
+                      setPayAmount(Number(row.remainingAmount ?? row.amount));
+                      setIsPayModalOpen(true);
+                    }} title={ar ? "دفع" : "Pay"}>
+                      <CreditCard className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {noActions && (
+                    <span className="text-gray-400 text-xs">{ar ? "-" : "-"}</span>
+                  )}
+                </div>
+              );
+            }
           }
         ]}
         rows={pagination.pagedRows}
@@ -245,11 +336,10 @@ export function FinanceExpensesTab({
       />
     </div>
 
-      {/* Create Expense Invoice Modal */}
       <Modal
         isOpen={Boolean(isCreateModalOpen && canCreate)}
         onClose={handleCreateClose}
-        title={ar ? "فاتورة مصروف جديدة" : "New Expense Invoice"}
+        title={editingId ? (ar ? "تعديل فاتورة" : "Edit Invoice") : (ar ? "فاتورة مصروف جديدة" : "New Expense Invoice")}
         titleIcon={
           <div className="circlemod-head-icon">
             <FileText className="w-4 h-4" />
@@ -416,8 +506,20 @@ export function FinanceExpensesTab({
         title={ar ? "اعتماد المصروف" : "Approve expense"}
         message={ar ? "سيتم اعتماد المصروف وإتاحته للدفع. هل تريد المتابعة؟" : "The expense will be approved and made available for payment. Continue?"}
         confirmLabel={ar ? "اعتماد" : "Approve"}
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
         confirmVariant="primary"
         isConfirming={approveM.isPending}
+      />
+      <ConfirmModal
+        isOpen={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={handleDelete}
+        title={ar ? "حذف الفاتورة" : "Delete Invoice"}
+        message={ar ? "هل أنت متأكد من رغبتك في حذف هذه الفاتورة؟" : "Are you sure you want to delete this invoice?"}
+        confirmLabel={ar ? "حذف" : "Delete"}
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
+        confirmVariant="danger"
+        isConfirming={deleteM.isPending}
       />
     </div>
   );

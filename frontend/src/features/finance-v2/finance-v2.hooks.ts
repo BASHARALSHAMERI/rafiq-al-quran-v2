@@ -1030,6 +1030,26 @@ export const useCreateSupplierMutation = () => {
   });
 };
 
+export const useUpdateSupplierMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: { name?: string; phone?: string; address?: string; notes?: string; isActive?: boolean } }) => financeV2Api.updateSupplier(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "suppliers"] });
+    }
+  });
+};
+
+export const useDeleteSupplierMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => financeV2Api.deleteSupplier(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "suppliers"] });
+    }
+  });
+};
+
 export const useExpenseCategoriesQuery = () =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expense-categories"],
@@ -1048,6 +1068,26 @@ export const useCreateExpenseCategoryMutation = () => {
   });
 };
 
+export const useUpdateExpenseCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: { name?: string; type?: string; accountingAccountId?: number | null; isActive?: boolean } }) => financeV2Api.updateExpenseCategory(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expense-categories"] });
+    }
+  });
+};
+
+export const useDeleteExpenseCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => financeV2Api.deleteExpenseCategory(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expense-categories"] });
+    }
+  });
+};
+
 export const useExpenseInvoicesQuery = (params: { centerId?: number; supplierId?: number; status?: string }) =>
   useQuery({
     queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expenses", params.centerId, params.supplierId, params.status],
@@ -1060,6 +1100,26 @@ export const useCreateExpenseInvoiceMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: { centerId?: number; supplierId?: number; categoryId: number; invoiceNo?: string; invoiceDate: string; dueDate?: string; description: string; amount: number; }) => financeV2Api.createExpenseInvoice(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expenses"] });
+    }
+  });
+};
+
+export const useUpdateExpenseInvoiceMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: { centerId?: number | null; supplierId?: number | null; categoryId?: number; invoiceNo?: string | null; invoiceDate?: string; dueDate?: string | null; description?: string; amount?: number; } }) => financeV2Api.updateExpenseInvoice(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expenses"] });
+    }
+  });
+};
+
+export const useDeleteExpenseInvoiceMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => financeV2Api.deleteExpenseInvoice(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: [...FINANCE_V2_QUERY_KEYS.all, "expenses"] });
     }

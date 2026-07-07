@@ -597,6 +597,15 @@ export const financeV2Api = {
     return response.data.data;
   },
 
+  async updateSupplier(id: number, payload: { name?: string; phone?: string; address?: string; notes?: string; isActive?: boolean }): Promise<SupplierV2> {
+    const response = await apiClient.patch<ApiResponse<SupplierV2>>(`/finance/v2/suppliers/${id}`, payload);
+    return response.data.data;
+  },
+
+  async deleteSupplier(id: number): Promise<void> {
+    await apiClient.delete(`/finance/v2/suppliers/${id}`);
+  },
+
   async listExpenseCategories(): Promise<ExpenseCategoryV2[]> {
     const response = await apiClient.get<ApiResponse<ExpenseCategoryV2[]>>("/finance/v2/expense-categories");
     return response.data.data;
@@ -605,6 +614,15 @@ export const financeV2Api = {
   async createExpenseCategory(payload: { name: string; type?: string; accountingAccountId?: number }): Promise<ExpenseCategoryV2> {
     const response = await apiClient.post<ApiResponse<ExpenseCategoryV2>>("/finance/v2/expense-categories", payload);
     return response.data.data;
+  },
+
+  async updateExpenseCategory(id: number, payload: { name?: string; type?: string; accountingAccountId?: number | null; isActive?: boolean }): Promise<ExpenseCategoryV2> {
+    const response = await apiClient.patch<ApiResponse<ExpenseCategoryV2>>(`/finance/v2/expense-categories/${id}`, payload);
+    return response.data.data;
+  },
+
+  async deleteExpenseCategory(id: number): Promise<void> {
+    await apiClient.delete(`/finance/v2/expense-categories/${id}`);
   },
 
   async listExpenseInvoices(params: { centerId?: number; supplierId?: number; status?: string }): Promise<ExpenseInvoiceV2[]> {
@@ -617,10 +635,38 @@ export const financeV2Api = {
     }));
   },
 
-  async createExpenseInvoice(payload: { centerId?: number; supplierId?: number; categoryId: number; invoiceNo?: string; invoiceDate: string; dueDate?: string; description: string; amount: number; }): Promise<ExpenseInvoiceV2> {
+  async createExpenseInvoice(payload: {
+    centerId?: number;
+    supplierId?: number;
+    categoryId: number;
+    invoiceNo?: string;
+    invoiceDate: string;
+    dueDate?: string;
+    description: string;
+    amount: number;
+  }): Promise<ExpenseInvoiceV2> {
     const response = await apiClient.post<ApiResponse<ExpenseInvoiceV2>>("/finance/v2/expenses", payload);
     const inv = response.data.data;
     return { ...inv, amount: Number(inv.amount) };
+  },
+
+  async updateExpenseInvoice(id: number, payload: {
+    centerId?: number | null;
+    supplierId?: number | null;
+    categoryId?: number;
+    invoiceNo?: string | null;
+    invoiceDate?: string;
+    dueDate?: string | null;
+    description?: string;
+    amount?: number;
+  }): Promise<ExpenseInvoiceV2> {
+    const response = await apiClient.patch<ApiResponse<ExpenseInvoiceV2>>(`/finance/v2/expenses/${id}`, payload);
+    const inv = response.data.data;
+    return { ...inv, amount: Number(inv.amount) };
+  },
+
+  async deleteExpenseInvoice(id: number): Promise<void> {
+    await apiClient.delete(`/finance/v2/expenses/${id}`);
   },
 
   async approveExpenseInvoice(id: number): Promise<ExpenseInvoiceV2> {
