@@ -140,7 +140,7 @@ export default function AccountingLedgerPage() {
   const ledger = ledgerQ.data;
   const rows = ledger?.rows ?? [];
   const [filterMonth, setFilterMonth] = useState<number | "">("");
-  const [filterYear, setFilterYear] = useState<number | "">(new Date().getFullYear());
+  const [filterYear, setFilterYear] = useState<number | "">("");
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
