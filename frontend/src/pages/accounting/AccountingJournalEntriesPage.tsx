@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FileText, Plus, Trash2, Printer, Search, Filter, RefreshCw, CheckCircle, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
@@ -40,6 +40,9 @@ import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
 import "../../styles/pages/vouchers-premium.css";
 import "../../styles/pages/finance-v4.css";
+
+const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const EN_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const entryDebitTotal = (entry: JournalEntry) =>
   entry.lines.reduce((sum, line) => sum + line.debit, 0);
@@ -182,6 +185,8 @@ export default function AccountingJournalEntriesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
+  const [filterMonth, setFilterMonth] = useState<number | "">("");
+  const [filterYear, setFilterYear] = useState<number | "">(new Date().getFullYear());
   const [journalModalOpen, setJournalModalOpen] = useState(false);
   const [journalError, setJournalError] = useState("");
   const [journalForm, setJournalForm] = useState<JournalFormState>({
@@ -223,12 +228,17 @@ export default function AccountingJournalEntriesPage() {
         (entry.description || "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "ALL" || entry.status === statusFilter;
       const matchesSource = sourceFilter === "ALL" || entry.sourceType === sourceFilter;
-      return matchesSearch && matchesStatus && matchesSource;
+      
+      const entryDateObj = new Date(entry.entryDate);
+      const matchesMonth = filterMonth === "" || (entryDateObj.getMonth() + 1) === filterMonth;
+      const matchesYear = filterYear === "" || entryDateObj.getFullYear() === filterYear;
+
+      return matchesSearch && matchesStatus && matchesSource && matchesMonth && matchesYear;
     });
-  }, [allEntries, searchTerm, statusFilter, sourceFilter]);
+  }, [allEntries, searchTerm, statusFilter, sourceFilter, filterMonth, filterYear]);
   const pagination = useClientPagination(filteredEntries, {
     initialPageSize: 10,
-    resetKey: `${searchTerm}|${statusFilter}|${sourceFilter}`
+    resetKey: `${searchTerm}|${statusFilter}|${sourceFilter}|${filterMonth}|${filterYear}`
   });
 
   const stats = useMemo(() => {
@@ -440,21 +450,19 @@ export default function AccountingJournalEntriesPage() {
       }
       toolbar={
         <div className="ctr-controls">
-          <div className="ctr-search-wrap">
-            <Search className="ctr-search-icon" size={18} />
-            <input 
-              className="ctr-search-input"
-              type="text" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              placeholder="بحث برقم القيد أو الوصف..." 
-            />
-          </div>
-          <div className="ctr-filters-group">
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border-none shadow-sm">
-              <Filter size={16} className="text-slate-400 ms-2" />
+          <div className="fin-filters-scroll">
+            <div className="fin-filter-item min-w-[220px]">
+              <Search size={14} className="text-slate-400 shrink-0" />
+              <input
+                type="text"
+                className="bg-transparent border-none outline-none w-full text-sm focus:ring-0"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="بحث برقم القيد أو الوصف..."
+              />
+            </div>
+            <div className="fin-filter-item min-w-[140px]">
               <select 
-                className="ctr-filter-select border-none bg-transparent h-8 min-w-[140px] focus:ring-0 outline-none"
                 value={statusFilter} 
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -464,10 +472,8 @@ export default function AccountingJournalEntriesPage() {
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border-none shadow-sm">
-              <Filter size={16} className="text-slate-400 ms-2" />
+            <div className="fin-filter-item min-w-[140px]">
               <select 
-                className="ctr-filter-select border-none bg-transparent h-8 min-w-[140px] focus:ring-0 outline-none"
                 value={sourceFilter} 
                 onChange={(e) => setSourceFilter(e.target.value)}
               >
@@ -477,14 +483,38 @@ export default function AccountingJournalEntriesPage() {
                 ))}
               </select>
             </div>
-            {(searchTerm || statusFilter !== "ALL" || sourceFilter !== "ALL") && (
-              <button 
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 underline px-2"
-                onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); setSourceFilter("ALL"); }}
+            {/* Month Filter */}
+            <div className="fin-filter-item min-w-[140px]">
+              <select 
+                value={filterMonth} 
+                onChange={(e) => setFilterMonth(e.target.value ? Number(e.target.value) : "")}
               >
-                تصفير
-              </button>
-            )}
+                <option value="">كل الأشهر</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{ar ? AR_MONTHS[i] : EN_MONTHS[i]}</option>
+                ))}
+              </select>
+            </div>
+            {/* Year Filter */}
+            <div className="fin-filter-item w-28">
+              <input
+                type="number" min={2000} max={2100} 
+                placeholder="السنة"
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value ? Number(e.target.value) : "")}
+              />
+            </div>
+          </div>
+          {(searchTerm || statusFilter !== "ALL" || sourceFilter !== "ALL" || filterMonth !== "" || filterYear !== "") && (
+            <button 
+              type="button"
+              className="fin-filter-reset"
+              onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); setSourceFilter("ALL"); setFilterMonth(""); setFilterYear(""); }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>تصفير</span>
+            </button>
+          )}
           </div>
         </div>
       }

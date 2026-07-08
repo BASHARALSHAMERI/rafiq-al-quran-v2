@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Printer, RefreshCw, CheckCircle, Clock, FileText, Filter } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, Printer, RefreshCw, CheckCircle, Clock, FileText, Filter, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
 import {
@@ -30,6 +30,9 @@ import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
 import "../../styles/pages/vouchers-premium.css";
 import "../../styles/pages/finance-v4.css";
+
+const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const EN_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 type LedgerRow = LedgerResponse["rows"][number];
 
@@ -136,7 +139,19 @@ export default function AccountingLedgerPage() {
   const ledgerQ = useAccountingLedgerQuery(accountId);
   const ledger = ledgerQ.data;
   const rows = ledger?.rows ?? [];
-  const pagination = useClientPagination(rows, { initialPageSize: 10 });
+  const [filterMonth, setFilterMonth] = useState<number | "">("");
+  const [filterYear, setFilterYear] = useState<number | "">(new Date().getFullYear());
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((row) => {
+      const rowDate = new Date(row.journalEntry.entryDate);
+      const matchesMonth = filterMonth === "" || (rowDate.getMonth() + 1) === filterMonth;
+      const matchesYear = filterYear === "" || rowDate.getFullYear() === filterYear;
+      return matchesMonth && matchesYear;
+    });
+  }, [rows, filterMonth, filterYear]);
+
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 10, resetKey: `${filterMonth}|${filterYear}` });
 
   const selectedAccount = useMemo(() => accounts.find(a => a.id === accountId), [accounts, accountId]);
 
@@ -146,7 +161,7 @@ export default function AccountingLedgerPage() {
     printAccountingDocument({
       title: "كشف حساب (دفتر الأستاذ)",
       subtitle: `${selectedAccount.code} - ${selectedAccount.name}`,
-      rows: rows,
+      rows: filteredRows,
       logoUrl: brandingQ.data?.logoUrl || undefined,
       orgName: brandingQ.data?.name || undefined,
       summaryHtml: `
@@ -253,11 +268,9 @@ export default function AccountingLedgerPage() {
       }
       toolbar={
         <div className="ctr-controls">
-          <div className="ctr-filters-group">
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border-none shadow-sm flex-1 min-w-[300px]">
-              <Filter size={16} className="text-slate-400 ms-2" />
+          <div className="fin-filters-scroll">
+            <div className="fin-filter-item min-w-[200px]">
               <select
-                className="ctr-filter-select border-none bg-transparent h-8 w-full focus:ring-0 outline-none"
                 value={accountId ?? ""}
                 onChange={(event) => setAccountId(Number(event.target.value) || undefined)}
               >
@@ -268,7 +281,38 @@ export default function AccountingLedgerPage() {
                 ))}
               </select>
             </div>
+            {/* Month Filter */}
+            <div className="fin-filter-item min-w-[140px]">
+              <select 
+                value={filterMonth} 
+                onChange={(e) => setFilterMonth(e.target.value ? Number(e.target.value) : "")}
+              >
+                <option value="">كل الأشهر</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>{brandingQ.data?.language === "en" ? EN_MONTHS[i] : AR_MONTHS[i]}</option>
+                ))}
+              </select>
+            </div>
+            {/* Year Filter */}
+            <div className="fin-filter-item w-28">
+              <input
+                type="number" min={2000} max={2100} 
+                placeholder="السنة"
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value ? Number(e.target.value) : "")}
+              />
+            </div>
           </div>
+          {(filterMonth !== "" || filterYear !== "") && (
+            <button 
+              type="button"
+              className="fin-filter-reset"
+              onClick={() => { setFilterMonth(""); setFilterYear(""); }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>تصفير</span>
+            </button>
+          )}
         </div>
       }
     >
@@ -291,11 +335,11 @@ export default function AccountingLedgerPage() {
                 void ledgerQ.refetch();
               }}
             />
-          ) : rows.length === 0 ? (
+          ) : filteredRows.length === 0 ? (
             <FinanceEmptyState
               variant="first-time"
               title={accounts.length === 0 ? "لا توجد حسابات محاسبية" : "لا توجد حركة لهذا الحساب"}
-              description={accounts.length === 0 ? "يجب إضافة حسابات أولاً" : "لم يتم تسجيل أي قيود على هذا الحساب"}
+              description={accounts.length === 0 ? "يجب إضافة حسابات أولاً" : "لم يتم تسجيل أي قيود على هذا الحساب في التاريخ المحدد"}
             />
           ) : (
             <FinanceDataTable<LedgerRow>

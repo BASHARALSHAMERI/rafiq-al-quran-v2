@@ -1,4 +1,4 @@
-﻿import { Scale, Printer, RefreshCw, CheckCircle, AlertCircle, Search } from "lucide-react";
+import { Scale, Printer, RefreshCw, CheckCircle, AlertCircle, Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
@@ -239,16 +239,28 @@ export default function AccountingTrialBalancePage() {
       }
       toolbar={
         <div className="ctr-controls">
-          <div className="ctr-search-wrap">
-            <Search className="ctr-search-icon" size={18} />
-            <input 
-              className="ctr-search-input"
-              type="text" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-              placeholder="بحث بالكود أو اسم الحساب..." 
-            />
+          <div className="fin-filters-scroll">
+            <div className="fin-filter-item min-w-[220px]">
+              <Search size={14} className="text-slate-400 shrink-0" />
+              <input
+                type="text"
+                className="bg-transparent border-none outline-none w-full text-sm focus:ring-0"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="بحث بالكود أو اسم الحساب..."
+              />
+            </div>
           </div>
+          {searchTerm && (
+            <button 
+              type="button"
+              className="fin-filter-reset"
+              onClick={() => setSearchTerm("")}
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>تصفير</span>
+            </button>
+          )}
         </div>
       }
     >
