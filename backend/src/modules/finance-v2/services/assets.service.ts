@@ -1095,7 +1095,7 @@ export const assetsService = {
           toUserId: input.toUserId ? optionalPositiveInt(input.toUserId, "toUserId") : custody.toUserId,
           assignedAt,
           returnedAt,
-          notes: input.notes !== undefined ? optionalString(input.notes, 500) : custody.notes,
+          notes: input.notes !== undefined ? (optionalString(input.notes, 500) ?? null) : custody.notes,
         },
         include: custodyInclude
       });

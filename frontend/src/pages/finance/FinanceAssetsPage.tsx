@@ -386,6 +386,7 @@ function AssetCategoriesTab({
           <ErrorState className="m-4" title={ar ? "فشل تحميل التصنيفات" : "Failed to load categories"} description={getLocalizedApiErrorMessage(categoriesQ.error, { ar, fallback: ar ? "تعذر تحميل تصنيفات الأصول." : "Unable to load asset categories." })} onRetry={() => void categoriesQ.refetch()} />
         ) : (
           <FinanceDataTable
+            className="[&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"
             columns={[
               { id: "name", header: ar ? "التصنيف" : "Category", cell: (row: AssetCategoryV2) => <strong className="text-slate-800 dark:text-slate-200">{row.name}</strong> },
               { id: "assetAccount", header: ar ? "حساب الأصل" : "Asset account", cell: (row: AssetCategoryV2) => row.assetAccount ? (
@@ -558,7 +559,7 @@ function AssetRegisterTab({
           name: editForm.name,
           location: editForm.location || undefined,
           description: editForm.description || undefined,
-          notes: editForm.notes || undefined,
+          notes: editForm.notes,
           usefulLifeMonths: editForm.usefulLifeMonths ? Number(editForm.usefulLifeMonths) : null
         }
       });
@@ -614,16 +615,15 @@ function AssetRegisterTab({
             <ErrorState className="m-4" title={ar ? "فشل تحميل الأصول" : "Failed to load assets"} description={getLocalizedApiErrorMessage(assetsQ.error, { ar, fallback: ar ? "تعذر تحميل سجل الأصول." : "Unable to load the asset register." })} onRetry={() => void assetsQ.refetch()} />
           ) : (
             <FinanceDataTable
+              className="[&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"
               columns={[
-                { id: "code", header: ar ? "الكود" : "Code", cell: (row: FixedAssetV2) => <strong className="text-slate-800 dark:text-slate-200">{row.assetCode}</strong> },
                 { id: "name", header: ar ? "الأصل" : "Asset", cell: (row: FixedAssetV2) => (
                   <div className="flex flex-col">
                     <span className="font-bold">{row.name}</span>
-                    <span className="text-[10px] text-slate-400">{row.category?.name ?? "-"}</span>
+                    <span className="text-[10px] text-slate-400">{row.assetCode} • {row.category?.name ?? "-"}</span>
                   </div>
                 )},
                 { id: "center", header: ar ? "المركز" : "Center", cell: (row: FixedAssetV2) => <span className="opacity-70">{row.center?.name ?? (ar ? "على مستوى الجمعية" : "Organization level")}</span> },
-                { id: "location", header: ar ? "الموقع" : "Location", cell: (row: FixedAssetV2) => <span className="text-xs opacity-60">{row.location ?? "-"}</span> },
                 { id: "purchaseDate", header: ar ? "تاريخ الشراء" : "Purchased", cell: (row: FixedAssetV2) => <span className="text-xs">{displayDate(row.purchaseDate)}</span> },
                 { id: "cost", header: ar ? "التكلفة" : "Cost", align: "end", cell: (row: FixedAssetV2) => (
                   <div className="font-bold text-brand-600"><FinanceMoney amount={row.purchaseCost} baseCurrency="YER" /></div>
@@ -631,21 +631,19 @@ function AssetRegisterTab({
                 { id: "currentValue", header: ar ? "القيمة الحالية" : "Curr. value", align: "end", cell: (row: FixedAssetV2) => (
                   <span className="text-xs text-slate-500"><FinanceMoney amount={row.currentValue ?? row.purchaseCost} baseCurrency="YER" /></span>
                 )},
-                { id: "custodian", header: ar ? "العهدة" : "Custodian", cell: (row: FixedAssetV2) => {
-                  const activeCustody = row.custodyLogs?.[0];
-                  const custodian = activeCustody?.toUser ?? row.custodian;
-                  return (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                        {(custodian?.fullName ?? "?").slice(0, 1)}
-                      </div>
-                      <span className="text-xs font-medium">{custodian?.fullName ?? "-"}</span>
-                    </div>
-                  );
-                }},
+
                 { id: "status", header: ar ? "الحالة" : "Status", align: "center", cell: (row: FixedAssetV2) => {
                   const label = statusOptions.find((s) => s.value === row.status)?.[ar ? "ar" : "en"] ?? row.status;
-                  return <span className={`fin-status-pill ${getStatusStyle(row.status)}`}>{label}</span>;
+                  return (
+                    <div className="flex flex-col gap-1 items-center">
+                      <span className={`fin-status-pill ${getStatusStyle(row.status)}`}>{label}</span>
+                      {row.expenseInvoiceId ? (
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded">{ar ? "فاتورة" : "Invoice"}</span>
+                      ) : row.acquisitionJournalEntryId ? (
+                        <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 rounded">{ar ? "مرحل" : "Posted"}</span>
+                      ) : null}
+                    </div>
+                  );
                 }},
                 { id: "actions", header: ar ? "إجراءات" : "Actions", align: "center", cell: (row: FixedAssetV2) => (
                   <div className="flex gap-1 justify-center flex-wrap">
@@ -654,14 +652,10 @@ function AssetRegisterTab({
                         <Edit2 size={16} />
                       </button>
                     )}
-                    {row.expenseInvoiceId ? (
-                      <Badge variant="warning" size="sm">{ar ? "فاتورة" : "Invoice"}</Badge>
-                    ) : canAcquire && !row.acquisitionJournalEntryId ? (
+                    {canAcquire && !row.expenseInvoiceId && !row.acquisitionJournalEntryId && (
                       <button type="button" className="fin-action-btn approve" onClick={() => setAcqModal(row)} title={ar ? "قيد شراء" : "Post Acq."}>
                         <PackageCheck size={16} />
                       </button>
-                    ) : (
-                      <Badge variant="success" size="sm">{ar ? "مرحل" : "Posted"}</Badge>
                     )}
                     {canDepreciate && row.acquisitionJournalEntryId && (
                       <button type="button" className="fin-action-btn print" onClick={() => setDepModal(row)} title={ar ? "إهلاك" : "Depreciate"}>
@@ -970,7 +964,7 @@ function AssetCustodyTab({
     if (!releaseModal) return;
     if (rejectInvalidForm(event.currentTarget, ar)) return;
     try {
-      await releaseM.mutateAsync({ custodyId: releaseModal.id, payload: { returnedAt: releaseForm.returnedAt, notes: releaseForm.notes || undefined } });
+      await releaseM.mutateAsync({ custodyId: releaseModal.id, payload: { returnedAt: releaseForm.returnedAt, notes: releaseForm.notes } });
       notifySuccess(ar ? "تم إخلاء العهدة بنجاح" : "Custody released successfully");
       setReleaseModal(null);
     } catch (error) {
@@ -989,7 +983,7 @@ function AssetCustodyTab({
           toUserId: editForm.toUserId ? Number(editForm.toUserId) : undefined,
           assignedAt: new Date(editForm.assignedAt).toISOString(),
           returnedAt: editForm.returnedAt ? new Date(editForm.returnedAt).toISOString() : null,
-          notes: editForm.notes || undefined
+          notes: editForm.notes
         }
       });
       notifySuccess(ar ? "تم تعديل العهدة بنجاح" : "Custody updated successfully");
@@ -1036,6 +1030,7 @@ function AssetCustodyTab({
             <ErrorState className="m-4" title={ar ? "فشل تحميل العهد" : "Failed to load custody logs"} description={getLocalizedApiErrorMessage(custodyQ.error, { ar, fallback: ar ? "تعذر تحميل سجل العهد." : "Unable to load custody logs." })} onRetry={() => void custodyQ.refetch()} />
           ) : (
             <FinanceDataTable
+              className="[&_td]:whitespace-nowrap [&_th]:whitespace-nowrap"
               columns={[
                 { id: "asset", header: ar ? "الأصل" : "Asset", cell: (row: AssetCustodyLogV2) => row.asset ? (
                   <div className="flex flex-col">
