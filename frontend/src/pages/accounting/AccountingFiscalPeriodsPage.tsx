@@ -76,7 +76,7 @@ export default function AccountingFiscalPeriodsPage() {
   const closeFiscalPeriodM = useCloseFiscalPeriodMutation();
   const reopenFiscalPeriodM = useReopenFiscalPeriodMutation();
 
-  const [selectedYearFilter, setSelectedYearFilter] = useState<string>("all");
+  const [selectedYearFilter, setSelectedYearFilter] = useState<string>(String(currentYear));
   const [statusFilter, setStatusFilter] = useState<"all" | "OPEN" | "CLOSED">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -530,12 +530,12 @@ export default function AccountingFiscalPeriodsPage() {
             </div>
           </div>
 
-          {(selectedYearFilter !== "all" || statusFilter !== "all" || searchTerm) && (
+          {(selectedYearFilter !== String(currentYear) || statusFilter !== "all" || searchTerm) && (
             <button
               type="button"
               className="fin-filter-reset"
               onClick={() => {
-                setSelectedYearFilter("all");
+                setSelectedYearFilter(String(currentYear));
                 setStatusFilter("all");
                 setSearchTerm("");
               }}
@@ -568,7 +568,7 @@ export default function AccountingFiscalPeriodsPage() {
               action={
                 selectedYearFilter !== "all" ? (
                   <Button variant="secondary" onClick={() => setSelectedYearFilter("all")}>
-                    مسح الفلاتر
+                    عرض كل السنوات
                   </Button>
                 ) : canManage ? (
                   <Button

@@ -143,6 +143,8 @@ export const accountSelect = {
   organizationId: true,
   centerId: true,
   accountingAccountId: true,
+  name: true,
+  code: true,
   accountType: true,
   openingBalance: true,
   currentBalance: true,

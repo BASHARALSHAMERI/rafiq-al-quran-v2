@@ -470,6 +470,7 @@ export const rewardsService = {
     scope: ScopeContext,
     batchId: number,
     input: {
+      accountId?: number;
       payments: Array<{
         itemId: number;
         manualReferenceNo?: string;
@@ -503,12 +504,28 @@ export const rewardsService = {
           );
         }
 
-        const account = batch.centerId
-          ? await ensureCenterFundAccountTx(tx, {
-              organizationId: scope.organizationId,
-              centerId: batch.centerId
+        const account = input.accountId
+          ? await tx.financeAccount.findFirst({
+              where: {
+                id: input.accountId,
+                organizationId: scope.organizationId,
+                isActive: true,
+                accountType: { in: [FinanceAccountType.ORG_FUND, FinanceAccountType.CENTER_FUND] }
+              },
+              select: accountSelect
             })
-          : await ensureOrgFundAccountTx(tx, scope.organizationId);
+          : batch.centerId
+            ? await ensureCenterFundAccountTx(tx, {
+                organizationId: scope.organizationId,
+                centerId: batch.centerId
+              })
+            : await ensureOrgFundAccountTx(tx, scope.organizationId);
+        if (input.accountId && !account) {
+          throw financeV2Domain.financeError("Selected fund account not found or invalid", 404, "ENTITY_NOT_FOUND");
+        }
+        if (!account) {
+          throw financeV2Domain.financeError("Fund account not resolved", 500, "INTERNAL_ERROR");
+        }
         const policy = await getEffectivePolicyTx(tx, {
           organizationId: scope.organizationId,
           centerId: batch.centerId

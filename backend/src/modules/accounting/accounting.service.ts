@@ -10,7 +10,8 @@ import {
   VoucherSourceType,
   VoucherType,
   FundTransferStatus,
-  FiscalPeriodStatus
+  FiscalPeriodStatus,
+  ExpenseInvoiceStatus
 } from "@prisma/client";
 import { prisma } from "../../shared/db/prisma";
 import { AppError } from "../../shared/errors/app-error";
@@ -502,12 +503,31 @@ export const accountingService = {
         where: { fiscalPeriodId: period.id, status: JournalEntryStatus.DRAFT }
       });
 
-      if (draftEntries > 0) {
+      const pendingVouchers = await tx.financeVoucher.count({
+        where: {
+          organizationId: scope.organizationId,
+          OR: [
+            { voucherDate: { gte: period.startDate, lte: period.endDate } },
+            { voucherDate: null, createdAt: { gte: period.startDate, lte: period.endDate } }
+          ],
+          status: { in: [VoucherStatus.DRAFT, VoucherStatus.SUBMITTED, VoucherStatus.APPROVED] }
+        }
+      });
+
+      const pendingInvoices = await tx.expenseInvoice.count({
+        where: {
+          organizationId: scope.organizationId,
+          invoiceDate: { gte: period.startDate, lte: period.endDate },
+          status: { in: [ExpenseInvoiceStatus.DRAFT, ExpenseInvoiceStatus.PENDING_APPROVAL, ExpenseInvoiceStatus.APPROVED] }
+        }
+      });
+
+      if (draftEntries > 0 || pendingVouchers > 0 || pendingInvoices > 0) {
         throw new AppError(
-          "لا يمكن إغلاق فترة مالية تحتوي على قيود مسودة",
+          `لا يمكن إغلاق فترة مالية تحتوي على قيود أو فواتير أو سندات غير مرحلة. (قيود: ${draftEntries}, سندات: ${pendingVouchers}, فواتير مصاريف: ${pendingInvoices})`,
           409,
-          { draftEntries },
-          "FISCAL_PERIOD_HAS_DRAFT_ENTRIES"
+          { draftEntries, pendingVouchers, pendingInvoices },
+          "FISCAL_PERIOD_HAS_PENDING_DOCUMENTS"
         );
       }
 

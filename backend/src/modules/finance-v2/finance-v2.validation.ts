@@ -678,6 +678,7 @@ export const createRewardBatchBodySchema = z
 
 export const payRewardBatchBodySchema = z
   .object({
+    accountId: positiveInt.optional(),
     payments: z.array(
       z
         .object({

@@ -25,6 +25,8 @@ import type { RewardBatchStatusV2 } from "../../features/finance-v2/types";
 import "../../styles/pages/centers-modern.css";
 import "../../styles/pages/finance-premium.css";
 import "../../styles/pages/finance-v4.css";
+import "../../styles/pages/vouchers-premium.css";
+import "../../styles/pages/users-enterprise-v5.css";
 
 const FinanceRewardsTab = lazy(() => import("../../features/finance-v2/components/tabs/FinanceRewardsTab"));
 

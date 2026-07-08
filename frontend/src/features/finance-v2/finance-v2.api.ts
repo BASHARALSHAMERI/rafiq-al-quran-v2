@@ -1187,6 +1187,7 @@ export const financeV2Api = {
   async payRewardBatch(
     batchId: number,
     payload: {
+      accountId?: number;
       payments: Array<{
         itemId: number;
         manualReferenceNo?: string;

@@ -15,6 +15,7 @@ import {
   useCreateFinanceV2RewardBatchMutation,
   useDeleteFinanceV2RewardBatchMutation,
   useFailFinanceV2RewardItemMutation,
+  useFinanceV2AccountsQuery,
   useFinanceV2RewardBatchesQuery,
   usePayFinanceV2RewardBatchMutation,
   useRejectFinanceV2RewardBatchMutation,
@@ -166,6 +167,7 @@ export default function FinanceRewardsTab({
     item: RewardItemV2;
     method: PaymentMethodV2;
     reference: string;
+    overrideAccountId?: number | null;
   } | null>(null);
   const [failureDraft, setFailureDraft] = useState<{
     batch: RewardBatchV2;
@@ -228,6 +230,7 @@ export default function FinanceRewardsTab({
   const approveBatchM = useApproveFinanceV2RewardBatchMutation();
   const rejectBatchM = useRejectFinanceV2RewardBatchMutation();
   const payBatchM = usePayFinanceV2RewardBatchMutation();
+  const { data: fundAccounts = [] } = useFinanceV2AccountsQuery();
   const failItemM = useFailFinanceV2RewardItemMutation();
   const deleteBatchM = useDeleteFinanceV2RewardBatchMutation();
   const selectedSummary = useMemo(() => rewardSummary(selectedBatch), [selectedBatch]);
@@ -321,6 +324,7 @@ export default function FinanceRewardsTab({
     try {
       const updated = await payBatchM.mutateAsync({
         batchId: paymentDraft.batch.id,
+        accountId: paymentDraft.overrideAccountId ?? undefined,
         payments: [{
           itemId: paymentDraft.item.id,
           method: paymentDraft.method,
@@ -799,14 +803,14 @@ export default function FinanceRewardsTab({
         onClose={() => setSelectedBatch(null)}
         title={ar ? "تفاصيل دفعة المكافآت" : "Reward Batch Details"}
         description={selectedBatch ? formatCycle(selectedBatch, ar) : undefined}
-        size="xl"
+        size="lg"
         footer={
           <Button variant="ghost" onClick={() => setSelectedBatch(null)}>
             {ar ? "إغلاق" : "Close"}
           </Button>
         }
       >
-        <div className="space-y-5">
+        <div className="circlemod-form">
           <div className="grid grid-cols-4 gap-3">
             <div className="rounded-lg border border-slate-100 bg-white p-3">
               <span className="block text-[0.68rem] font-bold uppercase text-text-tertiary">{ar ? "إجمالي المكافآت" : "Total rewards"}</span>
@@ -846,14 +850,6 @@ export default function FinanceRewardsTab({
                 )
               },
               {
-                header: ar ? "النوع" : "Type",
-                render: (item) => (
-                  <span className="text-xs font-bold text-text-secondary">
-                    {item.rewardType ? (ar ? REWARD_TYPE_LABELS[item.rewardType as RewardTypeV2].ar : REWARD_TYPE_LABELS[item.rewardType as RewardTypeV2].en) : "-"}
-                  </span>
-                )
-              },
-              {
                 header: ar ? "المبلغ" : "Amount",
                 render: (item) => <FinanceMoney amount={item.amount} baseCurrency="YER" className="text-sm font-black text-brand-600" />
               },
@@ -873,10 +869,6 @@ export default function FinanceRewardsTab({
               {
                 header: ar ? "طريقة الصرف" : "Payment method",
                 render: (item) => <span className="text-xs font-bold text-text-secondary">{item.paymentMethod ? REWARD_METHOD_LABELS[item.paymentMethod as PaymentMethodV2] : "-"}</span>
-              },
-              {
-                header: ar ? "المرجع" : "Reference",
-                render: (item) => <span className="max-w-[120px] truncate text-xs font-semibold text-text-secondary" title={item.paymentReference ?? undefined}>{item.paymentReference || "-"}</span>
               },
               {
                 header: ar ? "السند" : "Voucher",
@@ -917,56 +909,87 @@ export default function FinanceRewardsTab({
       <Modal
         isOpen={Boolean(paymentDraft && canPayReward)}
         onClose={() => setPaymentDraft(null)}
-        title="صرف مكافأة"
+        title={ar ? "صرف مكافأة" : "Pay Reward"}
         description={paymentDraft?.item.beneficiary?.fullName}
         size="md"
+        panelClassName="circlemod-panel"
+        bodyClassName="circlemod-body"
+        footerClassName="circlemod-footer-wrap"
         footer={
-          <div className="flex w-full flex-wrap justify-end gap-2">
+          <div className="circlemod-footer">
             <Button variant="ghost" onClick={() => setPaymentDraft(null)} disabled={payBatchM.isPending}>
-              إلغاء
+              {ar ? "إلغاء" : "Cancel"}
             </Button>
-            <Button onClick={handlePayItem} isLoading={payBatchM.isPending} leftIcon={<CreditCard className="w-4 h-4" />}>
-              صرف
+            <Button variant="primary" onClick={handlePayItem} isLoading={payBatchM.isPending} leftIcon={<CreditCard className="w-4 h-4" />}>
+              {ar ? "صرف" : "Pay"}
             </Button>
           </div>
         }
       >
         {paymentDraft ? (
-          <div className="space-y-4">
+          <div className="circlemod-form">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-center">
-              <span className="text-sm font-bold text-emerald-800 block mb-1">مبلغ المكافأة</span>
+              <span className="text-sm font-bold text-emerald-800 block mb-1">{ar ? "مبلغ المكافأة" : "Reward Amount"}</span>
               <FinanceMoney amount={paymentDraft.item.amount} baseCurrency="YER" className="text-2xl font-black text-emerald-600" />
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex gap-2 items-start text-sm text-slate-600">
-              <div>
-                <strong>طريقة الصرف</strong>
+            {/* Fund selector */}
+            <div className="circlemod-section" style={{ padding: '0.85rem 1rem' }}>
+              <div className="circlemod-section-head" style={{ paddingBottom: '0.5rem', marginBottom: 0, borderBottom: '1.5px solid #f1f5f9' }}>
+                <CreditCard size={14} className="circlemod-section-icon" />
+                <span>{ar ? "مصدر الصرف" : "Payment Source"}</span>
+              </div>
+              <div className="pt-3 circlemod-field">
+                <label>{ar ? "الصندوق" : "Fund"}</label>
                 <select
-                  className="circlemod-select mt-1"
+                  className="circlemod-select"
+                  value={paymentDraft.overrideAccountId ?? ""}
+                  onChange={(e) => setPaymentDraft((current) => current ? { ...current, overrideAccountId: e.target.value ? parseInt(e.target.value) : null } : current)}
+                >
+                  <option value="">{ar ? "-- تلقائي --" : "-- Auto --"}</option>
+                  {fundAccounts
+                    .filter((a) => a.accountType === "ORG_FUND" || a.accountType === "CENTER_FUND")
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name || (a.accountType === "ORG_FUND" ? (ar ? "الصندوق الرئيسي" : "Main Fund") : a.center?.name || (ar ? `صندوق مركز ${a.centerId}` : `Center ${a.centerId} Fund`))} — {a.currentBalance.toLocaleString()} YER
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Payment method */}
+            <div className="circlemod-section" style={{ padding: '0.85rem 1rem' }}>
+              <div className="circlemod-section-head" style={{ paddingBottom: '0.5rem', marginBottom: 0, borderBottom: '1.5px solid #f1f5f9' }}>
+                <CreditCard size={14} className="circlemod-section-icon" />
+                <span>{ar ? "طريقة الصرف" : "Payment Method"}</span>
+              </div>
+              <div className="pt-3 circlemod-field">
+                <label>{ar ? "الطريقة" : "Method"}</label>
+                <select
+                  className="circlemod-select"
                   value={paymentDraft.method}
                   onChange={(event) => setPaymentDraft((current) => current ? { ...current, method: event.target.value as PaymentMethodV2, reference: event.target.value === "CASH" ? "" : current.reference } : current)}
                 >
-                  <option value="CASH">نقداً</option>
-                  <option value="TRANSFER">تحويل بنكي</option>
+                  <option value="CASH">{ar ? "نقداً" : "Cash"}</option>
+                  <option value="TRANSFER">{ar ? "تحويل بنكي" : "Bank Transfer"}</option>
                 </select>
               </div>
             </div>
 
             {paymentDraft.method === "TRANSFER" && (
-              <label className="circlemod-field">
-                <span>رقم الحوالة</span>
-                <input
-                  className="circlemod-input"
-                  value={paymentDraft.reference}
-                  onChange={(event) => setPaymentDraft((current) => current ? { ...current, reference: event.target.value } : current)}
-                  placeholder="رقم إثبات التحويل"
-                />
-              </label>
+              <div className="circlemod-section" style={{ padding: '0.85rem 1rem' }}>
+                <div className="circlemod-field">
+                  <label>{ar ? "رقم الحوالة" : "Transfer Reference"}</label>
+                  <input
+                    className="circlemod-input"
+                    value={paymentDraft.reference}
+                    onChange={(event) => setPaymentDraft((current) => current ? { ...current, reference: event.target.value } : current)}
+                    placeholder={ar ? "رقم إثبات التحويل" : "Transfer reference number"}
+                  />
+                </div>
+              </div>
             )}
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex gap-2 items-start text-sm text-slate-600">
-              <span>ملاحظة: سيتم الصرف من صندوق المركز مع إنشاء السند المحاسبي آلياً.</span>
-            </div>
           </div>
         ) : null}
       </Modal>
@@ -975,36 +998,38 @@ export default function FinanceRewardsTab({
       <Modal
         isOpen={Boolean(failureDraft && canPayReward)}
         onClose={() => setFailureDraft(null)}
-        title="تسجيل فشل صرف"
+        title={ar ? "تسجيل فشل صرف" : "Record Payment Failure"}
         description={failureDraft?.item.beneficiary?.fullName}
         size="sm"
+        panelClassName="circlemod-panel"
+        bodyClassName="circlemod-body"
+        footerClassName="circlemod-footer-wrap"
         footer={
-          <div className="flex w-full flex-wrap justify-end gap-2">
+          <div className="circlemod-footer">
             <Button variant="ghost" onClick={() => setFailureDraft(null)} disabled={failItemM.isPending}>
-              إلغاء
+              {ar ? "إلغاء" : "Cancel"}
             </Button>
             <Button variant="danger" onClick={handleFailItem} isLoading={failItemM.isPending} disabled={!failureDraft?.reason.trim()}>
-              تسجيل فشل
+              {ar ? "تسجيل فشل" : "Record Failure"}
             </Button>
           </div>
         }
       >
         {failureDraft ? (
-          <div className="space-y-4">
+          <div className="circlemod-form">
             <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 flex gap-2 items-start text-sm text-rose-800">
-              <span>لن يتم إنشاء أي سند محاسبي وتبقى المكافأة معلقة حتى يتم صرفها بنجاح.</span>
+              <span>{ar ? "لن يتم إنشاء أي سند محاسبي وتبقى المكافأة معلقة حتى يتم صرفها بنجاح." : "No accounting voucher will be created. The reward remains pending until successfully paid."}</span>
             </div>
-
-            <label className="circlemod-field">
-              <span>سبب فشل الصرف</span>
+            <div className="circlemod-field">
+              <label>{ar ? "سبب فشل الصرف" : "Failure Reason"}</label>
               <textarea
                 className="circlemod-input min-h-[80px]"
                 value={failureDraft.reason}
                 onChange={(event) => setFailureDraft((current) => current ? { ...current, reason: event.target.value } : current)}
-                placeholder="مثال: رقم الحساب البنكي غير صحيح"
+                placeholder={ar ? "مثال: رقم الحساب البنكي غير صحيح" : "e.g. Bank account number is incorrect"}
                 required
               />
-            </label>
+            </div>
           </div>
         ) : null}
       </Modal>

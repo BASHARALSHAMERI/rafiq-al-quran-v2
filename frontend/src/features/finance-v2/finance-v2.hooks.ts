@@ -863,6 +863,7 @@ export const usePayFinanceV2RewardBatchMutation = () => {
   return useMutation({
     mutationFn: (input: {
       batchId: number;
+      accountId?: number;
       payments: Array<{
         itemId: number;
         manualReferenceNo?: string;
@@ -870,7 +871,7 @@ export const usePayFinanceV2RewardBatchMutation = () => {
         attachmentStorageKey?: string;
         externalTransferRef?: string;
       }>;
-    }) => financeV2Api.payRewardBatch(input.batchId, { payments: input.payments }),
+    }) => financeV2Api.payRewardBatch(input.batchId, { accountId: input.accountId, payments: input.payments }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
     }
