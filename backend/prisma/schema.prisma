@@ -859,6 +859,8 @@ model SupervisorVisitPlanItem {
   circleId          Int?                 @map("circle_id")
   plannedDate       DateTime             @map("planned_date") @db.Date
   plannedTimeWindow String?              @map("planned_time_window") @db.VarChar(100)
+  plannedStartAt    DateTime?            @map("planned_start_at")
+  plannedEndAt      DateTime?            @map("planned_end_at")
   priority          VisitPriority        @default(NORMAL)
   notes             String?              @db.VarChar(500)
   status            VisitPlanItemStatus  @default(VISIT_ITEM_PENDING)
@@ -3073,8 +3075,15 @@ enum RewardItemStatus {
 }
 
 enum RewardBeneficiaryRole {
+  SUPER_ADMIN
+  CENTER_ADMIN
+  SUPERVISOR
   TEACHER
   STUDENT
+  ACCOUNTANT
+  FINANCE_MANAGER
+  TREASURER
+  AUDITOR
 }
 
 enum ReportType {
@@ -3320,6 +3329,7 @@ enum ExpenseInvoiceStatus {
 
 enum FixedAssetStatus {
   ACTIVE
+  IN_CUSTODY
   UNDER_MAINTENANCE
   DISPOSED
   LOST

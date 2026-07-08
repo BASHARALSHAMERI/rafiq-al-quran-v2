@@ -17,13 +17,19 @@ import type {
   CreateCurrencyV2Payload,
   CreateExchangeRateV2Payload,
   CreateAssetCategoryV2Payload,
+  UpdateAssetCategoryV2Payload,
   CreateFixedAssetV2Payload,
+  UpdateFixedAssetV2Payload,
   AssignAssetCustodyV2Payload,
+  UpdateAssetCustodyV2Payload,
+  ReleaseCustodyV2Payload,
   FinanceDonationsV2Query,
   FinanceDonorsV2Query,
   FinanceInvoicesV2Query,
   DonationReportQuery,
-  ReceiptReportQuery
+  ReceiptReportQuery,
+  RewardBatchQueryV2,
+  RewardBeneficiaryRoleV2
 } from "./types";
 
 const invoicesKey = (filters: FinanceInvoicesV2Query) =>
@@ -221,6 +227,72 @@ export const usePostAssetDepreciationMutation = () => {
       financeV2Api.postAssetDepreciation(input.id, input.payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() });
+    }
+  });
+};
+
+export const useUpdateAssetCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: number; payload: UpdateAssetCategoryV2Payload }) =>
+      financeV2Api.updateAssetCategory(input.id, input.payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.assetCategories() });
+    }
+  });
+};
+
+export const useDeactivateAssetCategoryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (categoryId: number) => financeV2Api.deactivateAssetCategory(categoryId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.assetCategories() });
+    }
+  });
+};
+
+export const useUpdateFixedAssetMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: number; payload: UpdateFixedAssetV2Payload }) =>
+      financeV2Api.updateFixedAsset(input.id, input.payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() });
+    }
+  });
+};
+
+export const useDeactivateFixedAssetMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: number) => financeV2Api.deactivateFixedAsset(assetId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() });
+    }
+  });
+};
+
+export const useReactivateFixedAssetMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: number) => financeV2Api.reactivateFixedAsset(assetId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() });
+    }
+  });
+};
+
+export const useReleaseCustodyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { custodyId: number; payload: ReleaseCustodyV2Payload }) =>
+      financeV2Api.releaseCustody(input.custodyId, input.payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() }),
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.assetCustody() })
+      ]);
     }
   });
 };
@@ -706,13 +778,12 @@ export const useFailFinanceV2PayrollItemMutation = () => {
   });
 };
 
-export const useFinanceV2RewardBatchesQuery = (centerId?: number, periodYear?: number) =>
+export const useFinanceV2RewardBatchesQuery = (params: RewardBatchQueryV2 = {}) =>
   useQuery({
-    queryKey: FINANCE_V2_QUERY_KEYS.rewardBatches(centerId, periodYear),
+    queryKey: FINANCE_V2_QUERY_KEYS.rewardBatches(params.centerId, params.periodYear),
     queryFn: () =>
       financeV2Api.getRewardBatches({
-        centerId,
-        periodYear,
+        ...params,
         page: 1,
         pageSize: 100
       }),
@@ -811,6 +882,76 @@ export const useFailFinanceV2RewardItemMutation = () => {
   return useMutation({
     mutationFn: (input: { itemId: number; failureReason: string }) =>
       financeV2Api.failRewardItem(input.itemId, input.failureReason),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useAddFinanceV2RewardItemMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      batchId: number;
+      beneficiaryUserId: number;
+      beneficiaryRole: RewardBeneficiaryRoleV2;
+      centerId: number;
+      amount: number;
+      rewardType?: string;
+      notes?: string;
+    }) =>
+      financeV2Api.addRewardItem(input.batchId, {
+        beneficiaryUserId: input.beneficiaryUserId,
+        beneficiaryRole: input.beneficiaryRole,
+        centerId: input.centerId,
+        amount: input.amount,
+        rewardType: input.rewardType,
+        notes: input.notes
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useRemoveFinanceV2RewardItemMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { itemId: number }) =>
+      financeV2Api.removeRewardItem(input.itemId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useUpdateFinanceV2RewardBatchMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      batchId: number;
+      cycle?: "MONTHLY" | "QUARTERLY" | "ANNUAL";
+      rewardType?: "GENERAL" | "PERFORMANCE" | "ATTENDANCE" | "COMPETITION" | "OTHER" | null;
+      periodMonth?: number | null;
+      periodQuarter?: number | null;
+    }) =>
+      financeV2Api.updateRewardBatch(input.batchId, {
+        cycle: input.cycle,
+        rewardType: input.rewardType,
+        periodMonth: input.periodMonth,
+        periodQuarter: input.periodQuarter
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useDeleteFinanceV2RewardBatchMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { batchId: number }) =>
+      financeV2Api.deleteRewardBatch(input.batchId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
     }
@@ -1162,3 +1303,31 @@ export const useFinanceV2ReportStatementOfActivitiesQuery = (params: { centerId?
     staleTime: 20_000,
     placeholderData: keepPreviousData
   });
+
+export const useUpdateAssetCustodyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { custodyId: number; payload: UpdateAssetCustodyV2Payload }) =>
+      financeV2Api.updateCustodyLog(input.custodyId, input.payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() }),
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.assetCustody() })
+      ]);
+    }
+  });
+};
+
+export const useDeleteAssetCustodyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (custodyId: number) => financeV2Api.deleteCustodyLog(custodyId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.fixedAssets() }),
+        queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.assetCustody() })
+      ]);
+    }
+  });
+};
+

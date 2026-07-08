@@ -60,10 +60,15 @@ export default function FinanceRewardsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
   const user = useAuthStore((state) => state.user);
+  const canReadFinance =
+    user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER" ||
+    user?.role === "TREASURER" || user?.role === "AUDITOR" || user?.role === "SUPERVISOR";
   const canCreateRewardBatch =
     user?.role === "SUPER_ADMIN" || user?.role === "ACCOUNTANT" || user?.role === "FINANCE_MANAGER";
   const canPayReward =
     user?.role === "SUPER_ADMIN" || user?.role === "TREASURER";
+  const canApproveReward =
+    user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER";
 
   const now = new Date();
   const defaultYear = now.getFullYear();
@@ -71,20 +76,25 @@ export default function FinanceRewardsPage() {
   const [centerId, setCenterId] = useState<number | undefined>();
   const [year, setYear] = useState(defaultYear);
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [cycle, setCycle] = useState("");
+  const [quarter, setQuarter] = useState(1);
   const [status, setStatus] = useState<RewardBatchStatusV2 | "">("");
   const [showBatchModal, setShowBatchModal] = useState(false);
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
 
-  const batchesQ = useFinanceV2RewardBatchesQuery(centerId, year);
-  const batches = useMemo(
-    () => (batchesQ.data?.rows ?? []).filter((batch) =>
-      (!status || batch.status === status) &&
-      (batch.cycle !== "MONTHLY" || batch.periodMonth === month)
-    ),
-    [batchesQ.data?.rows, month, status]
-  );
+  const queryParams = useMemo(() => ({
+    centerId: centerId || undefined,
+    cycle: (cycle || undefined) as "MONTHLY" | "QUARTERLY" | "ANNUAL" | undefined,
+    periodYear: year,
+    periodMonth: cycle === "MONTHLY" ? month : undefined,
+    periodQuarter: cycle === "QUARTERLY" ? quarter : undefined,
+    status: (status || undefined) as RewardBatchStatusV2 | undefined
+  }), [centerId, cycle, year, month, quarter, status]);
+
+  const batchesQ = useFinanceV2RewardBatchesQuery(queryParams);
+  const batches = useMemo(() => batchesQ.data?.rows ?? [], [batchesQ.data?.rows]);
 
   const stats = useMemo(() => {
     let total = 0;
@@ -134,7 +144,7 @@ export default function FinanceRewardsPage() {
                     leftIcon={<Plus className="w-4 h-4" />}
                     onClick={() => setShowBatchModal(true)}
                   >
-                    {ar ? "مكافأة جديدة" : "New Reward"}
+                    {ar ? "دفعة مكافآت جديدة" : "New Reward Batch"}
                   </Button>
                 ) : null}
               </div>
@@ -171,17 +181,23 @@ export default function FinanceRewardsPage() {
           centerId={centerId}
           year={year}
           month={month}
+          cycle={cycle}
+          quarter={quarter}
           status={status}
           statusLabels={statusLabels}
-          statusList={["PENDING", "APPROVED", "PAID"]}
+          statusList={["DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "IN_PROGRESS", "PARTIALLY_PAID", "PAID", "CLOSED"]}
           onCenterChange={setCenterId}
           onYearChange={setYear}
           onMonthChange={setMonth}
+          onCycleChange={setCycle}
+          onQuarterChange={setQuarter}
           onStatusChange={setStatus}
           onReset={() => {
             setCenterId(undefined);
             setYear(defaultYear);
             setMonth(now.getMonth() + 1);
+            setCycle("");
+            setQuarter(1);
             setStatus("");
           }}
         />
@@ -193,10 +209,14 @@ export default function FinanceRewardsPage() {
             centerId={centerId}
             year={year}
             month={month}
+            cycle={cycle}
+            quarter={quarter}
             status={status}
-            isAdmin={canPayReward}
+            canPayReward={canPayReward}
+            canReadFinance={canReadFinance}
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
             canCreateBatch={canCreateRewardBatch}
+            canApproveBatch={canApproveReward}
             ar={ar}
             centers={centers}
             externalShowBatchForm={canCreateRewardBatch && showBatchModal}

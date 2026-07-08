@@ -45,6 +45,8 @@ type ItemFormState = {
   circleId: string;
   plannedDate: string;
   plannedTimeWindow: string;
+  plannedStartTime: string;
+  plannedEndTime: string;
   priority: VisitPriority;
   notes: string;
 };
@@ -84,6 +86,8 @@ const createItemForm = (centerId?: number, month?: number, year?: number): ItemF
     circleId: "",
     plannedDate: toIsoDate(targetYear, targetMonth, day),
     plannedTimeWindow: "",
+    plannedStartTime: "",
+    plannedEndTime: "",
     priority: "NORMAL",
     notes: ""
   };
@@ -94,6 +98,8 @@ const itemToForm = (item: VisitPlanItem): ItemFormState => ({
   circleId: item.circleId ? String(item.circleId) : "",
   plannedDate: item.plannedDate.slice(0, 10),
   plannedTimeWindow: item.plannedTimeWindow ?? "",
+  plannedStartTime: item.plannedStartAt ? new Date(item.plannedStartAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : "",
+  plannedEndTime: item.plannedEndAt ? new Date(item.plannedEndAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : "",
   priority: item.priority,
   notes: item.notes ?? ""
 });
@@ -395,6 +401,8 @@ function PlanItemModal({
           onChange={(event) => {
             const circleId = event.target.value;
             let recommendedTime = form.plannedTimeWindow;
+            let recommendedStart = form.plannedStartTime;
+            let recommendedEnd = form.plannedEndTime;
             if (circleId) {
               const circle = circlesQuery.data?.items.find((c) => String(c.id) === circleId);
               if (circle?.weeklySchedule && circle.weeklySchedule.length > 0) {
@@ -404,15 +412,19 @@ function PlanItemModal({
                 const row = circle.weeklySchedule.find((s) => s.dayOfWeek === dayStr) as any;
                 if (row?.startTime && row?.endTime) {
                   recommendedTime = `${row.startTime} - ${row.endTime}`;
+                  recommendedStart = row.startTime;
+                  recommendedEnd = row.endTime;
                 } else {
                   const firstRow = circle.weeklySchedule[0] as any;
                   if (firstRow?.startTime && firstRow?.endTime) {
                     recommendedTime = `${firstRow.startTime} - ${firstRow.endTime}`;
+                    recommendedStart = firstRow.startTime;
+                    recommendedEnd = firstRow.endTime;
                   }
                 }
               }
             }
-            setForm((current) => ({ ...current, circleId, plannedTimeWindow: recommendedTime }));
+            setForm((current) => ({ ...current, circleId, plannedTimeWindow: recommendedTime, plannedStartTime: recommendedStart, plannedEndTime: recommendedEnd }));
           }}
           options={[
             { value: "", label: ar ? "زيارة مركز فقط" : "Center only (no circle)" },
@@ -446,10 +458,41 @@ function PlanItemModal({
           style={{ opacity: 0.6, cursor: "default", pointerEvents: "none" }}
           aria-label={ar ? "التاريخ المحسوب" : "Computed date"}
         />
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            type="time"
+            value={form.plannedStartTime}
+            onChange={(event) => {
+              const newStart = event.target.value;
+              setForm((current) => ({
+                ...current,
+                plannedStartTime: newStart,
+                plannedTimeWindow: newStart && current.plannedEndTime ? `${newStart} - ${current.plannedEndTime}` : current.plannedTimeWindow
+              }));
+            }}
+            placeholder={ar ? "وقت البداية" : "Start Time"}
+            aria-label={ar ? "وقت البداية" : "Start Time"}
+          />
+          <Input
+            type="time"
+            value={form.plannedEndTime}
+            onChange={(event) => {
+              const newEnd = event.target.value;
+              setForm((current) => ({
+                ...current,
+                plannedEndTime: newEnd,
+                plannedTimeWindow: current.plannedStartTime && newEnd ? `${current.plannedStartTime} - ${newEnd}` : current.plannedTimeWindow
+              }));
+            }}
+            placeholder={ar ? "وقت النهاية" : "End Time"}
+            aria-label={ar ? "وقت النهاية" : "End Time"}
+          />
+        </div>
         <Input
           value={form.plannedTimeWindow}
           onChange={(event) => setForm((current) => ({ ...current, plannedTimeWindow: event.target.value }))}
-          placeholder={ar ? "نافذة الزيارة (اختياري)" : "Time window (optional)"}
+          placeholder={ar ? "نطاق وقت الزيارة للعرض (مثال: 16:00 - 18:00)" : "Display time window (e.g. 16:00 - 18:00)"}
+          aria-label={ar ? "نطاق الوقت" : "Time window"}
         />
         <Select
           value={form.priority}
@@ -559,6 +602,8 @@ export function VisitPlanManagement() {
       circleId: itemForm.circleId ? Number(itemForm.circleId) : null,
       plannedDate: itemForm.plannedDate,
       plannedTimeWindow: itemForm.plannedTimeWindow || undefined,
+      plannedStartAt: itemForm.plannedStartTime ? new Date(`${itemForm.plannedDate}T${itemForm.plannedStartTime}`).toISOString() : undefined,
+      plannedEndAt: itemForm.plannedEndTime ? new Date(`${itemForm.plannedDate}T${itemForm.plannedEndTime}`).toISOString() : undefined,
       priority: itemForm.priority,
       notes: itemForm.notes || undefined
     };
@@ -582,6 +627,8 @@ export function VisitPlanManagement() {
       circleId: itemForm.circleId ? Number(itemForm.circleId) : null,
       plannedDate: itemForm.plannedDate,
       plannedTimeWindow: itemForm.plannedTimeWindow || undefined,
+      plannedStartAt: itemForm.plannedStartTime ? new Date(`${itemForm.plannedDate}T${itemForm.plannedStartTime}`).toISOString() : undefined,
+      plannedEndAt: itemForm.plannedEndTime ? new Date(`${itemForm.plannedDate}T${itemForm.plannedEndTime}`).toISOString() : undefined,
       priority: itemForm.priority,
       notes: itemForm.notes || undefined
     };

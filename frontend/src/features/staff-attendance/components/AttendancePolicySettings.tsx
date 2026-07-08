@@ -31,7 +31,7 @@ const ALL_DAYS = [
 ] as const;
 
 type WeekdayValue = (typeof ALL_DAYS)[number];
-type GeoMode = "REQUIRED" | "OPTIONAL";
+type GeoMode = "STRICT" | "WARN_ONLY" | "DISABLED";
 
 type HolidayRow = AttendanceHolidayPeriod & { id: string };
 
@@ -63,7 +63,7 @@ const DEFAULT_FORM: PolicyFormState = {
   autoAbsenceDelayMinutes: 60,
   weekendDays: ["FRIDAY", "SATURDAY"],
   holidays: [],
-  geoEnforcement: "OPTIONAL",
+  geoEnforcement: "WARN_ONLY",
   timezone: "Asia/Aden",
   defaultShiftHours: "2",
   earlyDepartureThresholdMinutes: 15,
@@ -459,8 +459,9 @@ export function AttendancePolicySettings() {
                     setField("geoEnforcement", event.target.value as PolicyFormState["geoEnforcement"])
                   }
                   options={[
-                    { value: "REQUIRED", label: ar ? "إلزامي" : "Required" },
-                    { value: "OPTIONAL", label: ar ? "اختياري" : "Optional" }
+                    { value: "DISABLED", label: ar ? "معطل" : "Disabled" },
+                    { value: "WARN_ONLY", label: ar ? "تنبيه فقط (اختياري)" : "Warn Only (Optional)" },
+                    { value: "STRICT", label: ar ? "إلزامي (منع التحضير)" : "Strict (Block Attendance)" }
                   ]}
                 />
               </div>

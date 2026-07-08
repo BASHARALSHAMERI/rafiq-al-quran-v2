@@ -19,7 +19,16 @@ export type VoucherStatusV2 =
 export type VoucherTypeV2 = "RECEIPT" | "DISBURSEMENT";
 export type RewardCycleV2 = "MONTHLY" | "QUARTERLY" | "ANNUAL";
 export type RewardTypeV2 = "GENERAL" | "PERFORMANCE" | "ATTENDANCE" | "COMPETITION" | "OTHER";
-export type RewardBeneficiaryRoleV2 = "TEACHER" | "STUDENT";
+export type RewardBeneficiaryRoleV2 =
+  | "SUPER_ADMIN"
+  | "CENTER_ADMIN"
+  | "SUPERVISOR"
+  | "TEACHER"
+  | "STUDENT"
+  | "ACCOUNTANT"
+  | "FINANCE_MANAGER"
+  | "TREASURER"
+  | "AUDITOR";
 export type PayrollBatchStatusV2 =
   | "DRAFT"
   | "SUBMITTED"
@@ -44,6 +53,7 @@ export type DonorTypeV2 =
 export type DonationStatusV2 = "PLEDGED" | "RECEIVED" | "CANCELLED";
 export type FixedAssetStatusV2 =
   | "ACTIVE"
+  | "IN_CUSTODY"
   | "UNDER_MAINTENANCE"
   | "DISPOSED"
   | "LOST"
@@ -687,6 +697,14 @@ export type CreateRewardProfileV2Payload = {
   notes?: string;
 };
 
+export type CreateRewardBatchItemPayload = {
+  beneficiaryUserId: number;
+  beneficiaryRole: RewardBeneficiaryRoleV2;
+  centerId: number;
+  amount: number;
+  notes?: string;
+};
+
 export type CreateRewardBatchV2Payload = {
   centerId?: number;
   cycle: RewardCycleV2;
@@ -694,6 +712,17 @@ export type CreateRewardBatchV2Payload = {
   periodYear: number;
   periodMonth?: number;
   periodQuarter?: number;
+  sourceMode?: "MANUAL" | "AUTO";
+  items?: CreateRewardBatchItemPayload[];
+};
+
+export type RewardBatchQueryV2 = {
+  centerId?: number;
+  cycle?: RewardCycleV2;
+  periodYear?: number;
+  periodMonth?: number;
+  periodQuarter?: number;
+  status?: RewardBatchStatusV2;
 };
 
 export type FinanceReportDashboardV2 = {
@@ -964,6 +993,9 @@ export type FixedAssetV2 = {
   createdAt: string;
   updatedAt: string;
   category?: AssetCategoryV2;
+  custodyLogs?: Array<{
+    toUser?: { id: number; fullName: string; role: string; email: string } | null;
+  }> | null;
   center?: { id: number; name: string; code?: string } | null;
   custodian?: { id: number; fullName: string; role: string; email?: string } | null;
   supplier?: { id: number; name: string } | null;
@@ -1016,7 +1048,6 @@ export type CreateFixedAssetV2Payload = {
   usefulLifeMonths?: number;
   status?: FixedAssetStatusV2;
   location?: string;
-  custodianUserId?: number;
   supplierId?: number;
   expenseInvoiceId?: number;
   notes?: string;
@@ -1024,10 +1055,37 @@ export type CreateFixedAssetV2Payload = {
 
 export type AssignAssetCustodyV2Payload = {
   toUserId?: number;
-  centerId?: number;
   assignedAt?: string;
-  returnedAt?: string;
   notes?: string;
+};
+
+export type UpdateAssetCustodyV2Payload = {
+  toUserId?: number;
+  assignedAt?: string;
+  returnedAt?: string | null;
+  notes?: string;
+};
+
+
+export type UpdateFixedAssetV2Payload = {
+  name?: string;
+  description?: string;
+  location?: string;
+  notes?: string;
+  usefulLifeMonths?: number | null;
+};
+
+export type ReleaseCustodyV2Payload = {
+  returnedAt: string;
+  notes?: string;
+};
+
+export type UpdateAssetCategoryV2Payload = {
+  name?: string;
+  usefulLifeMonths?: number | null;
+  assetAccountId?: number | null;
+  depreciationExpenseAccountId?: number | null;
+  accumulatedDepreciationAccountId?: number | null;
 };
 
 // REPORTS-FINANCIAL-STATEMENTS-1: Financial Reports Types

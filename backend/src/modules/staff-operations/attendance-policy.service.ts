@@ -16,7 +16,7 @@ type PolicyData = {
   autoAbsenceAfterMinutes: number;
   weekendDays: Weekday[];
   holidays: HolidayPeriod[];
-  geoEnforcement: "REQUIRED" | "OPTIONAL";
+  geoEnforcement: GeoEnforcement;
   geoEnforcementMode: GeoEnforcement;
   defaultShiftDurationMinutes: number;
   earlyDepartureThresholdMinutes: number;
@@ -112,13 +112,8 @@ const parseHolidays = (raw: unknown): HolidayPeriod[] => {
 const isDateWithinHolidayPeriods = (dateStr: string, holidays: HolidayPeriod[]) =>
   holidays.some((holiday) => holiday.startDate <= dateStr && dateStr <= holiday.endDate);
 
-const mapGeoEnforcementToApi = (mode: GeoEnforcement): "REQUIRED" | "OPTIONAL" => {
-  const normalized = String(mode).toUpperCase();
-  return normalized === "STRICT" || normalized === "REQUIRED" ? "REQUIRED" : "OPTIONAL";
-};
-
 const mapGeoEnforcementFromApi = (
-  input?: GeoEnforcement | "REQUIRED" | "OPTIONAL"
+  input?: GeoEnforcement | "REQUIRED" | "OPTIONAL" | "STRICT" | "WARN_ONLY" | "DISABLED"
 ): GeoEnforcement | undefined => {
   if (input === undefined) return undefined;
   const normalized = String(input).toUpperCase();
@@ -153,7 +148,7 @@ const toPolicyResponse = (
   autoAbsenceAfterMinutes: policy.autoAbsenceDelayMinutes,
   weekendDays: parseWeekendDays(policy.weekendDays),
   holidays: parseHolidays(policy.holidays),
-  geoEnforcement: mapGeoEnforcementToApi(policy.geoEnforcement),
+  geoEnforcement: policy.geoEnforcement,
   geoEnforcementMode: policy.geoEnforcement,
   defaultShiftDurationMinutes: policy.defaultShiftDurationMinutes,
   earlyDepartureThresholdMinutes: policy.earlyDepartureThresholdMinutes,
@@ -197,11 +192,12 @@ export const attendancePolicyService = {
       autoAbsenceDelayMinutes: number;
       weekendDays: Weekday[];
       holidays: Array<HolidayPeriod | string>;
-      geoEnforcement: GeoEnforcement | "REQUIRED" | "OPTIONAL";
+      geoEnforcement: GeoEnforcement | "REQUIRED" | "OPTIONAL" | "STRICT" | "WARN_ONLY" | "DISABLED";
       defaultShiftDurationMinutes: number;
       earlyDepartureThresholdMinutes: number;
       prayerApiSource: string;
       timezone: string;
+      timeFormat: string;
     }>
   ) {
     if (scope.role !== "SUPER_ADMIN") {

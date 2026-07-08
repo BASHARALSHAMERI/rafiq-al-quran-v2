@@ -20,6 +20,8 @@ const parseStatus = (value: unknown) => {
 };
 
 export const assetsController = {
+  // ─── Asset Categories ─────────────────────────────────────────────────────
+
   async listAssetCategories(req: Request, res: Response) {
     const categories = await assetsService.listAssetCategories(req.scope!);
     res.json({ data: categories });
@@ -30,6 +32,20 @@ export const assetsController = {
     res.status(201).json({ data: category });
   },
 
+  async updateAssetCategory(req: Request, res: Response) {
+    const categoryId = parseId(req.params.id);
+    const category = await assetsService.updateAssetCategory(req.scope!, categoryId, req.body);
+    res.json({ data: category });
+  },
+
+  async deactivateAssetCategory(req: Request, res: Response) {
+    const categoryId = parseId(req.params.id);
+    const category = await assetsService.deactivateAssetCategory(req.scope!, categoryId);
+    res.json({ data: category });
+  },
+
+  // ─── Fixed Assets ─────────────────────────────────────────────────────────
+
   async listFixedAssets(req: Request, res: Response) {
     const assets = await assetsService.listFixedAssets(req.scope!, {
       centerId: req.query.centerId ? Number(req.query.centerId) : undefined,
@@ -39,10 +55,36 @@ export const assetsController = {
     res.json({ data: assets });
   },
 
+  async getFixedAsset(req: Request, res: Response) {
+    const assetId = parseId(req.params.id);
+    const asset = await assetsService.getFixedAsset(req.scope!, assetId);
+    res.json({ data: asset });
+  },
+
   async createFixedAsset(req: Request, res: Response) {
     const asset = await assetsService.createFixedAsset(req.scope!, req.body);
     res.status(201).json({ data: asset });
   },
+
+  async updateFixedAsset(req: Request, res: Response) {
+    const assetId = parseId(req.params.id);
+    const asset = await assetsService.updateFixedAsset(req.scope!, assetId, req.body);
+    res.json({ data: asset });
+  },
+
+  async deactivateFixedAsset(req: Request, res: Response) {
+    const assetId = parseId(req.params.id);
+    const asset = await assetsService.deactivateFixedAsset(req.scope!, assetId);
+    res.json({ data: asset });
+  },
+
+  async reactivateFixedAsset(req: Request, res: Response) {
+    const assetId = parseId(req.params.id);
+    const asset = await assetsService.reactivateFixedAsset(req.scope!, assetId);
+    res.json({ data: asset });
+  },
+
+  // ─── Custody Logs ─────────────────────────────────────────────────────────
 
   async listCustodyLogs(req: Request, res: Response) {
     const logs = await assetsService.listCustodyLogs(req.scope!, {
@@ -56,6 +98,26 @@ export const assetsController = {
     const custody = await assetsService.assignCustody(req.scope!, assetId, req.body);
     res.status(201).json({ data: custody });
   },
+
+  async releaseCustody(req: Request, res: Response) {
+    const custodyId = parseId(req.params.id);
+    const custody = await assetsService.releaseCustody(req.scope!, custodyId, req.body);
+    res.json({ data: custody });
+  },
+
+  async updateCustodyLog(req: Request, res: Response) {
+    const custodyId = parseId(req.params.id);
+    const custody = await assetsService.updateCustodyLog(req.scope!, custodyId, req.body);
+    res.json({ data: custody });
+  },
+
+  async deleteCustodyLog(req: Request, res: Response) {
+    const custodyId = parseId(req.params.id);
+    await assetsService.deleteCustodyLog(req.scope!, custodyId);
+    res.json({ success: true });
+  },
+
+  // ─── Acquisition & Depreciation ───────────────────────────────────────────
 
   async postAssetAcquisition(req: Request, res: Response) {
     const assetId = parseId(req.params.id);

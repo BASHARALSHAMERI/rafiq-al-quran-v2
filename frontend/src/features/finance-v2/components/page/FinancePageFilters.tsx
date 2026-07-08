@@ -16,7 +16,28 @@ type Props = {
   onReset: () => void;
   activeFiltersCount?: number;
   statusList?: string[];
+  cycle?: string;
+  onCycleChange?: (value: string) => void;
+  quarter?: number;
+  onQuarterChange?: (value: number) => void;
 };
+
+const cycleLabels: Record<string, string> = {
+  "": "الكل / سنوي",
+  MONTHLY: "شهري",
+  QUARTERLY: "ربع سنوي",
+  ANNUAL: "سنوي"
+};
+
+const cycleLabelsEn: Record<string, string> = {
+  "": "All / Annual",
+  MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  ANNUAL: "Annual"
+};
+
+const arabicQuarters = ["الربع الأول", "الربع الثاني", "الربع الثالث", "الربع الرابع"];
+const englishQuarters = ["Q1", "Q2", "Q3", "Q4"];
 
 export function FinancePageFilters({
   ar,
@@ -31,8 +52,15 @@ export function FinancePageFilters({
   onYearChange,
   onStatusChange,
   onReset,
-  statusList
+  statusList,
+  cycle,
+  onCycleChange,
+  quarter,
+  onQuarterChange
 }: Props) {
+  const showMonth = !cycle || cycle === "MONTHLY";
+  const showQuarter = cycle === "QUARTERLY";
+
   return (
     <div className="fin-filters-container" dir={ar ? "rtl" : "ltr"}>
       <div className="fin-filters-scroll">
@@ -52,25 +80,61 @@ export function FinancePageFilters({
           </select>
         </div>
 
-        {/* Month Filter */}
-        <div className="fin-filter-item min-w-[140px]">
-          <CalendarDays className="fin-filter-icon" />
-          <select
-            value={month}
-            onChange={(event) => onMonthChange(Number(event.target.value))}
-            className="w-full bg-transparent border-none focus:outline-none cursor-pointer"
-          >
-            {Array.from({ length: 12 }, (_, i) => {
-              const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-              const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-              return (
-                <option key={i + 1} value={i + 1}>
-                  {ar ? arabicMonths[i] : englishMonths[i]}
+        {/* Cycle Filter */}
+        {onCycleChange && (
+          <div className="fin-filter-item min-w-[140px]">
+            <Filter className="fin-filter-icon" />
+            <select
+              value={cycle ?? ""}
+              onChange={(event) => onCycleChange(event.target.value)}
+            >
+              <option value="">{ar ? "كل الدورات" : "All Cycles"}</option>
+              <option value="MONTHLY">{ar ? "شهري" : "Monthly"}</option>
+              <option value="QUARTERLY">{ar ? "ربع سنوي" : "Quarterly"}</option>
+              <option value="ANNUAL">{ar ? "سنوي" : "Annual"}</option>
+            </select>
+          </div>
+        )}
+
+        {/* Month Filter (visible when cycle = MONTHLY or no cycle filter) */}
+        {showMonth && (
+          <div className="fin-filter-item min-w-[140px]">
+            <CalendarDays className="fin-filter-icon" />
+            <select
+              value={month}
+              onChange={(event) => onMonthChange(Number(event.target.value))}
+              className="w-full bg-transparent border-none focus:outline-none cursor-pointer"
+            >
+              {Array.from({ length: 12 }, (_, i) => {
+                const arabicMonths = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                return (
+                  <option key={i + 1} value={i + 1}>
+                    {ar ? arabicMonths[i] : englishMonths[i]}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+
+        {/* Quarter Filter (visible when cycle = QUARTERLY) */}
+        {showQuarter && onQuarterChange && (
+          <div className="fin-filter-item min-w-[140px]">
+            <Filter className="fin-filter-icon" />
+            <select
+              value={quarter ?? 1}
+              onChange={(event) => onQuarterChange(Number(event.target.value))}
+              className="w-full bg-transparent border-none focus:outline-none cursor-pointer"
+            >
+              {[1, 2, 3, 4].map((q) => (
+                <option key={q} value={q}>
+                  {ar ? arabicQuarters[q - 1] : englishQuarters[q - 1]}
                 </option>
-              );
-            })}
-          </select>
-        </div>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Year Filter */}
         <div className="fin-filter-item w-28">

@@ -199,7 +199,7 @@ export const supervisorVisitService = {
   // ==========================================
   // Plan Items
   // ==========================================
-  async addPlanItem(scope: ScopeContext, planId: number, data: { centerId: number; circleId?: number; plannedDate: string; plannedTimeWindow?: string; priority?: VisitPriority; notes?: string }) {
+  async addPlanItem(scope: ScopeContext, planId: number, data: { centerId: number; circleId?: number; plannedDate: string; plannedTimeWindow?: string; plannedStartAt?: string; plannedEndAt?: string; priority?: VisitPriority; notes?: string }) {
     const plan = await prisma.supervisorVisitPlan.findFirst({
       where: { id: planId, organizationId: scope.organizationId },
       select: {
@@ -217,6 +217,8 @@ export const supervisorVisitService = {
         circleId: data.circleId ?? null,
         plannedDate: toStartOfDay(data.plannedDate),
         plannedTimeWindow: data.plannedTimeWindow,
+        plannedStartAt: data.plannedStartAt ? new Date(data.plannedStartAt) : null,
+        plannedEndAt: data.plannedEndAt ? new Date(data.plannedEndAt) : null,
         priority: data.priority ?? VisitPriority.NORMAL,
         notes: data.notes,
         status: VisitPlanItemStatus.VISIT_ITEM_PENDING
@@ -251,6 +253,8 @@ export const supervisorVisitService = {
       circleId?: number | null;
       plannedDate?: string;
       plannedTimeWindow?: string;
+      plannedStartAt?: Date | string | null;
+      plannedEndAt?: Date | string | null;
       priority?: VisitPriority;
       notes?: string;
     }
@@ -298,17 +302,21 @@ export const supervisorVisitService = {
       }
     }
 
+    const updateData: any = {
+      ...(data.centerId ? { centerId: data.centerId } : {}),
+      ...(data.centerId !== undefined && data.circleId === undefined ? { circleId: null } : {}),
+    };
+    if (data.circleId !== undefined) updateData.circleId = data.circleId;
+    if (data.plannedDate !== undefined) updateData.plannedDate = toStartOfDay(data.plannedDate);
+    if (data.plannedTimeWindow !== undefined) updateData.plannedTimeWindow = data.plannedTimeWindow;
+    if (data.plannedStartAt !== undefined) updateData.plannedStartAt = data.plannedStartAt ? new Date(data.plannedStartAt) : null;
+    if (data.plannedEndAt !== undefined) updateData.plannedEndAt = data.plannedEndAt ? new Date(data.plannedEndAt) : null;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
     const item = await prisma.supervisorVisitPlanItem.update({
       where: { id: itemId },
-      data: {
-        ...(data.centerId ? { centerId: data.centerId } : {}),
-        ...(data.centerId !== undefined && data.circleId === undefined ? { circleId: null } : {}),
-        ...(data.circleId !== undefined ? { circleId: data.circleId } : {}),
-        ...(data.plannedDate ? { plannedDate: toStartOfDay(data.plannedDate) } : {}),
-        ...(data.plannedTimeWindow !== undefined ? { plannedTimeWindow: data.plannedTimeWindow } : {}),
-        ...(data.priority ? { priority: data.priority } : {}),
-        ...(data.notes !== undefined ? { notes: data.notes } : {})
-      },
+      data: updateData,
       include: {
         center: { select: { id: true, name: true } },
         circle: { select: { id: true, name: true } }
@@ -641,6 +649,9 @@ export const supervisorVisitService = {
         observations: log?.observations ?? null,
         checklist: Array.isArray(log?.checklist) ? log.checklist : [],
         targetLabel: item.circle?.name ?? item.center?.name ?? "General Visit",
+        plannedTimeWindow: item.plannedTimeWindow ?? null,
+        plannedStartAt: item.plannedStartAt?.toISOString() ?? null,
+        plannedEndAt: item.plannedEndAt?.toISOString() ?? null,
         logId: log?.id ?? null
       });
     }
@@ -660,6 +671,9 @@ export const supervisorVisitService = {
         observations: log.observations ?? null,
         checklist: Array.isArray(log.checklist) ? log.checklist : [],
         targetLabel: log.circle?.name ?? log.center?.name ?? "General Visit",
+        plannedTimeWindow: null,
+        plannedStartAt: null,
+        plannedEndAt: null,
         logId: log.id
       });
     }

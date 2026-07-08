@@ -1,4 +1,4 @@
-import { Prisma, FinanceAccountType, FinanceMovementDirection, FinanceMovementType, FundTransferStatus, InvoiceStatus, InvoiceType, PaymentMethod, PayrollBatchStatus, PayrollItemStatus, RewardBatchStatus, RewardCycle, RewardItemStatus, RewardType, Role, VoucherAccountingCategory, VoucherSourceType, VoucherStatus, VoucherType, AuditAction, AuditEntityType, FeeMode } from "@prisma/client";
+import { Prisma, FinanceAccountType, FinanceMovementDirection, FinanceMovementType, FundTransferStatus, InvoiceStatus, InvoiceType, PaymentMethod, PayrollBatchStatus, PayrollItemStatus, RewardBatchStatus, RewardBeneficiaryRole, RewardCycle, RewardItemStatus, RewardType, Role, VoucherAccountingCategory, VoucherSourceType, VoucherStatus, VoucherType, AuditAction, AuditEntityType, FeeMode } from "@prisma/client";
 import { auditLogger } from "../../../shared/audit/audit-log";
 import { prisma } from "../../../shared/db/prisma";
 import type { ScopeContext } from "../../../shared/types/auth.types";
@@ -100,7 +100,7 @@ export const rewardsService = {
     input: {
       centerId?: number;
       beneficiaryUserId: number;
-      beneficiaryRole: "TEACHER" | "STUDENT";
+      beneficiaryRole: RewardBeneficiaryRole;
       cycle: RewardCycle;
       rewardType?: RewardType;
       defaultAmount: number;
@@ -117,7 +117,7 @@ export const rewardsService = {
       await ensureFinanceCenter(scope, input.centerId);
     }
 
-    const role = input.beneficiaryRole === "TEACHER" ? Role.TEACHER : Role.STUDENT;
+    const role = input.beneficiaryRole as unknown as Role;
     const beneficiary = await prisma.user.findFirst({
       where: {
         id: input.beneficiaryUserId,
@@ -218,6 +218,14 @@ export const rewardsService = {
       periodYear: number;
       periodMonth?: number;
       periodQuarter?: number;
+      sourceMode?: "MANUAL" | "AUTO";
+      items?: Array<{
+        beneficiaryUserId: number;
+        beneficiaryRole: RewardBeneficiaryRole;
+        centerId: number;
+        amount: number;
+        notes?: string;
+      }>;
     }
   ) {
     financeV2Domain.assertWriteEnabled();
@@ -238,6 +246,10 @@ export const rewardsService = {
       throw financeV2Domain.financeError("Annual cycle does not accept periodMonth or periodQuarter", 400, "VALIDATION_ERROR");
     }
 
+    if (input.sourceMode === "MANUAL" && (!input.items || input.items.length === 0)) {
+      throw financeV2Domain.financeError("Manual mode requires at least one beneficiary", 400, "VALIDATION_ERROR");
+    }
+
     const batch = await prisma.$transaction(async (tx) => {
       const created = await tx.rewardBatch.create({
         data: {
@@ -253,50 +265,66 @@ export const rewardsService = {
         select: { id: true }
       });
 
-      const profileFilters: Prisma.RewardProfileWhereInput[] = [];
-      if (input.centerId) {
-        profileFilters.push({ OR: [{ centerId: input.centerId }, { centerId: null }] });
-      }
-      if (input.rewardType) {
-        profileFilters.push(
-          input.rewardType === RewardType.GENERAL
-            ? { OR: [{ rewardType: RewardType.GENERAL }, { rewardType: null }] }
-            : { rewardType: input.rewardType }
-        );
-      }
-
-      const profiles = await tx.rewardProfile.findMany({
-        where: {
-          organizationId: scope.organizationId,
-          cycle: input.cycle,
-          isActive: true,
-          ...(profileFilters.length ? { AND: profileFilters } : {})
-        },
-        select: {
-          centerId: true,
-          beneficiaryUserId: true,
-          beneficiaryRole: true,
-          rewardType: true,
-          defaultAmount: true
-        }
-      });
-
-      const items = profiles
-        .map((profile) => ({
+      if (input.sourceMode === "MANUAL" && input.items) {
+        const itemData = input.items.map((item) => ({
           batchId: created.id,
-          beneficiaryUserId: profile.beneficiaryUserId,
-          beneficiaryRole: profile.beneficiaryRole,
-          centerId: input.centerId ?? profile.centerId ?? null,
-          circleId: null,
-          amount: profile.defaultAmount,
-          rankInCircle: null,
-          rewardType: profile.rewardType,
-          status: RewardItemStatus.PENDING
-        }))
-        .filter((row): row is Omit<typeof row, "centerId"> & { centerId: number } => row.centerId !== null);
+          beneficiaryUserId: item.beneficiaryUserId,
+          beneficiaryRole: item.beneficiaryRole,
+          centerId: item.centerId,
+          circleId: null as number | null,
+          amount: financeV2Domain.toDecimal(item.amount),
+          rankInCircle: null as number | null,
+          rewardType: null as RewardType | null,
+          status: RewardItemStatus.PENDING,
+          notes: item.notes?.trim() || null
+        }));
+        await tx.rewardItem.createMany({ data: itemData });
+      } else {
+        const profileFilters: Prisma.RewardProfileWhereInput[] = [];
+        if (input.centerId) {
+          profileFilters.push({ OR: [{ centerId: input.centerId }, { centerId: null }] });
+        }
+        if (input.rewardType) {
+          profileFilters.push(
+            input.rewardType === RewardType.GENERAL
+              ? { OR: [{ rewardType: RewardType.GENERAL }, { rewardType: null }] }
+              : { rewardType: input.rewardType }
+          );
+        }
 
-      if (items.length) {
-        await tx.rewardItem.createMany({ data: items });
+        const profiles = await tx.rewardProfile.findMany({
+          where: {
+            organizationId: scope.organizationId,
+            cycle: input.cycle,
+            isActive: true,
+            ...(profileFilters.length ? { AND: profileFilters } : {})
+          },
+          select: {
+            centerId: true,
+            beneficiaryUserId: true,
+            beneficiaryRole: true,
+            rewardType: true,
+            defaultAmount: true
+          }
+        });
+
+        const profileItems = profiles
+          .map((profile) => ({
+            batchId: created.id,
+            beneficiaryUserId: profile.beneficiaryUserId,
+            beneficiaryRole: profile.beneficiaryRole,
+            centerId: input.centerId ?? profile.centerId ?? null,
+            circleId: null as number | null,
+            amount: profile.defaultAmount,
+            rankInCircle: null as number | null,
+            rewardType: profile.rewardType,
+            status: RewardItemStatus.PENDING
+          }))
+          .filter((row): row is Omit<typeof row, "centerId"> & { centerId: number } => row.centerId !== null);
+
+        if (profileItems.length) {
+          await tx.rewardItem.createMany({ data: profileItems });
+        }
       }
 
       const totals = await tx.rewardItem.aggregate({
@@ -339,6 +367,15 @@ export const rewardsService = {
       assertFinanceEntity(batch, "Reward batch not found");
       financeV2Domain.ensureCenterAllowed(scope, batch.centerId);
       financeV2Domain.assertRewardBatchTransition(batch.status, RewardBatchStatus.SUBMITTED);
+
+      const totalItems = await tx.rewardItem.count({ where: { batchId: batch.id } });
+      if (totalItems === 0) {
+        throw financeV2Domain.financeError(
+          "Cannot submit an empty reward batch. Add at least one beneficiary first.",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
 
       return tx.rewardBatch.update({
         where: { id: batch.id },
@@ -649,5 +686,231 @@ export const rewardsService = {
     });
 
     return result;
+  },
+
+  async addRewardItem(
+    scope: ScopeContext,
+    batchId: number,
+    input: {
+      beneficiaryUserId: number;
+      beneficiaryRole: RewardBeneficiaryRole;
+      centerId: number;
+      amount: number;
+      rewardType?: RewardType;
+      notes?: string;
+    }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+    financeV2Domain.ensureCenterAllowed(scope, input.centerId);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const batch = await tx.rewardBatch.findFirst({
+        where: { id: batchId, organizationId: scope.organizationId },
+        select: { id: true, status: true, centerId: true }
+      });
+      assertFinanceEntity(batch, "Reward batch not found");
+
+      if (batch.status !== RewardBatchStatus.DRAFT) {
+        throw financeV2Domain.financeError("Can only add beneficiaries to a draft batch", 409, "INVALID_STATE_TRANSITION");
+      }
+
+      if (!input.amount || input.amount <= 0) {
+        throw financeV2Domain.financeError("Amount must be greater than zero", 400, "VALIDATION_ERROR");
+      }
+
+      const existing = await tx.rewardItem.findFirst({
+        where: { batchId: batch.id, beneficiaryUserId: input.beneficiaryUserId }
+      });
+      if (existing) {
+        throw financeV2Domain.financeError("Beneficiary already exists in this batch", 409, "DUPLICATE_ENTRY");
+      }
+
+      await tx.rewardItem.create({
+        data: {
+          batchId: batch.id,
+          beneficiaryUserId: input.beneficiaryUserId,
+          beneficiaryRole: input.beneficiaryRole,
+          centerId: input.centerId,
+          amount: financeV2Domain.toDecimal(input.amount),
+          rewardType: input.rewardType ?? null,
+          status: RewardItemStatus.PENDING,
+          notes: input.notes?.trim() || null
+        }
+      });
+
+      const totals = await tx.rewardItem.aggregate({
+        where: { batchId: batch.id },
+        _sum: { amount: true },
+        _count: { _all: true }
+      });
+
+      await tx.rewardBatch.update({
+        where: { id: batch.id },
+        data: {
+          totalAmount: totals._sum.amount ?? new Prisma.Decimal(0),
+          totalItems: totals._count._all
+        }
+      });
+
+      return tx.rewardBatch.findUnique({
+        where: { id: batch.id },
+        select: rewardBatchSelect
+      });
+    });
+
+    const batch = requireFinanceEntity(result, "Reward batch not found");
+    await addAudit({
+      scope,
+      action: AuditAction.CREATE,
+      entityType: AuditEntityType.REWARD_ITEM,
+      entityId: batch.id,
+      centerId: batch.centerId,
+      summary: "تم إضافة مستفيد إلى دفعة إكراميات"
+    });
+
+    return normalize(batch);
+  },
+
+  async removeRewardItem(scope: ScopeContext, itemId: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await tx.rewardItem.findFirst({
+        where: {
+          id: itemId,
+          batch: { organizationId: scope.organizationId }
+        },
+        select: {
+          id: true,
+          batchId: true,
+          centerId: true,
+          status: true,
+          batch: { select: { id: true, status: true } }
+        }
+      });
+      assertFinanceEntity(item, "Reward item not found");
+      financeV2Domain.ensureCenterAllowed(scope, item.centerId);
+
+      if (item.batch.status !== RewardBatchStatus.DRAFT) {
+        throw financeV2Domain.financeError("Can only remove beneficiaries from a draft batch", 409, "INVALID_STATE_TRANSITION");
+      }
+
+      if (item.status !== RewardItemStatus.PENDING) {
+        throw financeV2Domain.financeError("Can only remove pending beneficiaries", 409, "INVALID_STATE_TRANSITION");
+      }
+
+      await tx.rewardItem.delete({ where: { id: item.id } });
+
+      const totals = await tx.rewardItem.aggregate({
+        where: { batchId: item.batchId },
+        _sum: { amount: true },
+        _count: { _all: true }
+      });
+
+      await tx.rewardBatch.update({
+        where: { id: item.batchId },
+        data: {
+          totalAmount: totals._sum.amount ?? new Prisma.Decimal(0),
+          totalItems: totals._count._all
+        }
+      });
+
+      const refreshed = await tx.rewardBatch.findUnique({
+        where: { id: item.batchId },
+        select: rewardBatchSelect
+      });
+      return normalize(requireFinanceEntity(refreshed, "Reward batch not found"));
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.DELETE,
+      entityType: AuditEntityType.REWARD_ITEM,
+      entityId: itemId,
+      centerId: result.centerId,
+      summary: "تم حذف مستفيد من دفعة إكراميات"
+    });
+
+    return result;
+  },
+
+  async updateRewardBatch(
+    scope: ScopeContext,
+    batchId: number,
+    input: {
+      cycle?: RewardCycle;
+      rewardType?: RewardType | null;
+      periodMonth?: number | null;
+      periodQuarter?: number | null;
+    }
+  ) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const batch = await tx.rewardBatch.findFirst({
+        where: { id: batchId, organizationId: scope.organizationId },
+        select: { id: true, status: true }
+      });
+      assertFinanceEntity(batch, "Reward batch not found");
+
+      if (batch.status !== RewardBatchStatus.DRAFT) {
+        throw financeV2Domain.financeError("Can only edit a draft batch", 409, "INVALID_STATE_TRANSITION");
+      }
+
+      return tx.rewardBatch.update({
+        where: { id: batch.id },
+        data: {
+          ...(input.cycle !== undefined ? { cycle: input.cycle } : {}),
+          ...(input.rewardType !== undefined ? { rewardType: input.rewardType } : {}),
+          ...(input.periodMonth !== undefined ? { periodMonth: input.periodMonth } : {}),
+          ...(input.periodQuarter !== undefined ? { periodQuarter: input.periodQuarter } : {})
+        },
+        select: rewardBatchSelect
+      });
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.REWARD_BATCH,
+      entityId: updated.id,
+      centerId: updated.centerId,
+      summary: "تم تعديل دفعة إكراميات"
+    });
+
+    return normalize(updated);
+  },
+
+  async deleteRewardBatch(scope: ScopeContext, batchId: number) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanWrite(scope);
+
+    await prisma.$transaction(async (tx) => {
+      const batch = await tx.rewardBatch.findFirst({
+        where: { id: batchId, organizationId: scope.organizationId },
+        select: { id: true, status: true, centerId: true }
+      });
+      assertFinanceEntity(batch, "Reward batch not found");
+      financeV2Domain.ensureCenterAllowed(scope, batch.centerId);
+
+      if (batch.status !== RewardBatchStatus.DRAFT) {
+        throw financeV2Domain.financeError("Can only delete a draft batch", 409, "INVALID_STATE_TRANSITION");
+      }
+
+      await tx.rewardItem.deleteMany({ where: { batchId: batch.id } });
+      await tx.rewardBatch.delete({ where: { id: batch.id } });
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.DELETE,
+      entityType: AuditEntityType.REWARD_BATCH,
+      entityId: batchId,
+      centerId: null,
+      summary: "تم حذف دفعة إكراميات"
+    });
   }
 };

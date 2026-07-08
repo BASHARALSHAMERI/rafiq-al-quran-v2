@@ -763,6 +763,58 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  addRewardItem: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await rewardsService.addRewardItem(req.scope, params.id, req.body);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  removeRewardItem: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await rewardsService.removeRewardItem(req.scope, params.id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  updateRewardBatch: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await rewardsService.updateRewardBatch(req.scope, params.id, req.body);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  deleteRewardBatch: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      await rewardsService.deleteRewardBatch(req.scope, params.id);
+      res.json({ ok: true, data: null });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   listPendingApprovals: (async (req, res, next) => {
     try {
       if (!req.scope) {

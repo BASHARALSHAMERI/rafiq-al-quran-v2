@@ -149,10 +149,10 @@ const serializeGeoCheck = (input: {
 };
 
 const isGeoBlocked = (
-  geoEnforcement: "REQUIRED" | "OPTIONAL",
+  geoEnforcement: string,
   geoCheck: { isWithinRange: boolean | null; state: string }
 ) => {
-  if (geoEnforcement !== "REQUIRED") return false;
+  if (geoEnforcement !== "STRICT" && geoEnforcement !== "REQUIRED") return false;
   if (geoCheck.state === "unavailable") return false;
   return geoCheck.isWithinRange !== true;
 };
@@ -234,7 +234,7 @@ const buildSelfAttendanceEligibility = (input: {
     weekendDays: string[];
     holidays: Array<{ startDate: string; endDate: string }>;
     gracePeriodMinutes: number;
-    geoEnforcement: "REQUIRED" | "OPTIONAL";
+    geoEnforcement: string;
   };
   geoCheck: ReturnType<typeof serializeGeoCheck>;
 }) => {

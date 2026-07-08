@@ -55,6 +55,8 @@ import {
   patchPolicyBodySchema,
   failPayrollItemBodySchema,
   failRewardItemBodySchema,
+  addRewardItemBodySchema,
+  updateRewardBatchBodySchema,
   payPayrollBatchBodySchema,
   payRewardBatchBodySchema,
   payrollReportQuerySchema,
@@ -555,6 +557,36 @@ financeV2Router.post(
   financeV2Controller.failRewardItem
 );
 
+financeV2Router.post(
+  "/finance/v2/reward/batches/:id/items",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(addRewardItemBodySchema),
+  financeV2Controller.addRewardItem
+);
+
+financeV2Router.delete(
+  "/finance/v2/reward/items/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  financeV2Controller.removeRewardItem
+);
+
+financeV2Router.patch(
+  "/finance/v2/reward/batches/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(updateRewardBatchBodySchema),
+  financeV2Controller.updateRewardBatch
+);
+
+financeV2Router.delete(
+  "/finance/v2/reward/batches/:id",
+  requireRoles(financeDraftWriteRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  financeV2Controller.deleteRewardBatch
+);
+
 financeV2Router.get(
   "/finance/v2/approvals/pending",
   requireRoles(financeApprovalRoles),
@@ -856,6 +888,18 @@ financeV2Router.post(
   assetsController.createAssetCategory
 );
 
+financeV2Router.put(
+  "/finance/v2/asset-categories/:id",
+  requireRoles(financeSettingsWriteRoles),
+  assetsController.updateAssetCategory
+);
+
+financeV2Router.post(
+  "/finance/v2/asset-categories/:id/deactivate",
+  requireRoles(financeSettingsWriteRoles),
+  assetsController.deactivateAssetCategory
+);
+
 financeV2Router.get(
   "/finance/v2/assets",
   requireRoles(financeReadRoles),
@@ -866,6 +910,30 @@ financeV2Router.post(
   "/finance/v2/assets",
   requireRoles(financeDraftWriteRoles),
   assetsController.createFixedAsset
+);
+
+financeV2Router.get(
+  "/finance/v2/assets/:id",
+  requireRoles(financeReadRoles),
+  assetsController.getFixedAsset
+);
+
+financeV2Router.put(
+  "/finance/v2/assets/:id",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.updateFixedAsset
+);
+
+financeV2Router.post(
+  "/finance/v2/assets/:id/deactivate",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.deactivateFixedAsset
+);
+
+financeV2Router.post(
+  "/finance/v2/assets/:id/reactivate",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.reactivateFixedAsset
 );
 
 financeV2Router.get(
@@ -881,6 +949,24 @@ financeV2Router.post(
 );
 
 financeV2Router.post(
+  "/finance/v2/asset-custody/:id/release",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.releaseCustody
+);
+
+financeV2Router.put(
+  "/finance/v2/asset-custody/:id",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.updateCustodyLog
+);
+
+financeV2Router.delete(
+  "/finance/v2/asset-custody/:id",
+  requireRoles(financeDraftWriteRoles),
+  assetsController.deleteCustodyLog
+);
+
+financeV2Router.post(
   "/finance/v2/assets/:id/post-acquisition",
   requireRoles(financeCashWriteRoles),
   assetsController.postAssetAcquisition
@@ -892,12 +978,7 @@ financeV2Router.post(
   assetsController.postAssetDepreciation
 );
 
-financeV2Router.post(
-  "/finance/v2/assets/:id/acquire",
-  requireRoles(financeCashWriteRoles),
-  assetsController.postAssetAcquisition
-);
-
+// NOTE: /assets/:id/depreciate kept as alias for backward compat
 financeV2Router.post(
   "/finance/v2/assets/:id/depreciate",
   requireRoles(financeApprovalRoles),

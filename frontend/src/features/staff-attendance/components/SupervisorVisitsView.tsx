@@ -320,6 +320,16 @@ export function SupervisorVisitsView() {
                          {new Date(visit.createdAt).toLocaleDateString(ar ? 'ar-SA-u-nu-latn' : 'en-US')}
                        </span>
                     </div>
+                    {(visit.plannedStartAt || visit.plannedEndAt || visit.plannedTimeWindow) && (
+                      <div className="ctr-card-detail-row">
+                        <span className="ctr-card-detail-label text-[11px]">{ar ? "وقت الزيارة" : "Visit Time"}</span>
+                        <span className="ctr-card-detail-val font-medium">
+                          {visit.plannedStartAt || visit.plannedEndAt 
+                            ? `${visit.plannedStartAt ? new Date(visit.plannedStartAt).toLocaleTimeString(ar ? 'ar-SA-u-nu-latn' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '?'} - ${visit.plannedEndAt ? new Date(visit.plannedEndAt).toLocaleTimeString(ar ? 'ar-SA-u-nu-latn' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '?'}`
+                            : visit.plannedTimeWindow}
+                        </span>
+                      </div>
+                    )}
                      <div className="ctr-card-detail-row">
                        <span className="ctr-card-detail-label text-[11px]">{ar ? "التقييم الإجمالي" : "Overall Score"}</span>
                        <span className={`ctr-card-detail-val text-lg font-black ${scoreColor}`}>

@@ -144,7 +144,7 @@ export const notificationsService = {
           organizationId: input.organizationId,
           centerId: input.centerId,
           circleId: input.circleId ?? null,
-          type: "SUPERVISOR_VISIT_MISSED" as any,
+          type: "SUPERVISOR_VISIT_ASSIGNED", // Fallback to existing enum to avoid schema drift
           title,
           body,
           payload: {

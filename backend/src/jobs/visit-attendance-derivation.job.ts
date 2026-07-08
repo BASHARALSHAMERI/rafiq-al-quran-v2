@@ -14,10 +14,9 @@ export async function runVisitAttendanceDerivationJob() {
   const now = new Date();
   const today = toStartOfDay(now);
 
-  // 1. Mark past pending planned items as MISSED
-  // Only handles dates strictly before today.
+  // 1. Mark pending planned items as MISSED based on plannedEndAt or plannedDate
   const pendingItems = await prisma.supervisorVisitPlanItem.findMany({
-    where: { status: VisitPlanItemStatus.VISIT_ITEM_PENDING, plannedDate: { lt: today } },
+    where: { status: VisitPlanItemStatus.VISIT_ITEM_PENDING },
     include: {
       plan: { select: { supervisorId: true, organizationId: true } },
       center: { select: { name: true } },
@@ -25,13 +24,22 @@ export async function runVisitAttendanceDerivationJob() {
     }
   });
 
-  if (pendingItems.length > 0) {
+  const missedItems = pendingItems.filter(item => {
+    if (item.plannedEndAt) {
+      const gracePeriodEnd = new Date(item.plannedEndAt.getTime() + 30 * 60 * 1000);
+      return now > gracePeriodEnd;
+    } else {
+      return item.plannedDate < today;
+    }
+  });
+
+  if (missedItems.length > 0) {
     const missedCount = await prisma.supervisorVisitPlanItem.updateMany({
-      where: { id: { in: pendingItems.map(i => i.id) } },
+      where: { id: { in: missedItems.map(i => i.id) } },
       data: { status: VisitPlanItemStatus.VISIT_ITEM_MISSED }
     });
 
-    for (const item of pendingItems) {
+    for (const item of missedItems) {
       try {
         await notificationsService.notifySupervisorVisitMissed({
           organizationId: item.plan.organizationId,

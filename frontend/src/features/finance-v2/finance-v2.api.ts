@@ -6,6 +6,7 @@ import type {
   CreateFinanceDonorV2Payload,
   CreateFinanceVoucherV2Payload,
   CreateRewardBatchV2Payload,
+  RewardBatchQueryV2,
   CreateRewardProfileV2Payload,
   CreatePayrollBatchV2Payload,
   CreatePayrollProfileV2Payload,
@@ -40,6 +41,7 @@ import type {
   PayrollItemV2,
   PayrollBatchV2,
   PayrollProfileV2,
+  RewardBeneficiaryRoleV2,
   PendingApprovalsV2,
   ReceiveFinanceDonationV2Payload,
   RewardItemV2,
@@ -60,8 +62,12 @@ import type {
   FixedAssetV2,
   AssetCustodyLogV2,
   CreateAssetCategoryV2Payload,
+  UpdateAssetCategoryV2Payload,
   CreateFixedAssetV2Payload,
+  UpdateFixedAssetV2Payload,
   AssignAssetCustodyV2Payload,
+  UpdateAssetCustodyV2Payload,
+  ReleaseCustodyV2Payload,
   FinanceReportFinancialPositionV2,
   FinanceReportStatementOfActivitiesV2,
   FinancialPositionItemV2
@@ -587,6 +593,53 @@ export const financeV2Api = {
     return normalizeFixedAsset(response.data.data);
   },
 
+  async getFixedAsset(assetId: number): Promise<FixedAssetV2> {
+    const response = await apiClient.get<ApiResponse<FixedAssetV2>>(`/finance/v2/assets/${assetId}`);
+    return normalizeFixedAsset(response.data.data);
+  },
+
+  async updateFixedAsset(assetId: number, payload: UpdateFixedAssetV2Payload): Promise<FixedAssetV2> {
+    const response = await apiClient.put<ApiResponse<FixedAssetV2>>(`/finance/v2/assets/${assetId}`, payload);
+    return normalizeFixedAsset(response.data.data);
+  },
+
+  async deactivateFixedAsset(assetId: number): Promise<FixedAssetV2> {
+    const response = await apiClient.post<ApiResponse<FixedAssetV2>>(`/finance/v2/assets/${assetId}/deactivate`);
+    return normalizeFixedAsset(response.data.data);
+  },
+
+  async reactivateFixedAsset(assetId: number): Promise<FixedAssetV2> {
+    const response = await apiClient.post<ApiResponse<FixedAssetV2>>(`/finance/v2/assets/${assetId}/reactivate`);
+    return normalizeFixedAsset(response.data.data);
+  },
+
+  async releaseCustody(custodyId: number, payload: ReleaseCustodyV2Payload): Promise<AssetCustodyLogV2> {
+    const response = await apiClient.post<ApiResponse<AssetCustodyLogV2>>(
+      `/finance/v2/asset-custody/${custodyId}/release`,
+      payload
+    );
+    return normalizeAssetCustodyLog(response.data.data);
+  },
+
+  async updateCustodyLog(custodyId: number, payload: UpdateAssetCustodyV2Payload): Promise<AssetCustodyLogV2> {
+    const response = await apiClient.put<ApiResponse<AssetCustodyLogV2>>(`/finance/v2/asset-custody/${custodyId}`, payload);
+    return normalizeAssetCustodyLog(response.data.data);
+  },
+
+  async deleteCustodyLog(custodyId: number): Promise<void> {
+    await apiClient.delete(`/finance/v2/asset-custody/${custodyId}`);
+  },
+
+  async updateAssetCategory(categoryId: number, payload: UpdateAssetCategoryV2Payload): Promise<AssetCategoryV2> {
+    const response = await apiClient.put<ApiResponse<AssetCategoryV2>>(`/finance/v2/asset-categories/${categoryId}`, payload);
+    return normalizeAssetCategory(response.data.data);
+  },
+
+  async deactivateAssetCategory(categoryId: number): Promise<AssetCategoryV2> {
+    const response = await apiClient.post<ApiResponse<AssetCategoryV2>>(`/finance/v2/asset-categories/${categoryId}/deactivate`);
+    return normalizeAssetCategory(response.data.data);
+  },
+
   async listSuppliers(): Promise<SupplierV2[]> {
     const response = await apiClient.get<ApiResponse<SupplierV2[]>>("/finance/v2/suppliers");
     return response.data.data;
@@ -1057,13 +1110,7 @@ export const financeV2Api = {
     return normalizePayrollBatch(response.data.data);
   },
 
-  async getRewardBatches(params: {
-    centerId?: number;
-    cycle?: "MONTHLY" | "QUARTERLY" | "ANNUAL";
-    rewardType?: "GENERAL" | "PERFORMANCE" | "ATTENDANCE" | "COMPETITION" | "OTHER";
-    periodYear?: number;
-    periodMonth?: number;
-    periodQuarter?: number;
+  async getRewardBatches(params: RewardBatchQueryV2 & {
     page?: number;
     pageSize?: number;
   }): Promise<PaginatedRows<RewardBatchV2>> {
@@ -1162,6 +1209,48 @@ export const financeV2Api = {
       { failureReason: failureReason.trim() }
     );
     return normalizeRewardBatch(response.data.data);
+  },
+
+  async addRewardItem(
+    batchId: number,
+    payload: {
+      beneficiaryUserId: number;
+      beneficiaryRole: RewardBeneficiaryRoleV2;
+      centerId: number;
+      amount: number;
+      rewardType?: string;
+      notes?: string;
+    }
+  ): Promise<RewardBatchV2> {
+    const response = await apiClient.post<ApiResponse<RewardBatchV2>>(
+      `/finance/v2/reward/batches/${batchId}/items`,
+      payload
+    );
+    return normalizeRewardBatch(response.data.data);
+  },
+
+  async removeRewardItem(itemId: number): Promise<RewardBatchV2> {
+    const response = await apiClient.delete<ApiResponse<RewardBatchV2>>(
+      `/finance/v2/reward/items/${itemId}`
+    );
+    return normalizeRewardBatch(response.data.data);
+  },
+
+  async updateRewardBatch(batchId: number, payload: {
+    cycle?: "MONTHLY" | "QUARTERLY" | "ANNUAL";
+    rewardType?: "GENERAL" | "PERFORMANCE" | "ATTENDANCE" | "COMPETITION" | "OTHER" | null;
+    periodMonth?: number | null;
+    periodQuarter?: number | null;
+  }): Promise<RewardBatchV2> {
+    const response = await apiClient.patch<ApiResponse<RewardBatchV2>>(
+      `/finance/v2/reward/batches/${batchId}`,
+      payload
+    );
+    return normalizeRewardBatch(response.data.data);
+  },
+
+  async deleteRewardBatch(batchId: number): Promise<void> {
+    await apiClient.delete(`/finance/v2/reward/batches/${batchId}`);
   },
 
   async getPendingApprovals(): Promise<PendingApprovalsV2> {

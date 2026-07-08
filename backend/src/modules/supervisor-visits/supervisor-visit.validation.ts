@@ -49,6 +49,8 @@ export const addPlanItemSchema = z
     circleId: nullablePositiveId,
     plannedDate: dateStr,
     plannedTimeWindow: z.string().max(20).optional(),
+    plannedStartAt: z.string().datetime().optional(),
+    plannedEndAt: z.string().datetime().optional(),
     priority: z.nativeEnum(VisitPriority).optional(),
     notes: z.string().max(500).optional()
   })
@@ -60,6 +62,8 @@ export const updatePlanItemSchema = z
     circleId: nullablePositiveId,
     plannedDate: dateStr.optional(),
     plannedTimeWindow: z.string().max(20).optional(),
+    plannedStartAt: z.string().datetime().optional(),
+    plannedEndAt: z.string().datetime().optional(),
     priority: z.nativeEnum(VisitPriority).optional(),
     notes: z.string().max(500).optional()
   })

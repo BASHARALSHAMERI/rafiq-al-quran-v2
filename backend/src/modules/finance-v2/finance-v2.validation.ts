@@ -651,9 +651,30 @@ export const createRewardBatchBodySchema = z
     rewardType: z.nativeEnum(RewardType).optional(),
     periodYear: z.coerce.number().int().min(2000).max(2100),
     periodMonth: z.coerce.number().int().min(1).max(12).optional(),
-    periodQuarter: z.coerce.number().int().min(1).max(4).optional()
+    periodQuarter: z.coerce.number().int().min(1).max(4).optional(),
+    sourceMode: z.enum(["MANUAL", "AUTO"]).optional(),
+    items: z
+      .array(
+        z.object({
+          beneficiaryUserId: positiveInt,
+          beneficiaryRole: z.nativeEnum(RewardBeneficiaryRole),
+          centerId: positiveInt,
+          amount: z.coerce.number().positive().max(100000000),
+          notes: z.string().trim().max(500).optional()
+        }).strict()
+      )
+      .optional()
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) => {
+      if (data.sourceMode === "MANUAL") {
+        return !!data.items && data.items.length > 0;
+      }
+      return true;
+    },
+    { message: "Manual mode requires at least one beneficiary item" }
+  );
 
 export const payRewardBatchBodySchema = z
   .object({
@@ -676,6 +697,29 @@ export const payRewardBatchBodySchema = z
 export const failRewardItemBodySchema = z
   .object({
     failureReason: z.string().trim().min(1).max(500)
+  })
+  .strict();
+
+export const updateRewardBatchBodySchema = z
+  .object({
+    cycle: z.nativeEnum(RewardCycle).optional(),
+    rewardType: z.nativeEnum(RewardType).nullable().optional(),
+    periodMonth: z.coerce.number().int().min(1).max(12).nullable().optional(),
+    periodQuarter: z.coerce.number().int().min(1).max(4).nullable().optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "حقل واحد على الأقل مطلوب للتعديل"
+  });
+
+export const addRewardItemBodySchema = z
+  .object({
+    beneficiaryUserId: positiveInt,
+    beneficiaryRole: z.nativeEnum(RewardBeneficiaryRole),
+    centerId: positiveInt,
+    amount: z.coerce.number().positive("Amount must be greater than zero").max(100000000),
+    rewardType: z.nativeEnum(RewardType).optional(),
+    notes: z.string().trim().max(500).optional()
   })
   .strict();
 

@@ -123,6 +123,9 @@ export interface SupervisorVisitRecord {
   endGeoState?: GeoState | string | null;
   geoState: GeoState;
   visitType?: "PLANNED" | "EMERGENCY";
+  plannedTimeWindow?: string | null;
+  plannedStartAt?: string | null;
+  plannedEndAt?: string | null;
   planItemId?: number | null;
   checklist?: Array<Record<string, unknown>>;
   observations?: string | null;
@@ -251,7 +254,7 @@ export interface SelfAttendanceResponse {
     earlyDepartureThresholdMinutes: number;
     weekendDays: string[];
     holidays: AttendanceHolidayPeriod[];
-    geoEnforcement: "REQUIRED" | "OPTIONAL";
+    geoEnforcement: "STRICT" | "WARN_ONLY" | "DISABLED";
     timezone: string;
     timeFormat?: "HOUR_12" | "HOUR_24";
   };
@@ -310,8 +313,8 @@ export interface AttendancePolicy {
   earlyDepartureThresholdMinutes: number;
   weekendDays: string[];
   holidays: AttendanceHolidayPeriod[];
-  geoEnforcementMode: string;
-  geoEnforcement: "REQUIRED" | "OPTIONAL";
+  geoEnforcementMode?: string;
+  geoEnforcement: "STRICT" | "WARN_ONLY" | "DISABLED";
   timezone: string;
   defaultShiftDurationMinutes: number;
   prayerApiSource: string;
@@ -333,6 +336,8 @@ export interface VisitPlanItem {
   circleId?: number | null;
   plannedDate: string;
   plannedTimeWindow?: string | null;
+  plannedStartAt?: string | null;
+  plannedEndAt?: string | null;
   priority: VisitPriority;
   notes?: string | null;
   status: PlanItemStatus;

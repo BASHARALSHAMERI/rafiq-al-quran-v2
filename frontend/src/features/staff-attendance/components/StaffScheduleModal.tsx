@@ -4,6 +4,7 @@ import Modal from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
 import { useCentersQuery } from "../../org/org.hooks";
 import CircleScheduleEditor from "../../org/CircleScheduleEditor";
+import LocationPicker from "../../org/components/LocationPicker";
 import type { PrayerName } from "../../org/types";
 import {
   createEmptyScheduleDraftRows,
@@ -455,50 +456,25 @@ export function StaffScheduleModal({ ar, isOpen, existing, onClose }: StaffSched
             </label>
 
             {useCustomLocation && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                <div className="circlemod-field">
-                  <label htmlFor="sched-lat">{ar ? "خط العرض (Latitude) *" : "Latitude *"}</label>
-                  <input
-                    id="sched-lat"
-                    type="number"
-                    step="any"
-                    placeholder="e.g. 15.35222"
-                    className="circlemod-input"
-                    value={latitude}
-                    onChange={(e) => setLatitude(e.target.value ? Number(e.target.value) : "")}
-                    required
-                    disabled={isPending}
+              <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-col gap-4">
+                <div className="circlemod-field circlemod-field--full mt-2">
+                  <label>{ar ? "الموقع الجغرافي ونطاق الحضور على الخريطة *" : "Geographical Location & Radius on Map *"}</label>
+                  <LocationPicker
+                    active={useCustomLocation}
+                    ar={ar}
+                    pending={isPending}
+                    latitude={latitude.toString()}
+                    longitude={longitude.toString()}
+                    allowedRadiusMeters={allowedRadiusMeters.toString()}
+                    onChange={(field, value) => {
+                      if (field === "latitude") setLatitude(value ? Number(value) : "");
+                      else if (field === "longitude") setLongitude(value ? Number(value) : "");
+                      else if (field === "allowedRadiusMeters") setAllowedRadiusMeters(value ? Number(value) : "");
+                    }}
                   />
                 </div>
-                <div className="circlemod-field">
-                  <label htmlFor="sched-lng">{ar ? "خط الطول (Longitude) *" : "Longitude *"}</label>
-                  <input
-                    id="sched-lng"
-                    type="number"
-                    step="any"
-                    placeholder="e.g. 44.20911"
-                    className="circlemod-input"
-                    value={longitude}
-                    onChange={(e) => setLongitude(e.target.value ? Number(e.target.value) : "")}
-                    required
-                    disabled={isPending}
-                  />
-                </div>
-                <div className="circlemod-field">
-                  <label htmlFor="sched-radius">{ar ? "نطاق السماح الجغرافي (بالمتر) *" : "Allowed Radius (meters) *"}</label>
-                  <input
-                    id="sched-radius"
-                    type="number"
-                    placeholder="e.g. 100"
-                    className="circlemod-input"
-                    value={allowedRadiusMeters}
-                    onChange={(e) => setAllowedRadiusMeters(e.target.value ? Number(e.target.value) : "")}
-                    required
-                    disabled={isPending}
-                  />
-                </div>
-                <div className="circlemod-field">
-                  <label htmlFor="sched-loc-text">{ar ? "اسم/وصف الموقع (مثال: البيت، المكتب)" : "Location Description (e.g. Home, Office)"}</label>
+                <div className="circlemod-field circlemod-field--full">
+                  <label htmlFor="sched-loc-text">{ar ? "اسم/وصف الموقع (اختياري، مثال: البيت، المكتب)" : "Location Description (Optional, e.g. Home, Office)"}</label>
                   <input
                     id="sched-loc-text"
                     type="text"
