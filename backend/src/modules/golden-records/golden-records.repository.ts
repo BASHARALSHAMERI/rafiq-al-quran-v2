@@ -378,6 +378,14 @@ export const goldenRecordsRepository = {
     });
   },
 
+  findCandidateByExamAttemptId(input: { examAttemptId: number; excludeCandidateId?: number }) {
+    const where: Prisma.GraduationCandidateWhereInput = {
+      examAttemptId: input.examAttemptId,
+      ...(input.excludeCandidateId ? { id: { not: input.excludeCandidateId } } : {})
+    };
+    return prisma.graduationCandidate.findFirst({ where, select: { id: true } });
+  },
+
   findCandidateByStudentYear(input: { organizationId: number; studentId: number; year: number }) {
     return prisma.graduationCandidate.findFirst({
       where: {

@@ -1,3 +1,4 @@
+import { isValidScheduleTimeRange } from "../../shared/utils/schedule.utils";
 import type {
   CircleScheduleDay,
   CircleScheduleMode,
@@ -158,11 +159,19 @@ export const validateScheduleDraftRows = (
       if (!from || !to) {
         return ar ? `أكمل وقت ${weekdayLabel(row.day, ar)} (من/إلى)` : `Complete ${weekdayLabel(row.day, ar)} time range`;
       }
-      if (!hhmmRe.test(from) || !hhmmRe.test(to)) {
+      
+      const validation = isValidScheduleTimeRange(from, to);
+      if (!validation.isValid) {
+        if (validation.errorKey === "same_time") {
+          return ar ? `وقت بداية ${weekdayLabel(row.day, ar)} ونهايته لا يمكن أن يكونا متساويين` : `${weekdayLabel(row.day, ar)} start and end times cannot be equal`;
+        }
+        if (validation.errorKey === "too_short") {
+          return ar ? `مدة دوام ${weekdayLabel(row.day, ar)} قصيرة جدًا` : `${weekdayLabel(row.day, ar)} shift is too short`;
+        }
+        if (validation.errorKey === "too_long") {
+          return ar ? `مدة دوام ${weekdayLabel(row.day, ar)} طويلة جدًا، تأكد من وقت البداية والنهاية` : `${weekdayLabel(row.day, ar)} shift is too long`;
+        }
         return ar ? `صيغة الوقت غير صحيحة في ${weekdayLabel(row.day, ar)}` : `Invalid time format in ${weekdayLabel(row.day, ar)}`;
-      }
-      if (from >= to) {
-        return ar ? `وقت ${weekdayLabel(row.day, ar)} يجب أن يكون من < إلى` : `${weekdayLabel(row.day, ar)} time must be from < to`;
       }
       continue;
     }

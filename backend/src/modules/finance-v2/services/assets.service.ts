@@ -474,7 +474,7 @@ export const assetsService = {
 
     // منع تاريخ الشراء المستقبلي
     const today = new Date();
-    today.setHours(23, 59, 59, 999);
+    today.setUTCHours(23, 59, 59, 999);
     if (purchaseDate > today) {
       throw new AppError("تاريخ الشراء لا يمكن أن يكون في المستقبل", 400);
     }
@@ -699,7 +699,7 @@ export const assetsService = {
       }
       
       const today = new Date();
-      today.setHours(23, 59, 59, 999);
+      today.setUTCHours(23, 59, 59, 999);
       if (assignedAt > today) {
         throw new AppError("تاريخ التسليم لا يمكن أن يكون في المستقبل", 400);
       }

@@ -875,6 +875,12 @@ export const usersService = {
       throw new AppError("رقم الهاتف مطلوب لهذا الدور.", 400);
     }
 
+    // ponytail: skip phone reset for students — phone: "" from frontend becomes null, conflicts with @unique
+    if (existingUser.role === Role.STUDENT && normalized.profile?.phoneNormalized === null) {
+      delete normalized.profile.phone;
+      delete normalized.profile.phoneNormalized;
+    }
+
     if (normalized.fullName && normalized.fullName !== existingUser.fullName) {
       const duplicateName = await usersRepository.findUserByExactName(scope.organizationId, normalized.fullName, existingUser.id);
       if (duplicateName) {
@@ -941,7 +947,7 @@ export const usersService = {
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         throw new AppError(
-          "حدث خطأ أثناء تحديث المستخدم. يرجى المحاولة مرة أخرى.",
+          `حدث خطأ أثناء تحديث المستخدم. (Code: ${error.code}) ${error.message.split('\n').pop()}`,
           500,
           { prismaCode: error.code, prismaMessage: error.message },
           "USER_UPDATE_DB_ERROR"

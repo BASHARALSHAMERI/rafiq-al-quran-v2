@@ -33,5 +33,5 @@ export const safeDate = (input: string, fieldName: string): Date => {
 };
 
 export const toDateOnly = (date: Date): Date => {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 };

@@ -47,10 +47,12 @@ export function FinanceMoney({
   const fmt = (n: number) =>
     new Intl.NumberFormat(ar ? "ar-YE-u-nu-latn" : "en-US", { maximumFractionDigits: 2 }).format(n);
 
+  const displayBaseCurrency = ar && baseCurrency.toUpperCase() === "YER" ? "ر.ي" : baseCurrency;
+
   return (
     <span className={`finance-money ${className}`.trim()}>
       <span className="finance-money__primary">
-        {fmt(base)} {baseCurrency}
+        {fmt(base)} {displayBaseCurrency}
       </span>
       {showSecondary ? (
         <span className="finance-money__secondary">

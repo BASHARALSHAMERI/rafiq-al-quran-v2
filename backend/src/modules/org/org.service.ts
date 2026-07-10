@@ -11,6 +11,7 @@ import {
 } from "@prisma/client";
 import { auditLogger } from "../../shared/audit/audit-log";
 import { AppError } from "../../shared/errors/app-error";
+import { isValidScheduleTimeRange } from "../../shared/utils/schedule.utils";
 import type { ScopeContext } from "../../shared/types/auth.types";
 import { prisma } from "../../shared/db/prisma";
 import { staffScheduleService } from "../staff-operations/staff-schedule.service";
@@ -255,11 +256,18 @@ const weekdayRank = new Map<Weekday, number>(WEEKDAY_ORDER.map((day, index) => [
 const prayerRank = new Map<PrayerName, number>(PRAYER_ORDER.map((name, index) => [name, index]));
 
 const assertValidClockRange = (fromTime: string, toTime: string) => {
-  if (!HHMM_RE.test(fromTime) || !HHMM_RE.test(toTime)) {
-    throw new AppError("جداول نظام الساعة تتطلب قيم وقت HH:mm", 400);
-  }
-  if (fromTime >= toTime) {
-    throw new AppError("نطاق الساعة في الجدول الأسبوعي يجب أن يكون في نفس اليوم و fromTime < toTime", 400);
+  const result = isValidScheduleTimeRange(fromTime, toTime);
+  if (!result.isValid) {
+    if (result.errorKey === "same_time") {
+      throw new AppError("وقت البداية والنهاية في الجدول الأسبوعي لا يمكن أن يكونا متساويين", 400);
+    }
+    if (result.errorKey === "too_short") {
+      throw new AppError("مدة الدوام في الجدول الأسبوعي قصيرة جدًا", 400);
+    }
+    if (result.errorKey === "too_long") {
+      throw new AppError("مدة الدوام في الجدول الأسبوعي طويلة جدًا، تأكد من وقت البداية والنهاية", 400);
+    }
+    throw new AppError("صيغة الوقت في الجدول الأسبوعي غير صالحة", 400);
   }
 };
 

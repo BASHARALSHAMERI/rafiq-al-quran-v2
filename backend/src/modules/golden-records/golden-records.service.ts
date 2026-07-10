@@ -205,7 +205,7 @@ const isEligibleGoldenRecordAttemptOutcome = (attempt?: ExamAttemptOutcome | nul
     return false;
   }
 
-  if (attempt.status !== AttemptStatus.APPROVED || !attempt.reviewedAt) {
+  if ((attempt.status !== AttemptStatus.APPROVED && attempt.status !== AttemptStatus.PUBLISHED) || !attempt.reviewedAt) {
     return false;
   }
 
@@ -438,7 +438,7 @@ type CandidateEnrollment = StudentContext["studentEnrollments"][number];
 
 const normalizeDateValue = (value: Date) => {
   const normalized = new Date(value);
-  normalized.setHours(0, 0, 0, 0);
+  normalized.setUTCHours(0, 0, 0, 0);
   return normalized;
 };
 
@@ -578,8 +578,36 @@ const resolveCandidateExamAttemptLinkContext = async (input: {
     throw new AppError("محاولة الاختبار تنتمي لطالب آخر", 422);
   }
 
-  if (examAttempt.exam.centerId !== input.candidate.centerId) {
+  if (examAttempt.exam.centerId !== null && examAttempt.exam.centerId !== input.candidate.centerId) {
     throw new AppError("محاولة الاختبار تنتمي لمركز آخر", 422);
+  }
+
+    if (examAttempt.status !== AttemptStatus.APPROVED && examAttempt.status !== AttemptStatus.PUBLISHED) {
+    const statusAr =
+      examAttempt.status === AttemptStatus.SCHEDULED ? "مجدولة" :
+      examAttempt.status === AttemptStatus.IN_PROGRESS ? "قيد التنفيذ" :
+      examAttempt.status === AttemptStatus.EVALUATED ? "مقيمة" :
+      examAttempt.status === AttemptStatus.CANCELLED ? "ملغاة" :
+      examAttempt.status === AttemptStatus.ABSENT ? "غائب" : examAttempt.status;
+    throw new AppError(
+      `محاولة الاختبار يجب أن تكون معتمدة أو منشورة قبل ربطها بالمرشح. الحالة الحالية: ${statusAr}`,
+      422,
+      { examAttemptId: examAttempt.id, status: examAttempt.status },
+      "EXAM_ATTEMPT_NOT_APPROVED"
+    );
+  }
+
+  if (typeof examAttempt.totalScore !== "number" || examAttempt.totalScore < examAttempt.exam.passScore) {
+    throw new AppError(
+      "محاولة الاختبار يجب أن تكون ناجحة (الدرجة >= درجة النجاح) قبل ربطها بالمرشح",
+      422,
+      {
+        examAttemptId: examAttempt.id,
+        totalScore: examAttempt.totalScore,
+        passScore: examAttempt.exam.passScore
+      },
+      "EXAM_ATTEMPT_NOT_PASSED"
+    );
   }
 
   return examAttempt;
@@ -707,8 +735,8 @@ const assertEligibleGoldenRecordAttemptOutcome = (attempt: ExamAttemptOutcome) =
     );
   }
 
-  if (attempt.status !== AttemptStatus.APPROVED || !attempt.reviewedAt) {
-    throw new AppError("السجل الذهبي النهائي يتطلب محاولة اختبار معتمدة", 422);
+  if ((attempt.status !== AttemptStatus.APPROVED && attempt.status !== AttemptStatus.PUBLISHED) || !attempt.reviewedAt) {
+    throw new AppError("السجل الذهبي النهائي يتطلب محاولة اختبار معتمدة أو منشورة", 422);
   }
 
   if (typeof attempt.totalScore !== "number") {
@@ -753,9 +781,15 @@ const resolveEligibleCandidateFinalRecordAttempt = async (input: {
 
   if (
     attempt.studentId !== input.candidate.studentId ||
-    attempt.exam.centerId !== input.candidate.centerId
+    (attempt.exam.centerId !== null && attempt.exam.centerId !== input.candidate.centerId)
   ) {
-    throw new AppError("محاولة الاختبار المرتبطة لم تعد تطابق المرشح المعتمد", 422);
+    const reason = attempt.studentId !== input.candidate.studentId
+      ? "اختلاف الطالب"
+      : "اختلاف المركز";
+    throw new AppError(
+      `محاولة الاختبار المرتبطة لم تعد تطابق المرشح المعتمد: ${reason}`,
+      422
+    );
   }
 
   assertEligibleGoldenRecordAttemptOutcome(attempt);
@@ -825,7 +859,7 @@ const assertGoldenRecordCandidateGate = async (
 
   if (!record.examAttemptId || record.examAttemptId !== attempt.id) {
     throw new AppError(
-      "السجل الذهبي النهائي يجب أن يبقى مرتبطاً بمحاولة الاختبار المعتمدة للمرشح",
+      "السجل الذهبي النهائي مرتبط بمحاولة اختبار قديمة. يرجى إعادة إنشاء السجل من المرشح بعد تحديث الربط.",
       422,
       { recordId: record.id, candidateId: candidate.id, examAttemptId: record.examAttemptId },
       "EXAM_ATTEMPT_MISMATCH"
@@ -1275,17 +1309,32 @@ export const goldenRecordsService = {
 
     const candidate = await loadCandidateInScope(scope, candidateId);
 
-    if (candidate.status !== GraduationCandidateStatus.APPROVED) {
-      throw new AppError(
-        "فقط المرشحون المعتمدون يمكن ربطهم بمحاولات الاختبار",
-        409,
-        { candidateId: candidate.id, status: candidate.status },
-        "CANDIDATE_NOT_APPROVED"
-      );
-    }
-
     if (candidate.goldenRecord) {
       throw new AppError("المرشح لديه سجل ذهبي نهائي مرتبط بالفعل", 409);
+    }
+
+    const allowedStatuses: GraduationCandidateStatus[] = [
+      GraduationCandidateStatus.NOMINATED,
+      GraduationCandidateStatus.SCHEDULED,
+      GraduationCandidateStatus.TESTED,
+      GraduationCandidateStatus.APPROVED
+    ];
+    if (!allowedStatuses.includes(candidate.status)) {
+      throw new AppError("لا يمكن ربط المرشح بمحاولة اختبار في حالته الحالية", 409);
+    }
+
+    // Prevent re-linking to a different attempt
+    if (candidate.examAttemptId && candidate.examAttemptId !== input.examAttemptId) {
+      throw new AppError("المرشح مرتبط بالفعل بمحاولة اختبار أخرى", 409);
+    }
+
+    // Check exam attempt not already linked to another candidate
+    const existingLink = await goldenRecordsRepository.findCandidateByExamAttemptId({
+      examAttemptId: input.examAttemptId,
+      excludeCandidateId: candidate.id
+    });
+    if (existingLink) {
+      throw new AppError("محاولة الاختبار مرتبطة بمرشح آخر بالفعل", 409);
     }
 
     const examAttempt = await resolveCandidateExamAttemptLinkContext({
@@ -1294,6 +1343,11 @@ export const goldenRecordsService = {
       examAttemptId: input.examAttemptId
     });
 
+    const isApproved = candidate.status === GraduationCandidateStatus.APPROVED;
+    const newStatus = isApproved
+      ? GraduationCandidateStatus.APPROVED
+      : GraduationCandidateStatus.TESTED;
+
     try {
       const updated = await goldenRecordsRepository.updateCandidate({
         id: candidate.id,
@@ -1301,6 +1355,7 @@ export const goldenRecordsService = {
         data: {
           examId: examAttempt.examId,
           examAttemptId: examAttempt.id,
+          status: newStatus,
           gradeSnapshot: null,
           averageSnapshot: null,
           updatedById: scope.userId
@@ -1449,6 +1504,11 @@ export const goldenRecordsService = {
     }
 
     try {
+      const initialStatus =
+        source === GoldenRecordSource.CANDIDATE
+          ? GoldenRecordStatus.SUBMITTED
+          : GoldenRecordStatus.DRAFT;
+
       const created = await goldenRecordsRepository.createGoldenRecord({
         organizationId: scope.organizationId,
         year: candidate?.year ?? goldenRecordsDomain.currentYear(),
@@ -1469,9 +1529,49 @@ export const goldenRecordsService = {
         type: input.type,
         riwaya: input.riwaya ?? null,
         notes: normalizeOptionalString(input.notes) ?? null,
-        status: GoldenRecordStatus.DRAFT,
-        createdById: scope.userId
+        status: initialStatus,
+        createdById: scope.userId,
+        ...(initialStatus === GoldenRecordStatus.SUBMITTED
+          ? { submittedById: scope.userId, submittedAt: new Date() }
+          : {})
       });
+
+      if (
+        source === GoldenRecordSource.CANDIDATE &&
+        scope.role === Role.SUPER_ADMIN &&
+        resolvedExamAttempt &&
+        isEligibleGoldenRecordAttemptOutcome(resolvedExamAttempt)
+      ) {
+        const approved = await goldenRecordsRepository.updateGoldenRecord({
+          id: created.id,
+          data: {
+            status: GoldenRecordStatus.APPROVED,
+            approvedById: scope.userId,
+            approvedAt: new Date(),
+            registrySerial: goldenRecordsDomain.buildRegistrySerial({
+              organizationId: created.organizationId,
+              year: created.year,
+              recordId: created.id
+            }),
+            updatedById: scope.userId
+          }
+        });
+
+        await goldenRecordsRepository.upsertAchievementSnapshot({
+          organizationId: created.organizationId,
+          year: created.year,
+          studentId: created.studentId,
+          centerId: created.centerId,
+          circleId: created.circleId ?? null,
+          achievementCategory: goldenRecordsDomain.deriveAchievementCategory(30),
+          juzCount: 30,
+          goldenRecordId: created.id,
+          snapshotSource: GOLDEN_APPROVAL_SOURCE,
+          capturedById: scope.userId
+        });
+
+        return serializeGoldenRecord(approved!);
+      }
 
       return serializeGoldenRecord(created);
     } catch (error) {

@@ -99,8 +99,8 @@ export const createStudentFeeProfileBodySchema = z
       if (data.startDate && data.endDate) {
         const start = new Date(data.startDate);
         const end = new Date(data.endDate);
-        start.setHours(0,0,0,0);
-        end.setHours(0,0,0,0);
+        start.setUTCHours(0,0,0,0);
+        end.setUTCHours(0,0,0,0);
         return end >= start;
       }
       return true;
@@ -431,8 +431,8 @@ export const createDonationBodySchema = z
       if (data.isPledge && data.pledgeDueDate) {
         const pledgeDate = new Date(data.pledgeDueDate);
         const donDate = new Date(data.donationDate);
-        pledgeDate.setHours(0, 0, 0, 0);
-        donDate.setHours(0, 0, 0, 0);
+        pledgeDate.setUTCHours(0, 0, 0, 0);
+        donDate.setUTCHours(0, 0, 0, 0);
         return pledgeDate >= donDate;
       }
       return true;

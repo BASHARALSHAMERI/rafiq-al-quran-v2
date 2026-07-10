@@ -516,7 +516,6 @@ export default function AccountingJournalEntriesPage() {
             </button>
           )}
           </div>
-        </div>
       }
     >
       <div className="fin-premium-panel animate-premium">

@@ -1,6 +1,7 @@
 import React from "react";
 import { usePrayerTimes } from "../staff-attendance.api";
 import { Clock, Sun, Sunrise, Sunset, Moon } from "lucide-react";
+import { useTimeFormat, fmtClockTime } from "../../../shared/utils/time-format";
 
 interface PrayerTimesWidgetProps {
   centerId: number;
@@ -18,6 +19,8 @@ const PRAYER_CONFIG = [
 
 export const PrayerTimesWidget: React.FC<PrayerTimesWidgetProps> = ({ centerId, date, ar = true }) => {
   const { data: times, isLoading, error } = usePrayerTimes(centerId, date);
+  const { hour12 } = useTimeFormat();
+  const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
 
   if (isLoading) {
     return (
@@ -72,7 +75,7 @@ export const PrayerTimesWidget: React.FC<PrayerTimesWidgetProps> = ({ centerId, 
                 {ar ? prayer.labelAr : prayer.labelEn}
               </span>
               <span className="text-sm font-bold text-slate-800 dark:text-slate-100 font-mono tabular-nums">
-                {time ?? "--:--"}
+                {time ? fmtClockTime(time, locale, hour12) : "--:--"}
               </span>
             </div>
           );

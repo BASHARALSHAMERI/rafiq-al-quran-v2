@@ -154,10 +154,18 @@ export const accountingService = {
           isActive: true,
           children: { none: { isActive: true } }
         },
-        select: { id: true, centerId: true }
+        select: { id: true, centerId: true, code: true }
       });
       assertFinanceEntity(ledgerAccount, "Posting asset ledger account not found");
       financeV2Domain.ensureCenterAllowed(scope, ledgerAccount.centerId);
+
+      if (!/^(1110|1120|1130)/.test(ledgerAccount.code)) {
+        throw financeV2Domain.financeError(
+          "الحساب المختار لا يصلح كصندوق أو حساب بنكي.",
+          400,
+          "VALIDATION_ERROR"
+        );
+      }
 
       return tx.financeAccount.update({
         where: { id: account.id },
@@ -825,6 +833,41 @@ export const accountingService = {
       entityId: updated.id,
       centerId: updated.toCenterId ?? updated.fromCenterId,
       summary: "تم اعتماد تحويل صندوق"
+    });
+
+    return normalize(updated);
+  },
+
+  async rejectFundTransfer(scope: ScopeContext, transferId: number, input: { reason: string }) {
+    financeV2Domain.assertWriteEnabled();
+    financeV2Domain.assertCanApprove(scope);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const transfer = await tx.financeFundTransfer.findFirst({
+        where: { id: transferId, organizationId: scope.organizationId },
+        select: fundTransferSelect
+      });
+      assertFinanceEntity(transfer, "Fund transfer not found");
+      financeV2Domain.assertFundTransferTransition(transfer.status, FundTransferStatus.REJECTED);
+
+      return tx.financeFundTransfer.update({
+        where: { id: transfer.id },
+        data: {
+          status: FundTransferStatus.REJECTED,
+          rejectionReason: input.reason.trim(),
+          rejectedAt: new Date()
+        },
+        select: fundTransferSelect
+      });
+    });
+
+    await addAudit({
+      scope,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.FUND_TRANSFER,
+      entityId: updated.id,
+      centerId: updated.toCenterId ?? updated.fromCenterId,
+      summary: "تم رفض تحويل صندوق"
     });
 
     return normalize(updated);

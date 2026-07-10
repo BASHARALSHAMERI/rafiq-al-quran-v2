@@ -142,6 +142,7 @@ export default function LocationPicker({
         onChange("longitude", coords.longitude.toFixed(6));
       },
       () => notifyError(ar ? "تعذر تحديد الموقع الجغرافي. تأكد من تفعيل GPS ومنح الصلاحية للمتصفح." : "Unable to retrieve location. Make sure GPS is enabled and browser permissions are granted."),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 

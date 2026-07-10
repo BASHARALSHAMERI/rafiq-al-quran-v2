@@ -37,13 +37,13 @@ const FINANCE_ENTITY_TYPES: AuditEntityType[] = [
 
 const startOfDay = (value: Date): Date => {
   const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
 const endOfDay = (value: Date): Date => {
   const date = new Date(value);
-  date.setHours(23, 59, 59, 999);
+  date.setUTCHours(23, 59, 59, 999);
   return date;
 };
 

@@ -432,6 +432,47 @@ class TeacherPreparationStatsDto {
   }
 }
 
+class TeacherPreparationEligibilityDto {
+  final bool canCheckIn;
+  final bool canCheckOut;
+  final List<String> checkInBlockedReasons;
+  final List<String> checkOutBlockedReasons;
+  final DateTime? checkInOpenAt;
+  final DateTime? checkInCloseAt;
+  final DateTime? checkOutOpenAt;
+  final DateTime? checkOutCloseAt;
+
+  const TeacherPreparationEligibilityDto({
+    required this.canCheckIn,
+    required this.canCheckOut,
+    required this.checkInBlockedReasons,
+    required this.checkOutBlockedReasons,
+    this.checkInOpenAt,
+    this.checkInCloseAt,
+    this.checkOutOpenAt,
+    this.checkOutCloseAt,
+  });
+
+  factory TeacherPreparationEligibilityDto.fromJson(Map<String, dynamic> json) {
+    return TeacherPreparationEligibilityDto(
+      canCheckIn: _asNullableBool(json['canCheckIn']) ?? false,
+      canCheckOut: _asNullableBool(json['canCheckOut']) ?? false,
+      checkInBlockedReasons: (json['checkInBlockedReasons'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      checkOutBlockedReasons: (json['checkOutBlockedReasons'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      checkInOpenAt: _asNullableDateTime(json['checkInOpenAt']),
+      checkInCloseAt: _asNullableDateTime(json['checkInCloseAt']),
+      checkOutOpenAt: _asNullableDateTime(json['checkOutOpenAt']),
+      checkOutCloseAt: _asNullableDateTime(json['checkOutCloseAt']),
+    );
+  }
+}
+
 class TeacherPreparationDto {
   final int month;
   final int year;
@@ -442,6 +483,7 @@ class TeacherPreparationDto {
   final TeacherPreparationStatsDto stats;
   final List<TeacherPreparationRecordDto> history;
   final List<Map<String, dynamic>> excuses;
+  final TeacherPreparationEligibilityDto? eligibility;
 
   const TeacherPreparationDto({
     required this.month,
@@ -453,6 +495,7 @@ class TeacherPreparationDto {
     required this.stats,
     required this.history,
     required this.excuses,
+    required this.eligibility,
   });
 
   factory TeacherPreparationDto.fromJson(Map<String, dynamic> json) {
@@ -478,6 +521,11 @@ class TeacherPreparationDto {
           .map(TeacherPreparationRecordDto.fromJson)
           .toList(growable: false),
       excuses: _asList(json['excuses']),
+      eligibility: json['eligibility'] is Map
+          ? TeacherPreparationEligibilityDto.fromJson(
+              Map<String, dynamic>.from(json['eligibility'] as Map),
+            )
+          : null,
     );
   }
 }

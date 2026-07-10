@@ -224,6 +224,50 @@ const formatMinuteDuration = (minutes: number) => {
   return remainingMinutes > 0 ? `${hours} ساعة و${remainingMinutes} دقيقة` : `${hours} ساعة`;
 };
 
+export const buildAttendanceWindow = (input: {
+  attendanceDate: Date;
+  shiftStart: Date | null;
+  shiftEnd: Date | null;
+  checkInBeforeMinutes?: number;
+  checkInAfterMinutes?: number;
+}) => {
+  const checkInBeforeMinutes = input.checkInBeforeMinutes ?? 60;
+  
+  const shiftStart = input.shiftStart;
+  const shiftEnd = input.shiftEnd;
+  
+  const shiftDurationMinutes = shiftStart && shiftEnd ? Math.max(0, minutesBetween(shiftEnd, shiftStart)) : 0;
+  
+  // Allow check-in up to the end of the shift (plus a grace period if provided, or default to shift duration)
+  const checkInAfterMinutes = input.checkInAfterMinutes ?? Math.max(60, shiftDurationMinutes);
+  
+  // Allow check-out 15 minutes after the shift starts (instead of waiting for half the shift)
+  const checkOutBeforeMinutes = Math.max(0, shiftDurationMinutes - 15);
+  const checkOutAfterMinutes = 120; // Allow checkout up to 2 hours after shift ends
+
+  const checkInOpenAt = shiftStart ? new Date(shiftStart.getTime() - checkInBeforeMinutes * 60_000) : null;
+  const checkInCloseAt = shiftStart ? new Date(shiftStart.getTime() + checkInAfterMinutes * 60_000) : null;
+  const checkOutOpenAt = shiftEnd ? new Date(shiftEnd.getTime() - checkOutBeforeMinutes * 60_000) : null;
+  const checkOutCloseAt = shiftEnd ? new Date(shiftEnd.getTime() + checkOutAfterMinutes * 60_000) : null;
+  const absentDueAt = checkInCloseAt;
+
+  return {
+    attendanceDate: input.attendanceDate,
+    shiftStartAt: shiftStart,
+    shiftEndAt: shiftEnd,
+    checkInOpenAt,
+    checkInCloseAt,
+    checkOutOpenAt,
+    checkOutCloseAt,
+    absentDueAt,
+    checkInBeforeMinutes,
+    checkInAfterMinutes,
+    checkOutBeforeMinutes,
+    checkOutAfterMinutes,
+    shiftDurationMinutes
+  };
+};
+
 const buildSelfAttendanceEligibility = (input: {
   now: Date;
   attendanceDate: Date;
@@ -237,18 +281,31 @@ const buildSelfAttendanceEligibility = (input: {
     geoEnforcement: string;
   };
   geoCheck: ReturnType<typeof serializeGeoCheck>;
+  isMutation?: boolean;
 }) => {
   const workday = getAttendanceWorkdayState(input.attendanceDate, input.policy);
   const reasons: string[] = [];
   const warnings: string[] = [];
-  const shiftStart = input.effectiveShift?.start ?? null;
-  const shiftEnd = input.effectiveShift?.end ?? null;
-  const shiftDurationMinutes =
-    shiftStart && shiftEnd ? Math.max(0, minutesBetween(shiftEnd, shiftStart)) : 0;
-  const minimumCheckOutAt =
-    shiftStart && shiftDurationMinutes > 0
-      ? new Date(shiftStart.getTime() + Math.floor(shiftDurationMinutes / 2) * 60_000)
-      : null;
+  
+  const window = buildAttendanceWindow({
+    attendanceDate: input.attendanceDate,
+    shiftStart: input.effectiveShift?.start ?? null,
+    shiftEnd: input.effectiveShift?.end ?? null,
+    checkInBeforeMinutes: 60
+  });
+
+  const {
+    shiftStartAt: shiftStart,
+    shiftEndAt: shiftEnd,
+    checkInOpenAt,
+    checkInCloseAt,
+    checkOutOpenAt,
+    checkOutCloseAt,
+    absentDueAt,
+    checkInBeforeMinutes,
+    checkOutBeforeMinutes,
+    shiftDurationMinutes
+  } = window;
 
   if (!workday.isWorkday) {
     reasons.push(workday.isWeekend ? "اليوم عطلة أسبوعية حسب سياسة الحضور." : "اليوم ضمن الإجازات المعتمدة في سياسة الحضور.");
@@ -258,12 +315,16 @@ const buildSelfAttendanceEligibility = (input: {
     reasons.push("لا يوجد دوام محدد لهذا اليوم.");
   }
 
-  if (shiftStart && input.now < shiftStart) {
-    reasons.push("لم يبدأ وقت الدوام بعد.");
+  if (checkInOpenAt && input.now < checkInOpenAt) {
+    reasons.push(`لم يحن موعد تسجيل الحضور بعد (متاح قبل ${checkInBeforeMinutes} دقيقة من بداية الدوام).`);
   }
 
-  if (shiftEnd && input.now > shiftEnd && !input.todayRecord?.checkInTime) {
-    reasons.push("انتهى وقت الدوام ولا يمكن تسجيل الحضور الآن.");
+  if (checkInCloseAt && input.now > checkInCloseAt && !input.todayRecord?.checkInTime) {
+    if (shiftEnd && input.now > shiftEnd) {
+      reasons.push("انتهى وقت الدوام ولا يمكن تسجيل الحضور الآن.");
+    } else {
+      reasons.push("انتهى وقت تسجيل الحضور ولا يمكن تسجيل الحضور الآن.");
+    }
   }
 
   if (input.todayStatus === "on_leave") {
@@ -275,7 +336,9 @@ const buildSelfAttendanceEligibility = (input: {
   }
 
   if (isGeoBlocked(input.policy.geoEnforcement, input.geoCheck)) {
-    reasons.push(input.geoCheck.message);
+    if (input.isMutation || input.geoCheck.state !== "missing_location") {
+      reasons.push(input.geoCheck.message);
+    }
   } else if (input.geoCheck.isWithinRange === false) {
     warnings.push(input.geoCheck.message);
   }
@@ -292,8 +355,11 @@ const buildSelfAttendanceEligibility = (input: {
   if (input.todayRecord?.checkOutTime) {
     checkOutReasons.push("تم تسجيل الانصراف لهذا اليوم.");
   }
-  if (minimumCheckOutAt && input.now < minimumCheckOutAt) {
-    checkOutReasons.push(`لا يمكن تسجيل الانصراف قبل مرور نصف مدة الدوام (${formatMinuteDuration(Math.floor(shiftDurationMinutes / 2))}).`);
+  if (checkOutOpenAt && input.now < checkOutOpenAt) {
+    checkOutReasons.push(`لا يمكن تسجيل الانصراف قبل مرور نصف مدة الدوام (${formatMinuteDuration(checkOutBeforeMinutes)}).`);
+  }
+  if (checkOutCloseAt && input.now > checkOutCloseAt) {
+    checkOutReasons.push("انتهى وقت الانصراف ولا يمكن تسجيل الانصراف الآن.");
   }
   if (!workday.isWorkday) {
     checkOutReasons.push(workday.isWeekend ? "اليوم عطلة أسبوعية حسب سياسة الحضور." : "اليوم ضمن الإجازات المعتمدة في سياسة الحضور.");
@@ -305,7 +371,9 @@ const buildSelfAttendanceEligibility = (input: {
     checkOutReasons.push("لديك إجازة معتمدة لهذا اليوم.");
   }
   if (isGeoBlocked(input.policy.geoEnforcement, input.geoCheck)) {
-    checkOutReasons.push(input.geoCheck.message);
+    if (input.isMutation || input.geoCheck.state !== "missing_location") {
+      checkOutReasons.push(input.geoCheck.message);
+    }
   }
 
   return {
@@ -319,8 +387,13 @@ const buildSelfAttendanceEligibility = (input: {
     isHoliday: workday.isHoliday,
     shiftStart: shiftStart?.toISOString() ?? null,
     shiftEnd: shiftEnd?.toISOString() ?? null,
-    minimumCheckOutAt: minimumCheckOutAt?.toISOString() ?? null,
-    minimumCheckOutMinutes: shiftDurationMinutes > 0 ? Math.floor(shiftDurationMinutes / 2) : null,
+    checkInOpenAt: checkInOpenAt?.toISOString() ?? null,
+    checkInCloseAt: checkInCloseAt?.toISOString() ?? null,
+    checkOutOpenAt: checkOutOpenAt?.toISOString() ?? null,
+    checkOutCloseAt: checkOutCloseAt?.toISOString() ?? null,
+    absentDueAt: absentDueAt?.toISOString() ?? null,
+    minimumCheckOutAt: checkOutOpenAt?.toISOString() ?? null,
+    minimumCheckOutMinutes: shiftDurationMinutes > 0 ? checkOutBeforeMinutes : null,
     serverNow: input.now.toISOString()
   };
 };
@@ -633,7 +706,7 @@ export const staffOperationsService = {
 
   async markAttendance(scope: ScopeContext, records: Array<{ userId: number; centerId?: number | null; status: AttendanceStatus; note?: string }>, dateStr: string) {
     const attendanceDate = new Date(dateStr);
-    attendanceDate.setHours(0, 0, 0, 0);
+    attendanceDate.setUTCHours(0, 0, 0, 0);
 
     if (scope.role === Role.TEACHER) {
         // Teacher can only mark their own attendance
@@ -707,14 +780,17 @@ export const staffOperationsService = {
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
     const timezone = policy.timezone ?? "Asia/Aden";
-    const todayUtc = getAttendanceDateForTimeZone(now, timezone);
-    const currentMonthYear = getMonthYearForTimeZone(now, timezone);
+    const effectiveShift = await effectiveShiftService.resolveEffectiveShift(scope.userId, now, circle.centerId ?? 0, scope.organizationId, timezone);
+    const logicalDateForAttendance = effectiveShift ? effectiveShift.logicalDate : now;
+    
+    const todayUtc = getAttendanceDateForTimeZone(logicalDateForAttendance, timezone);
+    const currentMonthYear = getMonthYearForTimeZone(logicalDateForAttendance, timezone);
     
     const month = query.month ?? currentMonthYear.month;
     const year = query.year ?? currentMonthYear.year;
     const range = getMonthRange(month, year);
 
-    const [todayRecord, monthlyRecords, monthlyExcuses, monthlyLeaves, activeCirclesRaw, effectiveShift] =
+    const [todayRecord, monthlyRecords, monthlyExcuses, monthlyLeaves, activeCirclesRaw] =
       await Promise.all([
         prisma.staffAttendanceRecord.findUnique({
           where: {
@@ -761,8 +837,7 @@ export const staffOperationsService = {
           },
           orderBy: [{ startDate: "desc" }]
         }),
-        effectiveShiftService.getActiveCirclesForDay(scope.userId, now, timezone),
-        effectiveShiftService.resolveEffectiveShift(scope.userId, now, circle.centerId ?? 0, scope.organizationId, timezone)
+        effectiveShiftService.getActiveCirclesForDay(scope.userId, logicalDateForAttendance, timezone)
       ]);
 
     const activeCircles =
@@ -1009,9 +1084,17 @@ export const staffOperationsService = {
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
     const timezone = policy.timezone ?? "Asia/Aden";
-    const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
+    const effectiveShift = await effectiveShiftService.resolveEffectiveShift(
+      scope.userId,
+      now,
+      circle.centerId ?? 0,
+      scope.organizationId,
+      timezone
+    );
+    const logicalDateForAttendance = effectiveShift ? effectiveShift.logicalDate : now;
+    const attendanceDate = getAttendanceDateForTimeZone(logicalDateForAttendance, timezone);
 
-    const [existing, effectiveShift, approvedLeave] = await Promise.all([
+    const [existing, approvedLeave] = await Promise.all([
       prisma.staffAttendanceRecord.findUnique({
         where: {
           userId_attendanceDate: {
@@ -1020,13 +1103,6 @@ export const staffOperationsService = {
           }
         }
       }),
-      effectiveShiftService.resolveEffectiveShift(
-        scope.userId,
-        now,
-        circle.centerId ?? 0,
-        scope.organizationId,
-        timezone
-      ),
       prisma.staffLeaveRequest.findFirst({
         where: {
           organizationId: scope.organizationId,
@@ -1039,58 +1115,34 @@ export const staffOperationsService = {
       })
     ]);
 
-    if (existing?.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("لا يمكن تسجيل الحضور أثناء إجازة", 409, undefined, "INVALID_STATE");
-    }
-
-    if (existing?.checkOutTime) {
-      throw new AppError("تم إغلاق الحضور لهذا اليوم", 409, undefined, "INVALID_STATE");
-    }
-
-    if (existing?.checkInTime && !existing.checkOutTime) {
-      return {
-        action: "check_in",
-        record: serializeSelfAttendanceRecord(existing, effectiveShift),
-        geoCheck: serializeGeoCheck({
-          circle,
-          latitude: input.latitude,
-          longitude: input.longitude
-        })
-      };
-    }
-
-    const workday = getAttendanceWorkdayState(attendanceDate, policy);
-    if (!workday.isWorkday) {
-      throw new AppError(
-        workday.isWeekend
-          ? "لا يمكن تسجيل الحضور في يوم عطلة أسبوعية"
-          : "لا يمكن تسجيل الحضور في يوم إجازة معتمدة",
-        409,
-        undefined,
-        "ATTENDANCE_NOT_ALLOWED"
-      );
-    }
-
-    if (!effectiveShift) {
-      throw new AppError("لا يوجد دوام محدد لهذا اليوم", 409, undefined, "NO_SHIFT");
-    }
-
-    if (now < effectiveShift.start) {
-      throw new AppError("لا يمكن تسجيل الحضور قبل بداية وقت الدوام", 409, undefined, "BEFORE_SHIFT_START");
-    }
-
-    if (now > effectiveShift.end) {
-      throw new AppError("لا يمكن تسجيل الحضور بعد نهاية وقت الدوام", 409, undefined, "AFTER_SHIFT_END");
-    }
-
+    const todayStatus = existing?.status === AttendanceStatus.ON_LEAVE || approvedLeave ? "on_leave" : existing?.checkOutTime ? "checked_out" : existing?.checkInTime ? "checked_in" : "not_checked_in";
     const geoCheck = serializeGeoCheck({
       circle,
       latitude: input.latitude,
       longitude: input.longitude
     });
 
-    if (isGeoBlocked(policy.geoEnforcement, geoCheck)) {
-      throw new AppError(geoCheck.message, 403, undefined, "GEO_OUT_OF_RANGE");
+    const eligibility = buildSelfAttendanceEligibility({
+      now,
+      attendanceDate,
+      todayStatus,
+      todayRecord: existing,
+      effectiveShift,
+      policy,
+      geoCheck,
+      isMutation: true
+    });
+
+    if (existing?.checkInTime && !existing.checkOutTime) {
+      return {
+        action: "check_in",
+        record: serializeSelfAttendanceRecord(existing, effectiveShift),
+        geoCheck
+      };
+    }
+
+    if (!eligibility.canCheckIn) {
+      throw new AppError(eligibility.checkInBlockedReasons.join(" "), 409, undefined, "ATTENDANCE_NOT_ALLOWED");
     }
 
     const graceMinutes = Math.max(0, policy.gracePeriodMinutes ?? 0);
@@ -1157,8 +1209,16 @@ export const staffOperationsService = {
     const now = new Date();
     const policy = await attendancePolicyService.getPolicy(scope.organizationId);
     const timezone = policy.timezone ?? "Asia/Aden";
-    const attendanceDate = getAttendanceDateForTimeZone(now, timezone);
-    const [existing, effectiveShift, approvedLeave] = await Promise.all([
+    const effectiveShift = await effectiveShiftService.resolveEffectiveShift(
+      scope.userId,
+      now,
+      circle.centerId ?? 0,
+      scope.organizationId,
+      timezone
+    );
+    const logicalDateForAttendance = effectiveShift ? effectiveShift.logicalDate : now;
+    const attendanceDate = getAttendanceDateForTimeZone(logicalDateForAttendance, timezone);
+    const [existing, approvedLeave] = await Promise.all([
       prisma.staffAttendanceRecord.findUnique({
         where: {
           userId_attendanceDate: {
@@ -1167,13 +1227,6 @@ export const staffOperationsService = {
           }
         }
       }),
-      effectiveShiftService.resolveEffectiveShift(
-        scope.userId,
-        now,
-        circle.centerId ?? 0,
-        scope.organizationId,
-        timezone
-      ),
       prisma.staffLeaveRequest.findFirst({
         where: {
           organizationId: scope.organizationId,
@@ -1186,59 +1239,34 @@ export const staffOperationsService = {
       })
     ]);
 
-    if (!existing?.checkInTime) {
-      throw new AppError("يرجى تسجيل الحضور أولاً قبل تسجيل الانصراف", 400, undefined, "INVALID_STATE");
-    }
-
-    if (existing.status === AttendanceStatus.ON_LEAVE || approvedLeave) {
-      throw new AppError("لا يمكن تسجيل الانصراف أثناء إجازة", 409, undefined, "INVALID_STATE");
-    }
-
-    if (existing.checkOutTime) {
-      return {
-        action: "check_out",
-        record: serializeSelfAttendanceRecord(existing, effectiveShift),
-        geoCheck: serializeGeoCheck({
-          circle,
-          latitude: input.latitude,
-          longitude: input.longitude
-        })
-      };
-    }
-
-    const workday = getAttendanceWorkdayState(attendanceDate, policy);
-    if (!workday.isWorkday) {
-      throw new AppError(
-        workday.isWeekend
-          ? "لا يمكن تسجيل الانصراف في يوم عطلة أسبوعية"
-          : "لا يمكن تسجيل الانصراف في يوم إجازة معتمدة",
-        409,
-        undefined,
-        "ATTENDANCE_NOT_ALLOWED"
-      );
-    }
-
-    if (!effectiveShift) {
-      throw new AppError("لا يوجد دوام محدد لهذا اليوم", 409, undefined, "NO_SHIFT");
-    }
-
-    const shiftDurationMinutes = minutesBetween(effectiveShift.end, effectiveShift.start);
-    const minimumCheckOutAt = new Date(
-      effectiveShift.start.getTime() + Math.floor(shiftDurationMinutes / 2) * 60_000
-    );
-
-    if (now < minimumCheckOutAt) {
-      throw new AppError("لا يمكن تسجيل الانصراف قبل مرور نصف مدة الدوام", 409, undefined, "BEFORE_MINIMUM_CHECKOUT");
-    }
-
+    const todayStatus = existing?.status === AttendanceStatus.ON_LEAVE || approvedLeave ? "on_leave" : existing?.checkOutTime ? "checked_out" : existing?.checkInTime ? "checked_in" : "not_checked_in";
     const geoCheck = serializeGeoCheck({
       circle,
       latitude: input.latitude,
       longitude: input.longitude
     });
 
-    if (isGeoBlocked(policy.geoEnforcement, geoCheck)) {
-      throw new AppError(geoCheck.message, 403, undefined, "GEO_OUT_OF_RANGE");
+    const eligibility = buildSelfAttendanceEligibility({
+      now,
+      attendanceDate,
+      todayStatus,
+      todayRecord: existing,
+      effectiveShift,
+      policy,
+      geoCheck,
+      isMutation: true
+    });
+
+    if (existing?.checkOutTime) {
+      return {
+        action: "check_out",
+        record: serializeSelfAttendanceRecord(existing, effectiveShift),
+        geoCheck
+      };
+    }
+
+    if (!eligibility.canCheckOut) {
+      throw new AppError(eligibility.checkOutBlockedReasons.join(" "), 409, undefined, "ATTENDANCE_NOT_ALLOWED");
     }
 
     const threshold = Math.max(0, policy.earlyDepartureThresholdMinutes ?? 0);
@@ -1252,13 +1280,13 @@ export const staffOperationsService = {
     }
 
     const noteParts = [
-      existing.note ?? null,
+      existing!.note ?? null,
       geoCheck.state === "outside_range" ? geoCheck.message : null
     ].filter((part): part is string => Boolean(part && part.trim().length > 0));
     const note = noteParts.length > 0 ? noteParts.join(" | ") : null;
 
     const record = await prisma.staffAttendanceRecord.update({
-      where: { id: existing.id },
+      where: { id: existing!.id },
       data: {
         organizationId: scope.organizationId,
         centerId: circle.centerId,

@@ -116,7 +116,7 @@ export type StudentMonthlyDetailedReport = {
 
 /* ─── شكل استجابة الـ API الحقيقية (GET /reports/student/:id) ─── */
 
-export type StudentApiAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+export type StudentApiAttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | "ON_LEAVE";
 
 export type StudentApiAttendanceRow = {
   id: number;
@@ -148,6 +148,9 @@ export type StudentApiFollowUpRow = {
   matnId?: number | null;
   matnName?: string | null;
   matnStatus?: string | null;
+  matnFromRef?: string | null;
+  matnToRef?: string | null;
+  matn?: { titleAr?: string | null } | null;
   notes?: string | null;
   teacher?: { id: number; fullName: string } | null;
   circle?: {

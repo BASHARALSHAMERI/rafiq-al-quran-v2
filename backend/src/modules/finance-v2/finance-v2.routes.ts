@@ -399,6 +399,14 @@ financeV2Router.post(
 );
 
 financeV2Router.post(
+  "/finance/v2/fund-transfers/:id/reject",
+  requireRoles(financeApprovalRoles),
+  validateParams(financeV2EntityIdParamSchema),
+  validateBody(transitionCommentBodySchema),
+  financeV2Controller.rejectFundTransfer
+);
+
+financeV2Router.post(
   "/finance/v2/fund-transfers/:id/post",
   requireRoles(financeCashWriteRoles),
   validateParams(financeV2EntityIdParamSchema),

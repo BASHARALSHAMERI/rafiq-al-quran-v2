@@ -987,6 +987,14 @@ export const financeV2Api = {
     return normalizeFundTransfer(response.data.data);
   },
 
+  async rejectFundTransfer(transferId: number, reason: string): Promise<FinanceFundTransferV2> {
+    const response = await apiClient.post<ApiResponse<FinanceFundTransferV2>>(
+      `/finance/v2/fund-transfers/${transferId}/reject`,
+      { reason: reason.trim() }
+    );
+    return normalizeFundTransfer(response.data.data);
+  },
+
   async postFundTransfer(transferId: number, comment?: string): Promise<{
     transfer: FinanceFundTransferV2;
   }> {

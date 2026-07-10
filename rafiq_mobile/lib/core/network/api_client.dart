@@ -11,6 +11,7 @@ const _defaultJsonHeaders = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
   'X-Requested-With': 'XMLHttpRequest',
+  'Bypass-Tunnel-Reminder': 'true',
 };
 
 const _verboseNetworkLogs =

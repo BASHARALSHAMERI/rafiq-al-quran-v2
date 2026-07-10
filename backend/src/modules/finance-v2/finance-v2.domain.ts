@@ -73,7 +73,7 @@ const REWARD_BATCH_TRANSITIONS: Record<RewardBatchStatus, RewardBatchStatus[]> =
 const FUND_TRANSFER_TRANSITIONS: Record<FundTransferStatus, FundTransferStatus[]> = {
   DRAFT: [FundTransferStatus.SUBMITTED, FundTransferStatus.CANCELLED],
   SUBMITTED: [FundTransferStatus.APPROVED, FundTransferStatus.REJECTED],
-  APPROVED: [FundTransferStatus.POSTED],
+  APPROVED: [FundTransferStatus.POSTED, FundTransferStatus.REJECTED],
   REJECTED: [FundTransferStatus.DRAFT],
   POSTED: [],
   CANCELLED: []
@@ -102,15 +102,15 @@ const toMoney = (value: Prisma.Decimal | number | null | undefined): number => {
   return Number(value.toFixed(2));
 };
 
-const startOfDay = (value: Date): Date => {
+export const startOfDay = (value: Date): Date => {
   const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
-const endOfDay = (value: Date): Date => {
+export const endOfDay = (value: Date): Date => {
   const date = new Date(value);
-  date.setHours(23, 59, 59, 999);
+  date.setUTCHours(23, 59, 59, 999);
   return date;
 };
 

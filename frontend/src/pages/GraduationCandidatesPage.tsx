@@ -66,6 +66,7 @@ type CandidateFormMode = "create" | "edit";
 type CandidateDecisionKind = "approve" | "reject" | "defer";
 type GraduationCandidatesPageProps = {
   embedded?: boolean;
+  triggerCreate?: number;
 };
 
 type CandidateFiltersState = {
@@ -178,7 +179,8 @@ function DecisionModal({
 }
 
 export default function GraduationCandidatesPage({
-  embedded = false
+  embedded = false,
+  triggerCreate = 0
 }: GraduationCandidatesPageProps) {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -289,6 +291,12 @@ export default function GraduationCandidatesPage({
       setFilters((current) => ({ ...current, centerId: String(centers[0].id) }));
     }
   }, [formOpen, filters.centerId, centers]);
+
+  useEffect(() => {
+    if (triggerCreate > 0) {
+      openCreateModal();
+    }
+  }, [triggerCreate]);
 
   const centerOptions = centers.map((center) => ({ value: String(center.id), label: center.name }));
   const circleOptions = circles.map((circle) => ({ value: String(circle.id), label: circle.name }));
@@ -530,19 +538,6 @@ export default function GraduationCandidatesPage({
             </select>
 
             <div className="flex items-center gap-1.5 ms-2 shrink-0">
-              <div className="flex items-center gap-1">
-                {canManageCandidateNominations && (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className="h-[38px] px-3"
-                    leftIcon={<Plus size={16} />}
-                    onClick={openCreateModal}
-                  >
-                    {ar ? "إضافة مرشح" : "Add Candidate"}
-                  </Button>
-                )}
-              </div>
 
               <div className="w-[1px] h-[24px] bg-slate-200 mx-1" />
 

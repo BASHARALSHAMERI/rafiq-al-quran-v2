@@ -36,7 +36,8 @@ import {
 import {
   ATTEMPT_STATUS_LABELS,
   ATTEMPT_STATUS_VARIANTS,
-  COMMITTEE_ROLE_LABELS
+  COMMITTEE_ROLE_LABELS,
+  JUZ_BRANCH_OPTIONS
 } from "../constants/exam-templates";
 import { getSurahLabel } from "../constants/surah-options";
 import type { EvaluateAttemptPayload, ExamAttempt } from "../types";
@@ -107,8 +108,9 @@ const parseJuzBranchIndex = (branch?: string | null) => {
   const normalized = branch?.trim();
   if (!normalized) return null;
 
-  if (normalized.includes("الثلاثون")) {
-    return 30;
+  const directIndex = JUZ_BRANCH_OPTIONS.findIndex((label) => label === normalized);
+  if (directIndex >= 0) {
+    return directIndex + 1;
   }
 
   const westernDigits = normalized.replace(/[٠-٩]/g, (digit) => ARABIC_NUMERAL_MAP[digit] ?? digit);
@@ -120,6 +122,18 @@ const parseJuzBranchIndex = (branch?: string | null) => {
   return parsed;
 };
 
+const parseJuzRangeBranch = (branch?: string | null) => {
+  const normalized = branch?.trim();
+  if (!normalized) return null;
+  const westernDigits = normalized.replace(/[٠-٩]/g, (digit) => ARABIC_NUMERAL_MAP[digit] ?? digit);
+  const m = westernDigits.match(/من\s+الجزء\s+(\d+)\s+إلى\s+الجزء\s+(\d+)/);
+  if (!m) return null;
+  const from = Number(m[1]);
+  const to = Number(m[2]);
+  if (from < 1 || from > 30 || to < 1 || to > 30 || from > to) return null;
+  return { from, to };
+};
+
 const getSurahName = (index?: number | null) => {
   if (!index || index < 1 || index > 114) return "";
   return getSurahLabel(index).replace(/^سورة\s+/, "");
@@ -129,6 +143,19 @@ const resolveAttemptRange = (attempt: ExamAttempt) => {
   if (attempt.examRange) return attempt.examRange;
   if (attempt.exam?.type === "FULL_QURAN") {
     return { fromSurah: 1, fromAyah: 1, toSurah: 114, toAyah: 6 };
+  }
+  if (attempt.exam?.type === "JUZ_RANGE") {
+    const range = parseJuzRangeBranch(attempt.exam.examBranch);
+    if (!range) return null;
+    const startBoundary = JUZ_BOUNDARIES[range.from - 1];
+    const endBoundary = JUZ_BOUNDARIES[range.to - 1];
+    if (!startBoundary || !endBoundary) return null;
+    return {
+      fromSurah: startBoundary.fromSurah,
+      fromAyah: startBoundary.fromAyah,
+      toSurah: endBoundary.toSurah,
+      toAyah: endBoundary.toAyah
+    };
   }
   if (attempt.exam?.type !== "JUZ") return null;
 

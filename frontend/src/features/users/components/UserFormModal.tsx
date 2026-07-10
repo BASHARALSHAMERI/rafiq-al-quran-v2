@@ -3,6 +3,7 @@ import { User, Briefcase, Link as LinkIcon, Building2, CheckCircle2 } from "luci
 import { Button } from "../../../components/ui/Button";
 import Modal from "../../../components/ui/Modal";
 import ImageUploadField from "../../../components/ui/ImageUploadField";
+import SearchableSelect from "../../../components/ui/SearchableSelect";
 import { notifyError } from "../../../shared/ui/feedback";
 import type { Role } from "../../auth/types";
 import type {
@@ -125,7 +126,12 @@ export function RoleAwareUserFormModal({
       if (!state.studentProfile.joinDate) {
         return ar ? "تاريخ الالتحاق بالمركز مطلوب" : "Center Join date is required";
       }
-      if (supportsEnrollments && state.links.enrollmentCircleIds.length > 0 && !state.links.enrollmentStartDate) {
+      
+      const initialCircleId = initialUser?.studentEnrollments?.[0]?.circleId;
+      const currentCircleId = state.links.enrollmentCircleIds[0];
+      const isCircleChanged = mode === "edit" && currentCircleId !== undefined && currentCircleId !== initialCircleId;
+
+      if (supportsEnrollments && isCircleChanged && !state.links.enrollmentStartDate) {
         return ar ? "تاريخ بداية الالتحاق بالحلقة مطلوب" : "Circle Enrollment Start Date is required";
       }
     }
@@ -222,11 +228,17 @@ export function RoleAwareUserFormModal({
         relationType: state.links.childRelationType
       }));
     }
-    if (supportsEnrollments) {
-      links.enrollments = state.links.enrollmentCircleIds.map((circleId) => ({
-        circleId,
-        ...(state.links.enrollmentStartDate ? { startDate: state.links.enrollmentStartDate } : {})
-      }));
+    if (supportsEnrollments && state.links.enrollmentCircleIds.length > 0) {
+      links.enrollments = state.links.enrollmentCircleIds.map((circleId) => {
+        let startDateToUse = state.links.enrollmentStartDate;
+        if (mode === "create") {
+          startDateToUse = state.studentProfile.joinDate;
+        }
+        return {
+          circleId,
+          ...(startDateToUse ? { startDate: startDateToUse } : {})
+        };
+      });
     }
     if (Object.keys(links).length > 0) {
       payload.links = links;
@@ -707,46 +719,64 @@ export function RoleAwareUserFormModal({
                   <span>{ar ? "التحاق الحلقات" : "Circle Enrollments"}</span>
                 </div>
                 <div className="grid gap-4">
-                  <div className="ctr-fg md:w-1/2">
-                    <label>{ar ? "تاريخ بداية الالتحاق بالحلقة" : "Enrollment Start Date"}</label>
-                    <input
-                      className="ctr-form-input glass-input"
-                      type="date"
-                      value={state.links.enrollmentStartDate}
-                      onChange={(e) =>
-                        setState((p) => ({ ...p, links: { ...p.links, enrollmentStartDate: e.target.value } }))
-                      }
-                      title={ar ? "تاريخ البداية" : "Start date"}
-                    />
-                  </div>
+                  {(() => {
+                    const initialCircleId = initialUser?.studentEnrollments?.[0]?.circleId;
+                    const currentCircleId = state.links.enrollmentCircleIds[0];
+                    const isCircleChanged = mode === "edit" && currentCircleId !== undefined && currentCircleId !== initialCircleId;
+                    
+                    if (!isCircleChanged) return null;
+                    
+                    return (
+                      <div className="ctr-fg md:w-1/2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label>{ar ? "تاريخ بداية الالتحاق بالحلقة" : "Enrollment Start Date"}</label>
+                        <input
+                          className="ctr-form-input glass-input"
+                          type="date"
+                          value={state.links.enrollmentStartDate}
+                          onChange={(e) =>
+                            setState((p) => ({ ...p, links: { ...p.links, enrollmentStartDate: e.target.value } }))
+                          }
+                          title={ar ? "تاريخ البداية" : "Start date"}
+                        />
+                      </div>
+                    );
+                  })()}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                  <div className="ctr-fg mt-2">
+                    <label>{ar ? "اختيار الحلقة" : "Select Circle"}</label>
                     {circles.length === 0 ? (
-                      <span className="text-sm text-slate-500 italic px-2">{ar ? "لا توجد حلقات متاحة" : "No circles available"}</span>
+                      <div className="text-sm text-slate-500 italic p-3 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                        {ar ? "لا توجد حلقات متاحة في هذا المركز" : "No circles available in this center"}
+                      </div>
                     ) : (
-                      circles.map((circle) => (
-                        <label key={circle.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 text-primary-500 rounded border-slate-300 focus:ring-primary-500 transition-shadow"
-                            checked={state.links.enrollmentCircleIds.includes(circle.id)}
-                            onChange={() =>
-                              setState((p) => ({
-                                ...p,
-                                links: {
-                                  ...p.links,
-                                  enrollmentCircleIds: toggleIdInArray(
-                                    p.links.enrollmentCircleIds,
-                                    circle.id
-                                  )
-                                }
-                              }))
-                            }
-                            title={circle.name}
-                          />
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{circle.name}</span>
-                        </label>
-                      ))
+                      <SearchableSelect
+                        value={state.links.enrollmentCircleIds[0] || null}
+                        options={circles.map(c => ({ value: c.id, label: c.name }))}
+                        onChange={(val) => {
+                          const circleId = val as number | null;
+                          setState((p) => {
+                            const initialCircleId = initialUser?.studentEnrollments?.[0]?.circleId;
+                            const newIds = circleId ? [circleId] : [];
+                            const isNewCircle = mode === "edit" && circleId !== null && circleId !== initialCircleId;
+                            
+                            return {
+                              ...p,
+                              links: {
+                                ...p.links,
+                                enrollmentCircleIds: newIds,
+                                enrollmentStartDate: isNewCircle 
+                                  ? new Date().toISOString().split("T")[0] 
+                                  : (mode === "edit" && circleId === initialCircleId
+                                      ? (initialUser?.studentEnrollments?.[0]?.startDate ? String(initialUser.studentEnrollments[0].startDate).slice(0, 10) : "")
+                                      : "")
+                              }
+                            };
+                          });
+                        }}
+                        placeholder={ar ? "ابحث لتعيين حلقة..." : "Search to assign circle..."}
+                        allowClear={true}
+                        dir={ar ? "rtl" : "ltr"}
+                      />
                     )}
                   </div>
                 </div>

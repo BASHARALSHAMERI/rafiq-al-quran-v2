@@ -61,9 +61,9 @@ import {
   canSubmitRecord,
   formatAverageLabel,
   formatDateLabel,
+  getMissingSubmitFields,
   goldenRecordStatusLabel,
   goldenRecordTypeLabel,
-  hasEligibleGoldenRecordAttempt,
   riwayaLabel,
   toNullableNumber,
   toOptionalNumber,
@@ -388,6 +388,7 @@ export default function GoldenRecordsPage() {
   const [recordDecisionNote, setRecordDecisionNote] = useState("");
   const [recordDecisionError, setRecordDecisionError] = useState<string | null>(null);
   const [printingRecordId, setPrintingRecordId] = useState<number | null>(null);
+  const [triggerCandidateCreate, setTriggerCandidateCreate] = useState(0);
 
   const centersQ = useCentersQuery({ enabled: canLoadCenters });
   const circlesQ = useCirclesQuery(undefined, { enabled: canLoadCircles });
@@ -458,8 +459,7 @@ export default function GoldenRecordsPage() {
   const approvedCandidates = (approvedCandidatesQ.data?.items ?? []).filter(
     (item) =>
       item.status === "APPROVED" &&
-      !item.goldenRecord &&
-      hasEligibleGoldenRecordAttempt(item.examAttempt)
+      !item.goldenRecord
   );
   const selectedApprovedCandidate =
     approvedCandidates.find((item) => item.id === toPositiveNumber(recordFormDraft.candidateId)) ??
@@ -811,8 +811,8 @@ export default function GoldenRecordsPage() {
   };
 
   const printCompletionCertificate = async (row: GoldenRecordItem) => {
-    if (row.status !== "APPROVED" || row.type !== "KHATEM") {
-      notifyError(ar ? "لا تتاح شهادة الختم إلا للسجلات النهائية المعتمدة من نوع خاتم." : "Completion certificates are available only for approved Khatem records.");
+    if (row.status !== "APPROVED" || (row.type !== "KHATEM" && row.type !== "IJAZAH")) {
+      notifyError(ar ? "لا تتاح الشهادة إلا للسجلات النهائية المعتمدة (خاتم أو إجازة)." : "Certificates are available only for approved Khatem or Ijazah records.");
       return;
     }
 
@@ -894,6 +894,17 @@ export default function GoldenRecordsPage() {
       >
         {ar ? "تحديث الكل" : "Refresh All"}
       </Button>
+      {activeTab === "candidates" && user?.role === "CENTER_ADMIN" ? (
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          leftIcon={<Plus className="w-4 h-4" />}
+          onClick={() => setTriggerCandidateCreate((c) => c + 1)}
+        >
+          {ar ? "إضافة مرشح تخرج" : "Add Candidate"}
+        </Button>
+      ) : null}
       {activeTab === "records" ? (
         <Button
           type="button"
@@ -937,7 +948,7 @@ export default function GoldenRecordsPage() {
         ))}
       </section>
 
-      {activeTab === "candidates" ? <GraduationCandidatesPage embedded /> : null}
+      {activeTab === "candidates" ? <GraduationCandidatesPage embedded triggerCreate={triggerCandidateCreate} /> : null}
 
       {activeTab === "stats" ? (
         <section className="golden-records-tab-panel">
@@ -1210,10 +1221,23 @@ export default function GoldenRecordsPage() {
                       <strong>{formatDateLabel(row.examDate, ar)}</strong>
                     </div>
 
-                    <div style={{ minWidth: '100px', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ minWidth: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                       <Badge variant={badgeVariantForStatus(row.status)} size="sm" className="text-[0.62rem]">
                         {goldenRecordStatusLabel(row.status, ar)}
                       </Badge>
+                      {(row.status === "DRAFT" || row.status === "REJECTED") && !canSubmitRecord(row) && (
+                        <span style={{ fontSize: '0.55rem', color: '#a16207', textAlign: 'center', maxWidth: '130px', lineHeight: 1.2 }}>
+                          {(() => {
+                            const missing = getMissingSubmitFields(row, ar);
+                            if (missing.length > 0) {
+                              return (ar ? "ينقص: " : "Missing: ") + missing.join(ar ? "، " : ", ");
+                            }
+                            return ar
+                              ? "المرشح أو المحاولة غير مؤهلة. تأكد من اعتماد المرشح والمحاولة"
+                              : "Candidate or attempt not eligible. Verify approval and attempt";
+                          })()}
+                        </span>
+                      )}
                     </div>
 
                     <div className="gr-result-box">
@@ -1222,8 +1246,8 @@ export default function GoldenRecordsPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {row.status === "APPROVED" && row.type === "KHATEM" && (
-                        <button className="gs-icon-btn text-brand-600 hover:bg-brand-50" onClick={() => void printCompletionCertificate(row)} title={ar ? "طباعة شهادة الختم" : "Print Certificate"} disabled={printingRecordId === row.id}>
+                      {row.status === "APPROVED" && (row.type === "KHATEM" || row.type === "IJAZAH") && (
+                        <button className="gs-icon-btn text-brand-600 hover:bg-brand-50" onClick={() => void printCompletionCertificate(row)} title={row.type === "KHATEM" ? (ar ? "طباعة شهادة الختم" : "Print Khatem Certificate") : (ar ? "طباعة شهادة الإجازة" : "Print Ijazah Certificate")} disabled={printingRecordId === row.id}>
                           <Printer size={14} />
                         </button>
                       )}
@@ -1357,10 +1381,14 @@ export default function GoldenRecordsPage() {
           <Select label={ar ? "النوع" : "Type"} value={recordFormDraft.type} onChange={(event) => setRecordFormDraft((current) => ({ ...current, type: event.target.value as GoldenRecordType, riwaya: event.target.value === "IJAZAH" ? current.riwaya : "" }))} options={[{ value: "KHATEM", label: goldenRecordTypeLabel("KHATEM", ar) }, { value: "IJAZAH", label: goldenRecordTypeLabel("IJAZAH", ar) }]} />
           <Select label={ar ? "الرواية" : "Riwaya"} value={recordFormDraft.riwaya} onChange={(event) => setRecordFormDraft((current) => ({ ...current, riwaya: event.target.value }))} placeholder={recordFormDraft.type === "IJAZAH" ? (ar ? "مطلوبة" : "Required") : ar ? "اختيار اختياري" : "Optional"} options={[{ value: "HAFS", label: riwayaLabel("HAFS", ar) }, { value: "WARSH", label: riwayaLabel("WARSH", ar) }]} />
           
-          <Input label={ar ? "الدرجة" : "Grade"} value={recordFormDraft.grade} onChange={(event) => setRecordFormDraft((current) => ({ ...current, grade: event.target.value }))} disabled={recordFormDraft.sourceMode !== "MANUAL"} />
-          <Input type="number" step="0.01" label={ar ? "المتوسط" : "Average"} value={recordFormDraft.average} onChange={(event) => setRecordFormDraft((current) => ({ ...current, average: event.target.value }))} disabled={recordFormDraft.sourceMode !== "MANUAL"} />
-          <Input label={ar ? "التقدير" : "Appreciation"} value={recordFormDraft.appreciation} onChange={(event) => setRecordFormDraft((current) => ({ ...current, appreciation: event.target.value }))} disabled={recordFormDraft.sourceMode !== "MANUAL"} />
-          <Input type="date" label={ar ? "تاريخ الاختبار" : "Exam Date"} value={recordFormDraft.examDate} onChange={(event) => setRecordFormDraft((current) => ({ ...current, examDate: event.target.value }))} disabled={recordFormDraft.sourceMode !== "MANUAL"} />
+          {recordFormDraft.sourceMode === "MANUAL" && (
+            <>
+              <Input label={ar ? "الدرجة" : "Grade"} value={recordFormDraft.grade} onChange={(event) => setRecordFormDraft((current) => ({ ...current, grade: event.target.value }))} />
+              <Input type="number" step="0.01" label={ar ? "المتوسط" : "Average"} value={recordFormDraft.average} onChange={(event) => setRecordFormDraft((current) => ({ ...current, average: event.target.value }))} />
+              <Input label={ar ? "التقدير" : "Appreciation"} value={recordFormDraft.appreciation} onChange={(event) => setRecordFormDraft((current) => ({ ...current, appreciation: event.target.value }))} />
+              <Input type="date" label={ar ? "تاريخ الاختبار" : "Exam Date"} value={recordFormDraft.examDate} onChange={(event) => setRecordFormDraft((current) => ({ ...current, examDate: event.target.value }))} />
+            </>
+          )}
 
           {recordFormDraft.sourceMode === "CANDIDATE" && selectedApprovedCandidate ? (
             <div className="golden-records-form-grid__full">

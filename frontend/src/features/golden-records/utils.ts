@@ -129,8 +129,11 @@ export const attemptStatusLabel = (status: string, ar: boolean) => {
   const labels: Record<string, string> = {
     SCHEDULED: ar ? "مجدولة" : "Scheduled",
     IN_PROGRESS: ar ? "قيد التنفيذ" : "In Progress",
-    SUBMITTED: ar ? "مرفوعة للمراجعة" : "Submitted",
-    REVIEWED: ar ? "مراجعة" : "Reviewed"
+    EVALUATED: ar ? "مقيمة" : "Evaluated",
+    APPROVED: ar ? "معتمدة" : "Approved",
+    PUBLISHED: ar ? "منشورة" : "Published",
+    CANCELLED: ar ? "ملغاة" : "Cancelled",
+    ABSENT: ar ? "غائب" : "Absent"
   };
   return labels[status] ?? status;
 };
@@ -191,7 +194,9 @@ export const hasEligibleGoldenRecordAttempt = (
 export const canEditCandidate = (item: GraduationCandidateItem) => item.status !== "APPROVED";
 
 export const canLinkCandidateExamAttempt = (item: GraduationCandidateItem) =>
-  item.status === "APPROVED" && !item.goldenRecord;
+  !item.goldenRecord &&
+  !item.examAttemptId &&
+  ["NOMINATED", "SCHEDULED", "TESTED", "APPROVED"].includes(item.status);
 
 export const canCreateRecordFromCandidate = (item: GraduationCandidateItem) =>
   item.status === "APPROVED" &&
@@ -218,6 +223,15 @@ export const canApproveRecord = (item: GoldenRecordItem) =>
   item.status === "SUBMITTED" &&
   hasCompleteRecordDocumentation(item) &&
   (item.source === "MANUAL" || hasOperationalCandidateProof(item));
+
+export const getMissingSubmitFields = (item: GoldenRecordItem, ar: boolean): string[] => {
+  const missing: string[] = [];
+  if (!item.grade) missing.push(ar ? "الدرجة (Grade)" : "Grade");
+  if (item.average === null || item.average === undefined) missing.push(ar ? "المتوسط (Average)" : "Average");
+  if (!item.appreciation) missing.push(ar ? "التقدير (Appreciation)" : "Appreciation");
+  if (!item.examDate) missing.push(ar ? "تاريخ الاختبار (Exam Date)" : "Exam Date");
+  return missing;
+};
 
 export const escapeCsvCell = (value: unknown) => {
   const text = String(value ?? "");

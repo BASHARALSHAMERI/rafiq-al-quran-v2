@@ -24,7 +24,7 @@ type AttendanceBulkInput = {
 
 const toDateOnly = (value: Date): Date => {
   const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 

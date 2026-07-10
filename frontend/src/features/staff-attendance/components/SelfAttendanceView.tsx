@@ -29,7 +29,6 @@ import {
   type SelfAttendanceRecord,
   type LeaveType,
 } from "../staff-attendance.api";
-import { PrayerTimesWidget } from "./PrayerTimesWidget";
 import { getLocalizedApiErrorMessage } from "../../../shared/api/error";
 import { useTimeFormat, fmtTime } from "../../../shared/utils/time-format";
 import "../../../styles/pages/self-attendance-v2.css";
@@ -244,14 +243,7 @@ export function SelfAttendanceView() {
     };
   }, [todayStatus, ar]);
 
-  // ── Shift window check (±30 min)
-  const shiftInRange = useMemo(() => {
-    if (!effectiveShift) return true;
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const parse = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
-    return nowMin >= parse(effectiveShift.start) - 30 && nowMin <= parse(effectiveShift.end) + 30;
-  }, [effectiveShift]);
+
 
   // ── History: combine attendance + excuses
   const historyRows = useMemo(() => {
@@ -452,12 +444,10 @@ export function SelfAttendanceView() {
           {/* ── Action buttons ── */}
           <div className="sa2-hero__actions">
             {/* Shift time warning */}
-            {!shiftInRange && todayStatus === "not_checked_in" && (
+            {!eligibility?.canCheckIn && todayStatus === "not_checked_in" && (eligibility?.checkInBlockedReasons ?? []).length > 0 && (
               <div className="sa2-shift-warning">
                 <Info size={13} />
-                {ar
-                  ? "الحضور متاح خلال وقت الوردية فقط (±30 دقيقة)"
-                  : "Check-in only during shift window (±30 min)"}
+                {eligibility!.checkInBlockedReasons[0]}
               </div>
             )}
 
@@ -467,7 +457,7 @@ export function SelfAttendanceView() {
                 <Button
                   variant="primary"
                   size="md"
-                  disabled={isBusy || !shiftInRange}
+                  disabled={isBusy || !eligibility?.canCheckIn}
                   isLoading={checkInMutation.isPending}
                   onClick={handleCheckIn}
                   fullWidth
@@ -492,7 +482,7 @@ export function SelfAttendanceView() {
 
             {/* checked_in */}
             {todayStatus === "checked_in" && (
-              <Button variant="secondary" size="md" disabled={isBusy} isLoading={checkOutMutation.isPending} onClick={handleCheckOut} fullWidth>
+              <Button variant="secondary" size="md" disabled={isBusy || !eligibility?.canCheckOut} isLoading={checkOutMutation.isPending} onClick={handleCheckOut} fullWidth>
                 <LogOut size={14} style={{ marginInlineEnd: "0.375rem" }} />
                 {ar ? "تسجيل الانصراف" : "Check Out"}
               </Button>
@@ -581,10 +571,7 @@ export function SelfAttendanceView() {
         </div>
       </div>
 
-      {/* ── Prayer Times ── */}
-      {target?.centerId && (
-        <PrayerTimesWidget centerId={target.centerId} ar={ar} />
-      )}
+
 
       {/* ── History Panel ── */}
       <div className="sa2-section">

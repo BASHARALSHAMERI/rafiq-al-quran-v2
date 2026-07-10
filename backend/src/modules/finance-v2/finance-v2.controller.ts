@@ -498,6 +498,19 @@ export const financeV2Controller = {
     }
   }) as RequestHandler,
 
+  rejectFundTransfer: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+      const params = res.locals.validatedParams as { id: number };
+      const data = await accountingService.rejectFundTransfer(req.scope, params.id, { reason: req.body.reason || req.body.comment || "" });
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
   postFundTransfer: (async (req, res, next) => {
     try {
       if (!req.scope) {

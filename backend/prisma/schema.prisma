@@ -1699,7 +1699,7 @@ model FinanceVoucher {
   originalCurrencyCode String?                    @db.VarChar(3)
   exchangeRateToBase   Decimal?                   @db.Decimal(18, 6)
   status               VoucherStatus              @default(DRAFT)
-  accountingCategory   VoucherAccountingCategory? // FA-3.2.1: nullable — existing/payment-generated vouchers excluded from accounting posting
+  accountingCategory   VoucherAccountingCategory? // FA-3.2.1: nullable â€” existing/payment-generated vouchers excluded from accounting posting
   attachmentStorageKey String?                    @db.VarChar(255)
   externalTransferRef  String?                    @db.VarChar(120)
   manualReferenceNo    String?                    @db.VarChar(120)
@@ -2948,7 +2948,7 @@ enum FinanceMovementType {
   PAYROLL_PAYOUT
   REWARD_PAYOUT
   VOID_REVERSAL
-  /// @deprecated Zero rows use this value (rafiq_v2_clean_dev precheck). No active backend code references it. Was a one-time historical import marker. PostgreSQL enum value removal requires full enum recreation — defer to DB-CLEAN-4.
+  /// @deprecated Zero rows use this value (rafiq_v2_clean_dev precheck). No active backend code references it. Was a one-time historical import marker. PostgreSQL enum value removal requires full enum recreation â€” defer to DB-CLEAN-4.
   LEGACY_BACKFILL
 }
 
@@ -3151,7 +3151,7 @@ enum AuditEntityType {
   PAYROLL_ITEM
   REWARD_BATCH
   REWARD_ITEM
-  // Finance module – added in AUDIT-TRAIL-FINANCE-1
+  // Finance module â€“ added in AUDIT-TRAIL-FINANCE-1
   EXPENSE_INVOICE
   FIXED_ASSET
 }

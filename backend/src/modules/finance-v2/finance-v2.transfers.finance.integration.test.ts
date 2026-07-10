@@ -73,5 +73,70 @@ describe("fund transfer workflow integration", () => {
     ).toBe(1);
     expect((await financeTestPrisma.financeAccount.findUniqueOrThrow({ where: { id: context.accounts.orgFund.id } })).currentBalance.toNumber()).toBe(300000);
   });
-});
 
+  test("rejects a transfer from SUBMITTED or APPROVED state and prevents post of REJECTED", async () => {
+    const context = await createTaizFinanceContext();
+
+    const transfer = await financeAccountingService.createFundTransfer(
+      context.scopes.manager,
+      {
+        fromAccountId: context.accounts.orgFund.id,
+        toAccountId: context.accounts.centerFund.id,
+        amount: 5000,
+      },
+    );
+
+    await financeAccountingService.submitFundTransfer(
+      context.scopes.manager,
+      transfer.id,
+      {},
+    );
+
+    // Reject from SUBMITTED
+    const rejected1 = await financeAccountingService.rejectFundTransfer(
+      context.scopes.manager,
+      transfer.id,
+      { reason: "Wrong amount" },
+    );
+    expect(rejected1.status).toBe(FundTransferStatus.REJECTED);
+    expect(rejected1.rejectionReason).toBe("Wrong amount");
+
+    // Can't post rejected
+    await expect(
+      financeAccountingService.postFundTransfer(
+        context.scopes.treasurer,
+        transfer.id,
+        {},
+      ),
+    ).rejects.toMatchObject({
+      code: "INVALID_STATE_TRANSITION",
+    });
+
+    // Test rejecting from APPROVED
+    const transfer2 = await approve(context, 5000);
+    const rejected2 = await financeAccountingService.rejectFundTransfer(
+      context.scopes.manager,
+      transfer2.id,
+      { reason: "Changed mind" },
+    );
+    expect(rejected2.status).toBe(FundTransferStatus.REJECTED);
+    expect(rejected2.rejectionReason).toBe("Changed mind");
+
+    // Prevent rejecting from POSTED
+    const transfer3 = await approve(context, 5000);
+    await financeAccountingService.postFundTransfer(
+      context.scopes.treasurer,
+      transfer3.id,
+      {},
+    );
+    await expect(
+      financeAccountingService.rejectFundTransfer(
+        context.scopes.manager,
+        transfer3.id,
+        { reason: "Too late" },
+      ),
+    ).rejects.toMatchObject({
+      code: "INVALID_STATE_TRANSITION",
+    });
+  });
+});

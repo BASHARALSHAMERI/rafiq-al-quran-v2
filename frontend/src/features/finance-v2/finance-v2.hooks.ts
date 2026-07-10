@@ -643,6 +643,17 @@ export const useApproveFinanceV2FundTransferMutation = () => {
   });
 };
 
+export const useRejectFinanceV2FundTransferMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { transferId: number; reason: string }) =>
+      financeV2Api.rejectFundTransfer(input.transferId, input.reason),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: FINANCE_V2_QUERY_KEYS.all });
+    }
+  });
+};
+
 export const usePostFinanceV2FundTransferMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -244,6 +244,13 @@ export const reportsRepository = {
         matnId: true,
         matnName: true,
         matnStatus: true,
+        matnFromRef: true,
+        matnToRef: true,
+        matn: {
+          select: {
+            titleAr: true
+          }
+        },
         notes: true,
         teacher: {
           select: {
@@ -459,6 +466,13 @@ export const reportsRepository = {
         rating: true,
         matnName: true,
         matnStatus: true,
+        matnFromRef: true,
+        matnToRef: true,
+        matn: {
+          select: {
+            titleAr: true
+          }
+        },
         notes: true,
         teacher: {
           select: {

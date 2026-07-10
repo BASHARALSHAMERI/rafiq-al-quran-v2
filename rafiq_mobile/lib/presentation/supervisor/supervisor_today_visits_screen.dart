@@ -53,7 +53,7 @@ class _SupervisorTodayVisitsScreenState
         return null;
       }
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
+        desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 8));
     } catch (_) {
       return null;

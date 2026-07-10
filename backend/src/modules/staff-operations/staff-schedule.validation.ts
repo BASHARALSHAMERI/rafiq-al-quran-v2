@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { StaffRoleType, Weekday, CircleScheduleMode, PrayerName, GeoEnforcement, TimeFormat } from "@prisma/client";
+import { isValidScheduleTimeRange } from "../../shared/utils/schedule.utils";
 
 /**
  * Phase 3 — Staff Schedule Zod Validation Schemas
@@ -23,6 +24,19 @@ const slotSchema = z
     if (slot.mode === "CLOCK") {
       if (!slot.fromTime) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["fromTime"], message: "وقت البداية مطلوب لنظام الساعة" });
+      } else if (slot.toTime) {
+        const result = isValidScheduleTimeRange(slot.fromTime, slot.toTime);
+        if (!result.isValid) {
+          if (result.errorKey === "same_time") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["toTime"], message: "وقت البداية والنهاية لا يمكن أن يكونا متساويين" });
+          } else if (result.errorKey === "too_short") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["toTime"], message: "مدة الدوام قصيرة جدًا" });
+          } else if (result.errorKey === "too_long") {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["toTime"], message: "مدة الدوام طويلة جدًا" });
+          } else {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["toTime"], message: "نطاق الساعة غير صالح" });
+          }
+        }
       }
     }
     if (slot.mode === "PRAYER") {

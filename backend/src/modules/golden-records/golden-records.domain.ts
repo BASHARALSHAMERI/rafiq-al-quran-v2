@@ -44,7 +44,7 @@ const GOLDEN_RECORD_TRANSITIONS: Record<GoldenRecordStatus, GoldenRecordStatus[]
 
 const toDateOnly = (value: Date): Date => {
   const normalized = new Date(value);
-  normalized.setHours(0, 0, 0, 0);
+  normalized.setUTCHours(0, 0, 0, 0);
   return normalized;
 };
 
@@ -122,13 +122,6 @@ export const goldenRecordsDomain = {
   },
 
   normalizeCandidateStatus(status: GraduationCandidateStatus): GraduationCandidateStatus {
-    if (
-      status === GraduationCandidateStatus.SCHEDULED ||
-      status === GraduationCandidateStatus.TESTED
-    ) {
-      return GraduationCandidateStatus.NOMINATED;
-    }
-
     return status;
   },
 

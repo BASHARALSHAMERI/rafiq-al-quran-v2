@@ -67,7 +67,7 @@ class _TeacherPreparationScreenState
 
       // Only send coordinates when the device returns a real location.
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
+        desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 8));
     } catch (_) {
       return null;
@@ -602,13 +602,18 @@ class _TodayCard extends StatelessWidget {
           if (isNotCheckedIn) ...[
             _ActionButtons(
               isBusy: isBusy,
-              onCheckIn: _isWithinShift(shift) ? onCheckIn : null,
+              onCheckIn: preparation.eligibility?.canCheckIn == true ? onCheckIn : null,
               onRequestExcuse: onRequestExcuse,
               onRequestLeave: onRequestLeave,
-              isOutsideShift: !_isWithinShift(shift),
+              errorMsg: preparation.eligibility?.checkInBlockedReasons.isNotEmpty == true 
+                  ? preparation.eligibility!.checkInBlockedReasons.first 
+                  : null,
             ),
           ] else if (isCheckedIn) ...[
-            _CheckOutButton(isBusy: isBusy, onCheckOut: onCheckOut),
+            _CheckOutButton(
+              isBusy: isBusy, 
+              onCheckOut: preparation.eligibility?.canCheckOut == true ? onCheckOut : null,
+            ),
           ] else if (isCheckedOut) ...[
             const _CompletionBadge(),
           ] else if (isExcuse) ...[
@@ -922,20 +927,20 @@ class _ActionButtons extends StatelessWidget {
   final VoidCallback onRequestExcuse;
   final VoidCallback onRequestLeave;
 
-  final bool isOutsideShift;
+  final String? errorMsg;
 
   const _ActionButtons({
     required this.isBusy,
     required this.onCheckIn,
     required this.onRequestExcuse,
     required this.onRequestLeave,
-    this.isOutsideShift = false,
+    this.errorMsg,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(children: [
-      if (isOutsideShift)
+      if (errorMsg != null)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Container(
@@ -945,14 +950,14 @@ class _ActionButtons extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: _kRed.withValues(alpha: 0.15)),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.info_outline_rounded, size: 16, color: _kRed),
-                SizedBox(width: 8),
+                const Icon(Icons.info_outline_rounded, size: 16, color: _kRed),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'تسجيل الحضور متاح فقط خلال موعد الحلقة (±30 دقيقة)',
-                    style: TextStyle(
+                    errorMsg!,
+                    style: const TextStyle(
                       color: _kRed,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -988,13 +993,13 @@ class _ActionButtons extends StatelessWidget {
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: isOutsideShift ? _kGray : _kGreen,
+              backgroundColor: onCheckIn == null ? _kGray : _kGreen,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
             ),
-            onPressed: (isBusy || isOutsideShift) ? null : onCheckIn,
+            onPressed: isBusy ? null : onCheckIn,
             icon: isBusy
                 ? const SizedBox(
                     width: 18,
@@ -1035,7 +1040,7 @@ class _ActionButtons extends StatelessWidget {
 // ─────────────────────────────────────────────
 class _CheckOutButton extends StatelessWidget {
   final bool isBusy;
-  final VoidCallback onCheckOut;
+  final VoidCallback? onCheckOut;
 
   const _CheckOutButton({required this.isBusy, required this.onCheckOut});
 
@@ -1360,21 +1365,6 @@ String _fmtTime(DateTime? value) {
   return DateFormat('hh:mm a', 'ar').format(value.toLocal());
 }
 
-bool _isWithinShift(TeacherEffectiveShiftDto? shift) {
-  if (shift == null) return true; // No shift defined, allow check-in
-  final now = DateTime.now();
-
-  // Add 30 mins grace period before and after
-  final start = shift.start.subtract(const Duration(minutes: 30));
-  final end = shift.end.add(const Duration(minutes: 30));
-
-  // Normalize dates to today for comparison if they are only times
-  final nowTime = now.hour * 60 + now.minute;
-  final startTime = start.hour * 60 + start.minute;
-  final endTime = end.hour * 60 + end.minute;
-
-  return nowTime >= startTime && nowTime <= endTime;
-}
 
 // ─────────────────────────────────────────────
 //  EXCUSE BOTTOM SHEET

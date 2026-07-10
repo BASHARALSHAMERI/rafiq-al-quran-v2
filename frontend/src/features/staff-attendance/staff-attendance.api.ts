@@ -269,6 +269,11 @@ export interface SelfAttendanceResponse {
     isHoliday: boolean;
     shiftStart: string | null;
     shiftEnd: string | null;
+    checkInOpenAt: string | null;
+    checkInCloseAt: string | null;
+    checkOutOpenAt: string | null;
+    checkOutCloseAt: string | null;
+    absentDueAt: string | null;
     minimumCheckOutAt: string | null;
     minimumCheckOutMinutes: number | null;
     serverNow: string;

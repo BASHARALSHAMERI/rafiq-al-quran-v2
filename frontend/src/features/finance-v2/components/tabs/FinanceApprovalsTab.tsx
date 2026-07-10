@@ -14,6 +14,8 @@ import {
 import { FinanceReasonConfirmModal } from "../FinanceReasonConfirmModal";
 import {
   useApproveFinanceV2FundTransferMutation,
+  useRejectFinanceV2FundTransferMutation,
+  usePostFinanceV2FundTransferMutation,
   useApproveFinanceV2PayrollBatchMutation,
   useApproveFinanceV2RewardBatchMutation,
   useApproveFinanceV2VoucherMutation,
@@ -40,6 +42,7 @@ type ReasonTarget =
   | { type: "voucher"; id: number }
   | { type: "payroll"; id: number }
   | { type: "reward"; id: number }
+  | { type: "transfer"; id: number }
   | null;
 
 export default function FinanceApprovalsTab({ isSuperAdmin, ar }: Props) {
@@ -50,6 +53,8 @@ export default function FinanceApprovalsTab({ isSuperAdmin, ar }: Props) {
   const approveVoucherVoidM = useApproveFinanceV2VoucherVoidMutation();
 
   const approveTransferM = useApproveFinanceV2FundTransferMutation();
+  const rejectTransferM = useRejectFinanceV2FundTransferMutation();
+  const postTransferM = usePostFinanceV2FundTransferMutation();
 
   const approvePayrollBatchM = useApproveFinanceV2PayrollBatchMutation();
   const rejectPayrollBatchM = useRejectFinanceV2PayrollBatchMutation();
@@ -98,6 +103,17 @@ export default function FinanceApprovalsTab({ isSuperAdmin, ar }: Props) {
   const handleConfirmReason = async (reason: string) => {
     if (!reasonTarget) {
       return;
+    }
+
+    if (reasonTarget.type === "transfer") {
+      const didSucceed = await runAction(
+        () => rejectTransferM.mutateAsync({ transferId: reasonTarget.id, reason }),
+        ar ? "تم رفض التحويل" : "Transfer rejected successfully",
+        ar ? "تعذر رفض التحويل" : "Failed to reject transfer"
+      );
+      if (didSucceed) {
+        closeReasonModal();
+      }
     }
 
     if (reasonTarget.type === "voucher") {
@@ -238,20 +254,53 @@ export default function FinanceApprovalsTab({ isSuperAdmin, ar }: Props) {
       header: ar ? "الإجراء" : "Action",
       isActions: true,
       cell: (transfer: FinanceFundTransferV2) => (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() =>
-            void runAction(
-              () => approveTransferM.mutateAsync({ transferId: transfer.id }),
-              ar ? "تم اعتماد التحويل" : "Transfer approved successfully",
-              ar ? "تعذر اعتماد التحويل" : "Failed to approve transfer"
-            )
-          }
-        >
-          {ar ? "اعتماد" : "Approve"}
-        </Button>
+        <>
+          {transfer.status === "SUBMITTED" && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-emerald-600"
+                onClick={() =>
+                  void runAction(
+                    () => approveTransferM.mutateAsync({ transferId: transfer.id }),
+                    ar ? "تم اعتماد التحويل" : "Transfer approved successfully",
+                    ar ? "تعذر اعتماد التحويل" : "Failed to approve transfer"
+                  )
+                }
+              >
+                {ar ? "اعتماد" : "Approve"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-rose-600"
+                onClick={() => setReasonTarget({ type: "transfer", id: transfer.id })}
+              >
+                {ar ? "رفض" : "Reject"}
+              </Button>
+            </>
+          )}
+          {transfer.status === "APPROVED" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() =>
+                void runAction(
+                  () => postTransferM.mutateAsync({ transferId: transfer.id }),
+                  ar ? "تم ترحيل التحويل" : "Transfer posted successfully",
+                  ar ? "تعذر ترحيل التحويل" : "Failed to post transfer"
+                )
+              }
+            >
+              {ar ? "ترحيل" : "Post"}
+            </Button>
+          )}
+        </>
       )
     }
   ];
@@ -387,6 +436,7 @@ export default function FinanceApprovalsTab({ isSuperAdmin, ar }: Props) {
         placeholder={ar ? "اكتب السبب" : "Enter reason"}
         label={ar ? "السبب" : "Reason"}
         isConfirming={
+          rejectTransferM.isPending ||
           rejectVoucherM.isPending ||
           rejectPayrollBatchM.isPending ||
           rejectRewardBatchM.isPending

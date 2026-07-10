@@ -13,15 +13,15 @@ type ListNotificationsQuery = {
   pageSize?: number;
 };
 
-const startOfDay = (value: string | Date) => {
+const startOfDay = (value: string | Date): Date => {
   const date = new Date(value);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 
-const endOfDay = (value: string | Date) => {
+const endOfDay = (value: string | Date): Date => {
   const date = new Date(value);
-  date.setHours(23, 59, 59, 999);
+  date.setUTCHours(23, 59, 59, 999);
   return date;
 };
 

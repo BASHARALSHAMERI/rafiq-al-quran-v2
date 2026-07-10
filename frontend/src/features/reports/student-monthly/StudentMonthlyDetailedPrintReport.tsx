@@ -132,6 +132,7 @@ export function StudentMonthlyDetailedPrintReport({
                       <td>{row.dayName}</td>
                       <td>{row.date}</td>
                       <td><AttendanceBadge status={row.attendanceStatus} /></td>
+                      <td><AttendanceBadge status={row.attendanceStatus} /></td>
                       <td>{absent ? <span className="empty-cell">—</span> : cell(m?.toSurah)}</td>
                       <td>{absent ? <span className="empty-cell">—</span> : cell(m?.toPosition)}</td>
                       <td>{absent ? <span className="empty-cell">—</span> : cell(r?.toSurah)}</td>
@@ -180,19 +181,20 @@ export function StudentMonthlyDetailedPrintReport({
             <table className="student-monthly-table">
               <colgroup>
                 <col style={{ width: "3%" }} />
+                <col style={{ width: "6%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "5%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "5%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "5%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "7%" }} />
                 <col style={{ width: "5%" }} />
                 <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "10%" }} />
                 <col style={{ width: "7%" }} />
               </colgroup>
               <thead>
@@ -200,6 +202,8 @@ export function StudentMonthlyDetailedPrintReport({
                   <th rowSpan={2}>م</th>
                   <th rowSpan={2}>اليوم</th>
                   <th rowSpan={2}>التاريخ</th>
+                  <th rowSpan={2}>الحضور</th>
+
                   <th colSpan={5}>الحفظ</th>
                   <th colSpan={5}>المراجعة</th>
                   <th colSpan={2}>المتون</th>
@@ -235,6 +239,7 @@ export function StudentMonthlyDetailedPrintReport({
                         )}
                       </td>
                       <td>{row.date}</td>
+                      <td><AttendanceBadge status={row.attendanceStatus} /></td>
                       <td>{absent ? <span className="empty-cell" /> : cell(m?.fromSurah)}</td>
                       <td>{absent ? <span className="empty-cell" /> : cell(m?.fromPosition)}</td>
                       <td>{absent ? <span className="empty-cell" /> : cell(m?.toSurah)}</td>
@@ -252,7 +257,7 @@ export function StudentMonthlyDetailedPrintReport({
                 })}
                 {dailyRows.length === 0 && (
                   <tr>
-                    <td colSpan={15} className="empty-cell">لا توجد أيام مسجلة لهذا الشهر.</td>
+                    <td colSpan={16} className="empty-cell">لا توجد أيام مسجلة لهذا الشهر.</td>
                   </tr>
                 )}
               </tbody>
@@ -262,14 +267,24 @@ export function StudentMonthlyDetailedPrintReport({
           <div className="smr-print-section-title">الإنجاز الجماعي</div>
           <table className="group-achievement-table">
             <colgroup>
-              <col style={{ width: "4%" }} />
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "16%" }} />
-              <col style={{ width: "36%" }} />
-              <col style={{ width: "22%" }} />
-            </colgroup>
-            <thead>
+                <col style={{ width: "3%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
+              </colgroup>
+              <thead>
               <tr>
                 <th>م</th><th>اليوم</th><th>التاريخ</th>
                 <th>نوع الإنجاز</th><th>الدرس / النشاط</th><th>الملاحظات</th>

@@ -63,7 +63,7 @@ export type ListFollowUpsInput = {
 
 const toDateOnly = (input: Date): Date => {
   const date = new Date(input);
-  date.setHours(0, 0, 0, 0);
+  date.setUTCHours(0, 0, 0, 0);
   return date;
 };
 

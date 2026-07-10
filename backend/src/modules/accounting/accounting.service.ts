@@ -150,12 +150,12 @@ const parseDateRange = (from?: string, to?: string): DateRange => {
   const range: DateRange = {};
   if (from) {
     const parsedFrom = parseDate(from, "from");
-    parsedFrom.setHours(0, 0, 0, 0);
+    parsedFrom.setUTCHours(0, 0, 0, 0);
     range.from = parsedFrom;
   }
   if (to) {
     const parsedTo = parseDate(to, "to");
-    parsedTo.setHours(23, 59, 59, 999);
+    parsedTo.setUTCHours(23, 59, 59, 999);
     range.to = parsedTo;
   }
   if (range.from && range.to && range.from > range.to) {

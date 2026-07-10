@@ -1219,6 +1219,8 @@ Future<void> _showCreateSlotSheet(
                       onPressed: submitting
                           ? null
                           : () async {
+                              if (!sheetContext.mounted) return;
+
                               final startDateTime = _combineDateAndTime(
                                   selectedDate, selectedTime);
                               if (startDateTime == null) {
@@ -1254,14 +1256,15 @@ Future<void> _showCreateSlotSheet(
                                       joinUrl: joinUrlController.text.trim(),
                                       note: noteController.text.trim(),
                                     );
+
+                                if (!sheetContext.mounted) return;
+
                                 ref
                                     .read(
                                       remoteRecitationRefreshProvider.notifier,
                                     )
                                     .state++;
-                                if (sheetContext.mounted) {
-                                  Navigator.of(sheetContext).pop();
-                                }
+                                Navigator.of(sheetContext).pop();
                                 if (context.mounted) {
                                   AppSnackBar.success(
                                     context,
@@ -1472,6 +1475,8 @@ Future<void> _showCompleteBookingSheet(
                       onPressed: submitting
                           ? null
                           : () async {
+                              if (!sheetContext.mounted) return;
+
                               final rating = _parseInt(
                                 ratingController.text,
                               );
@@ -1569,14 +1574,15 @@ Future<void> _showCompleteBookingSheet(
                                       bookingId: booking.id,
                                       payload: payload,
                                     );
+
+                                if (!sheetContext.mounted) return;
+
                                 ref
                                     .read(
                                       remoteRecitationRefreshProvider.notifier,
                                     )
                                     .state++;
-                                if (sheetContext.mounted) {
-                                  Navigator.of(sheetContext).pop();
-                                }
+                                Navigator.of(sheetContext).pop();
                                 if (context.mounted) {
                                   AppSnackBar.success(
                                     context,

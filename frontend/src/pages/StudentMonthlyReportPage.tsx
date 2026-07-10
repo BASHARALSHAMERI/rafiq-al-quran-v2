@@ -126,14 +126,15 @@ export default function StudentMonthlyReportPage() {
       const api = reportQ.data as unknown as StudentMonthlyApiResponse;
       return adaptStudentMonthlyReport(api);
     }
-    // API فاضي أو لم يُحمّل بعد: نُبني هيكل فارغ مبني على الفلاتر فقط
+    if (reportQ.isLoading || reportQ.isFetching) return null;
+    // API فاضي أو فشل: نُبني هيكل فارغ مبني على الفلاتر فقط
     return buildEmptyStudentMonthlyReport({
       studentId: String(studentId),
       studentName: selectedStudentName || String(studentId),
       month: month!,
       year: year!,
     });
-  }, [reportQ.data, reportEnabled, studentId, selectedStudentName, month, year]);
+  }, [reportQ.data, reportQ.isLoading, reportQ.isFetching, reportEnabled, studentId, selectedStudentName, month, year]);
 
   /* ─── اسم الطالب النهائي (من التقرير إن توفّر، وإلا من الفلتر) ─── */
   const effectiveStudentName = useMemo(() => {

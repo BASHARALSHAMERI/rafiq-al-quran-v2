@@ -95,8 +95,7 @@ const num = (value?: number | null): number => (typeof value === "number" ? valu
 /** تصنيف نوع سجل المتابعة. */
 const isMemorization = (type: string) => type === "NEW_MEMORIZATION";
 const isRevision = (type: string) => type === "REVIEW";
-const isMutun = (row: StudentApiFollowUpRow) =>
-  !isMemorization(row.type) && !isRevision(row.type) && Boolean(row.matnName);
+const isMutun = (row: StudentApiFollowUpRow) => row.type === "MATN";
 
 /** أعلى تقييم نصّي ضمن مجموعة سجلات (يُمثّل تقدير اليوم). */
 const groupGrade = (rows: StudentApiFollowUpRow[]): string | undefined => {
@@ -126,10 +125,12 @@ const buildSpanSection = (rows: StudentApiFollowUpRow[]) => {
 const buildMutunSection = (rows: StudentApiFollowUpRow[]) => {
   if (rows.length === 0) return undefined;
   const first = rows[0];
+  const last = rows[rows.length - 1];
   const pagesCount = rows.reduce((sum, r) => sum + num(r.pagesCount), 0);
+  const fromTo = [first.matnFromRef, last.matnToRef].filter(Boolean).join(" - ");
   return {
-    matnName: first.matnName ?? undefined,
-    lessonOrChapter: first.notes ?? undefined,
+    matnName: first.matnName ?? first.matn?.titleAr ?? undefined,
+    lessonOrChapter: fromTo || first.notes || undefined,
     pagesCount: pagesCount || undefined,
     grade: groupGrade(rows),
   };
@@ -144,6 +145,7 @@ const mapAttendanceStatus = (
     case "LATE":
       return "late";
     case "EXCUSED":
+    case "ON_LEAVE":
       return "absent_excused";
     case "ABSENT":
       return "absent_unexcused";
@@ -228,7 +230,11 @@ export const adaptStudentMonthlyReport = (
 
   // قائمة الأيام = اتحاد تواريخ الحضور وتواريخ المتابعة، مرتبة تصاعديًا.
   const allDates = Array.from(
-    new Set<string>([...attendanceByDate.keys(), ...followUpsByDate.keys()])
+    new Set<string>([
+      ...attendanceByDate.keys(),
+      ...followUpsByDate.keys(),
+      ...api.activities.map((activity) => dateKey(activity.activityDate)),
+    ])
   )
     .filter(Boolean)
     .sort();
@@ -238,7 +244,7 @@ export const adaptStudentMonthlyReport = (
     const status = mapAttendanceStatus(attendance?.status);
     const isAbsent = status === "absent_excused" || status === "absent_unexcused";
 
-    const dayFollowUps = followUpsByDate.get(key) ?? [];
+    const dayFollowUps = [...(followUpsByDate.get(key) ?? [])].sort((a, b) => a.id - b.id);
     const memoRows = dayFollowUps.filter((r) => isMemorization(r.type));
     const revRows = dayFollowUps.filter((r) => isRevision(r.type));
     const mutunRows = dayFollowUps.filter((r) => isMutun(r));

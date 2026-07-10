@@ -18,10 +18,12 @@ import { attendancePolicyService } from "./attendance-policy.service";
 type EffectiveShift = {
   start: Date;
   end: Date;
+  logicalDate: Date;
   assignments: Array<{
     assignmentId: number;
     circleId: number | null;
     slotMode: string;
+    logicalDay: string;
   }>;
 };
 
@@ -125,12 +127,18 @@ export const effectiveShiftService = {
       new Date(Date.UTC(localDate.year, localDate.month - 1, localDate.day)).getUTCDay()
     ];
 
+    const yesterdayDate = new Date(date.getTime() - 86400000);
+    const localYesterday = getTimeZoneParts(yesterdayDate, resolvedTimeZone);
+    const yesterdayOfWeek = WEEKDAY_JS_MAP[
+      new Date(Date.UTC(localYesterday.year, localYesterday.month - 1, localYesterday.day)).getUTCDay()
+    ];
+
     // ── Diagnostic logging ──
     console.info(
-      `[resolveEffectiveShift] userId=${userId} date=${date.toISOString()} dayOfWeek=${dayOfWeek} centerId=${centerId} tz=${resolvedTimeZone}`
+      `[resolveEffectiveShift] userId=${userId} date=${date.toISOString()} dayOfWeek=${dayOfWeek} yesterdayOfWeek=${yesterdayOfWeek} centerId=${centerId} tz=${resolvedTimeZone}`
     );
 
-    // 1. Find active assignments with their slots for today
+    // 1. Find active assignments with their slots for today and yesterday
     const assignments = await prisma.staffScheduleAssignment.findMany({
       where: {
         userId,
@@ -143,7 +151,7 @@ export const effectiveShiftService = {
       },
       include: {
         slots: {
-          where: { dayOfWeek }
+          where: { dayOfWeek: { in: [dayOfWeek, yesterdayOfWeek] } }
         }
       }
     });
@@ -168,21 +176,26 @@ export const effectiveShiftService = {
     }
 
     // 2. Collect all resolved time ranges
-    const ranges: Array<{ start: Date; end: Date; assignmentId: number; circleId: number | null; mode: string }> = [];
+    const ranges: Array<{ start: Date; end: Date; assignmentId: number; circleId: number | null; mode: string; logicalDate: Date; logicalDay: string }> = [];
 
     for (const assignment of assignments) {
       for (const slot of assignment.slots) {
         let start: Date;
         let end: Date;
+        
+        const slotDate = slot.dayOfWeek === dayOfWeek ? date : yesterdayDate;
 
         if (slot.mode === "CLOCK") {
           // Direct HH:mm resolution
           if (!slot.fromTime) continue;
 
-          start = zonedWallTimeToDate(date, slot.fromTime, resolvedTimeZone);
+          start = zonedWallTimeToDate(slotDate, slot.fromTime, resolvedTimeZone);
 
           if (slot.toTime) {
-            end = zonedWallTimeToDate(date, slot.toTime, resolvedTimeZone);
+            end = zonedWallTimeToDate(slotDate, slot.toTime, resolvedTimeZone);
+            if (end <= start) {
+              end = addMinutes(end, 24 * 60);
+            }
           } else {
             const duration = slot.defaultDurationMinutes ?? policy.defaultShiftDurationMinutes;
             end = addMinutes(start, duration);
@@ -197,17 +210,20 @@ export const effectiveShiftService = {
             continue;
           }
 
-          const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.fromPrayer, policy.prayerApiSource);
+          const fromHHmm = await resolvePrayerToHHmm(resolvedCenter, slotDate, slot.fromPrayer, policy.prayerApiSource);
           if (!fromHHmm) continue; // Center has no GPS / prayer times unavailable
 
-          start = zonedWallTimeToDate(date, fromHHmm, resolvedTimeZone);
+          start = zonedWallTimeToDate(slotDate, fromHHmm, resolvedTimeZone);
           start = addMinutes(start, slot.fromPrayerOffsetMinutes ?? 0);
 
           if (slot.toPrayer) {
-            const toHHmm = await resolvePrayerToHHmm(resolvedCenter, date, slot.toPrayer, policy.prayerApiSource);
+            const toHHmm = await resolvePrayerToHHmm(resolvedCenter, slotDate, slot.toPrayer, policy.prayerApiSource);
             if (!toHHmm) continue;
-            end = zonedWallTimeToDate(date, toHHmm, resolvedTimeZone);
+            end = zonedWallTimeToDate(slotDate, toHHmm, resolvedTimeZone);
             end = addMinutes(end, slot.toPrayerOffsetMinutes ?? 0);
+            if (end <= start) {
+              end = addMinutes(end, 24 * 60);
+            }
           } else {
             const duration = slot.defaultDurationMinutes ?? policy.defaultShiftDurationMinutes;
             end = addMinutes(start, duration);
@@ -219,26 +235,39 @@ export const effectiveShiftService = {
         ranges.push({
           start,
           end,
+          logicalDate: slotDate,
           assignmentId: assignment.id,
           circleId: assignment.circleId,
-          mode: slot.mode
+          mode: slot.mode,
+          logicalDay: slot.dayOfWeek
         });
       }
     }
 
-    if (ranges.length === 0) {
+    // Filter ranges: Keep today's shifts, and keep yesterday's shifts ONLY if they are still active
+    const checkOutAfterMinutes = 120; // 2 hours grace period for checking out
+    const validRanges = ranges.filter((r: any) => {
+      if (r.logicalDay === dayOfWeek) return true;
+      const checkOutCloseAt = addMinutes(r.end, checkOutAfterMinutes);
+      return checkOutCloseAt.getTime() > date.getTime();
+    });
+
+    if (validRanges.length === 0) {
       console.warn(
-        `[resolveEffectiveShift] → null: assignment(s) found but no slot resolved for dayOfWeek=${dayOfWeek}. ` +
-        `Check that slots exist for this day and have valid fromTime/fromPrayer.`
+        `[resolveEffectiveShift] → null: assignment(s) found but no active slot resolved.`
       );
       return null;
     }
 
-    // 3. Merge: earliest start, latest end
-    let mergedStart = ranges[0].start;
-    let mergedEnd = ranges[0].end;
+    // Pick the most relevant logical day (if yesterday is still active, prefer it)
+    const activeYesterday = validRanges.filter((r: any) => r.logicalDay === yesterdayOfWeek);
+    const targetRanges = activeYesterday.length > 0 ? activeYesterday : validRanges.filter((r: any) => r.logicalDay === dayOfWeek);
 
-    for (const range of ranges) {
+    // 3. Merge: earliest start, latest end for the target logical day
+    let mergedStart = targetRanges[0].start;
+    let mergedEnd = targetRanges[0].end;
+
+    for (const range of targetRanges) {
       if (range.start < mergedStart) mergedStart = range.start;
       if (range.end > mergedEnd) mergedEnd = range.end;
     }
@@ -246,10 +275,12 @@ export const effectiveShiftService = {
     return {
       start: mergedStart,
       end: mergedEnd,
-      assignments: ranges.map((r) => ({
+      logicalDate: targetRanges[0].logicalDate,
+      assignments: targetRanges.map((r: any) => ({
         assignmentId: r.assignmentId,
         circleId: r.circleId,
-        slotMode: r.mode
+        slotMode: r.mode,
+        logicalDay: r.logicalDay
       }))
     };
   },

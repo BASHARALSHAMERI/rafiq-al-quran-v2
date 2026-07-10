@@ -1,4 +1,5 @@
 import {
+  AchievementCategory,
   AttemptStatus,
   CommitteeRole,
   GoldenRecordStatus,
@@ -338,6 +339,7 @@ export const certificatesService = {
         examDate: true,
         riwaya: true,
         centerId: true,
+        studentId: true,
         approvedBy: {
           select: {
             fullName: true
@@ -406,7 +408,40 @@ export const certificatesService = {
     }
 
     if (!record.achievementSnapshot) {
-      throw new AppError("شهادة الإتمام تتطلب لقطة سجل ذهبي نهائي معتمدة", 409);
+      try {
+        await prisma.studentYearlyAchievementSnapshot.upsert({
+          where: {
+            organizationId_studentId_year: {
+              organizationId: record.center.organization.id,
+              studentId: record.studentId,
+              year: record.year
+            }
+          },
+          update: {
+            goldenRecordId: record.id,
+            achievementCategory: AchievementCategory.JUZ_30,
+            juzCount: 30,
+            snapshotSource: "GOLDEN_CERTIFICATE",
+            capturedAt: new Date()
+          },
+          create: {
+            organizationId: record.center.organization.id,
+            year: record.year,
+            studentId: record.studentId,
+            centerId: record.centerId,
+            achievementCategory: AchievementCategory.JUZ_30,
+            juzCount: 30,
+            goldenRecordId: record.id,
+            snapshotSource: "GOLDEN_CERTIFICATE",
+            capturedById: scope.userId
+          }
+        });
+      } catch {
+        throw new AppError(
+          "لا يمكن طباعة الشهادة لأن بيانات الإنجاز النهائية غير مكتملة.",
+          409
+        );
+      }
     }
 
     const chair = record.examAttempt?.committeeMembers.find(

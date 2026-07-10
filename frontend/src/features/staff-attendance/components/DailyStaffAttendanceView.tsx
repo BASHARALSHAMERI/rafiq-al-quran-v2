@@ -258,28 +258,16 @@ export function DailyStaffAttendanceView() {
         cls: "amber"
       },
       {
-        label: ar ? "بانتظار الدوام" : "Waiting",
-        value: waiting,
-        icon: Clock,
-        cls: "slate"
-      },
-      {
         label: ar ? "لم يسجل بعد" : "Pending",
-        value: pending,
+        value: pending + waiting,
         icon: Clock,
         cls: "slate"
       },
       {
-        label: ar ? "غائب" : "Absent",
-        value: absent,
+        label: ar ? "غائب / بعذر" : "Absent / Excused",
+        value: absent + excused,
         icon: XCircle,
         cls: "violet"
-      },
-      {
-        label: ar ? "بعذر / إجازة" : "Excused / Leave",
-        value: excused,
-        icon: AlertCircle,
-        cls: "brand"
       }
     ];
   }, [ar, filteredRecords]);

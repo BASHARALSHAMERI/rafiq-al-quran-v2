@@ -5,6 +5,7 @@ import 'app_flavor.dart';
 
 class EnvConfig {
   static const String _androidEmulatorBaseUrl = 'http://10.0.2.2:4000';
+  static const String _physicalDeviceBaseUrl = 'https://every-bobcats-train.loca.lt'; // Localtunnel URL
   static const String _localhostBaseUrl = 'http://localhost:4000';
   static const String _defaultProdBaseUrl = 'https://api.example.com';
 
@@ -14,7 +15,7 @@ class EnvConfig {
     }
 
     return switch (defaultTargetPlatform) {
-      TargetPlatform.android => _androidEmulatorBaseUrl,
+      TargetPlatform.android => _physicalDeviceBaseUrl, // Public URL bypassing Firewall
       _ => _localhostBaseUrl,
     };
   }

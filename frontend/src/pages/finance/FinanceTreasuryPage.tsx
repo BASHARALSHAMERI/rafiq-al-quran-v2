@@ -4,7 +4,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Banknote,
-  Plus
+  Plus,
+  Landmark,
+  History
 } from "lucide-react";
 import { Suspense, lazy, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -73,6 +75,7 @@ export default function FinanceTreasuryPage() {
   const [year, setYear] = useState(defaultYear);
   const [status, setStatus] = useState<any>("");
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"accounts" | "transfers" | "movements">("accounts");
 
   const centersQ = useCentersQuery();
   const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
@@ -124,12 +127,44 @@ export default function FinanceTreasuryPage() {
                     leftIcon={<Plus className="w-4 h-4" />}
                     onClick={() => setShowTransferModal(true)}
                   >
-                    {ar ? "تحويل صندوق" : "Fund Transfer"}
+                    {ar ? "تحويل مالي" : "Fund Transfer"}
                   </Button>
                 ) : null}
               </div>
             }
           />
+          <nav className="exams-tabs-bar mt-6" aria-label={ar ? "علامات تبويب الخزينة" : "Treasury tabs"}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "accounts"}
+              className={`exams-tab-btn ${activeTab === "accounts" ? "exams-tab-btn--active" : ""}`}
+              onClick={() => setActiveTab("accounts")}
+            >
+              <Landmark className="w-4 h-4" />
+              <span>{ar ? "الصناديق والحسابات" : "Accounts & Funds"}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "transfers"}
+              className={`exams-tab-btn ${activeTab === "transfers" ? "exams-tab-btn--active" : ""}`}
+              onClick={() => setActiveTab("transfers")}
+            >
+              <ArrowDownLeft className="w-4 h-4" />
+              <span>{ar ? "التحويلات" : "Transfers"}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "movements"}
+              className={`exams-tab-btn ${activeTab === "movements" ? "exams-tab-btn--active" : ""}`}
+              onClick={() => setActiveTab("movements")}
+            >
+              <History className="w-4 h-4" />
+              <span>{ar ? "الحركات" : "Movements"}</span>
+            </button>
+          </nav>
         </div>
       }
       kpis={
@@ -184,6 +219,7 @@ export default function FinanceTreasuryPage() {
             isSuperAdmin={user?.role === "SUPER_ADMIN"}
             canEditLedgerAccount={user?.role === "SUPER_ADMIN" || user?.role === "FINANCE_MANAGER"}
             ar={ar}
+            activeTab={activeTab}
             externalShowTransfer={canCreateTransfer && showTransferModal}
             onExternalTransferClose={() => setShowTransferModal(false)}
           />
