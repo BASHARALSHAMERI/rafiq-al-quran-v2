@@ -249,7 +249,7 @@ export function RoleAwareUserFormModal({
     } catch (e) {
       notifyError((e as Error).message || "An error occurred");
     }
-  }, [onSubmit, state, mode, role, validateStep, supportsCenterLinks, supportsCircleLinks, supportsParentLinks, supportsEnrollments]);
+  }, [onSubmit, state, mode, role, selectedRole, validateStep, supportsCenterLinks, supportsCircleLinks, supportsParentLinks, supportsEnrollments]);
 
   const modalFooter = useMemo(() => (
     <>
