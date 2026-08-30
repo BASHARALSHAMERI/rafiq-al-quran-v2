@@ -35,11 +35,11 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
   Future<void> _loadAttendance() async {
     final contextState = ref.read(contextControllerProvider);
     final circleId = contextState.selectedCircleId;
-    if (circleId == null || circleId.trim().isEmpty) return;
+    if (circleId == null || circleId <= 0) return;
 
     final date = DateTime.tryParse(widget.dateIso);
     await ref.read(attendanceControllerProvider.notifier).loadForDate(
-          circleId: circleId,
+          circleId: circleId.toString(),
           date: date,
         );
   }
@@ -50,6 +50,9 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
     final att = ref.watch(attendanceControllerProvider);
     final controller = ref.read(attendanceControllerProvider.notifier);
     final circleId = contextState.selectedCircleId;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
 
     final selectedDate = DateTime.tryParse(widget.dateIso) ?? att.selectedDate;
     final now = DateTime.now();
@@ -62,8 +65,9 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
       }
     });
 
-    if (circleId == null || circleId.trim().isEmpty) {
+    if (circleId == null || circleId <= 0) {
       return Scaffold(
+        backgroundColor: context.surfaceColor,
         appBar: const StandardAppBar(title: 'تسجيل الحضور'),
         body: PageStateView.error(
           title: 'لا توجد حلقة محددة',
@@ -88,7 +92,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
         .length;
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceLight,
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'تسجيل الحضور'),
       body: att.isLoading
           ? const PageStateView.loading()
@@ -102,8 +106,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                     children: [
                       // Top Tally Cards and "Mark all present" button
                       Container(
-                        color: Colors
-                            .transparent, // Background color is page color
+                        color: Colors.transparent,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                         child: Column(
@@ -113,29 +116,29 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                                 _StatPill(
                                   label: 'حاضر',
                                   value: '$presentCount',
-                                  textColor: const Color(0xFF4C9872),
-                                  bgColor: const Color(0xFFEAF5F0),
+                                  textColor: custom.success,
+                                  bgColor: custom.success.withValues(alpha: isDark ? 0.20 : 0.10),
                                 ),
                                 const SizedBox(width: 8),
                                 _StatPill(
                                   label: 'بعذر',
                                   value: '$excusedCount',
-                                  textColor: const Color(0xFFD49A3E),
-                                  bgColor: const Color(0xFFFCF3E3),
+                                  textColor: custom.warning,
+                                  bgColor: custom.warning.withValues(alpha: isDark ? 0.20 : 0.10),
                                 ),
                                 const SizedBox(width: 8),
                                 _StatPill(
                                   label: 'بلا عذر',
                                   value: '$absentCount',
-                                  textColor: const Color(0xFFC65D65),
-                                  bgColor: const Color(0xFFFBECEB),
+                                  textColor: Theme.of(context).colorScheme.error,
+                                  bgColor: Theme.of(context).colorScheme.error.withValues(alpha: isDark ? 0.20 : 0.10),
                                 ),
                                 const SizedBox(width: 8),
                                 _StatPill(
                                   label: 'متأخر',
                                   value: '$lateCount',
-                                  textColor: Colors.black87,
-                                  bgColor: const Color(0xFFF6F5F2),
+                                  textColor: custom.accent,
+                                  bgColor: custom.accent.withValues(alpha: isDark ? 0.20 : 0.10),
                                 ),
                               ],
                             ),
@@ -143,14 +146,14 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                             GestureDetector(
                               onTap:
                                   isLocked ? null : controller.markAllPresent,
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   Text(
                                     'تحديد الكل حاضرون ✓',
                                     style: TextStyle(
-                                      color: Color(0xFF4C9872),
-                                      fontWeight: FontWeight.w700,
+                                      color: custom.success,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -192,7 +195,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
           : Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               decoration: const BoxDecoration(
-                color: Colors.transparent, // Floating over the background
+                color: Colors.transparent,
               ),
               child: SafeArea(
                 top: false,
@@ -201,8 +204,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                   height: 52,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF568E7C), // Dark green flat
+                      backgroundColor: primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -212,8 +214,8 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                     onPressed: isLocked || att.isSubmitting
                         ? null
                         : () async {
-                            final outcome =
-                                await controller.submit(circleId: circleId);
+                            final outcome = await controller.submit(
+                                circleId: circleId.toString());
                             if (!context.mounted ||
                                 outcome == AttendanceSubmitOutcome.failed) {
                               return;
@@ -244,7 +246,7 @@ class _AttendanceMarkScreenState extends ConsumerState<AttendanceMarkScreen> {
                         : const Text(
                             'حفظ الحضور',
                             style: TextStyle(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                               fontSize: 16,
                             ),
                           ),
@@ -293,7 +295,7 @@ class _StatPill extends StatelessWidget {
               label,
               style: TextStyle(
                 color: textColor,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
             ),
@@ -321,12 +323,15 @@ class _StudentAttendanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight, width: 0.8),
+        border: Border.all(color: context.borderColor, width: 0.8),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Column(
@@ -337,8 +342,8 @@ class _StudentAttendanceCard extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4C9872),
+                decoration: BoxDecoration(
+                  color: primary,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -346,7 +351,7 @@ class _StudentAttendanceCard extends StatelessWidget {
                     student.name.isNotEmpty ? student.name.trim()[0] : '؟',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       fontSize: 18,
                     ),
                   ),
@@ -357,8 +362,8 @@ class _StudentAttendanceCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   student.name,
-                  style: const TextStyle(
-                    color: Colors.black87,
+                  style: TextStyle(
+                    color: context.textPrimaryColor,
                     fontWeight: FontWeight.w800,
                     fontSize: 15,
                   ),
@@ -371,7 +376,7 @@ class _StudentAttendanceCard extends StatelessWidget {
                   _CircularStatusButton(
                     icon: Icons.check_circle_outline_rounded,
                     isSelected: draft.status == AttendanceStatus.present,
-                    selectedColor: const Color(0xFF4C9872),
+                    selectedColor: custom.success,
                     onTap: isLocked
                         ? null
                         : () => onStatusChanged(AttendanceStatus.present),
@@ -380,8 +385,7 @@ class _StudentAttendanceCard extends StatelessWidget {
                   _CircularStatusButton(
                     icon: Icons.sick_outlined,
                     isSelected: draft.status == AttendanceStatus.excused,
-                    selectedColor: const Color(0xFFDDA638),
-                    selectedIconColor: Colors.black87,
+                    selectedColor: custom.warning,
                     onTap: isLocked
                         ? null
                         : () => onStatusChanged(AttendanceStatus.excused),
@@ -390,7 +394,7 @@ class _StudentAttendanceCard extends StatelessWidget {
                   _CircularStatusButton(
                     icon: Icons.highlight_off_rounded,
                     isSelected: draft.status == AttendanceStatus.absent,
-                    selectedColor: const Color(0xFFCB4C49),
+                    selectedColor: Theme.of(context).colorScheme.error,
                     onTap: isLocked
                         ? null
                         : () => onStatusChanged(AttendanceStatus.absent),
@@ -399,8 +403,7 @@ class _StudentAttendanceCard extends StatelessWidget {
                   _CircularStatusButton(
                     icon: Icons.schedule_rounded,
                     isSelected: draft.status == AttendanceStatus.late,
-                    selectedColor: const Color(0xFFC79E30),
-                    selectedIconColor: Colors.black87,
+                    selectedColor: custom.accent,
                     onTap: isLocked
                         ? null
                         : () => onStatusChanged(AttendanceStatus.late),
@@ -416,9 +419,9 @@ class _StudentAttendanceCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9F9F9),
+                color: context.surfaceColor,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.black12, width: 0.5),
+                border: Border.all(color: context.borderColor, width: 0.5),
               ),
               child: Row(
                 children: [
@@ -427,14 +430,14 @@ class _StudentAttendanceCard extends StatelessWidget {
                       initialValue: draft.note,
                       enabled: !isLocked,
                       onChanged: onNoteChanged,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13,
-                          color: Colors.black87,
+                          color: context.textPrimaryColor,
                           fontWeight: FontWeight.w600),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'سبب الغياب...',
                         hintStyle: TextStyle(
-                            color: Colors.black38,
+                            color: context.textSecondaryColor,
                             fontSize: 13,
                             fontWeight: FontWeight.w500),
                         border: InputBorder.none,
@@ -444,8 +447,8 @@ class _StudentAttendanceCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Icon(Icons.error_outline_rounded,
-                      color: Color(0xFFDDA638), size: 18),
+                  Icon(Icons.error_outline_rounded,
+                      color: custom.warning, size: 18),
                 ],
               ),
             ),
@@ -460,14 +463,12 @@ class _CircularStatusButton extends StatelessWidget {
   final IconData icon;
   final bool isSelected;
   final Color selectedColor;
-  final Color selectedIconColor;
   final VoidCallback? onTap;
 
   const _CircularStatusButton({
     required this.icon,
     required this.isSelected,
     required this.selectedColor,
-    this.selectedIconColor = Colors.white,
     this.onTap,
   });
 
@@ -480,16 +481,16 @@ class _CircularStatusButton extends StatelessWidget {
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: isSelected ? selectedColor : const Color(0xFFF5F5F5),
+          color: isSelected ? selectedColor : context.surfaceColor,
           borderRadius: BorderRadius.circular(10),
           border:
-              isSelected ? null : Border.all(color: Colors.black12, width: 0.5),
+              isSelected ? null : Border.all(color: context.borderColor, width: 0.8),
         ),
         child: Center(
           child: Icon(
             icon,
             size: 20,
-            color: isSelected ? selectedIconColor : Colors.black45,
+            color: isSelected ? Colors.white : context.textSecondaryColor,
           ),
         ),
       ),

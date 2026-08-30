@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../application/auth/auth_providers.dart';
 import '../../application/context/context_controller.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
@@ -115,7 +116,7 @@ class _TeacherHalqaReportScreenState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE0E0E0),
+                  color: context.borderColor,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -172,9 +173,10 @@ class _TeacherHalqaReportScreenState
       year: _period.year,
     );
     final reportAsync = ref.watch(_halqaMonthlyReportProvider(arg));
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'تقرير الحلقة الشهري'),
       body: reportAsync.when(
         loading: () =>
@@ -208,7 +210,7 @@ class _TeacherHalqaReportScreenState
 
           return RefreshIndicator(
             onRefresh: _refresh,
-            color: AppColors.primaryLight,
+            color: theme.colorScheme.primary,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
@@ -348,7 +350,7 @@ final _halqaMonthlyReportProvider = FutureProvider.autoDispose.family<
     final selectedCircleId = ref.watch(
       contextControllerProvider.select((state) => state.selectedCircleId),
     );
-    targetCircleId = int.tryParse(selectedCircleId ?? '');
+    targetCircleId = selectedCircleId;
   }
 
   if (targetCircleId == null) {
@@ -397,21 +399,21 @@ class _MonthSelector extends StatelessWidget {
                 Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     height: 1.2,
-                    color: AppColors.textPrimaryLight,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '$year',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondaryLight,
+                    color: context.textSecondaryColor,
                   ),
                 ),
               ],
@@ -437,16 +439,16 @@ class _NavArrowBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE8EAE0)),
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: context.borderColor),
         ),
-        child: Icon(icon, size: 20, color: AppColors.textPrimaryLight),
+        child: Icon(icon, size: 20, color: context.textPrimaryColor),
       ),
     );
   }
@@ -469,6 +471,10 @@ class _CircleInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
+    final primary = theme.colorScheme.primary;
+
     return AppCard(
       child: Row(
         children: [
@@ -478,20 +484,20 @@ class _CircleInfoCard extends StatelessWidget {
               children: [
                 Text(
                   circleName,
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
-                    color: AppColors.textPrimaryLight,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'المعلم: $teacherName · $studentsCount طالب',
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondaryLight,
+                    color: context.textSecondaryColor,
                     height: 1.4,
                   ),
                 ),
@@ -500,16 +506,16 @@ class _CircleInfoCard extends StatelessWidget {
           ),
           const SizedBox(width: 14),
           Container(
-            width: 52,
-            height: 52,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.groups_outlined,
-              color: AppColors.primaryLight,
-              size: 26,
+              color: primary,
+              size: 24,
             ),
           ),
         ],
@@ -530,28 +536,29 @@ class _ExportButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
     return SizedBox(
       width: double.infinity,
-      height: 50,
+      height: 48,
       child: ElevatedButton.icon(
         onPressed: isExporting ? null : onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryLight,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor:
-              AppColors.primaryLight.withValues(alpha: 0.6),
+          backgroundColor: primary,
+          foregroundColor: theme.colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           elevation: 0,
         ),
         icon: isExporting
-            ? const SizedBox(
+            ? SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: theme.colorScheme.onPrimary,
                 ),
               )
             : const Icon(Icons.download_rounded, size: 20),
@@ -559,7 +566,7 @@ class _ExportButton extends StatelessWidget {
           isExporting ? 'جار تجهيز التقرير...' : 'تصدير / مشاركة',
           style: const TextStyle(
             fontWeight: FontWeight.w700,
-            fontSize: 16,
+            fontSize: 15,
           ),
         ),
       ),
@@ -580,10 +587,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w900,
-        color: AppColors.textPrimaryLight,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        color: context.textPrimaryColor,
         height: 1.2,
       ),
     );
@@ -603,18 +610,18 @@ class _OverallGradeCard extends StatelessWidget {
     required this.completionRate,
   });
 
-  Color get _gradeColor {
+  Color _gradeColor(BuildContext context) {
+    final custom = context.customColors;
     switch (grade.trim()) {
       case 'ممتاز':
-        return const Color(0xFF16A34A);
-      case 'جيد جداً':
-        return const Color(0xFF2563EB);
       case 'جيد':
-        return const Color(0xFF16A34A);
+        return custom.success;
+      case 'جيد جداً':
+        return custom.info;
       case 'مقبول':
-        return const Color(0xFFD97706);
+        return custom.warning;
       default:
-        return AppColors.primaryLight;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -623,12 +630,12 @@ class _OverallGradeCard extends StatelessWidget {
     return AppCard(
       child: Column(
         children: [
-          const Text(
+          Text(
             'التقييم العام للحلقة',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -637,17 +644,17 @@ class _OverallGradeCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w900,
-              color: _gradeColor,
+              color: _gradeColor(context),
               height: 1.1,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             '${completionRate.toStringAsFixed(0)}% نسبة الإنجاز الكلي',
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -667,6 +674,8 @@ class _MetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -679,29 +688,25 @@ class _MetricsGrid extends StatelessWidget {
           label: 'متوسط الحضور',
           value: '${_asDouble(summary['attendanceRate']).toStringAsFixed(0)}%',
           icon: Icons.calendar_today_outlined,
-          iconColor: const Color(0xFF22C55E),
-          iconBg: const Color(0xFFDCFCE7),
+          iconColor: custom.success,
         ),
         _MetricCard(
           label: 'عدد الطلاب',
           value: '${_asInt(summary['totalStudents'])}',
           icon: Icons.groups_outlined,
-          iconColor: const Color(0xFF0EA5E9),
-          iconBg: const Color(0xFFE0F2FE),
+          iconColor: custom.info,
         ),
         _MetricCard(
           label: 'صفحات المراجعة',
           value: _asDouble(summary['reviewPages']).toStringAsFixed(0),
           icon: Icons.star_border_rounded,
-          iconColor: const Color(0xFFF59E0B),
-          iconBg: const Color(0xFFFEF3C7),
+          iconColor: custom.warning,
         ),
         _MetricCard(
           label: 'صفحات الحفظ',
           value: _asDouble(summary['memorizationPages']).toStringAsFixed(0),
           icon: Icons.menu_book_outlined,
-          iconColor: const Color(0xFF3B82F6),
-          iconBg: const Color(0xFFDBEAFE),
+          iconColor: Theme.of(context).colorScheme.primary,
         ),
       ],
     );
@@ -713,18 +718,18 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color iconColor;
-  final Color iconBg;
 
   const _MetricCard({
     required this.label,
     required this.value,
     required this.icon,
     required this.iconColor,
-    required this.iconBg,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -738,32 +743,32 @@ class _MetricCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 26,
+                  style: TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
                     height: 1,
-                    color: AppColors.textPrimaryLight,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(12),
+                  color: iconColor.withValues(alpha: isDark ? 0.20 : 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: Icon(icon, size: 20, color: iconColor),
+                child: Icon(icon, size: 18, color: iconColor),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
+            style: TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
               height: 1.3,
             ),
           ),
@@ -784,6 +789,8 @@ class _HighlightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return Row(
       children: [
         Expanded(
@@ -791,7 +798,7 @@ class _HighlightRow extends StatelessWidget {
             title: 'أفضل طالب في الحفظ',
             name: _asMap(summary['bestStudent'])['name']?.toString() ?? '-',
             icon: Icons.workspace_premium_rounded,
-            iconColor: const Color(0xFFF59E0B),
+            iconColor: custom.warning,
           ),
         ),
         const SizedBox(width: 10),
@@ -800,7 +807,7 @@ class _HighlightRow extends StatelessWidget {
             title: 'الأكثر التزاماً',
             name: _asMap(summary['mostImproved'])['name']?.toString() ?? '-',
             icon: Icons.trending_up_rounded,
-            iconColor: const Color(0xFF22C55E),
+            iconColor: custom.success,
           ),
         ),
       ],
@@ -827,23 +834,24 @@ class _HighlightCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 26),
-          const SizedBox(height: 10),
+          Icon(icon, color: iconColor, size: 24),
+          const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
               height: 1.3,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             name,
-            style: const TextStyle(
-              fontSize: 16,
+            style: TextStyle(
+              fontSize: 15,
               fontWeight: FontWeight.w800,
+              color: context.textPrimaryColor,
               height: 1.2,
             ),
           ),
@@ -886,17 +894,16 @@ class _LevelBlob extends StatelessWidget {
   Widget build(BuildContext context) {
     final levelName = level['level']?.toString() ?? '-';
     final count = _asInt(level['count']);
-    final tone = _levelTone(levelName);
+    final tone = _levelTone(levelName, context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Dome / blob shape
         Container(
           width: 72,
           height: 44,
           decoration: BoxDecoration(
-            color: tone.color,
+            color: tone.color.withValues(alpha: context.isDark ? 0.25 : 0.15),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(36),
               topRight: Radius.circular(36),
@@ -905,11 +912,11 @@ class _LevelBlob extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           '$count',
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.w900,
             color: tone.textColor,
             height: 1,
@@ -918,10 +925,10 @@ class _LevelBlob extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           levelName,
-          style: const TextStyle(
-            fontSize: 13,
+          style: TextStyle(
+            fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
           ),
         ),
       ],
@@ -946,30 +953,24 @@ class _SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EAE0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        decoration: const InputDecoration(
+        style: TextStyle(color: context.textPrimaryColor),
+        decoration: InputDecoration(
           hintText: 'ابحث عن طالب...',
           hintStyle: TextStyle(
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
             fontWeight: FontWeight.w500,
           ),
           prefixIcon:
-              Icon(Icons.search_rounded, color: AppColors.textSecondaryLight),
+              Icon(Icons.search_rounded, color: context.textSecondaryColor),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
         ),
       ),
     );
@@ -1003,6 +1004,9 @@ class _StudentCard extends StatelessWidget {
         '';
     final completionRate =
         (_asDouble(student['completionRate']) / 100).clamp(0.0, 1.0);
+    final isDark = context.isDark;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return AppCard(
       onTap: () =>
@@ -1011,25 +1015,23 @@ class _StudentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header Row ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar
               Container(
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   name.trim().isNotEmpty ? name.trim()[0] : 'ط',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.primaryLight,
+                    color: isDark ? Colors.white : primary,
                   ),
                 ),
               ),
@@ -1040,20 +1042,21 @@ class _StudentCard extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: TextStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         height: 1.2,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     if (lastMemorized.isNotEmpty) ...[
                       const SizedBox(height: 3),
                       Text(
                         lastMemorized,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondaryLight,
+                          color: context.textSecondaryColor,
                           height: 1.3,
                         ),
                       ),
@@ -1061,31 +1064,26 @@ class _StudentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Grade badge
               if (gradeLabel.isNotEmpty) _GradeBadge(label: gradeLabel),
               const SizedBox(width: 6),
-              // Trend icon
               Icon(
                 trend >= 0
                     ? Icons.trending_up_rounded
                     : Icons.trending_down_rounded,
-                color: trend >= 0
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFFEF4444),
+                color: trend >= 0 ? custom.success : Theme.of(context).colorScheme.error,
                 size: 20,
               ),
             ],
           ),
           const SizedBox(height: 14),
 
-          // ── Four Stats Row ──
           Row(
             children: [
               _StudentStat(
                 icon: Icons.calendar_today_outlined,
                 label: 'الحضور',
                 value: '${attendanceRate.toStringAsFixed(0)}%',
-                iconColor: const Color(0xFF22C55E),
+                iconColor: custom.success,
               ),
               const _StatDivider(),
               _StudentStat(
@@ -1093,7 +1091,7 @@ class _StudentCard extends StatelessWidget {
                 label: 'الحفظ',
                 value:
                     '${hifzPages.toStringAsFixed(0)}/${hifzTarget.toStringAsFixed(0)}',
-                iconColor: const Color(0xFF3B82F6),
+                iconColor: primary,
               ),
               const _StatDivider(),
               _StudentStat(
@@ -1101,7 +1099,7 @@ class _StudentCard extends StatelessWidget {
                 label: 'المراجعة',
                 value:
                     '${reviewPages.toStringAsFixed(0)}/${reviewTarget.toStringAsFixed(0)}',
-                iconColor: const Color(0xFF8B5CF6),
+                iconColor: custom.info,
               ),
               const _StatDivider(),
               _RatingStat(rating: averageRating),
@@ -1109,16 +1107,13 @@ class _StudentCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ── Progress Bar ──
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: completionRate,
               minHeight: 5,
-              backgroundColor: const Color(0xFFE8EAE0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.primaryLight,
-              ),
+              backgroundColor: context.borderColor,
+              valueColor: AlwaysStoppedAnimation<Color>(primary),
             ),
           ),
         ],
@@ -1150,20 +1145,20 @@ class _StudentStat extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               height: 1,
-              color: AppColors.textPrimaryLight,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 3),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
               height: 1,
             ),
           ),
@@ -1180,6 +1175,7 @@ class _RatingStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
     final normalizedRating =
         (rating <= 5 ? rating : rating / 20).clamp(0.0, 5.0);
     final fullStars = normalizedRating.round().clamp(0, 5);
@@ -1188,10 +1184,10 @@ class _RatingStat extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
+          Icon(
             Icons.star_border_rounded,
             size: 15,
-            color: Color(0xFFF59E0B),
+            color: custom.warning,
           ),
           const SizedBox(height: 4),
           Row(
@@ -1201,17 +1197,17 @@ class _RatingStat extends StatelessWidget {
               (i) => Icon(
                 i < fullStars ? Icons.star_rounded : Icons.star_outline_rounded,
                 size: 10,
-                color: const Color(0xFFF59E0B),
+                color: custom.warning,
               ),
             ),
           ),
           const SizedBox(height: 3),
-          const Text(
+          Text(
             'التقدير',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
               height: 1,
             ),
           ),
@@ -1228,9 +1224,9 @@ class _StatDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 1,
-      height: 32,
+      height: 30,
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      color: const Color(0xFFE8EAE0),
+      color: context.borderColor,
     );
   }
 }
@@ -1240,35 +1236,36 @@ class _GradeBadge extends StatelessWidget {
 
   const _GradeBadge({required this.label});
 
-  Color get _color {
+  Color _color(BuildContext context) {
+    final custom = context.customColors;
     switch (label.trim()) {
       case 'ممتاز':
-        return const Color(0xFF16A34A);
-      case 'جيد جداً':
-        return const Color(0xFF2563EB);
       case 'جيد':
-        return const Color(0xFF16A34A);
+        return custom.success;
+      case 'جيد جداً':
+        return custom.info;
       case 'مقبول':
-        return const Color(0xFFD97706);
+        return custom.warning;
       default:
-        return AppColors.primaryLight;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = _color(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        color: c.withValues(alpha: context.isDark ? 0.20 : 0.12),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: _color,
+          color: c,
         ),
       ),
     );
@@ -1290,15 +1287,15 @@ class _MonthlyPlansCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return Row(
       children: [
         Expanded(
           child: _PlanStatusCard(
             count: pendingCount,
             label: 'في الانتظار',
-            valueColor: const Color(0xFFD97706),
-            bgColor: const Color(0xFFFEF9EC),
-            borderColor: const Color(0xFFFDE68A),
+            valueColor: custom.warning,
           ),
         ),
         const SizedBox(width: 10),
@@ -1306,9 +1303,7 @@ class _MonthlyPlansCard extends StatelessWidget {
           child: _PlanStatusCard(
             count: approvedCount,
             label: 'خطة معتمدة',
-            valueColor: const Color(0xFF16A34A),
-            bgColor: const Color(0xFFF0FDF4),
-            borderColor: const Color(0xFFBBF7D0),
+            valueColor: custom.success,
           ),
         ),
       ],
@@ -1320,44 +1315,42 @@ class _PlanStatusCard extends StatelessWidget {
   final int count;
   final String label;
   final Color valueColor;
-  final Color bgColor;
-  final Color borderColor;
 
   const _PlanStatusCard({
     required this.count,
     required this.label,
     required this.valueColor,
-    required this.bgColor,
-    required this.borderColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
+        color: valueColor.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: valueColor.withValues(alpha: isDark ? 0.25 : 0.15)),
       ),
       child: Column(
         children: [
           Text(
             '$count',
             style: TextStyle(
-              fontSize: 34,
+              fontSize: 30,
               fontWeight: FontWeight.w900,
               color: valueColor,
               height: 1,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 13,
+            style: TextStyle(
+              fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -1373,12 +1366,10 @@ class _PlanStatusCard extends StatelessWidget {
 class _ActivityTypeMeta {
   final IconData icon;
   final Color color;
-  final Color bg;
 
   const _ActivityTypeMeta({
     required this.icon,
     required this.color,
-    required this.bg,
   });
 }
 
@@ -1386,52 +1377,42 @@ const Map<String, _ActivityTypeMeta> _kActivityMeta = {
   'تجويد': _ActivityTypeMeta(
     icon: Icons.menu_book_outlined,
     color: Color(0xFF2563EB),
-    bg: Color(0xFFDBEAFE),
   ),
   'TAJWEED': _ActivityTypeMeta(
     icon: Icons.menu_book_outlined,
     color: Color(0xFF2563EB),
-    bg: Color(0xFFDBEAFE),
   ),
   'محاضرة': _ActivityTypeMeta(
     icon: Icons.school_outlined,
     color: Color(0xFF7C3AED),
-    bg: Color(0xFFEDE9FE),
   ),
   'LECTURE': _ActivityTypeMeta(
     icon: Icons.school_outlined,
     color: Color(0xFF7C3AED),
-    bg: Color(0xFFEDE9FE),
   ),
   'تفسير': _ActivityTypeMeta(
     icon: Icons.auto_stories_outlined,
     color: Color(0xFF16A34A),
-    bg: Color(0xFFDCFCE7),
   ),
   'TAFSIR': _ActivityTypeMeta(
     icon: Icons.auto_stories_outlined,
     color: Color(0xFF16A34A),
-    bg: Color(0xFFDCFCE7),
   ),
   'مسابقة قرآنية': _ActivityTypeMeta(
     icon: Icons.emoji_events_outlined,
     color: Color(0xFFD97706),
-    bg: Color(0xFFFEF3C7),
   ),
   'COMPETITION': _ActivityTypeMeta(
     icon: Icons.emoji_events_outlined,
     color: Color(0xFFD97706),
-    bg: Color(0xFFFEF3C7),
   ),
   'رحلة': _ActivityTypeMeta(
     icon: Icons.directions_bus_outlined,
     color: Color(0xFF0284C7),
-    bg: Color(0xFFE0F2FE),
   ),
   'TRIP': _ActivityTypeMeta(
     icon: Icons.directions_bus_outlined,
     color: Color(0xFF0284C7),
-    bg: Color(0xFFE0F2FE),
   ),
 };
 
@@ -1458,65 +1439,63 @@ class _ActivityCard extends StatelessWidget {
     final typeAr = _kActivityTypeLabels[typeRaw] ?? typeRaw;
     final metaKey = typeAr.isNotEmpty ? typeAr : typeRaw;
     final meta = _kActivityMeta[metaKey] ??
-        const _ActivityTypeMeta(
+        _ActivityTypeMeta(
           icon: Icons.event_outlined,
-          color: AppColors.primaryLight,
-          bg: Color(0xFFDCFCE7),
+          color: Theme.of(context).colorScheme.primary,
         );
     final participants = _asInt(activity['participantsCount']);
     final notes = activity['notes']?.toString() ?? '';
+    final isDark = context.isDark;
 
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Activity type icon
           Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: meta.bg,
-              borderRadius: BorderRadius.circular(14),
+              color: meta.color.withValues(alpha: isDark ? 0.20 : 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(meta.icon, color: meta.color, size: 22),
           ),
           const SizedBox(width: 12),
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   activity['title']?.toString() ?? 'نشاط جماعي',
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: TextStyle(
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     height: 1.2,
-                    color: AppColors.textPrimaryLight,
+                    color: context.textPrimaryColor,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Text(
                       dateLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                     ),
-                    const Text(
+                    Text(
                       '  ·  ',
-                      style: TextStyle(color: AppColors.textSecondaryLight),
+                      style: TextStyle(color: context.textSecondaryColor),
                     ),
                     Text(
                       '$participants حاضر',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -1525,10 +1504,10 @@ class _ActivityCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     notes,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondaryLight,
+                      color: context.textSecondaryColor,
                       height: 1.4,
                     ),
                   ),
@@ -1537,12 +1516,11 @@ class _ActivityCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Type badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: meta.bg,
-              borderRadius: BorderRadius.circular(8),
+              color: meta.color.withValues(alpha: isDark ? 0.20 : 0.12),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               typeAr.isEmpty ? typeRaw : typeAr,
@@ -1559,10 +1537,6 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// EXPORT SHEET TILE
-// ═══════════════════════════════════════════════════════════
-
 class _ExportActionTile extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -1577,16 +1551,12 @@ class _ExportActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.primaryLight),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       onTap: onTap,
     );
   }
 }
-
-// ═══════════════════════════════════════════════════════════
-// LEVEL TONE HELPER
-// ═══════════════════════════════════════════════════════════
 
 class _LevelTone {
   final Color color;
@@ -1595,37 +1565,34 @@ class _LevelTone {
   const _LevelTone({required this.color, required this.textColor});
 }
 
-_LevelTone _levelTone(String level) {
+_LevelTone _levelTone(String level, BuildContext context) {
+  final custom = context.customColors;
   switch (level.trim()) {
     case 'مبتدئ':
     case 'BEGINNER':
-      return const _LevelTone(
-        color: Color(0xFFF59E0B),
-        textColor: Color(0xFFF59E0B),
+      return _LevelTone(
+        color: custom.warning,
+        textColor: custom.warning,
       );
     case 'متوسط':
     case 'INTERMEDIATE':
-      return const _LevelTone(
-        color: Color(0xFF60A5FA),
-        textColor: Color(0xFF2563EB),
+      return _LevelTone(
+        color: custom.info,
+        textColor: custom.info,
       );
     case 'متقدم':
     case 'ADVANCED':
-      return const _LevelTone(
-        color: Color(0xFF4ADE80),
-        textColor: Color(0xFF16A34A),
+      return _LevelTone(
+        color: custom.success,
+        textColor: custom.success,
       );
     default:
-      return const _LevelTone(
-        color: AppColors.primaryLight,
-        textColor: AppColors.primaryLight,
+      return _LevelTone(
+        color: Theme.of(context).colorScheme.primary,
+        textColor: Theme.of(context).colorScheme.primary,
       );
   }
 }
-
-// ═══════════════════════════════════════════════════════════
-// UTILITY HELPERS
-// ═══════════════════════════════════════════════════════════
 
 List<Map<String, dynamic>> _asMapList(dynamic value) {
   if (value is List) {

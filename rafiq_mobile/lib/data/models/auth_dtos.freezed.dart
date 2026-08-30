@@ -537,6 +537,9 @@ mixin _$AuthUserDto {
   String get email => throw _privateConstructorUsedError;
   String get fullName => throw _privateConstructorUsedError;
   String get role => throw _privateConstructorUsedError;
+  int get organizationId => throw _privateConstructorUsedError;
+  bool get isActive => throw _privateConstructorUsedError;
+  String get accountStatus => throw _privateConstructorUsedError;
   String? get phone => throw _privateConstructorUsedError;
   String? get gender => throw _privateConstructorUsedError;
   String? get avatarUrl => throw _privateConstructorUsedError;
@@ -560,6 +563,9 @@ abstract class $AuthUserDtoCopyWith<$Res> {
       String email,
       String fullName,
       String role,
+      int organizationId,
+      bool isActive,
+      String accountStatus,
       String? phone,
       String? gender,
       String? avatarUrl,
@@ -584,6 +590,9 @@ class _$AuthUserDtoCopyWithImpl<$Res, $Val extends AuthUserDto>
     Object? email = null,
     Object? fullName = null,
     Object? role = null,
+    Object? organizationId = null,
+    Object? isActive = null,
+    Object? accountStatus = null,
     Object? phone = freezed,
     Object? gender = freezed,
     Object? avatarUrl = freezed,
@@ -606,6 +615,18 @@ class _$AuthUserDtoCopyWithImpl<$Res, $Val extends AuthUserDto>
       role: null == role
           ? _value.role
           : role // ignore: cast_nullable_to_non_nullable
+              as String,
+      organizationId: null == organizationId
+          ? _value.organizationId
+          : organizationId // ignore: cast_nullable_to_non_nullable
+              as int,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      accountStatus: null == accountStatus
+          ? _value.accountStatus
+          : accountStatus // ignore: cast_nullable_to_non_nullable
               as String,
       phone: freezed == phone
           ? _value.phone
@@ -644,6 +665,9 @@ abstract class _$$AuthUserDtoImplCopyWith<$Res>
       String email,
       String fullName,
       String role,
+      int organizationId,
+      bool isActive,
+      String accountStatus,
       String? phone,
       String? gender,
       String? avatarUrl,
@@ -666,6 +690,9 @@ class __$$AuthUserDtoImplCopyWithImpl<$Res>
     Object? email = null,
     Object? fullName = null,
     Object? role = null,
+    Object? organizationId = null,
+    Object? isActive = null,
+    Object? accountStatus = null,
     Object? phone = freezed,
     Object? gender = freezed,
     Object? avatarUrl = freezed,
@@ -688,6 +715,18 @@ class __$$AuthUserDtoImplCopyWithImpl<$Res>
       role: null == role
           ? _value.role
           : role // ignore: cast_nullable_to_non_nullable
+              as String,
+      organizationId: null == organizationId
+          ? _value.organizationId
+          : organizationId // ignore: cast_nullable_to_non_nullable
+              as int,
+      isActive: null == isActive
+          ? _value.isActive
+          : isActive // ignore: cast_nullable_to_non_nullable
+              as bool,
+      accountStatus: null == accountStatus
+          ? _value.accountStatus
+          : accountStatus // ignore: cast_nullable_to_non_nullable
               as String,
       phone: freezed == phone
           ? _value.phone
@@ -721,6 +760,9 @@ class _$AuthUserDtoImpl implements _AuthUserDto {
       required this.email,
       required this.fullName,
       required this.role,
+      this.organizationId = 0,
+      this.isActive = true,
+      this.accountStatus = 'ACTIVE',
       this.phone,
       this.gender,
       this.avatarUrl,
@@ -739,6 +781,15 @@ class _$AuthUserDtoImpl implements _AuthUserDto {
   @override
   final String role;
   @override
+  @JsonKey()
+  final int organizationId;
+  @override
+  @JsonKey()
+  final bool isActive;
+  @override
+  @JsonKey()
+  final String accountStatus;
+  @override
   final String? phone;
   @override
   final String? gender;
@@ -751,7 +802,7 @@ class _$AuthUserDtoImpl implements _AuthUserDto {
 
   @override
   String toString() {
-    return 'AuthUserDto(id: $id, email: $email, fullName: $fullName, role: $role, phone: $phone, gender: $gender, avatarUrl: $avatarUrl, organizationName: $organizationName, organizationLogoUrl: $organizationLogoUrl)';
+    return 'AuthUserDto(id: $id, email: $email, fullName: $fullName, role: $role, organizationId: $organizationId, isActive: $isActive, accountStatus: $accountStatus, phone: $phone, gender: $gender, avatarUrl: $avatarUrl, organizationName: $organizationName, organizationLogoUrl: $organizationLogoUrl)';
   }
 
   @override
@@ -764,6 +815,12 @@ class _$AuthUserDtoImpl implements _AuthUserDto {
             (identical(other.fullName, fullName) ||
                 other.fullName == fullName) &&
             (identical(other.role, role) || other.role == role) &&
+            (identical(other.organizationId, organizationId) ||
+                other.organizationId == organizationId) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive) &&
+            (identical(other.accountStatus, accountStatus) ||
+                other.accountStatus == accountStatus) &&
             (identical(other.phone, phone) || other.phone == phone) &&
             (identical(other.gender, gender) || other.gender == gender) &&
             (identical(other.avatarUrl, avatarUrl) ||
@@ -776,8 +833,20 @@ class _$AuthUserDtoImpl implements _AuthUserDto {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, id, email, fullName, role, phone,
-      gender, avatarUrl, organizationName, organizationLogoUrl);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      email,
+      fullName,
+      role,
+      organizationId,
+      isActive,
+      accountStatus,
+      phone,
+      gender,
+      avatarUrl,
+      organizationName,
+      organizationLogoUrl);
 
   @JsonKey(ignore: true)
   @override
@@ -799,6 +868,9 @@ abstract class _AuthUserDto implements AuthUserDto {
       required final String email,
       required final String fullName,
       required final String role,
+      final int organizationId,
+      final bool isActive,
+      final String accountStatus,
       final String? phone,
       final String? gender,
       final String? avatarUrl,
@@ -816,6 +888,12 @@ abstract class _AuthUserDto implements AuthUserDto {
   String get fullName;
   @override
   String get role;
+  @override
+  int get organizationId;
+  @override
+  bool get isActive;
+  @override
+  String get accountStatus;
   @override
   String? get phone;
   @override

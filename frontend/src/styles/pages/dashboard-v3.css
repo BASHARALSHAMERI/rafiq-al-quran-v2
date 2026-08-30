@@ -166,6 +166,17 @@
   background: rgba(255,255,255,0.03);
   border-color: rgba(255,255,255,0.08);
 }
+.dash-fbar__label {
+  color: var(--text-tertiary, #9ca3af);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dash-fbar__scope {
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
 .dash-fbar__spacer {
   flex: 1;
   min-width: 0;
@@ -243,6 +254,35 @@
   .dash-fbar__pill { width: 100%; }
 }
 
+/* Decision data quality */
+.dash-data-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--warning-500, #c97812) 28%, transparent);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--warning-500, #c97812) 8%, var(--bg-surface-elevated, #fff));
+  color: var(--text-secondary, #5f6b7a);
+}
+.dash-data-note > svg {
+  flex: 0 0 auto;
+  margin-top: 0.125rem;
+  color: var(--warning-600, #a85f0c);
+}
+.dash-data-note > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.dash-data-note strong {
+  font-size: 0.8125rem;
+  color: var(--text-primary, #18212f);
+}
+.dash-data-note span {
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
 /* ─── KPI CARDS (colored gradients) ─── */
 .dash-kpis {
   display: grid;
@@ -317,6 +357,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+.dash-kpi-card__meta {
+  max-width: 24ch;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  opacity: 0.78;
+}
 .dash-kpi-card__icon {
   width: 2.75rem;
   height: 2.75rem;
@@ -609,6 +655,16 @@
   font-size: 0.75rem;
   color: var(--text-tertiary, #9ca3af);
 }
+.dash-prio__action {
+  display: inline-flex;
+  margin-inline-start: 0.5rem;
+  color: var(--text-brand, var(--primary-700, #104f58));
+  font-weight: 700;
+  text-decoration: none;
+}
+.dash-prio__action:hover {
+  text-decoration: underline;
+}
 .dash-prio__value {
   font-size: 1.5rem;
   font-weight: 700;
@@ -786,6 +842,121 @@
 }
 .dash-activity__sep { opacity: 0.5; }
 
+/* ─── FINANCIAL OVERVIEW ─── */
+.dash-finance {
+  grid-column: 1 / -1;
+}
+.dash-finance__grid {
+  display: flex;
+  gap: 2rem;
+  align-items: stretch;
+}
+.dash-finance__ring-col {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+.dash-finance__ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.dash-finance__ring-meta {
+  text-align: center;
+  margin-top: 0;
+}
+.dash-finance__bars-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  justify-content: center;
+}
+.dash-finance-bar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  margin-bottom: 0.25rem;
+}
+.dash-finance-bar__label {
+  color: var(--text-secondary, #9ca3af);
+}
+.dash-finance-bar__val {
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  direction: ltr;
+}
+.dash-finance-bar__track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--bg-surface-active, #edf1f5);
+  overflow: hidden;
+}
+.dash-finance-bar__fill {
+  height: 100%;
+  border-radius: 0.25rem;
+  transition: width 0.6s ease;
+.dash-finance__scope-note {
+  margin: 0 0 1rem;
+  color: var(--text-tertiary, #7b8794);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+}
+.dash-finance-bar__fill--primary { background: var(--bg-primary, var(--primary-600, #136269)); }
+.dash-finance-bar__fill--success { background: var(--bg-success, var(--success-600, #1d764f)); }
+.dash-finance-bar__fill--warning { background: var(--bg-warning, var(--warning-500, #c97812)); }
+.dash-finance-bar__fill--danger  { background: var(--bg-error, var(--error-600, #b43151)); }
+
+.dash-finance__summary {
+  display: flex;
+  gap: 2rem;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-subtle, #e7edf3);
+}
+.dash-finance__summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary, #6b7280);
+  direction: ltr;
+}
+
+/* ─── RECORDED STAFF ATTENDANCE ─── */
+.dash-staff {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.dash-staff__roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.625rem;
+}
+.dash-staff__role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border-subtle, #e7edf3);
+  border-radius: 0.625rem;
+  background: var(--bg-subtle, #f7f9fc);
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.75rem;
+}
+.dash-staff__role strong {
+  color: var(--text-primary, #111827);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.dash-staff__role small {
+  font-size: 0.625rem;
+  font-weight: 500;
+}
 /* ─── QUICK ACTIONS ─── */
 .dash-actions {
   display: flex;
@@ -986,4 +1157,14 @@
 [data-theme="dark"] .dash-insight-link:hover {
   background: rgba(52, 211, 153, 0.06);
   border-color: rgba(52, 211, 153, 0.2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash *,
+  .dash *::before,
+  .dash *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

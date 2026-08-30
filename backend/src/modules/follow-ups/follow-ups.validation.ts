@@ -39,7 +39,8 @@ export const createFollowUpBodySchema = z
     matnStatus: z.string().trim().max(50).optional().nullable(),
     matnFromRef: z.string().trim().max(80).optional().nullable(),
     matnToRef: z.string().trim().max(80).optional().nullable(),
-    notes: z.string().trim().max(500).optional().nullable()
+    notes: z.string().trim().max(500).optional().nullable(),
+    idempotencyKey: z.string().trim().max(128).optional().nullable()
   })
   .strict();
 

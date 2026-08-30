@@ -7,11 +7,11 @@ import '../../application/student/student_dashboard_provider.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/data_parsing_helper.dart';
 import '../shared/widgets/app_card.dart';
 import '../shared/widgets/page_state_view.dart';
 import '../shared/widgets/section_header.dart';
 import '../shared/widgets/standard_app_bar.dart';
-import '../../core/utils/data_parsing_helper.dart';
 
 enum _FollowUpKind { memorization, review, matn }
 
@@ -75,13 +75,16 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
     final state = ref.watch(studentDashboardProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'الحفظ والمراجعة'),
       body: _buildBody(state),
     );
   }
 
   Widget _buildBody(StudentDashboardState state) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     if (state.isLoading) {
       return const PageStateView.loading();
     }
@@ -148,7 +151,7 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
               child: _CountCard(
                 label: 'حفظ',
                 count: memorizationCount,
-                color: AppColors.primaryLight,
+                color: primary,
                 icon: Icons.menu_book_rounded,
               ),
             ),
@@ -157,7 +160,7 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
               child: _CountCard(
                 label: 'مراجعة',
                 count: reviewCount,
-                color: AppColors.infoLight,
+                color: custom.info,
                 icon: Icons.refresh_rounded,
               ),
             ),
@@ -166,7 +169,7 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
               child: _CountCard(
                 label: 'متون',
                 count: matnCount,
-                color: AppColors.warningLight,
+                color: custom.warning,
                 icon: Icons.auto_stories_rounded,
               ),
             ),
@@ -179,9 +182,15 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         if (selectedRecords.isEmpty)
-          const AppCard(
+          AppCard(
             child: Center(
-              child: Text('لا توجد سجلات في هذا القسم حالياً.'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'لا توجد سجلات في هذا القسم حالياً.',
+                  style: TextStyle(color: context.textSecondaryColor, fontWeight: FontWeight.w700),
+                ),
+              ),
             ),
           )
         else
@@ -314,7 +323,6 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
     }
   }
 
-
   String _matnStatusLabel(dynamic raw) {
     switch ((raw?.toString().trim().toUpperCase() ?? '')) {
       case 'COMPLETED':
@@ -327,7 +335,6 @@ class _MemorizationLogScreenState extends ConsumerState<MemorizationLogScreen> {
         return 'حالة غير محددة';
     }
   }
-
 
   DateTime? _asDate(dynamic value) {
     if (value is DateTime) {
@@ -355,7 +362,7 @@ class _LogHeroCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF4E8E7A), Color(0xFF5F9F8A)],
+          colors: [Color(0xFF0F766E), Color(0xFF115E59)],
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
         ),
@@ -442,21 +449,24 @@ class _DailySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     final (label, icon, color) = switch (item.kind) {
       _FollowUpKind.memorization => (
           'الحفظ',
           Icons.menu_book_rounded,
-          AppColors.primaryLight
+          primary,
         ),
       _FollowUpKind.review => (
           'المراجعة',
           Icons.refresh_rounded,
-          AppColors.infoLight
+          custom.info,
         ),
       _FollowUpKind.matn => (
           'المتون',
           Icons.auto_stories_rounded,
-          AppColors.warningLight
+          custom.warning,
         ),
     };
 
@@ -474,9 +484,10 @@ class _DailySummaryCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
@@ -497,9 +508,9 @@ class _DailySummaryCard extends StatelessWidget {
             item.pages > 0
                 ? '${item.pages.toStringAsFixed(1)} صفحة'
                 : 'بدون صفحات',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
           const SizedBox(height: 2),
@@ -507,9 +518,9 @@ class _DailySummaryCard extends StatelessWidget {
             item.averageRating > 0
                 ? 'تقييم ${item.averageRating.toStringAsFixed(1)}'
                 : 'بدون تقييم',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -551,9 +562,9 @@ class _CountCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -577,9 +588,9 @@ class _TypeSegment extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: [
@@ -617,6 +628,8 @@ class _SegmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -625,7 +638,7 @@ class _SegmentButton extends StatelessWidget {
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected ? AppColors.primaryLight : Colors.transparent,
+            color: selected ? primary : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           alignment: Alignment.center,
@@ -633,7 +646,7 @@ class _SegmentButton extends StatelessWidget {
             title,
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: selected ? Colors.white : AppColors.textSecondaryLight,
+              color: selected ? Theme.of(context).colorScheme.onPrimary : context.textSecondaryColor,
             ),
           ),
         ),
@@ -650,6 +663,8 @@ class _RecordCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formatter = DateFormat('d MMMM y', 'ar');
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
 
     return AppCard(
       child: Column(
@@ -666,13 +681,14 @@ class _RecordCard extends StatelessWidget {
                       record.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w900,
+                            color: context.textPrimaryColor,
                           ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       record.subtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondaryLight,
+                            color: context.textSecondaryColor,
                           ),
                     ),
                   ],
@@ -687,7 +703,7 @@ class _RecordCard extends StatelessWidget {
                   Text(
                     _relativeDateLabel(record.date, formatter),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
+                          color: context.textSecondaryColor,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -700,14 +716,14 @@ class _RecordCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF2F7F4),
+                color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
                 'عدد الصفحات: ${record.pages.toStringAsFixed(1)}',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
-                  fontWeight: FontWeight.w700,
+                style: TextStyle(
+                  color: primary,
+                  fontWeight: FontWeight.w800,
                   fontSize: 12,
                 ),
               ),
@@ -719,13 +735,14 @@ class _RecordCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               decoration: BoxDecoration(
-                color: AppColors.borderLight.withValues(alpha: 0.45),
+                color: context.surfaceColor,
                 borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: context.borderColor),
               ),
               child: Text(
                 record.notes!,
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 12,
                 ),
               ),
@@ -766,12 +783,14 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     if (rating <= 0) {
-      return const Text(
+      return Text(
         'بدون تقييم',
         style: TextStyle(
           fontSize: 11,
-          color: AppColors.textSecondaryLight,
+          color: context.textSecondaryColor,
         ),
       );
     }
@@ -784,8 +803,8 @@ class _Stars extends StatelessWidget {
           Icons.star_rounded,
           size: 15,
           color: filled
-              ? AppColors.warningLight
-              : AppColors.textSecondaryLight.withValues(alpha: 0.25),
+              ? custom.warning
+              : context.borderColor,
         );
       }),
     );

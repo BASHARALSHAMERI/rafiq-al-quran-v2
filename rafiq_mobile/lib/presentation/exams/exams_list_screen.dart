@@ -47,8 +47,8 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
 
     final key = [
       role?.name,
-      contextState.selectedCenterId ?? '',
-      contextState.selectedCircleId ?? '',
+      contextState.selectedCenterId?.toString() ?? '',
+      contextState.selectedCircleId?.toString() ?? '',
       needsContext.toString(),
     ].join(':');
 
@@ -63,14 +63,12 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
         return;
       }
 
-      // Supervisors get SUBMITTED nominations to review;
-      // Teachers get all nominations to track their own requests.
       final includeSupervisorNominations = role == UserRole.supervisor;
       final includeTeacherNominations = role == UserRole.teacher;
 
       ref.read(examControllerProvider.notifier).loadDashboard(
-            centerId: int.tryParse(contextState.selectedCenterId ?? ''),
-            circleId: int.tryParse(contextState.selectedCircleId ?? ''),
+            centerId: contextState.selectedCenterId,
+            circleId: contextState.selectedCircleId,
             includeTemplates: role == UserRole.teacher,
             includeNominations:
                 includeTeacherNominations || includeSupervisorNominations,
@@ -89,8 +87,8 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
     final includeTeacherNominations = role == UserRole.teacher;
 
     await ref.read(examControllerProvider.notifier).loadDashboard(
-          centerId: int.tryParse(contextState.selectedCenterId ?? ''),
-          circleId: int.tryParse(contextState.selectedCircleId ?? ''),
+          centerId: contextState.selectedCenterId,
+          circleId: contextState.selectedCircleId,
           includeTemplates: role == UserRole.teacher,
           includeNominations:
               includeTeacherNominations || includeSupervisorNominations,
@@ -132,7 +130,6 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
       return;
     }
 
-    // Refresh to reflect updated status
     await _refresh(contextState, role);
   }
 
@@ -154,6 +151,7 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
     _ensureDataLoaded(contextState, role);
 
     final examState = ref.watch(examControllerProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
     final teacherCanNominate = role == UserRole.teacher;
     final supervisorCanReview = role == UserRole.supervisor;
@@ -163,7 +161,6 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
 
     final attempts = filterExamAttempts(examState.attempts, _searchQuery);
     final nominations = filterNominations(examState.nominations, _searchQuery);
-    // Supervisor sees SUBMITTED nominations for review; teacher sees all their nominations
     final supervisorPendingNominations = supervisorCanReview
         ? nominations.where((n) => n.status == 'SUBMITTED').toList()
         : <ExamNominationDto>[];
@@ -182,7 +179,7 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
         .length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF8),
+      backgroundColor: context.surfaceColor,
       appBar: PremiumAppBar(
         title: 'الاختبارات',
         actions: [
@@ -203,7 +200,7 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                   onRefresh: () => _refresh(contextState, role),
                 )
               : RefreshIndicator(
-                  color: AppColors.primaryLight,
+                  color: primary,
                   onRefresh: () => _refresh(contextState, role),
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -245,10 +242,11 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                                   isStudentOrParent
                                       ? 'سجل نتائجي'
                                       : 'سجل الاختبارات',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    color: context.textPrimaryColor,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -259,12 +257,10 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                                           : isStudentOrParent
                                               ? 'هنا يمكنك متابعة نتائج اختباراتك والمواعيد المجدولة لك.'
                                               : 'عرض المحاولات والنتائج وفق الصلاحية الحالية.',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textSecondaryLight,
-                                      ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.textSecondaryColor,
+                                  ),
                                 ),
                               ],
                             ),
@@ -277,7 +273,7 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                                   : () => _openNominationSheet(
                                       examState.publishedExams),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.primaryLight,
+                                backgroundColor: primary,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
@@ -302,7 +298,6 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                         inProgressCount: inProgressCount,
                         reviewedCount: finalizedCount,
                       ),
-                      // ─── Teacher: track own nominations ───
                       if (teacherCanNominate) ...[
                         const SizedBox(height: AppSpacing.md),
                         const ExamSectionHeader(
@@ -311,12 +306,12 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         if (nominations.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'لا توجد طلبات ترشيح مطابقة حالياً.',
                               style: TextStyle(
-                                  color: AppColors.textSecondaryLight),
+                                  color: context.textSecondaryColor),
                             ),
                           )
                         else
@@ -331,8 +326,6 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                             ),
                           ),
                       ],
-
-                      // ─── Supervisor: review pending nominations ───
                       if (supervisorCanReview) ...[
                         const SizedBox(height: AppSpacing.md),
                         ExamSectionHeader(
@@ -343,12 +336,12 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         if (supervisorPendingNominations.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'لا توجد طلبات ترشيح بانتظار المراجعة الإشرافية.',
                               style: TextStyle(
-                                  color: AppColors.textSecondaryLight),
+                                  color: context.textSecondaryColor),
                             ),
                           )
                         else
@@ -382,11 +375,11 @@ class _ExamsListScreenState extends ConsumerState<ExamsListScreen> {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       if (examState.isLoading && !examState.hasLoaded)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 56),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 56),
                           child: Center(
                             child: CircularProgressIndicator(
-                              color: AppColors.primaryLight,
+                              color: primary,
                             ),
                           ),
                         )

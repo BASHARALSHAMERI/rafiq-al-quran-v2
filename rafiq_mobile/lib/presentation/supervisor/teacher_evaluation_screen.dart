@@ -6,16 +6,16 @@ import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
 import '../../application/supervisor/supervisor_notes_controller.dart';
 import '../../core/constants/app_radius.dart';
-import '../../core/utils/app_snack_bar.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_gradients.dart';
 import '../../core/theme/app_shadows.dart';
+import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
 import '../shared/states/app_empty_state.dart';
 import '../shared/widgets/app_card.dart';
-import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 const _criteria = [
   ('punctuality', 'الالتزام بالمواعيد'),
@@ -68,7 +68,7 @@ class _TeacherEvaluationScreenState
 
     final circle = _selectedCircle!;
     final contextState = ref.read(contextControllerProvider);
-    final centerId = int.tryParse(contextState.selectedCenterId ?? '');
+    final centerId = contextState.selectedCenterId;
     final targetLabel =
         '${circle.name}${circle.teacherName != null ? ' - ${circle.teacherName}' : ''}';
 
@@ -102,13 +102,12 @@ class _TeacherEvaluationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final ctx = ref.watch(contextControllerProvider);
-    final centerId = int.tryParse(ctx.selectedCenterId ?? '');
+    final centerId = ctx.selectedCenterId;
     final circlesAsync = ref.watch(orgCirclesProvider(centerId));
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'تقييم المعلمين',
         leading: _selectedCircle != null
@@ -143,8 +142,8 @@ class _TeacherEvaluationScreenState
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: _selectedCircle == null
-                  ? _buildCircleList(theme, teacherCircles)
-                  : _buildEvaluationForm(theme),
+                  ? _buildCircleList(teacherCircles)
+                  : _buildEvaluationForm(),
             ),
           );
         },
@@ -152,7 +151,10 @@ class _TeacherEvaluationScreenState
     );
   }
 
-  Widget _buildCircleList(ThemeData theme, List<OrgCircleDto> circles) {
+  Widget _buildCircleList(List<OrgCircleDto> circles) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     if (circles.isEmpty) {
       return const AppEmptyState(
         title: 'لا توجد حلقات نشطة',
@@ -165,31 +167,30 @@ class _TeacherEvaluationScreenState
       key: const ValueKey('list'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Distinguishing banner: periodic comprehensive evaluation vs field visit
         Container(
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.only(bottom: AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.infoLight.withValues(alpha: 0.08),
+            color: custom.info.withValues(alpha: context.isDark ? 0.16 : 0.08),
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: AppColors.infoLight.withValues(alpha: 0.25),
+              color: custom.info.withValues(alpha: 0.25),
             ),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.info_outline_rounded,
-                  color: AppColors.infoLight, size: 18),
-              SizedBox(width: 10),
+                  color: custom.info, size: 18),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'التقييم الدوري الشامل لمهارات المعلم — يختلف عن زيارة الحلقة الميدانية. يُرفع للسجل التقييمي ومدير المركز.',
                   style: TextStyle(
-                    color: AppColors.infoLight,
+                    color: custom.info,
                     fontSize: 12,
                     height: 1.5,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -212,11 +213,11 @@ class _TeacherEvaluationScreenState
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(alpha: 0.1),
+                        color: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Icon(Icons.person_rounded,
-                          color: AppColors.primaryLight),
+                      child: Icon(Icons.person_rounded,
+                          color: primary),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -224,18 +225,21 @@ class _TeacherEvaluationScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(c.name,
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                  color: context.textPrimaryColor)),
                           Text(
                             '${c.teacherName ?? 'لم يحدد المعلم'} · ${c.studentsCount} طالب',
-                            style: theme.textTheme.labelSmall
-                                ?.copyWith(color: AppColors.textSecondaryLight),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: context.textSecondaryColor),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded,
-                        color: AppColors.textSecondaryLight),
+                    Icon(Icons.chevron_right_rounded,
+                        color: context.textSecondaryColor),
                   ],
                 ),
               ),
@@ -249,33 +253,40 @@ class _TeacherEvaluationScreenState
     );
   }
 
-  Widget _buildEvaluationForm(ThemeData theme) {
+  Widget _buildEvaluationForm() {
     final c = _selectedCircle!;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return Column(
       key: const ValueKey('form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.primaryLight.withValues(alpha: 0.05),
+            color: primary.withValues(alpha: context.isDark ? 0.16 : 0.06),
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-                color: AppColors.primaryLight.withValues(alpha: 0.2)),
+                color: primary.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('تقييم: ${c.name}',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: context.textPrimaryColor)),
               if (c.teacherName != null)
                 Text('المعلم: ${c.teacherName}',
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: AppColors.textSecondaryLight)),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: context.textSecondaryColor)),
               Text('${c.studentsCount} طالب',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: AppColors.textSecondaryLight)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: context.textSecondaryColor)),
             ],
           ),
         ).animate().fadeIn(),
@@ -292,8 +303,10 @@ class _TeacherEvaluationScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(criterion.$2,
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: context.textPrimaryColor)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -309,9 +322,8 @@ class _TeacherEvaluationScreenState
                               Icons.star_rounded,
                               size: 28,
                               color: isSelected
-                                  ? AppColors.warningLight
-                                  : AppColors.textSecondaryLight
-                                      .withValues(alpha: 0.25),
+                                  ? custom.warning
+                                  : context.borderColor,
                             ),
                           ),
                         );
@@ -319,8 +331,10 @@ class _TeacherEvaluationScreenState
                       const Spacer(),
                       if (currentVal > 0)
                         Text('$currentVal/5',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppColors.textSecondaryLight)),
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: context.textSecondaryColor)),
                     ],
                   ),
                 ],
@@ -334,24 +348,25 @@ class _TeacherEvaluationScreenState
         TextField(
           controller: _notesController,
           maxLines: 4,
+          style: TextStyle(color: context.textPrimaryColor),
           decoration: InputDecoration(
             hintText: 'أضف ملاحظاتك حول أداء المعلم...',
             filled: true,
-            fillColor: AppColors.cardLight,
+            fillColor: context.cardColor,
             contentPadding: const EdgeInsets.all(14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: const BorderSide(color: AppColors.borderLight),
+              borderSide: BorderSide(color: context.borderColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              borderSide: const BorderSide(color: AppColors.borderLight),
+              borderSide: BorderSide(color: context.borderColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.lg),
               borderSide: BorderSide(
-                  color: AppColors.primaryLight.withValues(alpha: 0.5),
-                  width: 2),
+                  color: primary,
+                  width: 1.5),
             ),
           ),
         ).animate().fadeIn().slideY(begin: 0.1, end: 0),
@@ -369,12 +384,12 @@ class _TeacherEvaluationScreenState
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    side: const BorderSide(color: AppColors.borderLight),
+                    side: BorderSide(color: context.borderColor),
                   ),
                 ),
-                child: const Text('رجوع',
+                child: Text('رجوع',
                     style: TextStyle(
-                        color: AppColors.textPrimaryLight,
+                        color: context.textPrimaryColor,
                         fontWeight: FontWeight.w700)),
               ),
             ),
@@ -406,7 +421,7 @@ class _TeacherEvaluationScreenState
                                 style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
-                                    fontWeight: FontWeight.w700)),
+                                    fontWeight: FontWeight.w800)),
                           ],
                         ),
                 ),

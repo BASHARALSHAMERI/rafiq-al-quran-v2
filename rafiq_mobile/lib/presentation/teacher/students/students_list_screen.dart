@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../application/auth/auth_providers.dart';
 import '../../../application/context/context_controller.dart';
 import '../../../application/follow_up/today_follow_ups_provider.dart';
+import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
@@ -50,42 +51,50 @@ String _errorMessage(Object error) {
   return 'تعذر تحميل بيانات الطلاب';
 }
 
-Map<String, dynamic> _followUpConfig(StudentFollowUpStatus status) {
+Map<String, dynamic> _followUpConfig(BuildContext context, StudentFollowUpStatus status) {
+  final custom = context.customColors;
+  final isDark = context.isDark;
+
   switch (status) {
     case StudentFollowUpStatus.pending:
+      final color = context.textSecondaryColor;
       return {
         'label': 'لم تتم المتابعة',
         'icon': Icons.schedule_rounded,
-        'color': const Color(0xFF6B7280),
-        'bg': const Color(0xFFF3F4F6),
+        'color': color,
+        'bg': color.withValues(alpha: isDark ? 0.16 : 0.08),
       };
     case StudentFollowUpStatus.hifz:
+      const color = Color(0xFF0284C7);
       return {
         'label': 'تم تسجيل الحفظ',
         'icon': Icons.menu_book_outlined,
-        'color': const Color(0xFF0284C7),
-        'bg': const Color(0xFFE0F2FE),
+        'color': color,
+        'bg': color.withValues(alpha: isDark ? 0.18 : 0.10),
       };
     case StudentFollowUpStatus.review:
+      const color = Color(0xFFD97706);
       return {
         'label': 'تم تسجيل المراجعة',
-        'icon': Icons.book_outlined,
-        'color': const Color(0xFFD97706),
-        'bg': const Color(0xFFFEF3C7),
+        'icon': Icons.bookmark_outline_rounded,
+        'color': color,
+        'bg': color.withValues(alpha: isDark ? 0.18 : 0.10),
       };
     case StudentFollowUpStatus.mutoon:
+      final color = custom.accent;
       return {
         'label': 'تم تسجيل المتون',
         'icon': Icons.integration_instructions_outlined,
-        'color': const Color(0xFF4B5563),
-        'bg': const Color(0xFFF3F4F6),
+        'color': color,
+        'bg': color.withValues(alpha: isDark ? 0.18 : 0.10),
       };
     case StudentFollowUpStatus.complete:
+      final color = custom.success;
       return {
         'label': 'مكتمل',
         'icon': Icons.check_circle_outline_rounded,
-        'color': const Color(0xFF10B981),
-        'bg': const Color(0xFFEEF9F1),
+        'color': color,
+        'bg': color.withValues(alpha: isDark ? 0.18 : 0.10),
       };
   }
 }
@@ -115,87 +124,124 @@ StudentFollowUpStatus _deriveFollowUpStatus(Set<String> types) {
   return StudentFollowUpStatus.pending;
 }
 
-final studentsDirectoryProvider =
-    FutureProvider.autoDispose<List<_StudentListItem>>((ref) async {
-  final contextState = ref.watch(contextControllerProvider);
-  final selectedCircleId = contextState.selectedCircleId?.trim();
-  final selectedCenterId = contextState.selectedCenterId?.trim();
+class _StudentsDirectoryNotifier extends AutoDisposeAsyncNotifier<List<_StudentListItem>> {
+  int _page = 1;
+  bool _hasMore = true;
 
-  final query = <String, dynamic>{'role': 'STUDENT'};
-  if (selectedCircleId != null && selectedCircleId.isNotEmpty) {
-    query['circleId'] = selectedCircleId;
-  } else if (selectedCenterId != null && selectedCenterId.isNotEmpty) {
-    query['centerId'] = selectedCenterId;
+  @override
+  Future<List<_StudentListItem>> build() async {
+    _page = 1;
+    _hasMore = true;
+    return _fetchPage(_page);
   }
 
-  final dio = ref.watch(apiClientProvider);
-  final response = await dio.get('/users', queryParameters: query);
-  final rows = DataParsingHelper.asMapList(
-    DataParsingHelper.asMap(response.data)['data'],
-  );
-  if (rows.isEmpty && response.data is List) {
-    // Handle cases where response.data is directly the list
-    rows.addAll(DataParsingHelper.asMapList(response.data));
+  Future<void> loadMore() async {
+    if (state.isLoading || !_hasMore) return;
+    
+    state = const AsyncLoading<List<_StudentListItem>>().copyWithPrevious(state);
+    
+    try {
+      final nextItems = await _fetchPage(_page + 1);
+      _page++;
+      state = AsyncData([...state.value ?? [], ...nextItems]);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
-  
-  final output = <_StudentListItem>[];
 
-  Map<int, Set<String>> todayFollowUps = const {};
-  if (selectedCircleId != null && selectedCircleId.isNotEmpty) {
-    final circleIdInt = int.tryParse(selectedCircleId);
-    if (circleIdInt != null && circleIdInt > 0) {
+  Future<List<_StudentListItem>> _fetchPage(int page) async {
+    final contextState = ref.watch(contextControllerProvider);
+    final selectedCircleId = contextState.selectedCircleId;
+    final selectedCenterId = contextState.selectedCenterId;
+
+    final query = <String, dynamic>{'role': 'STUDENT', 'page': page, 'limit': 20};
+    if (selectedCircleId != null) {
+      query['circleId'] = selectedCircleId.toString();
+    } else if (selectedCenterId != null) {
+      query['centerId'] = selectedCenterId.toString();
+    }
+
+    final dio = ref.watch(apiClientProvider);
+    final response = await dio.get('/users', queryParameters: query);
+    
+    final responseData = DataParsingHelper.asMap(response.data);
+    final dataField = responseData['data'];
+    
+    List<Map<String, dynamic>> rows = [];
+    if (dataField is Map) {
+       rows = DataParsingHelper.asMapList(dataField['data']);
+       final meta = DataParsingHelper.asMap(dataField['meta']);
+       final totalPages = DataParsingHelper.readInt(meta['totalPages']) ?? 1;
+       _hasMore = page < totalPages;
+    } else if (dataField is List) {
+       rows = DataParsingHelper.asMapList(dataField);
+       if (rows.isEmpty && response.data is List) {
+         rows.addAll(DataParsingHelper.asMapList(response.data));
+       }
+       _hasMore = false;
+    }
+    
+    final output = <_StudentListItem>[];
+
+    Map<int, Set<String>> todayFollowUps = const {};
+    if (selectedCircleId != null && selectedCircleId > 0) {
       try {
         todayFollowUps =
-            await ref.watch(todayFollowUpsProvider(circleIdInt).future);
+            await ref.watch(todayFollowUpsProvider(selectedCircleId).future);
       } catch (_) {
         todayFollowUps = const {};
       }
     }
-  }
 
-  for (final row in rows) {
-    final id = DataParsingHelper.readInt(row['id']);
-    if (id == null || id <= 0) {
-      continue;
-    }
-
-    final profile = DataParsingHelper.asMap(row['profile']);
-    final studentProfile = DataParsingHelper.asMap(row['studentProfile']);
-    final enrollments = DataParsingHelper.asMapList(row['studentEnrollments']);
-
-    String enrollmentLabel = '-';
-    if (enrollments.isNotEmpty) {
-      final first = enrollments.first;
-      if (first['circleId'] != null) {
-        enrollmentLabel = 'C-${first['circleId']}';
+    for (final row in rows) {
+      final id = DataParsingHelper.readInt(row['id']);
+      if (id == null || id <= 0) {
+        continue;
       }
+
+      final profile = DataParsingHelper.asMap(row['profile']);
+      final studentProfile = DataParsingHelper.asMap(row['studentProfile']);
+      final enrollments = DataParsingHelper.asMapList(row['studentEnrollments']);
+
+      String enrollmentLabel = '-';
+      if (enrollments.isNotEmpty) {
+        final first = enrollments.first;
+        if (first['circleId'] != null) {
+          enrollmentLabel = 'C-${first['circleId']}';
+        }
+      }
+
+      final name = DataParsingHelper.readString(
+        profile['fullName'] ?? row['fullName'] ?? row['name'],
+        fallback: 'طالب #$id',
+      );
+
+      final levelCode = studentProfile['level']?.toString();
+      final statusCode = studentProfile['studentStatus']?.toString();
+      final followUpStatus =
+          _deriveFollowUpStatus(todayFollowUps[id] ?? const <String>{});
+
+      output.add(
+        _StudentListItem(
+          id: id,
+          name: name,
+          levelLabel: DataParsingHelper.studentLevelLabel(levelCode) ?? 'غير محدد',
+          statusLabel: DataParsingHelper.studentStatusLabel(statusCode),
+          statusColor: DataParsingHelper.studentStatusColor(statusCode),
+          enrollmentLabel: enrollmentLabel,
+          followUpStatus: followUpStatus,
+        ),
+      );
     }
 
-    final name = DataParsingHelper.readString(
-      profile['fullName'] ?? row['fullName'] ?? row['name'],
-      fallback: 'طالب #$id',
-    );
-
-    final levelCode = studentProfile['level']?.toString();
-    final statusCode = studentProfile['studentStatus']?.toString();
-    final followUpStatus =
-        _deriveFollowUpStatus(todayFollowUps[id] ?? const <String>{});
-
-    output.add(
-      _StudentListItem(
-        id: id,
-        name: name,
-        levelLabel: DataParsingHelper.studentLevelLabel(levelCode) ?? 'غير محدد',
-        statusLabel: DataParsingHelper.studentStatusLabel(statusCode),
-        statusColor: DataParsingHelper.studentStatusColor(statusCode),
-        enrollmentLabel: enrollmentLabel,
-        followUpStatus: followUpStatus,
-      ),
-    );
+    output.sort((a, b) => a.name.compareTo(b.name));
+    return output;
   }
+}
 
-  output.sort((a, b) => a.name.compareTo(b.name));
-  return output;
+final _studentsDirectoryProvider =
+    AsyncNotifierProvider.autoDispose<_StudentsDirectoryNotifier, List<_StudentListItem>>(() {
+  return _StudentsDirectoryNotifier();
 });
 
 class StudentsListScreen extends ConsumerStatefulWidget {
@@ -206,9 +252,30 @@ class StudentsListScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(_studentsDirectoryProvider.notifier).loadMore();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final studentsAsync = ref.watch(studentsDirectoryProvider);
+    final studentsAsync = ref.watch(_studentsDirectoryProvider);
     final circleName = ref.watch(
       contextControllerProvider.select((state) => state.selectedCircleName),
     );
@@ -224,7 +291,7 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'متابعة الحلقة',
         onBackTap: () {
@@ -236,11 +303,11 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
         },
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh_rounded,
-              color: AppColors.textPrimaryLight,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
-            onPressed: () => ref.invalidate(studentsDirectoryProvider),
+            onPressed: () => ref.invalidate(_studentsDirectoryProvider),
           ),
         ],
       ),
@@ -271,7 +338,7 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
                   subtitle: _errorMessage(error),
                   icon: Icons.error_outline_rounded,
                   actionLabel: 'إعادة المحاولة',
-                  onAction: () => ref.invalidate(studentsDirectoryProvider),
+                  onAction: () => ref.invalidate(_studentsDirectoryProvider),
                 ),
                 data: (items) {
                   if (items.isEmpty) {
@@ -283,24 +350,39 @@ class _StudentsListScreenState extends ConsumerState<StudentsListScreen> {
                     );
                   }
 
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(studentsDirectoryProvider);
-                      await ref.read(studentsDirectoryProvider.future);
-                    },
-                    child: ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return _FollowUpStudentCard(
-                          item: item,
-                          onTap: () => context.push(
-                            RouteNames.teacherStudentProfile(item.id),
-                          ),
+                  return ListView.separated(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: items.length + 1,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) {
+                      if (index == items.length) {
+                        return Consumer(
+                          builder: (context, ref, child) {
+                            final isLoading = ref.watch(_studentsDirectoryProvider).isLoading;
+                            return isLoading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(AppSpacing.md),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  )
+                                : const SizedBox.shrink();
+                          },
                         );
-                      },
-                    ),
+                      }
+                      
+                      final item = items[index];
+                      return _FollowUpStudentCard(
+                        item: item,
+                        onTap: () => context.push(
+                          RouteNames.teacherStudentProfile(item.id),
+                        ),
+                      ).animate().fadeIn().slideY(
+                            begin: 0.04,
+                            end: 0,
+                            delay: Duration(milliseconds: 20 * index.clamp(0, 20)),
+                          );
+                    },
                   );
                 },
               ),
@@ -328,13 +410,14 @@ class _CircleFollowUpSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final safeProgress = progress.isFinite ? progress.clamp(0.0, 1.0) : 0.0;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,19 +425,19 @@ class _CircleFollowUpSummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'تقدم المتابعة',
-                style: TextStyle(
+                style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
-                  color: AppColors.textPrimaryLight,
+                  color: context.textPrimaryColor,
                 ),
               ),
               Text(
                 '$completed/$total طالب',
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
               ),
@@ -365,9 +448,9 @@ class _CircleFollowUpSummaryCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: safeProgress,
-              minHeight: 6,
-              color: const Color(0xFF568A78), // Green/teal from the mockup image
-              backgroundColor: AppColors.borderLight.withValues(alpha: 0.5),
+              minHeight: 7,
+              color: theme.colorScheme.primary,
+              backgroundColor: context.borderColor,
             ),
           ),
         ],
@@ -387,41 +470,35 @@ class _FollowUpStudentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 _StudentAvatar(name: item.name),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         item.name,
-                        style: const TextStyle(
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: AppColors.textPrimaryLight,
+                          fontSize: 15,
+                          color: context.textPrimaryColor,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -429,11 +506,11 @@ class _FollowUpStudentCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                const Icon(
+                const SizedBox(width: 12),
+                Icon(
                   Icons.keyboard_arrow_left_rounded,
                   size: 20,
-                  color: AppColors.textSecondaryLight,
+                  color: context.textSecondaryColor,
                 ),
               ],
             ),
@@ -451,7 +528,7 @@ class _StudentStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final config = _followUpConfig(status);
+    final config = _followUpConfig(context, status);
     final Color color = config['color'] as Color;
     final Color bgColor = config['bg'] as Color;
     final IconData icon = config['icon'] as IconData;
@@ -461,7 +538,7 @@ class _StudentStatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -474,7 +551,6 @@ class _StudentStatusChip extends StatelessWidget {
               color: color,
               fontWeight: FontWeight.w700,
               fontSize: 11,
-              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -490,22 +566,27 @@ class _StudentAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
     final initial = name.trim().isEmpty ? '؟' : name.trim().characters.first;
+    final theme = Theme.of(context);
 
     return Container(
       width: 44,
       height: 44,
-      decoration: const BoxDecoration(
-        color: Color(0xFFE8F0ED),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.20 : 0.10),
         shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.35 : 0.20),
+        ),
       ),
       child: Center(
         child: Text(
           initial,
-          style: const TextStyle(
-            color: Color(0xFF1E2A25),
+          style: TextStyle(
+            color: isDark ? Colors.white : theme.colorScheme.primary,
             fontWeight: FontWeight.w900,
-            fontSize: 20,
+            fontSize: 18,
           ),
         ),
       ),

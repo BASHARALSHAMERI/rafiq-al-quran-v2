@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
+import { CircleDot, Crosshair, MapPin, Search } from "lucide-react";
 
 import { Button } from "../../../components/ui/Button";
 import { notifyError } from "../../../shared/ui/feedback";
-import LocationMap from "./LocationMap";
+import { geoApi, type GeoPlace } from "../../../shared/geo/geo-api";
+import LocationMap, { type DevicePosition } from "./LocationMap";
 
 type LocationField = "latitude" | "longitude" | "allowedRadiusMeters";
 
@@ -17,6 +18,8 @@ type LocationPickerProps = {
   allowClear?: boolean;
   onChange: (field: LocationField, value: string) => void;
 };
+
+type NearbyPlace = GeoPlace & { distance: number };
 
 const distanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const radius = 6371000;
@@ -41,47 +44,26 @@ export default function LocationPicker({
   onChange,
 }: LocationPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<GeoPlace[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [resolvedAddress, setResolvedAddress] = useState("");
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [nearbyPlaces, setNearbyPlaces] = useState<any[]>([]);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [devicePosition, setDevicePosition] = useState<DevicePosition | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-    setAddressLoading(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=${ar ? "ar" : "en"}`,
-      );
-      const data = await response.json();
-      setResolvedAddress(data?.display_name ?? "");
-    } catch {
-      setResolvedAddress("");
-    } finally {
-      setAddressLoading(false);
-    }
-  }, [ar]);
 
   const fetchNearbyPlaces = useCallback(async (lat: number, lng: number) => {
     setNearbyLoading(true);
     try {
-      const query = `[out:json][timeout:15];(node(around:250,${lat},${lng})[amenity];node(around:250,${lat},${lng})[shop];node(around:250,${lat},${lng})[historic];);out body 15;`;
-      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-      const data = await response.json();
+      const places = await geoApi.nearby({ lat, lng, radius: 3000 });
       setNearbyPlaces(
-        (data?.elements ?? [])
-          .filter((place: any) => place.tags?.name)
-          .map((place: any) => ({
-            id: place.id,
-            name: place.tags.name,
-            lat: place.lat,
-            lng: place.lon,
-            distance: Math.round(distanceInMeters(lat, lng, place.lat, place.lon)),
-            type: place.tags.amenity || place.tags.shop || "landmark",
+        places
+          .map((place): NearbyPlace => ({
+            ...place,
+            distance: Math.round(distanceInMeters(lat, lng, place.latitude, place.longitude)),
           }))
-          .sort((a: any, b: any) => a.distance - b.distance),
+          .sort((a, b) => a.distance - b.distance),
       );
     } catch {
       setNearbyPlaces([]);
@@ -94,19 +76,20 @@ export default function LocationPicker({
     if (!active) return;
     const lat = Number(latitude);
     const lng = Number(longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || latitude === "" || longitude === "") {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || latitude === "" || longitude === "" || (lat === 0 && lng === 0)) {
       setResolvedAddress("");
       setNearbyPlaces([]);
       return;
     }
-
-    const addressTimer = window.setTimeout(() => reverseGeocode(lat, lng), 800);
-    const nearbyTimer = window.setTimeout(() => fetchNearbyPlaces(lat, lng), 1200);
-    return () => {
-      window.clearTimeout(addressTimer);
-      window.clearTimeout(nearbyTimer);
-    };
-  }, [active, fetchNearbyPlaces, latitude, longitude, reverseGeocode]);
+    const nearbyTimer = window.setTimeout(() => fetchNearbyPlaces(lat, lng), 600);
+    const controller = new AbortController();
+    const reverseTimer = window.setTimeout(() => {
+      void geoApi.reverse({ lat, lng }, controller.signal)
+        .then((result) => setResolvedAddress(result.address ?? ""))
+        .catch(() => undefined);
+    }, 350);
+    return () => { window.clearTimeout(nearbyTimer); window.clearTimeout(reverseTimer); controller.abort(); };
+  }, [active, fetchNearbyPlaces, latitude, longitude]);
 
   useEffect(() => {
     const closeResults = (event: MouseEvent) => {
@@ -117,15 +100,19 @@ export default function LocationPicker({
   }, []);
 
   const search = async () => {
-    if (!searchQuery.trim()) return;
+    const query = searchQuery.trim();
+    if (query.length < 3) {
+      notifyError(ar ? "اكتب ثلاثة أحرف على الأقل للبحث." : "Enter at least three characters to search.");
+      return;
+    }
     setSearchLoading(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1&accept-language=${ar ? "ar" : "en"}`,
-      );
-      setSearchResults(await response.json());
-    } catch {
+      const results = await geoApi.search(query);
+      setSearchResults(results);
+      if (!results.length) notifyError(ar ? "لم يتم العثور على نتائج مطابقة." : "No matching locations found.");
+    } catch (error) {
       setSearchResults([]);
+      notifyError(error instanceof Error ? error.message : ar ? "تعذر البحث عن الموقع." : "Location search failed.");
     } finally {
       setSearchLoading(false);
     }
@@ -138,6 +125,7 @@ export default function LocationPicker({
     }
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
+        setDevicePosition({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy });
         onChange("latitude", coords.latitude.toFixed(6));
         onChange("longitude", coords.longitude.toFixed(6));
       },
@@ -159,15 +147,16 @@ export default function LocationPicker({
               onChange("longitude", "");
               setResolvedAddress("");
               setNearbyPlaces([]);
+              setDevicePosition(null);
             }}
           >
             {ar ? "إلغاء التفعيل الجغرافي" : "Disable Geofence"}
           </button>
         ) : null}
-        <button type="button" className="circlemod-inline-action" onClick={useCurrentLocation} disabled={pending}>
-          <MapPin size={11} />
+        <Button type="button" variant="secondary" size="sm" onClick={useCurrentLocation} disabled={pending}>
+          <Crosshair size={15} />
           <span>{ar ? "جلب موقعي الحالي (GPS)" : "Get Current Location"}</span>
-        </button>
+        </Button>
       </div>
 
       <div ref={searchRef} className="relative">
@@ -186,6 +175,7 @@ export default function LocationPicker({
             disabled={pending}
           />
           <Button type="button" variant="primary" onClick={() => void search()} isLoading={searchLoading} disabled={pending || !searchQuery.trim()}>
+            <Search size={15} />
             {ar ? "بحث" : "Search"}
           </Button>
         </div>
@@ -196,18 +186,23 @@ export default function LocationPicker({
           >
             {searchResults.map((result) => (
               <button
-                key={result.place_id}
+                key={result.id}
                 type="button"
-                className="flex w-full flex-col border-b border-slate-100 px-3 text-right hover:bg-slate-50"
+                className="flex w-full items-start gap-2 border-b border-slate-100 px-3 text-right hover:bg-slate-50"
                 style={{ paddingTop: 10, paddingBottom: 10 }}
                 onClick={() => {
-                  onChange("latitude", Number(result.lat).toFixed(6));
-                  onChange("longitude", Number(result.lon).toFixed(6));
-                  setSearchQuery(result.display_name);
+                  onChange("latitude", result.latitude.toFixed(6));
+                  onChange("longitude", result.longitude.toFixed(6));
+                  setSearchQuery(result.name);
+                  setResolvedAddress(result.address ?? result.name);
                   setSearchResults([]);
                 }}
               >
-                <span className="truncate text-xs font-semibold text-slate-800">{result.display_name}</span>
+                <MapPin size={15} className="mt-0.5 shrink-0 text-emerald-600" />
+                <span className="min-w-0">
+                  <strong className="block truncate text-xs text-slate-800">{result.name}</strong>
+                  {result.address ? <span className="block truncate text-[10px] text-slate-500">{result.address}</span> : null}
+                </span>
               </button>
             ))}
           </div>
@@ -220,15 +215,16 @@ export default function LocationPicker({
         latitude={latitude}
         longitude={longitude}
         allowedRadiusMeters={allowedRadiusMeters}
+        devicePosition={devicePosition}
         onChange={onChange}
       />
 
-      {resolvedAddress || addressLoading ? (
+      {resolvedAddress ? (
         <div className="flex items-start rounded-lg border border-emerald-100 bg-emerald-50" style={{ gap: 6, padding: 8 }}>
           <MapPin size={13} className="mt-0.5 flex-shrink-0" style={{ color: "#0d9488" }} />
           <div style={{ fontSize: 11, lineHeight: 1.7, color: "#0f766e" }}>
             <strong style={{ display: "block" }}>{ar ? "الموقع المحدد حالياً:" : "Selected Address:"}</strong>
-            {addressLoading ? (ar ? "جاري جلب العنوان..." : "Resolving address...") : resolvedAddress}
+            {resolvedAddress}
           </div>
         </div>
       ) : null}
@@ -248,8 +244,8 @@ export default function LocationPicker({
                   type="button"
                   className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px]"
                   onClick={() => {
-                    onChange("latitude", place.lat.toFixed(6));
-                    onChange("longitude", place.lng.toFixed(6));
+                    onChange("latitude", place.latitude.toFixed(6));
+                    onChange("longitude", place.longitude.toFixed(6));
                   }}
                 >
                   {place.name} ({place.distance}{ar ? "م" : "m"})
@@ -261,7 +257,10 @@ export default function LocationPicker({
       ) : null}
 
       <div className="circlemod-field">
-        <label>{ar ? "نطاق التحقق الجغرافي (متر) *" : "Geofence Radius (meters) *"}</label>
+        <label className="flex items-center gap-1.5">
+          <CircleDot size={15} className="text-emerald-600" />
+          {ar ? "نطاق التحقق الجغرافي (متر) *" : "Geofence Radius (meters) *"}
+        </label>
         <input
           type="number"
           min="10"

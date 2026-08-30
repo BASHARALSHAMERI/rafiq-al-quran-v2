@@ -549,14 +549,22 @@ export const orgService = {
     return centers.map((center) => toCenterResponse(center));
   },
 
-  async listCircles(scope: ScopeContext, query: { centerId?: number; circleId?: number }) {
+  async listCircles(scope: ScopeContext, query: { centerId?: number; circleId?: number; approvalStatus?: string }) {
     const centerIds = orgDomain.resolveCenterScope(scope, query.centerId);
     const circleIds = orgDomain.resolveCircleScope(scope, query.circleId, query.centerId);
+
+    let approvalStatuses = undefined;
+    if (scope.role === Role.TEACHER || scope.role === Role.STUDENT) {
+      approvalStatuses = ['APPROVED'];
+    } else if (query.approvalStatus) {
+      approvalStatuses = [query.approvalStatus];
+    }
 
     const circles = await orgRepository.listCircles({
       organizationId: scope.organizationId,
       centerIds,
-      circleIds
+      circleIds,
+      approvalStatuses: approvalStatuses as any
     });
     return circles.map((circle) => toCircleResponse(circle));
   },
@@ -839,7 +847,9 @@ export const orgService = {
         latitude: input.latitude ?? null,
         longitude: input.longitude ?? null,
         allowedRadiusMeters: input.allowedRadiusMeters ?? null,
-        weeklySchedule
+        weeklySchedule,
+        approvalStatus: (scope.role === Role.SUPER_ADMIN || scope.role === Role.SUPERVISOR) ? 'APPROVED' : 'PENDING',
+        approvedById: (scope.role === Role.SUPER_ADMIN || scope.role === Role.SUPERVISOR) ? scope.userId : null
       });
 
       await auditLogger.log({
@@ -1023,5 +1033,43 @@ export const orgService = {
     await staffScheduleService.syncCircleScheduleState(circle.id, circle.isActive);
 
     return toCircleResponse(circle);
+  },
+
+  async updateCircleApprovalStatus(scope: ScopeContext, circleId: number, status: 'APPROVED' | 'REJECTED') {
+    orgDomain.assertCanApproveCircles(scope);
+    
+    const circle = await orgRepository.findCircleById({
+      circleId,
+      organizationId: scope.organizationId,
+      includeInactive: true
+    });
+
+    if (!circle) {
+      throw new AppError("الحلقة غير موجودة", 404);
+    }
+    
+    // Make sure center is in scope for the supervisor
+    orgDomain.ensureCenterManageable(scope, circle.centerId);
+
+    const updatedCircle = await orgRepository.updateCircleApprovalStatus(circleId, status, scope.userId);
+    
+    await auditLogger.log({
+      organizationId: scope.organizationId,
+      centerId: circle.centerId,
+      circleId: circle.id,
+      actorUserId: scope.userId,
+      actorRole: scope.role,
+      action: AuditAction.UPDATE,
+      entityType: AuditEntityType.CIRCLE,
+      entityId: circle.id,
+      summary: `${status === 'APPROVED' ? 'اعتماد' : 'رفض'} حلقة: ${circle.name}`,
+      metadata: {
+        circleId: circle.id,
+        before: { approvalStatus: circle.approvalStatus },
+        after: { approvalStatus: status }
+      }
+    });
+
+    return toCircleResponse(updatedCircle);
   }
 };

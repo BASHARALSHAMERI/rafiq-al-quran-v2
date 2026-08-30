@@ -16,6 +16,12 @@ export const orgDomain = {
     }
   },
 
+  assertCanApproveCircles(scope: ScopeContext) {
+    if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.SUPERVISOR) {
+      throw new AppError("Forbidden", 403);
+    }
+  },
+
   ensureCenterManageable(scope: ScopeContext, centerId: number) {
     if (scope.role !== Role.SUPER_ADMIN && scope.role !== Role.CENTER_ADMIN) {
       throw new AppError("Forbidden", 403);

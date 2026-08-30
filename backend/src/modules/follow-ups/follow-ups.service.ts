@@ -699,6 +699,18 @@ export const followUpsService = {
       return serializeRecord(existing);
     }
 
+    const resolvedFinalizeDate = toDateOnly(existing.recordDate);
+    const attendance = await prisma.attendanceRecord.findFirst({
+      where: {
+        studentId: existing.studentId,
+        circleId: existing.circleId,
+        attendanceDate: resolvedFinalizeDate
+      }
+    });
+    if (!attendance || (attendance.status !== "PRESENT" && attendance.status !== "LATE")) {
+      throw new AppError("لا يمكن تصفية متابعة لطالب غائب أو لم يُسجل حضوره بعد", 400);
+    }
+
     const finalizedResponse = await prisma.$transaction(async (tx) => {
       const finalized = await followUpsRepository.finalizeRecord(followUpId, existing.lockVersion, tx);
       if (!finalized) {
@@ -721,5 +733,22 @@ export const followUpsService = {
     });
 
     return serializeRecord(finalizedResponse);
+  },
+
+  async removeFollowUp(scope: ScopeContext, followUpId: number) {
+    followUpDomain.assertCanWrite(scope);
+
+    const existing = await followUpsRepository.findRecordById(followUpId, scope.organizationId);
+
+    if (!existing) {
+      throw new AppError("سجل المتابعة غير موجود", 404);
+    }
+
+    await ensureCircleAccessible(scope, existing.circleId);
+    followUpDomain.assertCanUpdateRecord(scope, existing.teacherId);
+
+    await followUpsRepository.removeRecord(followUpId);
+
+    return { id: followUpId, deleted: true };
   }
 };

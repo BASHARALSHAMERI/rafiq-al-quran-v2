@@ -16,7 +16,7 @@ const dashboardRouter = Router();
 dashboardRouter.use(
   authGuard,
   attachScope,
-  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER])
+  requireRoles([Role.SUPER_ADMIN, Role.CENTER_ADMIN, Role.SUPERVISOR, Role.TEACHER, Role.ACCOUNTANT, Role.FINANCE_MANAGER, Role.TREASURER, Role.AUDITOR])
 );
 
 dashboardRouter.get("/metrics", validateQuery(dashboardMetricsQuerySchema), dashboardController.metrics);

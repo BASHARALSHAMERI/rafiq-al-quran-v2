@@ -14,11 +14,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-rtl-text": "^0.4.0",
     "@tanstack/react-query": "^5.90.21",
     "axios": "^1.13.5",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.564.0",
+    "maplibre-gl": "^5.24.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^24.10.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.7",

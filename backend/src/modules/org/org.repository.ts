@@ -5,7 +5,8 @@ import {
   type CircleType,
   type Gender,
   type PrayerName,
-  type Weekday
+  type Weekday,
+  type CircleApprovalStatus
 } from "@prisma/client";
 import { prisma } from "../../shared/db/prisma";
 import { activeCenterWhere, activeCircleWhere, activeUserWhere } from "../../shared/policies/active-read.policy";
@@ -19,6 +20,7 @@ type CircleFilter = {
   organizationId: number;
   centerIds?: number[];
   circleIds?: number[];
+  approvalStatuses?: CircleApprovalStatus[];
 };
 
 type CenterByIdFilter = {
@@ -103,6 +105,8 @@ type CreateCircleInput = {
   allowedRadiusMeters?: number | null;
   weeklySchedule?: CircleScheduleSlotInput[];
   isActive?: boolean;
+  approvalStatus?: CircleApprovalStatus;
+  approvedById?: number | null;
 };
 
 type UpdateCircleInput = {
@@ -232,6 +236,9 @@ const circleSelect = {
   latitude: true,
   longitude: true,
   allowedRadiusMeters: true,
+  approvalStatus: true,
+  approvedById: true,
+  approvedAt: true,
   createdAt: true,
   updatedAt: true,
   center: {
@@ -282,6 +289,7 @@ const circleListSelect = {
   latitude: true,
   longitude: true,
   allowedRadiusMeters: true,
+  approvalStatus: true,
   createdAt: true,
   updatedAt: true,
   center: {
@@ -557,6 +565,13 @@ export const orgRepository = {
           ? {
               id: {
                 in: filter.circleIds
+              }
+            }
+          : {}),
+        ...(filter.approvalStatuses?.length
+          ? {
+              approvalStatus: {
+                in: filter.approvalStatuses
               }
             }
           : {})
@@ -850,7 +865,10 @@ export const orgRepository = {
           latitude: input.latitude ?? null,
           longitude: input.longitude ?? null,
           allowedRadiusMeters: input.allowedRadiusMeters ?? null,
-          isActive: input.isActive ?? true
+          isActive: input.isActive ?? true,
+          approvalStatus: input.approvalStatus,
+          approvedById: input.approvedById,
+          approvedAt: input.approvedById ? new Date() : null
         },
         select: {
           id: true
@@ -1017,6 +1035,18 @@ export const orgRepository = {
         ...(input.associationGeoRadiusMeters !== undefined ? { associationGeoRadiusMeters: input.associationGeoRadiusMeters ?? null } : {})
       },
       select: organizationBrandingSelect
+    });
+  },
+
+  async updateCircleApprovalStatus(circleId: number, status: 'PENDING' | 'APPROVED' | 'REJECTED', approvedById: number) {
+    return prisma.circle.update({
+      where: { id: circleId },
+      data: {
+        approvalStatus: status,
+        approvedById,
+        approvedAt: new Date()
+      },
+      select: circleSelect
     });
   }
 };

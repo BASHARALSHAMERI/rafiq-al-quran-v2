@@ -82,6 +82,7 @@ class _TeacherNominationSheetState
   @override
   Widget build(BuildContext context) {
     final examsAsync = ref.watch(availableExamsProvider(widget.circleId));
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
       padding: EdgeInsets.only(
@@ -90,9 +91,9 @@ class _TeacherNominationSheetState
         left: AppSpacing.lg,
         right: AppSpacing.lg,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -103,30 +104,31 @@ class _TeacherNominationSheetState
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.borderLight,
+                color: context.borderColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'طلب ترشيح طالب لاختبار',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w900,
-              color: AppColors.textPrimaryLight,
+              color: context.textPrimaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'نوع الاختبار',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(fontWeight: FontWeight.w800, color: context.textPrimaryColor),
           ),
           const SizedBox(height: 8),
           examsAsync.when(
             data: (exams) => DropdownButtonFormField<int>(
               initialValue: _selectedExamId,
+              dropdownColor: context.cardColor,
               decoration: const InputDecoration(
                 hintText: 'اختر نوع الاختبار...',
                 contentPadding: EdgeInsets.symmetric(horizontal: 16),
@@ -134,13 +136,13 @@ class _TeacherNominationSheetState
               items: exams
                   .map((e) => DropdownMenuItem(
                         value: e.id,
-                        child: Text(e.title),
+                        child: Text(e.title, style: TextStyle(color: context.textPrimaryColor)),
                       ))
                   .toList(),
               onChanged: (val) => setState(() => _selectedExamId = val),
             ),
-            loading: () => const LinearProgressIndicator(),
-            error: (err, _) => Text('خطأ في تحميل الاختبارات: $err'),
+            loading: () => LinearProgressIndicator(color: primary),
+            error: (err, _) => Text('خطأ في تحميل الاختبارات: $err', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
           const SizedBox(height: 16),
           GestureDetector(
@@ -160,7 +162,7 @@ class _TeacherNominationSheetState
                 labelText: 'التاريخ المقترح',
                 controller: _dateController,
                 readOnly: true,
-                suffixIcon: const Icon(Icons.calendar_today_rounded),
+                suffixIcon: Icon(Icons.calendar_today_rounded, color: primary),
               ),
             ),
           ),

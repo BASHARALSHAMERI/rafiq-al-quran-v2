@@ -10,7 +10,6 @@ import '../../../../core/constants/app_radius.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/utils/app_snack_bar.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/standard_app_bar.dart';
@@ -91,7 +90,7 @@ class _GroupAchievementScreenState
     }
 
     final circleIdStr = ref.read(contextControllerProvider).selectedCircleId;
-    final circleId = int.tryParse(circleIdStr ?? '');
+    final circleId = circleIdStr;
     if (circleId == null) {
       _showError('لم يتم تحديد حلقة نشطة');
       return;
@@ -147,9 +146,12 @@ class _GroupAchievementScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = context.isDark;
+    final primary = theme.colorScheme.primary;
+    final custom = context.customColors;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(
         title: 'الإنجاز الجماعي',
       ),
@@ -161,10 +163,11 @@ class _GroupAchievementScreenState
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.05),
+                color: primary.withValues(alpha: isDark ? 0.16 : 0.08),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(
-                    color: AppColors.primaryLight.withValues(alpha: 0.1)),
+                  color: primary.withValues(alpha: isDark ? 0.25 : 0.15),
+                ),
               ),
               child: Row(
                 children: [
@@ -172,24 +175,32 @@ class _GroupAchievementScreenState
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.1),
+                      color: primary.withValues(alpha: isDark ? 0.22 : 0.12),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: const Icon(Icons.people_alt_rounded,
-                        size: 18, color: AppColors.primaryLight),
+                    child: Icon(
+                      Icons.people_alt_rounded,
+                      size: 18,
+                      color: primary,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('الطلاب الحاضرون اليوم',
-                            style: theme.textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(
+                          'الطلاب الحاضرون اليوم',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: context.textPrimaryColor,
+                          ),
+                        ),
                         Text(
                           '${presentStudents.length} طالب سيتم ربط النشاط بهم تلقائياً',
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: AppColors.textSecondaryLight),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: context.textSecondaryColor,
+                          ),
                         ),
                       ],
                     ),
@@ -205,10 +216,13 @@ class _GroupAchievementScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('نوع النشاط',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    'نوع النشاط',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   GridView.builder(
                     shrinkWrap: true,
@@ -232,13 +246,13 @@ class _GroupAchievementScreenState
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.primaryLight.withValues(alpha: 0.1)
-                                : theme.scaffoldBackgroundColor,
+                                ? primary.withValues(alpha: isDark ? 0.22 : 0.10)
+                                : (isDark ? theme.colorScheme.surfaceContainerHighest : Colors.transparent),
                             borderRadius: BorderRadius.circular(AppRadius.lg),
                             border: Border.all(
                               color: isSelected
-                                  ? AppColors.primaryLight
-                                  : AppColors.borderLight,
+                                  ? primary
+                                  : context.borderColor,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -254,8 +268,8 @@ class _GroupAchievementScreenState
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: isSelected
-                                      ? AppColors.primaryLight
-                                      : AppColors.textPrimaryLight,
+                                      ? primary
+                                      : context.textPrimaryColor,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -279,35 +293,24 @@ class _GroupAchievementScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('عنوان النشاط',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    'عنوان النشاط',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   TextField(
                     controller: _titleController,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: context.textPrimaryColor,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'مثال: شرح أحكام الميم الساكنة',
-                      filled: true,
-                      fillColor: theme.scaffoldBackgroundColor,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide: BorderSide(
-                            color:
-                                AppColors.primaryLight.withValues(alpha: 0.5),
-                            width: 2),
+                        borderSide: BorderSide(color: context.borderColor),
                       ),
                     ),
                   ),
@@ -325,35 +328,25 @@ class _GroupAchievementScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('وصف النشاط (اختياري)',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    'وصف النشاط (اختياري)',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: context.textSecondaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   TextField(
                     controller: _descriptionController,
                     maxLines: 4,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: context.textPrimaryColor,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'تفاصيل إضافية عن النشاط...',
-                      filled: true,
-                      fillColor: theme.scaffoldBackgroundColor,
-                      contentPadding: const EdgeInsets.all(14),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide: BorderSide(
-                            color:
-                                AppColors.primaryLight.withValues(alpha: 0.5),
-                            width: 2),
+                        borderSide: BorderSide(color: context.borderColor),
                       ),
                     ),
                   ),
@@ -373,22 +366,28 @@ class _GroupAchievementScreenState
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.successLight.withValues(alpha: 0.1),
+                        color: custom.success.withValues(alpha: isDark ? 0.16 : 0.08),
                         border: Border.all(
-                            color:
-                                AppColors.successLight.withValues(alpha: 0.2)),
+                          color: custom.success.withValues(alpha: isDark ? 0.25 : 0.15),
+                        ),
                         borderRadius: BorderRadius.circular(AppRadius.xl),
                       ),
                       child: Column(
                         children: [
-                          const Text('✓ تم تسجيل النشاط بنجاح',
-                              style: TextStyle(
-                                  color: AppColors.successLight,
-                                  fontWeight: FontWeight.w700)),
+                          Text(
+                            '✓ تم تسجيل النشاط بنجاح',
+                            style: TextStyle(
+                              color: custom.success,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text('تم ربطه بـ ${presentStudents.length} طالب حاضر',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppColors.textSecondaryLight)),
+                          Text(
+                            'تم ربطه بـ ${presentStudents.length} طالب حاضر',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -398,16 +397,18 @@ class _GroupAchievementScreenState
                       child: TextButton(
                         onPressed: _handleReset,
                         style: TextButton.styleFrom(
-                          backgroundColor: theme.scaffoldBackgroundColor,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.xl),
                           ),
                         ),
-                        child: const Text('تسجيل نشاط جديد',
-                            style: TextStyle(
-                                color: AppColors.textPrimaryLight,
-                                fontWeight: FontWeight.w700)),
+                        child: Text(
+                          'تسجيل نشاط جديد',
+                          style: TextStyle(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -424,12 +425,11 @@ class _GroupAchievementScreenState
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    gradient: _isSaving ? null : AppGradients.deepPrimary,
+                    gradient: _isSaving ? null : AppGradients.primary,
                     color: _isSaving
-                        ? AppColors.textSecondaryLight.withValues(alpha: 0.3)
+                        ? context.textSecondaryColor.withValues(alpha: 0.3)
                         : null,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
-                    boxShadow: _isSaving ? null : AppShadows.primaryGlow,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -466,7 +466,7 @@ class _GroupAchievementScreenState
                   .slideY(begin: 0.1, end: 0, duration: 300.ms);
             }),
 
-            const SizedBox(height: 100), // BottomNav padding
+            const SizedBox(height: 100),
           ],
         ),
       ),

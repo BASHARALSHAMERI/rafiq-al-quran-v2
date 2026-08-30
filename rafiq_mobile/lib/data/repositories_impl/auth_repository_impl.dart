@@ -98,11 +98,13 @@ class AuthRepositoryImpl implements AuthRepository {
 
   Future<void> _persistUser(AuthUserDto user) {
     return _localDataSource.saveUserProfile(
-      userId: user.id.toString(),
-      name: _displayNameFor(user),
+      userId: user.id,
+      organizationId: user.organizationId,
+      fullName: user.fullName,
+      email: user.email,
       role: user.role,
-      phone: user.phone,
-      gender: user.gender,
+      isActive: user.isActive,
+      accountStatus: user.accountStatus,
     );
   }
 
@@ -135,20 +137,24 @@ class AuthRepositoryImpl implements AuthRepository {
 
     return User(
       id: cachedUser.id,
-      name: cachedUser.name,
+      organizationId: cachedUser.organizationId,
+      fullName: cachedUser.fullName,
+      email: cachedUser.email,
       role: cachedUser.role,
-      phone: cachedUser.phone,
-      gender: cachedUser.gender,
+      isActive: cachedUser.isActive,
+      accountStatus: cachedUser.accountStatus,
     );
   }
 
   User _mapUser(AuthUserDto dto) {
     return User(
-      id: dto.id.toString(),
-      name: _displayNameFor(dto),
+      id: dto.id,
+      organizationId: dto.organizationId,
+      fullName: _displayNameFor(dto),
+      email: dto.email,
       role: dto.role,
-      phone: dto.phone,
-      gender: dto.gender,
+      isActive: dto.isActive,
+      accountStatus: dto.accountStatus,
     );
   }
 }

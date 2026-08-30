@@ -32,4 +32,6 @@ groupActivitiesRouter.post(
 
 groupActivitiesRouter.get("/group-activities/:id", groupActivitiesController.getById);
 
+groupActivitiesRouter.delete("/group-activities/:id", groupActivitiesController.remove);
+
 export default groupActivitiesRouter;

@@ -15,6 +15,7 @@ import type {
   UpdateCenterPayload,
   UpdateCirclePayload,
   UpdateOrganizationBrandingPayload,
+  UpdateCircleApprovalStatusPayload,
   UpdateEntityStatusPayload
 } from "./types";
 
@@ -207,6 +208,7 @@ const normalizeCircle = (value: Circle): Circle => {
     circleType: value.circleType,
     teacherId,
     mosqueName: typeof value.mosqueName === "string" ? value.mosqueName : null,
+    approvalStatus: typeof value.approvalStatus === "string" ? value.approvalStatus : undefined,
     isActive: typeof value.isActive === "boolean" ? value.isActive : undefined,
     createdAt: typeof value.createdAt === "string" ? value.createdAt : null,
     updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
@@ -244,7 +246,9 @@ export const orgApi = {
   async getCircles(params?: OrgListParams): Promise<NormalizedListResult<Circle>> {
     const response = await apiClient.get<ApiResponse<ListPayload<Circle>>>("/org/circles", {
       params: {
-        centerId: params?.centerId
+        centerId: params?.centerId,
+        circleId: params?.circleId,
+        approvalStatus: params?.approvalStatus
       }
     });
 
@@ -287,6 +291,14 @@ export const orgApi = {
   async updateCircleStatus(circleId: number, payload: UpdateEntityStatusPayload): Promise<Circle> {
     const response = await apiClient.patch<ApiResponse<Circle>>(
       `/org/circles/${circleId}/status`,
+      payload
+    );
+    return normalizeCircle(response.data.data);
+  },
+
+  async updateCircleApprovalStatus(circleId: number, payload: UpdateCircleApprovalStatusPayload): Promise<Circle> {
+    const response = await apiClient.patch<ApiResponse<Circle>>(
+      `/org/circles/${circleId}/approval`,
       payload
     );
     return normalizeCircle(response.data.data);

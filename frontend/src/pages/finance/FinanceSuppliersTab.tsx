@@ -147,7 +147,7 @@ export function FinanceSuppliersTab({
           {
             id: "actions",
             header: ar ? "الإجراءات" : "Actions",
-            stickyRight: true,
+            isActions: true,
             render: (row: any) => (
               <div className="flex gap-2">
                 {canManage && (
@@ -243,10 +243,10 @@ export function FinanceSuppliersTab({
         onConfirm={handleDelete}
         title={ar ? "حذف المورد" : "Delete Supplier"}
         message={ar ? "هل أنت متأكد من رغبتك في حذف هذا المورد؟ لا يمكن التراجع عن هذه العملية." : "Are you sure you want to delete this supplier? This action cannot be undone."}
-        confirmText={ar ? "حذف" : "Delete"}
-        cancelText={ar ? "إلغاء" : "Cancel"}
-        isDestructive={true}
-        isLoading={deleteM.isPending}
+        confirmLabel={ar ? "حذف" : "Delete"}
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
+        confirmVariant="danger"
+        isConfirming={deleteM.isPending}
       />
     </div>
   );

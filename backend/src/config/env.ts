@@ -59,6 +59,8 @@ const envSchema = z.object({
   FINANCE_V2_ENFORCE_TRANSFER_ATTACHMENT: optionalBool(),
   FINANCE_V2_DUAL_WRITE_LEGACY_PAYMENT: optionalBool(),
   COMMIT_SHA: z.string().trim().optional(),
+  GEO_NOMINATIM_BASE_URL: z.string().url().default("https://nominatim.openstreetmap.org"),
+  GEO_OVERPASS_BASE_URL: z.string().url().default("https://overpass-api.de/api"),
 
   // SMTP Configuration
   SMTP_HOST: z.string().trim().optional().default("smtp.gmail.com"),

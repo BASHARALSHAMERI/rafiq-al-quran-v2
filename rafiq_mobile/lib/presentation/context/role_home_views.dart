@@ -90,7 +90,7 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
     );
 
     return RoleHomeLayout(
-      greeting: 'أهلاً، ${auth.user?.name ?? 'المشرف'}',
+      greeting: 'أهلاً، ${auth.user?.fullName ?? 'المشرف'}',
       subtitle: subtitle,
       dateLabel: _arabicDateLabel(),
       metrics: [
@@ -120,7 +120,7 @@ class _SupervisorHomeViewState extends ConsumerState<SupervisorHomeView> {
           title: 'زيارة الحلقة',
           icon: Icons.assignment_turned_in_rounded,
           onTap: () {
-            final circleId = int.tryParse(contextState.selectedCircleId ?? '');
+            final circleId = contextState.selectedCircleId;
             if (circleId != null && circleId > 0) {
               context.push(RouteNames.halqaVisit(circleId));
               return;
@@ -274,7 +274,7 @@ class _ParentHomeViewState extends ConsumerState<ParentHomeView> {
     final updates = _buildParentUpdates(context, parentState.childrenProfiles);
 
     return RoleHomeLayout(
-      greeting: 'أهلاً، ${auth.user?.name ?? 'ولي الأمر'}',
+      greeting: 'أهلاً، ${auth.user?.fullName ?? 'ولي الأمر'}',
       subtitle: 'متابعة الأبناء من منصة رفيق',
       dateLabel: _arabicDateLabel(),
       metrics: [
@@ -400,7 +400,7 @@ class _StudentHomeViewState extends ConsumerState<StudentHomeView> {
     final updates = _buildStudentUpdates(context, data);
 
     return RoleHomeLayout(
-      greeting: 'أهلاً، ${auth.user?.name ?? 'الطالب'}',
+      greeting: 'أهلاً، ${auth.user?.fullName ?? 'الطالب'}',
       subtitle: subtitle,
       dateLabel: _arabicDateLabel(),
       metrics: [

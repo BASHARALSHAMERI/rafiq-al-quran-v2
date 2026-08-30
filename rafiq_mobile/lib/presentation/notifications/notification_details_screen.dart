@@ -23,6 +23,7 @@ class NotificationDetailsScreen extends ConsumerWidget {
     final notification = initialNotification ?? _findNotification(ref);
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'تفاصيل الإشعار'),
       body: notification == null
           ? const AppEmptyState(
@@ -37,9 +38,9 @@ class NotificationDetailsScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.cardColor,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.borderLight),
+                    border: Border.all(color: context.borderColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +48,8 @@ class NotificationDetailsScreen extends ConsumerWidget {
                       Text(
                         notification.title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w900,
+                              color: context.textPrimaryColor,
                             ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -55,6 +57,7 @@ class NotificationDetailsScreen extends ConsumerWidget {
                         notification.message,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               height: 1.7,
+                              color: context.textSecondaryColor,
                             ),
                       ),
                     ],

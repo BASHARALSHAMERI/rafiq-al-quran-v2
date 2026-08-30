@@ -10,6 +10,7 @@ export type CircleScheduleDay =
   | "THURSDAY";
 export type CircleScheduleMode = "CLOCK" | "PRAYER";
 export type PrayerName = "FAJR" | "DHUHR" | "ASR" | "MAGHRIB" | "ISHA";
+export type CircleApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type CircleScheduleClockRow = {
   day: CircleScheduleDay;
@@ -102,6 +103,7 @@ export type Circle = {
   latitude?: number | null;
   longitude?: number | null;
   allowedRadiusMeters?: number | null;
+  approvalStatus?: CircleApprovalStatus;
   isActive?: boolean;
   createdAt: string | null;
   updatedAt?: string | null;
@@ -130,6 +132,8 @@ export type Circle = {
 
 export type OrgListParams = {
   centerId?: number;
+  circleId?: number;
+  approvalStatus?: CircleApprovalStatus;
   page?: number;
   pageSize?: number;
 };
@@ -210,4 +214,8 @@ export type UpdateCirclePayload = {
 
 export type UpdateEntityStatusPayload = {
   isActive: boolean;
+};
+
+export type UpdateCircleApprovalStatusPayload = {
+  status: CircleApprovalStatus;
 };

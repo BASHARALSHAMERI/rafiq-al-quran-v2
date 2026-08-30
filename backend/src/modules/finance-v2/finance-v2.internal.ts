@@ -569,7 +569,6 @@ export const tuitionPlanSelect = {
   isActive: true,
   planKind: true,
   createdAt: true,
-  updatedAt: true,
   center: {
     select: { id: true, name: true, code: true }
   }

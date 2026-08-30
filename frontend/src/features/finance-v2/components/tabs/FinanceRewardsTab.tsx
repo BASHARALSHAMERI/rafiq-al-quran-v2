@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Gift, Printer, Calendar, Eye, CreditCard, Receipt, RefreshCcw, User, X, Search, Check, ChevronLeft, ChevronRight, Plus, Trash2, Send, CheckCircle, XCircle } from "lucide-react";
+import { Gift, Printer, Calendar, Eye, CreditCard, Receipt, User, Search, Check, ChevronLeft, ChevronRight, Plus, Trash2, Send, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "../../../../components/ui/Button";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";

@@ -51,7 +51,7 @@ class TeacherRemoteRecitationScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8F5),
+        backgroundColor: context.surfaceColor,
         appBar: StandardAppBar(
           title: 'التسميع عن بعد',
           bottom: PreferredSize(
@@ -65,23 +65,24 @@ class TeacherRemoteRecitationScreen extends ConsumerWidget {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardColor,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.borderLight),
+                  border: Border.all(color: context.borderColor),
                 ),
                 child: TabBar(
                   indicatorSize: TabBarIndicatorSize.tab,
                   dividerColor: Colors.transparent,
-                  labelColor: AppColors.textPrimaryLight,
-                  unselectedLabelColor: AppColors.textSecondaryLight,
-                  indicator: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
+                  labelColor: context.textPrimaryColor,
+                  unselectedLabelColor: context.textSecondaryColor,
+                  indicator: BoxDecoration(
+                    color: context.cardColor,
+                    borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    border: Border.all(color: context.borderColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x12000000),
+                        color: Colors.black.withValues(alpha: context.isDark ? 0.20 : 0.05),
                         blurRadius: 10,
-                        offset: Offset(0, 4),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -139,6 +140,8 @@ class _TeacherSlotsTab extends ConsumerWidget {
     final settings = settingsAsync.valueOrNull;
     final slotsPage = slotsAsync.valueOrNull;
     final slots = slotsPage?.data ?? const <RemoteRecitationSlotDto>[];
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     final isInitialLoading = (settingsAsync.isLoading && settings == null) ||
         (slotsAsync.isLoading && slotsPage == null);
@@ -159,6 +162,7 @@ class _TeacherSlotsTab extends ConsumerWidget {
     }
 
     return RefreshIndicator(
+      color: primary,
       onRefresh: () async {
         ref.read(remoteRecitationRefreshProvider.notifier).state++;
       },
@@ -176,11 +180,12 @@ class _TeacherSlotsTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'إعدادات الجلسة',
                     style: TextStyle(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       fontSize: 18,
+                      color: context.textPrimaryColor,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -212,12 +217,12 @@ class _TeacherSlotsTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.md),
           ],
-          const Text(
+          Text(
             'المواعيد المتاحة للتسميع',
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimaryLight,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -242,26 +247,27 @@ class _TeacherSlotsTab extends ConsumerWidget {
                               children: [
                                 Text(
                                   _formatDayDate(slot.startsAt),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 18,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 17,
+                                    color: context.textPrimaryColor,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   _formatTimeRange(slot.startsAt, slot.endsAt),
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondaryLight,
+                                  style: TextStyle(
+                                    color: context.textSecondaryColor,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const _RoundIcon(
+                          _RoundIcon(
                             icon: Icons.calendar_today_outlined,
-                            color: AppColors.primaryLight,
-                            background: Color(0xFFEFF7F2),
+                            color: primary,
+                            background: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
                           ),
                         ],
                       ),
@@ -274,11 +280,11 @@ class _TeacherSlotsTab extends ConsumerWidget {
                               slot.providerHost!.isNotEmpty)
                             _StatusChip(
                               label: slot.providerHost!,
-                              color: AppColors.primaryLight,
+                              color: primary,
                             ),
-                          const _StatusChip(
+                          _StatusChip(
                             label: 'رابط خارجي',
-                            color: AppColors.infoLight,
+                            color: custom.info,
                           ),
                         ],
                       ),
@@ -291,8 +297,8 @@ class _TeacherSlotsTab extends ConsumerWidget {
                             slot.joinUrl!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.infoLight,
+                            style: TextStyle(
+                              color: custom.info,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -303,8 +309,8 @@ class _TeacherSlotsTab extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           slot.note!,
-                          style: const TextStyle(
-                            color: AppColors.textSecondaryLight,
+                          style: TextStyle(
+                            color: context.textSecondaryColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -315,7 +321,8 @@ class _TeacherSlotsTab extends ConsumerWidget {
                         icon: const Icon(Icons.delete_outline_rounded),
                         label: const Text('حذف'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.errorLight,
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
                     ],
@@ -336,7 +343,7 @@ class _TeacherSlotsTab extends ConsumerWidget {
             icon: const Icon(Icons.add_rounded),
             label: const Text('إضافة موعد جديد'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primaryLight,
+              backgroundColor: primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -365,6 +372,7 @@ class _TeacherRequestsTab extends ConsumerWidget {
     final approvedPage = approvedAsync.valueOrNull;
     final pending = pendingPage?.data ?? const <RemoteRecitationBookingDto>[];
     final approved = approvedPage?.data ?? const <RemoteRecitationBookingDto>[];
+    final primary = Theme.of(context).colorScheme.primary;
 
     final isInitialLoading = (pendingAsync.isLoading && pendingPage == null) ||
         (approvedAsync.isLoading && approvedPage == null);
@@ -385,6 +393,7 @@ class _TeacherRequestsTab extends ConsumerWidget {
     }
 
     return RefreshIndicator(
+      color: primary,
       onRefresh: () async {
         ref.read(remoteRecitationRefreshProvider.notifier).state++;
       },
@@ -397,9 +406,13 @@ class _TeacherRequestsTab extends ConsumerWidget {
           120,
         ),
         children: [
-          const Text(
+          Text(
             'طلبات بانتظار الموافقة',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textPrimaryColor,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (pending.isEmpty)
@@ -415,9 +428,13 @@ class _TeacherRequestsTab extends ConsumerWidget {
               ),
             ),
           const SizedBox(height: AppSpacing.lg),
-          const Text(
+          Text(
             'جلسات قادمة',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textPrimaryColor,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (approved.isEmpty)
@@ -447,6 +464,7 @@ class _TeacherHistoryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final historyPage = historyAsync.valueOrNull;
     final bookings = historyPage?.data ?? const <RemoteRecitationBookingDto>[];
+    final primary = Theme.of(context).colorScheme.primary;
 
     if (historyAsync.isLoading && historyPage == null) {
       return const PageStateView.loading();
@@ -463,6 +481,7 @@ class _TeacherHistoryTab extends ConsumerWidget {
     }
 
     return RefreshIndicator(
+      color: primary,
       onRefresh: () async {
         ref.read(remoteRecitationRefreshProvider.notifier).state++;
       },
@@ -475,9 +494,13 @@ class _TeacherHistoryTab extends ConsumerWidget {
           120,
         ),
         children: [
-          const Text(
+          Text(
             'الجلسات السابقة',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: context.textPrimaryColor,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (bookings.isEmpty)
@@ -505,6 +528,9 @@ class _PendingBookingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return EnterpriseCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,16 +543,17 @@ class _PendingBookingCard extends ConsumerWidget {
                   children: [
                     Text(
                       booking.student.fullName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _formatSessionLine(booking.slot.startsAt),
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -537,9 +564,9 @@ class _PendingBookingCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          const _StatusChip(
+          _StatusChip(
             label: 'بانتظار الموافقة',
-            color: AppColors.warningLight,
+            color: custom.warning,
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -555,7 +582,8 @@ class _PendingBookingCard extends ConsumerWidget {
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('رفض'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.errorLight,
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -571,8 +599,9 @@ class _PendingBookingCard extends ConsumerWidget {
                   icon: const Icon(Icons.check_rounded),
                   label: const Text('قبول'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
+                    backgroundColor: primary,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -591,6 +620,9 @@ class _UpcomingBookingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return EnterpriseCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,33 +635,34 @@ class _UpcomingBookingCard extends ConsumerWidget {
                   children: [
                     Text(
                       booking.student.fullName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _formatSessionLine(booking.slot.startsAt),
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              const _RoundIcon(
+              _RoundIcon(
                 icon: Icons.videocam_outlined,
                 color: Colors.white,
-                background: AppColors.primaryLight,
+                background: primary,
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          const _StatusChip(
+          _StatusChip(
             label: 'تمت الموافقة',
-            color: AppColors.successLight,
+            color: custom.success,
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -641,8 +674,9 @@ class _UpcomingBookingCard extends ConsumerWidget {
                   icon: const Icon(Icons.menu_book_outlined),
                   label: const Text('تقييم'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryLight,
+                    backgroundColor: primary,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -654,7 +688,8 @@ class _UpcomingBookingCard extends ConsumerWidget {
                   icon: const Icon(Icons.link_rounded),
                   label: const Text('انضمام للجلسة'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.infoLight,
+                    foregroundColor: custom.info,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -674,6 +709,7 @@ class _CompletedBookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final followUp = booking.followUpRecord;
+    final custom = context.customColors;
 
     return EnterpriseCard(
       child: Column(
@@ -687,9 +723,10 @@ class _CompletedBookingCard extends StatelessWidget {
                   children: [
                     Text(
                       booking.student.fullName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -697,17 +734,17 @@ class _CompletedBookingCard extends StatelessWidget {
                       followUp?.recordDate ??
                           DateFormat('yyyy-MM-dd', 'ar')
                               .format(booking.slot.startsAt),
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
               ),
-              const _StatusChip(
+              _StatusChip(
                 label: 'مكتملة',
-                color: AppColors.successLight,
+                color: custom.success,
               ),
             ],
           ),
@@ -716,15 +753,16 @@ class _CompletedBookingCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAF8),
+              color: context.surfaceColor,
               borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: context.borderColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _followUpSummary(followUp),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w800, color: context.textPrimaryColor),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 _StarsBar(rating: followUp?.rating),
@@ -733,8 +771,8 @@ class _CompletedBookingCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     followUp.notes!,
-                    style: const TextStyle(
-                      color: AppColors.textSecondaryLight,
+                    style: TextStyle(
+                      color: context.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -764,16 +802,17 @@ class _SectionEmptyCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
               fontSize: 16,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             message,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
+            style: TextStyle(
+              color: context.textSecondaryColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -805,7 +844,7 @@ class _TabLabel extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 20),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFFD24B43),
+              color: Theme.of(context).colorScheme.error,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -838,7 +877,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: context.isDark ? 0.20 : 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -846,6 +885,7 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w800,
+          fontSize: 12,
         ),
       ),
     );
@@ -863,22 +903,26 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7F4),
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.primaryLight),
+          Icon(icon, size: 16, color: primary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimaryLight,
+              color: context.textPrimaryColor,
+              fontSize: 12,
             ),
           ),
         ],
@@ -894,14 +938,16 @@ class _RoundAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return CircleAvatar(
       radius: 22,
-      backgroundColor: AppColors.primaryLight,
+      backgroundColor: primary,
       child: Text(
         label,
         style: const TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
@@ -941,13 +987,15 @@ class _StarsBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stars = ((rating ?? 0) / 20).round().clamp(0, 5);
+    final custom = context.customColors;
+
     return Row(
       children: List.generate(
         5,
         (index) => Icon(
           index < stars ? Icons.star_rounded : Icons.star_border_rounded,
           size: 18,
-          color: AppColors.secondaryLight,
+          color: custom.warning,
         ),
       ),
     );
@@ -1105,12 +1153,13 @@ Future<void> _showCreateSlotSheet(
   DateTime? selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay? selectedTime = const TimeOfDay(hour: 16, minute: 0);
   bool submitting = false;
+  final primary = Theme.of(context).colorScheme.primary;
 
   try {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1134,17 +1183,18 @@ Future<void> _showCreateSlotSheet(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       'إضافة موعد جديد',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: sheetContext.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('التاريخ'),
+                      title: Text('التاريخ', style: TextStyle(color: sheetContext.textPrimaryColor, fontWeight: FontWeight.w700)),
                       subtitle: Text(
                         selectedDate == null
                             ? 'اختر تاريخ الموعد'
@@ -1152,8 +1202,9 @@ Future<void> _showCreateSlotSheet(
                                 'EEEE d MMMM y',
                                 'ar',
                               ).format(selectedDate!),
+                        style: TextStyle(color: sheetContext.textSecondaryColor),
                       ),
-                      trailing: const Icon(Icons.calendar_today_outlined),
+                      trailing: Icon(Icons.calendar_today_outlined, color: primary),
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: sheetContext,
@@ -1170,13 +1221,14 @@ Future<void> _showCreateSlotSheet(
                     ),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('الوقت'),
+                      title: Text('الوقت', style: TextStyle(color: sheetContext.textPrimaryColor, fontWeight: FontWeight.w700)),
                       subtitle: Text(
                         selectedTime == null
                             ? 'اختر وقت البداية'
                             : selectedTime!.format(sheetContext),
+                        style: TextStyle(color: sheetContext.textSecondaryColor),
                       ),
-                      trailing: const Icon(Icons.schedule_outlined),
+                      trailing: Icon(Icons.schedule_outlined, color: primary),
                       onTap: () async {
                         final picked = await showTimePicker(
                           context: sheetContext,
@@ -1193,13 +1245,15 @@ Future<void> _showCreateSlotSheet(
                         child: Text(
                           'ينتهي الموعد تلقائياً عند '
                           '${DateFormat('HH:mm', 'ar').format(end)}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondaryLight,
+                          style: TextStyle(
+                            color: sheetContext.textSecondaryColor,
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     TextField(
                       controller: joinUrlController,
+                      style: TextStyle(color: sheetContext.textPrimaryColor),
                       decoration: const InputDecoration(
                         labelText: 'رابط الجلسة الخارجي',
                         hintText: 'https://meet.google.com/...',
@@ -1209,6 +1263,7 @@ Future<void> _showCreateSlotSheet(
                     TextField(
                       controller: noteController,
                       maxLines: 2,
+                      style: TextStyle(color: sheetContext.textPrimaryColor),
                       decoration: const InputDecoration(
                         labelText: 'ملاحظة داخلية',
                         hintText: 'اختياري',
@@ -1285,14 +1340,15 @@ Future<void> _showCreateSlotSheet(
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.add_rounded),
                       label: const Text('إضافة الموعد'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
+                        backgroundColor: primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
                   ],
@@ -1325,12 +1381,13 @@ Future<void> _showCompleteBookingSheet(
   final notesController = TextEditingController();
   String selectedType = 'NEW_MEMORIZATION';
   bool submitting = false;
+  final primary = Theme.of(context).colorScheme.primary;
 
   try {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: context.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -1350,11 +1407,12 @@ Future<void> _showCompleteBookingSheet(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
+                    Text(
                       'تقييم الجلسة',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: sheetContext.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
@@ -1363,6 +1421,7 @@ Future<void> _showCompleteBookingSheet(
                       decoration: const InputDecoration(
                         labelText: 'نوع التسميع',
                       ),
+                      dropdownColor: sheetContext.cardColor,
                       items: const [
                         DropdownMenuItem(
                           value: 'NEW_MEMORIZATION',
@@ -1387,6 +1446,7 @@ Future<void> _showCompleteBookingSheet(
                     if (!isMatn) ...[
                       TextField(
                         controller: surahController,
+                        style: TextStyle(color: sheetContext.textPrimaryColor),
                         decoration: const InputDecoration(
                           labelText: 'اسم السورة أو وصف المقطع',
                         ),
@@ -1398,6 +1458,7 @@ Future<void> _showCompleteBookingSheet(
                             child: TextField(
                               controller: fromSurahController,
                               keyboardType: TextInputType.number,
+                              style: TextStyle(color: sheetContext.textPrimaryColor),
                               decoration: const InputDecoration(
                                 labelText: 'من سورة',
                               ),
@@ -1408,6 +1469,7 @@ Future<void> _showCompleteBookingSheet(
                             child: TextField(
                               controller: fromAyahController,
                               keyboardType: TextInputType.number,
+                              style: TextStyle(color: sheetContext.textPrimaryColor),
                               decoration: const InputDecoration(
                                 labelText: 'من آية',
                               ),
@@ -1422,6 +1484,7 @@ Future<void> _showCompleteBookingSheet(
                             child: TextField(
                               controller: toSurahController,
                               keyboardType: TextInputType.number,
+                              style: TextStyle(color: sheetContext.textPrimaryColor),
                               decoration: const InputDecoration(
                                 labelText: 'إلى سورة',
                               ),
@@ -1432,6 +1495,7 @@ Future<void> _showCompleteBookingSheet(
                             child: TextField(
                               controller: toAyahController,
                               keyboardType: TextInputType.number,
+                              style: TextStyle(color: sheetContext.textPrimaryColor),
                               decoration: const InputDecoration(
                                 labelText: 'إلى آية',
                               ),
@@ -1442,6 +1506,7 @@ Future<void> _showCompleteBookingSheet(
                     ] else ...[
                       TextField(
                         controller: matnNameController,
+                        style: TextStyle(color: sheetContext.textPrimaryColor),
                         decoration: const InputDecoration(
                           labelText: 'اسم المتن',
                         ),
@@ -1449,6 +1514,7 @@ Future<void> _showCompleteBookingSheet(
                       const SizedBox(height: AppSpacing.sm),
                       TextField(
                         controller: matnStatusController,
+                        style: TextStyle(color: sheetContext.textPrimaryColor),
                         decoration: const InputDecoration(
                           labelText: 'حالة المتن',
                         ),
@@ -1458,6 +1524,7 @@ Future<void> _showCompleteBookingSheet(
                     TextField(
                       controller: ratingController,
                       keyboardType: TextInputType.number,
+                      style: TextStyle(color: sheetContext.textPrimaryColor),
                       decoration: const InputDecoration(
                         labelText: 'التقييم من 100',
                       ),
@@ -1466,6 +1533,7 @@ Future<void> _showCompleteBookingSheet(
                     TextField(
                       controller: notesController,
                       maxLines: 3,
+                      style: TextStyle(color: sheetContext.textPrimaryColor),
                       decoration: const InputDecoration(
                         labelText: 'ملاحظات',
                       ),
@@ -1603,14 +1671,15 @@ Future<void> _showCompleteBookingSheet(
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.check_rounded),
                       label: const Text('حفظ التقييم'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
+                        backgroundColor: primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
                   ],

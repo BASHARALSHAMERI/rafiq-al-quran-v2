@@ -22,20 +22,6 @@ type Props = {
   onQuarterChange?: (value: number) => void;
 };
 
-const cycleLabels: Record<string, string> = {
-  "": "الكل / سنوي",
-  MONTHLY: "شهري",
-  QUARTERLY: "ربع سنوي",
-  ANNUAL: "سنوي"
-};
-
-const cycleLabelsEn: Record<string, string> = {
-  "": "All / Annual",
-  MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
-  ANNUAL: "Annual"
-};
-
 const arabicQuarters = ["الربع الأول", "الربع الثاني", "الربع الثالث", "الربع الرابع"];
 const englishQuarters = ["Q1", "Q2", "Q3", "Q4"];
 

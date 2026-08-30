@@ -17,6 +17,10 @@ class AppErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+    final isDark = context.isDark;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -27,40 +31,43 @@ class AppErrorState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.errorLight.withValues(alpha: 0.1),
+                color: errorColor.withValues(alpha: isDark ? 0.18 : 0.10),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: errorColor.withValues(alpha: isDark ? 0.28 : 0.16),
+                ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline_rounded,
-                size: 64,
-                color: AppColors.errorLight,
+                size: 56,
+                color: errorColor,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryLight,
-                  ),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: context.textPrimaryColor,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: context.textSecondaryColor,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.lg),
               FilledButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('إعادة المحاولة'),
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size(200, 48),
+                  minimumSize: const Size(180, 46),
                 ),
               ),
             ],

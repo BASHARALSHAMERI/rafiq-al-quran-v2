@@ -72,7 +72,7 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
 
   Future<void> _submit() async {
     final contextState = ref.read(contextControllerProvider);
-    final circleId = int.tryParse(contextState.selectedCircleId ?? '');
+    final circleId = contextState.selectedCircleId;
 
     setState(() => _localError = null);
 
@@ -133,6 +133,7 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
     final contextState = ref.watch(contextControllerProvider);
     final examState = ref.watch(examControllerProvider);
     final studentsAsync = ref.watch(examStudentOptionsProvider);
+    final primary = Theme.of(context).colorScheme.primary;
 
     final students = studentsAsync.maybeWhen(
       data: (items) => items,
@@ -150,7 +151,7 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
       bottom: FilledButton.icon(
         onPressed: examState.isSubmitting ? null : _submit,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primaryLight,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(
@@ -191,7 +192,8 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
           DropdownButtonFormField<int>(
             initialValue: _selectedExamId,
             isExpanded: true,
-            decoration: examInputDecoration('اختر قالب الاختبار'),
+            dropdownColor: context.cardColor,
+            decoration: examInputDecoration(context, 'اختر قالب الاختبار'),
             items: widget.exams
                 .map(
                   (exam) => DropdownMenuItem<int>(
@@ -199,6 +201,7 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                     child: Text(
                       '${exam.title} - ${exam.type == 'FULL_QURAN' ? 'المصحف كاملاً' : (exam.examBranch ?? 'أجزاء')}',
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.textPrimaryColor),
                     ),
                   ),
                 )
@@ -214,11 +217,12 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                 child: TextField(
                   controller: _dateController,
                   readOnly: true,
+                  style: TextStyle(color: context.textPrimaryColor),
                   decoration:
-                      examInputDecoration('تاريخ مقترح للاختبار').copyWith(
+                      examInputDecoration(context, 'تاريخ مقترح للاختبار').copyWith(
                     suffixIcon: IconButton(
                       onPressed: _pickDate,
-                      icon: const Icon(Icons.calendar_month_rounded),
+                      icon: Icon(Icons.calendar_month_rounded, color: primary),
                     ),
                   ),
                 ),
@@ -228,7 +232,8 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                 child: TextField(
                   controller: _readinessController,
                   keyboardType: TextInputType.number,
-                  decoration: examInputDecoration('درجة الجاهزية (0-100)'),
+                  style: TextStyle(color: context.textPrimaryColor),
+                  decoration: examInputDecoration(context, 'درجة الجاهزية (0-100)'),
                 ),
               ),
             ],
@@ -253,17 +258,16 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
           Container(
             constraints: const BoxConstraints(minHeight: 180, maxHeight: 280),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.borderColor),
               boxShadow: AppShadows.xs,
             ),
             child: studentsAsync.when(
-              loading: () => const Center(
+              loading: () => Center(
                 child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child:
-                      CircularProgressIndicator(color: AppColors.primaryLight),
+                  padding: const EdgeInsets.all(24),
+                  child: CircularProgressIndicator(color: primary),
                 ),
               ),
               error: (error, _) => Center(
@@ -272,9 +276,9 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                   child: Text(
                     readExamStudentError(error),
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                        ),
+                    style: TextStyle(
+                      color: context.textSecondaryColor,
+                    ),
                   ),
                 ),
               ),
@@ -288,9 +292,9 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                             ? 'لا يوجد طلاب نشطون في الحلقة الحالية'
                             : 'لا توجد نتائج مطابقة لعبارة البحث',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondaryLight,
-                            ),
+                        style: TextStyle(
+                          color: context.textSecondaryColor,
+                        ),
                       ),
                     ),
                   );
@@ -304,16 +308,27 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: filteredStudents.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: context.borderColor),
                     itemBuilder: (context, index) {
                       final student = filteredStudents[index];
                       return RadioListTile<int>(
                         dense: true,
                         value: student.id,
-                        activeColor: AppColors.primaryLight,
-                        title: Text(student.fullName),
+                        activeColor: primary,
+                        title: Text(
+                          student.fullName,
+                          style: TextStyle(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         subtitle: Text(
-                            '${student.levelLabel} • ${student.statusLabel}'),
+                          '${student.levelLabel} • ${student.statusLabel}',
+                          style: TextStyle(
+                            color: context.textSecondaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -331,7 +346,8 @@ class _ExamNominationSheetState extends ConsumerState<ExamNominationSheet> {
             controller: _notesController,
             minLines: 3,
             maxLines: 5,
-            decoration: examInputDecoration('اكتب ملاحظاتك هنا'),
+            style: TextStyle(color: context.textPrimaryColor),
+            decoration: examInputDecoration(context, 'اكتب ملاحظاتك هنا'),
           ),
         ],
       ),
@@ -352,12 +368,15 @@ class _NominationContextCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Wrap(
@@ -367,17 +386,17 @@ class _NominationContextCard extends StatelessWidget {
           ExamPill(
             icon: Icons.apartment_rounded,
             text: centerName,
-            color: AppColors.primaryLight,
+            color: primary,
           ),
           ExamPill(
             icon: Icons.groups_rounded,
             text: circleName,
-            color: AppColors.infoLight,
+            color: custom.info,
           ),
           ExamPill(
             icon: Icons.publish_rounded,
             text: '$templatesCount اختبار منشور',
-            color: AppColors.secondaryLight,
+            color: custom.accent,
           ),
         ],
       ),

@@ -144,5 +144,28 @@ export const groupActivitiesService = {
       throw new AppError("النشاط غير موجود", 404);
     }
     return serializeActivity(activity);
+  },
+
+  async remove(scope: ScopeContext, id: number) {
+    const activity = await groupActivitiesRepository.findById(id, scope.organizationId);
+    if (!activity) {
+      throw new AppError("النشاط غير موجود", 404);
+    }
+
+    if (!scope.allAccess) {
+      const circle = await groupActivitiesRepository.findCircleWithCenter(
+        activity.circleId,
+        scope.organizationId
+      );
+      const hasAccess =
+        scope.circleIds.includes(activity.circleId) ||
+        (circle !== null && scope.centerIds.includes(circle.centerId));
+      if (!hasAccess) {
+        throw new AppError("ليس لديك صلاحية", 403);
+      }
+    }
+
+    await groupActivitiesRepository.remove(id, scope.organizationId);
+    return { id, deleted: true };
   }
 };

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../application/exams/exam_controller.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_snack_bar.dart';
 import '../../../data/models/exam_dtos.dart';
 
@@ -61,6 +62,8 @@ class _SupervisorReviewNominationSheetState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(examControllerProvider);
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return Stack(
       children: [
@@ -79,22 +82,25 @@ class _SupervisorReviewNominationSheetState
                 Text(
                   'مراجعة طلب الترشيح',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.w900,
+                        color: primary,
                       ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'الطالب: ${widget.nomination.student?.fullName ?? "—"}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.w800, color: context.textPrimaryColor),
                 ),
                 const SizedBox(height: 4),
-                Text('الاختبار: ${widget.nomination.exam?.title ?? "—"}'),
+                Text(
+                  'الاختبار: ${widget.nomination.exam?.title ?? "—"}',
+                  style: TextStyle(color: context.textSecondaryColor),
+                ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'قرار المشرف',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.w800, color: context.textPrimaryColor),
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<bool>(
@@ -120,6 +126,7 @@ class _SupervisorReviewNominationSheetState
                 const SizedBox(height: 16),
                 TextField(
                   controller: _notesController,
+                  style: TextStyle(color: context.textPrimaryColor),
                   decoration: const InputDecoration(
                     labelText: 'ملاحظات المراجعة (اختياري)',
                     border: OutlineInputBorder(),
@@ -142,8 +149,8 @@ class _SupervisorReviewNominationSheetState
                         onPressed: state.isSubmitting ? null : _submitReview,
                         style: FilledButton.styleFrom(
                           backgroundColor: _isApproved
-                              ? Colors.green.shade700
-                              : Colors.red.shade700,
+                              ? custom.success
+                              : Theme.of(context).colorScheme.error,
                         ),
                         child: Text(_isApproved ? 'اعتماد الطلب' : 'رفض الطلب'),
                       ),
@@ -157,9 +164,9 @@ class _SupervisorReviewNominationSheetState
         if (state.isSubmitting)
           Positioned.fill(
             child: Container(
-              color: Colors.black12,
-              child: const Center(
-                child: CircularProgressIndicator(),
+              color: Colors.black.withValues(alpha: 0.3),
+              child: Center(
+                child: CircularProgressIndicator(color: primary),
               ),
             ),
           ),
@@ -178,6 +185,8 @@ class CenterApproveNominationSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -185,23 +194,24 @@ class CenterApproveNominationSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(Icons.info_outline, size: 48, color: Colors.blueGrey),
+            Icon(Icons.info_outline, size: 48, color: primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'اعتماد المركز متاح فقط عبر منصة الويب.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: context.textPrimaryColor),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'يرجى تسجيل الدخول إلى لوحة تحكم المركز من المتصفح لإتمام عملية الاعتماد.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: context.textSecondaryColor),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إغلاق'),
+              style: FilledButton.styleFrom(backgroundColor: primary),
+              child: const Text('حسناً'),
             ),
           ],
         ),

@@ -87,12 +87,18 @@ export const groupActivitiesRepository = {
     });
   },
 
+  async remove(id: number, organizationId: number) {
+    return prisma.groupActivity.delete({
+      where: { id }
+    });
+  },
+
   async findPresentStudentsForDate(circleId: number, date: Date) {
     return prisma.attendanceRecord.findMany({
       where: {
         circleId,
         attendanceDate: date,
-        status: "PRESENT"
+        status: { in: ["PRESENT", "LATE"] }
       },
       select: { studentId: true }
     });

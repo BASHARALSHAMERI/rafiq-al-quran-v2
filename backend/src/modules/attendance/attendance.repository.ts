@@ -222,18 +222,48 @@ export const attendanceRepository = {
             throw error;
           }
 
-          await tx.attendanceRecord.updateMany({
+          const existing = await tx.attendanceRecord.findUnique({
+            where: {
+              studentId_circleId_attendanceDate: {
+                studentId: record.studentId,
+                circleId: input.circleId,
+                attendanceDate: input.attendanceDate
+              }
+            },
+            select: { lockVersion: true }
+          });
+
+          if (!existing) {
+            throw error;
+          }
+
+          const updated = await tx.attendanceRecord.updateMany({
             where: {
               studentId: record.studentId,
               circleId: input.circleId,
-              attendanceDate: input.attendanceDate
+              attendanceDate: input.attendanceDate,
+              lockVersion: existing.lockVersion
             },
             data: {
               status: record.status,
               markedById: input.markedById,
               note: record.note,
+              lockVersion: { increment: 1 }
             }
           });
+
+          if (updated.count === 0) {
+            throw new AppError(
+              "Attendance record version conflict",
+              409,
+              {
+                studentId: record.studentId,
+                circleId: input.circleId,
+                attendanceDate: input.attendanceDate.toISOString().slice(0, 10)
+              },
+              "VERSION_CONFLICT"
+            );
+          }
         }
       }
     });

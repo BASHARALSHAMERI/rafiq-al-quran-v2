@@ -52,4 +52,11 @@ followUpsRouter.patch(
   followUpsController.finalizeFollowUp
 );
 
+followUpsRouter.delete(
+  "/:id",
+  requireRoles([Role.TEACHER, Role.SUPERVISOR]),
+  validateParams(followUpIdParamSchema),
+  followUpsController.removeFollowUp
+);
+
 export default followUpsRouter;

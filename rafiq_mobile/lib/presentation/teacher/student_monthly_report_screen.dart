@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/auth/auth_providers.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
@@ -155,9 +156,12 @@ class _StudentMonthlyReportScreenState
   @override
   Widget build(BuildContext context) {
     final reportAsync = ref.watch(teacherStudentMonthlyReportProvider(_query));
+    final custom = context.customColors;
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'التقرير الشهري'),
       body: reportAsync.when(
         loading: () => const AppLoadingState(
@@ -231,8 +235,10 @@ class _StudentMonthlyReportScreenState
                               label: 'إجمالي',
                               value: '${_asInt(attendance['total'])}',
                               icon: Icons.calendar_month_rounded,
-                              color: AppColors.textPrimaryLight,
-                              background: const Color(0xFFF5F4F0),
+                              color: context.textPrimaryColor,
+                              background: isDark
+                                  ? theme.colorScheme.surfaceContainerHighest
+                                  : const Color(0xFFF5F4F0),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -241,8 +247,8 @@ class _StudentMonthlyReportScreenState
                               label: 'حاضر',
                               value: '${_asInt(attendance['present'])}',
                               icon: Icons.check_circle_outline_rounded,
-                              color: AppColors.successLight,
-                              background: const Color(0xFFF1FAF4),
+                              color: custom.success,
+                              background: custom.success.withValues(alpha: isDark ? 0.16 : 0.08),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -251,8 +257,8 @@ class _StudentMonthlyReportScreenState
                               label: 'بعذر',
                               value: '${_asInt(attendance['excused'])}',
                               icon: Icons.shield_outlined,
-                              color: AppColors.warningLight,
-                              background: const Color(0xFFFFF8EC),
+                              color: custom.warning,
+                              background: custom.warning.withValues(alpha: isDark ? 0.16 : 0.08),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -261,8 +267,8 @@ class _StudentMonthlyReportScreenState
                               label: 'بدون عذر',
                               value: '${_asInt(attendance['absent'])}',
                               icon: Icons.cancel_outlined,
-                              color: AppColors.errorLight,
-                              background: const Color(0xFFFFF4F4),
+                              color: theme.colorScheme.error,
+                              background: theme.colorScheme.error.withValues(alpha: isDark ? 0.16 : 0.08),
                             ),
                           ),
                         ],
@@ -283,7 +289,7 @@ class _StudentMonthlyReportScreenState
                   title: 'الحفظ',
                   progress: _asDouble(hifz['completionRate']),
                   icon: Icons.menu_book_rounded,
-                  color: AppColors.primaryLight,
+                  color: theme.colorScheme.primary,
                   details: [
                     _SectionDetail(
                       label: 'الخطة الشهرية',
@@ -312,7 +318,7 @@ class _StudentMonthlyReportScreenState
                   title: 'المراجعة',
                   progress: _asDouble(review['completionRate']),
                   icon: Icons.autorenew_rounded,
-                  color: AppColors.infoLight,
+                  color: custom.info,
                   details: [
                     _SectionDetail(
                       label: 'خطة المراجعة',
@@ -340,7 +346,7 @@ class _StudentMonthlyReportScreenState
                     _asInt(matn['totalRecords']),
                   ),
                   icon: Icons.description_outlined,
-                  color: AppColors.warningLight,
+                  color: custom.accent,
                   details: [
                     _SectionDetail(
                       label: 'إجمالي السجلات',
@@ -361,7 +367,7 @@ class _StudentMonthlyReportScreenState
                         value: _asDouble(followUp['averageRating'])
                             .toStringAsFixed(1),
                         icon: Icons.star_rounded,
-                        color: AppColors.warningLight,
+                        color: custom.warning,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -371,7 +377,7 @@ class _StudentMonthlyReportScreenState
                         value:
                             _asDouble(exams['averageScore']).toStringAsFixed(1),
                         icon: Icons.fact_check_outlined,
-                        color: AppColors.successLight,
+                        color: custom.success,
                       ),
                     ),
                   ],
@@ -431,7 +437,7 @@ class _MonthSelector extends StatelessWidget {
                   'الفترة الحالية',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
+                        color: context.textSecondaryColor,
                       ),
                 ),
                 const SizedBox(height: 4),
@@ -439,10 +445,10 @@ class _MonthSelector extends StatelessWidget {
                   label,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w800,
                         height: 1.2,
-                        fontFamily: 'Cairo',
+                        color: context.textPrimaryColor,
                       ),
                 ),
               ],
@@ -466,18 +472,21 @@ class _MonthActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: Ink(
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          color: AppColors.primaryLight.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          color: isDark ? theme.colorScheme.surfaceContainerHighest : AppColors.surfaceVariantLight,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: context.borderColor),
         ),
-        child: Icon(icon, color: AppColors.textPrimaryLight),
+        child: Icon(icon, color: context.textPrimaryColor, size: 20),
       ),
     );
   }
@@ -506,44 +515,41 @@ class _StudentHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final custom = context.customColors;
+    final primary = theme.colorScheme.primary;
+    final isDark = context.isDark;
+
     return AppCard(
       padding: EdgeInsets.zero,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: context.borderColor),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.08),
+                  color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.primaryLight.withValues(alpha: 0.15),
+                    color: primary.withValues(alpha: isDark ? 0.35 : 0.20),
                     width: 1.5,
                   ),
                 ),
                 child: Center(
                   child: Text(
                     studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
-                    style: const TextStyle(
-                      color: AppColors.primaryLight,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : primary,
                       fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      fontFamily: 'Cairo',
+                      fontSize: 22,
                     ),
                   ),
                 ),
@@ -551,11 +557,10 @@ class _StudentHeroCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 studentName,
-                style: const TextStyle(
-                  fontSize: 18,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimaryLight,
-                  fontFamily: 'Cairo',
+                  color: context.textPrimaryColor,
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
@@ -563,11 +568,10 @@ class _StudentHeroCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 '$periodTitle · $circleName',
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: context.textSecondaryColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  fontFamily: 'Cairo',
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -576,10 +580,10 @@ class _StudentHeroCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1FAF4),
-                  borderRadius: BorderRadius.circular(12),
+                  color: custom.success.withValues(alpha: isDark ? 0.16 : 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
-                    color: AppColors.successLight.withValues(alpha: 0.1),
+                    color: custom.success.withValues(alpha: isDark ? 0.25 : 0.12),
                   ),
                 ),
                 child: Row(
@@ -588,19 +592,19 @@ class _StudentHeroCard extends StatelessWidget {
                       child: _HeroMetric(
                         label: 'التقييم العام',
                         value: monthlyGrade,
-                        color: AppColors.successLight,
+                        color: custom.success,
                       ),
                     ),
                     Container(
                       width: 1,
-                      height: 38,
-                      color: AppColors.borderLight,
+                      height: 36,
+                      color: context.borderColor,
                     ),
                     Expanded(
                       child: _HeroMetric(
                         label: 'نسبة الإنجاز',
                         value: completionRate,
-                        color: AppColors.primaryLight,
+                        color: primary,
                       ),
                     ),
                   ],
@@ -613,23 +617,18 @@ class _StudentHeroCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: isExporting ? null : () => onExportPdf(false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primaryLight,
-                        side: BorderSide(
-                          color: AppColors.primaryLight.withValues(alpha: 0.25),
-                          width: 1.5,
-                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                       icon: isExporting
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 1.5,
-                                color: AppColors.primaryLight,
+                                color: primary,
                               ),
                             )
                           : const Icon(Icons.download_rounded, size: 16),
@@ -638,7 +637,6 @@ class _StudentHeroCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                     ),
@@ -648,11 +646,11 @@ class _StudentHeroCard extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: isExporting ? null : () => onExportPdf(true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: Colors.white,
+                        backgroundColor: primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 11),
                       ),
@@ -662,7 +660,6 @@ class _StudentHeroCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 12,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                     ),
@@ -671,14 +668,15 @@ class _StudentHeroCard extends StatelessWidget {
                   IconButton(
                     onPressed: isExporting ? null : onMoreOptions,
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F3F0),
-                      foregroundColor: AppColors.textPrimaryLight,
+                      backgroundColor: isDark
+                          ? theme.colorScheme.surfaceContainerHighest
+                          : AppColors.surfaceVariantLight,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       padding: const EdgeInsets.all(11),
                     ),
-                    icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                    icon: Icon(Icons.more_horiz_rounded, size: 20, color: context.textPrimaryColor),
                   ),
                 ],
               ),
@@ -712,7 +710,6 @@ class _HeroMetric extends StatelessWidget {
             fontSize: 20,
             fontWeight: FontWeight.w900,
             color: color,
-            fontFamily: 'Cairo',
             height: 1.1,
           ),
         ),
@@ -720,11 +717,10 @@ class _HeroMetric extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.textSecondaryLight,
+          style: TextStyle(
+            color: context.textSecondaryColor,
             fontWeight: FontWeight.w700,
             fontSize: 11,
-            fontFamily: 'Cairo',
             height: 1.2,
           ),
         ),
@@ -749,23 +745,21 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppColors.textPrimaryLight,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-            fontFamily: 'Cairo',
-          ),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: context.textPrimaryColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: const TextStyle(
-            color: AppColors.textSecondaryLight,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-            fontFamily: 'Cairo',
-            height: 1.35,
-          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.textSecondaryColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                height: 1.35,
+              ),
         ),
       ],
     );
@@ -793,7 +787,7 @@ class _AttendanceStatCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -806,18 +800,16 @@ class _AttendanceStatCard extends StatelessWidget {
               fontSize: 18,
               fontWeight: FontWeight.w900,
               color: color,
-              fontFamily: 'Cairo',
               height: 1.1,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
+            style: TextStyle(
+              color: context.textSecondaryColor,
               fontWeight: FontWeight.w700,
               fontSize: 10,
-              fontFamily: 'Cairo',
               height: 1.1,
             ),
             textAlign: TextAlign.center,
@@ -839,25 +831,26 @@ class _ProgressLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
     return Column(
       children: [
         Row(
           children: [
             Text(
               'نسبة الحضور',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                    color: context.textSecondaryColor,
                     fontWeight: FontWeight.w700,
-                    fontFamily: 'Cairo',
                   ),
             ),
             const Spacer(),
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.primaryLight,
+              style: TextStyle(
+                color: primary,
                 fontWeight: FontWeight.w900,
-                fontFamily: 'Cairo',
               ),
             ),
           ],
@@ -867,9 +860,9 @@ class _ProgressLine extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(
             value: progress,
-            minHeight: 8,
-            color: AppColors.primaryLight,
-            backgroundColor: AppColors.borderLight,
+            minHeight: 7,
+            color: primary,
+            backgroundColor: context.borderColor,
           ),
         ),
       ],
@@ -904,6 +897,8 @@ class _PlanSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,22 +906,22 @@ class _PlanSectionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: color.withValues(alpha: isDark ? 0.20 : 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: Icon(icon, color: color),
+                child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    fontFamily: 'Cairo',
+                    color: context.textPrimaryColor,
                     height: 1.2,
                   ),
                 ),
@@ -936,8 +931,7 @@ class _PlanSectionCard extends StatelessWidget {
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  fontFamily: 'Cairo',
+                  fontSize: 17,
                   height: 1,
                 ),
               ),
@@ -946,7 +940,7 @@ class _PlanSectionCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           ...details.map(
             (detail) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -954,9 +948,8 @@ class _PlanSectionCard extends StatelessWidget {
                     child: Text(
                       detail.label,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondaryLight,
+                            color: context.textSecondaryColor,
                             fontWeight: FontWeight.w600,
-                            fontFamily: 'Cairo',
                             fontSize: 13,
                             height: 1.35,
                           ),
@@ -967,9 +960,9 @@ class _PlanSectionCard extends StatelessWidget {
                     child: Text(
                       detail.value,
                       textAlign: TextAlign.end,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontFamily: 'Cairo',
+                        color: context.textPrimaryColor,
                         fontSize: 13,
                         height: 1.35,
                       ),
@@ -984,9 +977,9 @@ class _PlanSectionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: (progress / 100).clamp(0, 1).toDouble(),
-              minHeight: 8,
+              minHeight: 7,
               color: color,
-              backgroundColor: AppColors.borderLight,
+              backgroundColor: context.borderColor,
             ),
           ),
         ],
@@ -1010,6 +1003,8 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return AppCard(
       child: Column(
         children: [
@@ -1017,30 +1012,29 @@ class _MetricCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              color: color.withValues(alpha: isDark ? 0.20 : 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
-              fontFamily: 'Cairo',
+              color: color,
               height: 1,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.textSecondaryColor,
                   fontWeight: FontWeight.w700,
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
+                  fontSize: 11,
                   height: 1.3,
                 ),
           ),
@@ -1062,20 +1056,23 @@ class _ActivityCard extends StatelessWidget {
     final dateLabel = parsedDate == null
         ? (rawDate == null || rawDate.isEmpty ? '-' : rawDate)
         : formatGregorianDateLabel(parsedDate);
+    final isDark = context.isDark;
+    final primary = Theme.of(context).colorScheme.primary;
 
     return AppCard(
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.menu_book_rounded,
-              color: AppColors.primaryLight,
+              color: primary,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
@@ -1085,20 +1082,19 @@ class _ActivityCard extends StatelessWidget {
               children: [
                 Text(
                   activity['title']?.toString() ?? 'نشاط',
-                  style: const TextStyle(
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    fontFamily: 'Cairo',
+                    fontSize: 14,
+                    color: context.textPrimaryColor,
                     height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   '${activity['activityType'] ?? '-'} • $dateLabel',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondaryLight,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
                         fontSize: 12,
                         height: 1.35,
                       ),
@@ -1126,8 +1122,8 @@ class _ExportOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
       onTap: onTap,
     );
   }

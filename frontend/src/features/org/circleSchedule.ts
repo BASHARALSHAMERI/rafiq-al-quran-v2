@@ -30,7 +30,6 @@ export const PRAYER_ORDER: PrayerName[] = ["FAJR", "DHUHR", "ASR", "MAGHRIB", "I
 
 const weekdayRank = new Map(WEEKDAY_ORDER.map((day, index) => [day, index]));
 const prayerRank = new Map(PRAYER_ORDER.map((name, index) => [name, index]));
-const hhmmRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const weekdayLabel = (day: CircleScheduleDay, ar: boolean) => {
   const labelsAr: Record<CircleScheduleDay, string> = {

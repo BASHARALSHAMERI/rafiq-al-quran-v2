@@ -68,6 +68,8 @@ class _ManualQuestionSheetState extends State<ManualQuestionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return ExamSheetScaffold(
       title: 'إضافة سؤال يدوياً',
       subtitle: 'تحديد النطاق القرآني للسؤال',
@@ -76,7 +78,7 @@ class _ManualQuestionSheetState extends State<ManualQuestionSheet> {
         child: FilledButton.icon(
           onPressed: widget.isSubmitting ? null : _submit,
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primaryLight,
+            backgroundColor: primary,
             minimumSize: const Size.fromHeight(52),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -138,12 +140,14 @@ class _RangeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +155,7 @@ class _RangeSection extends StatelessWidget {
           Text(title,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: AppColors.primaryLight,
+                    color: primary,
                   )),
           const SizedBox(height: 12),
           Row(
@@ -161,7 +165,8 @@ class _RangeSection extends StatelessWidget {
                 child: DropdownButtonFormField<int>(
                   initialValue: selectedSurah,
                   isExpanded: true,
-                  decoration: examInputDecoration('السورة'),
+                  dropdownColor: context.cardColor,
+                  decoration: examInputDecoration(context, 'السورة'),
                   items: List.generate(
                     114,
                     (i) => DropdownMenuItem(
@@ -169,6 +174,7 @@ class _RangeSection extends StatelessWidget {
                       child: Text(
                         '${i + 1}. ${surahNames[i]}',
                         overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.textPrimaryColor),
                       ),
                     ),
                   ),
@@ -183,7 +189,8 @@ class _RangeSection extends StatelessWidget {
                   controller: ayahController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: examInputDecoration('الآية'),
+                  style: TextStyle(color: context.textPrimaryColor),
+                  decoration: examInputDecoration(context, 'الآية'),
                   textAlign: TextAlign.center,
                 ),
               ),

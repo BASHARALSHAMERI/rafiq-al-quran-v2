@@ -50,5 +50,10 @@ export const dashboardDomain = {
     }
 
     return Number(((presentCount / totalCount) * 100).toFixed(2));
+  },
+
+  staffAttendanceRate(present: number, late: number, absent: number): number {
+    const accountable = present + late + absent;
+    return accountable ? Number((((present + late) / accountable) * 100).toFixed(2)) : 0;
   }
 };

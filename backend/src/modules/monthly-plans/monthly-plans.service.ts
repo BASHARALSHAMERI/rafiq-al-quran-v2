@@ -16,7 +16,8 @@ import type {
 
 const WORKING_DAYS_PER_MONTH = 22;
 const DEFAULT_HIFZ_DAILY_RATE = 0.5;
-const REVIEW_REPETITIONS_PER_MONTH = 2;
+const DEFAULT_REVIEW_DAILY_RATE = 5;
+const PAGES_PER_JUZ = 20;
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
 const round2 = (value: number) => Math.round(value * 100) / 100;
@@ -224,7 +225,7 @@ const buildPlanProgress = async (
   const latestReached =
     progress.latestHifz?.toSurah && progress.latestHifz?.toAyah
       ? {
-          surah: progress.latestHifz.surah,
+          surah: progress.latestHifz.toSurah.toString(),
           toSurah: progress.latestHifz.toSurah,
           toAyah: progress.latestHifz.toAyah,
           toPage: progress.latestHifz.toPage ?? null
@@ -333,11 +334,59 @@ const buildGeneratedPlan = async (input: {
     }
   }
 
-  const reviewTargetPages = generatedHifzRange
-    ? round1(generatedHifzRange.pagesCount * REVIEW_REPETITIONS_PER_MONTH)
-    : 0;
-  const reviewDailyRate =
-    reviewTargetPages > 0 ? round2(reviewTargetPages / WORKING_DAYS_PER_MONTH) : 0;
+  const [totalMemorizedPages, lastReview, reviewSettings] = await Promise.all([
+    monthlyPlansRepository.calcTotalMemorizedPages(input.studentId, input.circleId, input.planStartDate),
+    monthlyPlansRepository.findLastReviewFollowUp(input.studentId, input.circleId, input.planStartDate),
+    monthlyPlansRepository.findReviewSettings(input.teacherId, input.circleId, input.organizationId)
+  ]);
+
+  const totalJuz = totalMemorizedPages > 0 ? Math.round(totalMemorizedPages / PAGES_PER_JUZ) : 0;
+
+  const resolvedReviewThresholds = {
+    juzThreshold5: reviewSettings?.juzThreshold5 ? Number(reviewSettings.juzThreshold5) : 10,
+    juzThreshold10: reviewSettings?.juzThreshold10 ? Number(reviewSettings.juzThreshold10) : 15,
+    juzThreshold20: reviewSettings?.juzThreshold20 ? Number(reviewSettings.juzThreshold20) : 20,
+    juzThreshold30: reviewSettings?.juzThreshold30 ? Number(reviewSettings.juzThreshold30) : 30
+  };
+
+  let reviewDailyRate: number;
+  if (totalJuz >= 20) {
+    reviewDailyRate = resolvedReviewThresholds.juzThreshold30;
+  } else if (totalJuz >= 10) {
+    reviewDailyRate = resolvedReviewThresholds.juzThreshold20;
+  } else if (totalJuz >= 5) {
+    reviewDailyRate = resolvedReviewThresholds.juzThreshold10;
+  } else {
+    reviewDailyRate = totalJuz > 0 ? resolvedReviewThresholds.juzThreshold5 : DEFAULT_REVIEW_DAILY_RATE;
+  }
+
+  const reviewTargetPages = round1(reviewDailyRate * WORKING_DAYS_PER_MONTH);
+
+  let generatedReviewRange:
+    | {
+        fromSurah: number;
+        fromAyah: number;
+        toSurah: number;
+        toAyah: number;
+        pagesCount: number;
+      }
+    | null = null;
+
+  const reviewStartAyah = nextAyahAfter(lastReview?.toSurah, lastReview?.toAyah);
+  const reviewSurah = reviewStartAyah.surah ?? 1;
+  const reviewAyah = reviewStartAyah.ayah ?? 1;
+
+  if (reviewTargetPages > 0) {
+    try {
+      generatedReviewRange = await quranService.resolveRangeByTargetPages({
+        fromSurah: reviewSurah,
+        fromAyah: reviewAyah,
+        targetPages: reviewTargetPages
+      });
+    } catch {
+      generatedReviewRange = null;
+    }
+  }
 
   const plan = await monthlyPlansRepository.upsertPlan({
     organizationId: input.organizationId,
@@ -353,12 +402,12 @@ const buildGeneratedPlan = async (input: {
     hifzToAyah: generatedHifzRange?.toAyah ?? null,
     hifzTargetPages,
     hifzDailyRate: round2(hifzDailyRate),
-    reviewFromSurah: generatedHifzRange?.fromSurah ?? null,
-    reviewFromAyah: generatedHifzRange?.fromAyah ?? null,
-    reviewToSurah: generatedHifzRange?.toSurah ?? null,
-    reviewToAyah: generatedHifzRange?.toAyah ?? null,
-    reviewTargetPages: round1(reviewTargetPages),
-    reviewDailyRate
+    reviewFromSurah: generatedReviewRange?.fromSurah ?? reviewSurah,
+    reviewFromAyah: generatedReviewRange?.fromAyah ?? reviewAyah,
+    reviewToSurah: generatedReviewRange?.toSurah ?? null,
+    reviewToAyah: generatedReviewRange?.toAyah ?? null,
+    reviewTargetPages,
+    reviewDailyRate: round2(reviewDailyRate)
   });
 
   return { plan, preserved: false } as const;

@@ -8,7 +8,9 @@ import {
   Pencil,
   Power,
   Shield,
-  Users
+  Users,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Circle, CircleScheduleDay, CircleScheduleRow, PrayerName } from "../../types";
@@ -21,9 +23,12 @@ interface CircleCardProps {
   ar: boolean;
   view?: "grid" | "list";
   canManage: boolean;
+  canApprove?: boolean;
   pending: boolean;
   openEdit: (c: Circle) => void;
   toggleStatus: (c: Circle) => void;
+  onApprove?: (c: Circle) => void;
+  onReject?: (c: Circle) => void;
 }
 
 const DAY_ORDER: CircleScheduleDay[] = [
@@ -150,9 +155,12 @@ export default function CircleCard({
   ar,
   view = "grid",
   canManage,
+  canApprove,
   pending,
   openEdit,
-  toggleStatus
+  toggleStatus,
+  onApprove,
+  onReject
 }: CircleCardProps) {
   const navigate = useNavigate();
   const circleIsActive = circle.isActive ?? true;
@@ -199,6 +207,16 @@ export default function CircleCard({
           >
             {isActive ? (ar ? "نشطة" : "Active") : !centerIsActive ? (ar ? "معطلة بسبب المركز" : "Center inactive") : ar ? "معطلة" : "Inactive"}
           </span>
+          {circle.approvalStatus === "PENDING" && (
+            <span className="ctr-center-card__chip !bg-red-500 !text-white font-bold shadow-sm ring-1 ring-red-600">
+              {ar ? "قيد الاعتماد" : "Pending Approval"}
+            </span>
+          )}
+          {circle.approvalStatus === "REJECTED" && (
+            <span className="ctr-center-card__chip bg-red-500/10 text-red-500 ring-1 ring-red-500/30">
+              {ar ? "مرفوضة" : "Rejected"}
+            </span>
+          )}
           {circle.gender ? (
             <span
               className={`ctr-center-card__chip ${
@@ -258,6 +276,28 @@ export default function CircleCard({
           >
             <Power size={16} />
           </button>
+        ) : null}
+        {canApprove && circle.approvalStatus === "PENDING" ? (
+          <>
+            <button
+              type="button"
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] transition-all duration-200 hover:-translate-y-[2px] hover:shadow-md text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100"
+              onClick={() => onApprove?.(circle)}
+              disabled={pending}
+              title={ar ? "اعتماد الحلقة" : "Approve Circle"}
+            >
+              <CheckCircle size={16} />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-center w-[34px] h-[34px] rounded-[10px] transition-all duration-200 hover:-translate-y-[2px] hover:shadow-md text-red-600 bg-red-50 border border-red-200 hover:bg-red-100"
+              onClick={() => onReject?.(circle)}
+              disabled={pending}
+              title={ar ? "رفض الحلقة" : "Reject Circle"}
+            >
+              <XCircle size={16} />
+            </button>
+          </>
         ) : null}
         {canManage ? (
           <button

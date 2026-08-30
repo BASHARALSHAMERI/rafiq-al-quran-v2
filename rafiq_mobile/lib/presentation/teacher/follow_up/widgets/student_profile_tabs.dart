@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/exams/exam_controller.dart';
+import '../../../../core/constants/app_radius.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../../domain/entities/student_profile.dart';
-import '../../../shared/widgets/app_card.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../application/exams/exam_controller.dart';
 import '../../../exams/widgets/student_exams_view.dart';
+import '../../../shared/widgets/app_card.dart';
 
 class StudentProfileTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabController controller;
@@ -27,46 +27,40 @@ class StudentProfileTabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
     return Container(
       height: 58,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        boxShadow: overlapsContent
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
+        color: context.surfaceColor,
       ),
       child: Container(
         height: 42,
         margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.cardLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderLight),
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: context.borderColor),
         ),
         child: TabBar(
           controller: controller,
           indicator: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(9),
+            color: primary,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           indicatorPadding: const EdgeInsets.all(3),
-          labelColor: Colors.white,
-          unselectedLabelColor: AppColors.textSecondaryLight,
+          labelColor: theme.colorScheme.onPrimary,
+          unselectedLabelColor: context.textSecondaryColor,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w800,
-            fontSize: 11.5,
+            fontSize: 12,
           ),
           unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 11.5,
+            fontSize: 12,
           ),
           dividerColor: Colors.transparent,
           splashFactory: NoSplash.splashFactory,
@@ -100,6 +94,7 @@ class StudentProfileSummaryTab extends StatelessWidget {
     final memorizedProgress = (profile.memorizedJuzz / 30).clamp(0.0, 1.0);
     final recentFollowUps =
         profile.recentFollowUps.take(3).toList(growable: false);
+    final theme = Theme.of(context);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -116,16 +111,16 @@ class StudentProfileSummaryTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: memorizedProgress,
-                  minHeight: 10,
-                  color: AppColors.primaryLight,
-                  backgroundColor: AppColors.borderLight,
+                  minHeight: 8,
+                  color: theme.colorScheme.primary,
+                  backgroundColor: context.borderColor,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'نسبة الإنجاز: ${(memorizedProgress * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 13,
                 ),
               ),
@@ -133,21 +128,21 @@ class StudentProfileSummaryTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'السجل الأخير',
           style: TextStyle(
             fontWeight: FontWeight.w900,
             fontSize: 16,
-            color: AppColors.textPrimaryLight,
+            color: context.textPrimaryColor,
           ),
         ),
         const SizedBox(height: 10),
         if (recentFollowUps.isEmpty)
-          const AppCard(
-            padding: EdgeInsets.all(16),
+          AppCard(
+            padding: const EdgeInsets.all(16),
             child: Text(
               'لا توجد سجلات متابعة متاحة حالياً',
-              style: TextStyle(color: AppColors.textSecondaryLight),
+              style: TextStyle(color: context.textSecondaryColor),
             ),
           ),
         ...recentFollowUps.map((record) => _RecordTile(record: record)),
@@ -196,8 +191,10 @@ class StudentProfileAttendanceTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final percentage = profile.attendancePercentage;
     final progress = (percentage / 100).clamp(0.0, 1.0);
+    final custom = context.customColors;
     final statusColor =
-        percentage >= 75 ? AppColors.successLight : AppColors.warningLight;
+        percentage >= 75 ? custom.success : custom.warning;
+    final isDark = context.isDark;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -214,9 +211,9 @@ class StudentProfileAttendanceTab extends StatelessWidget {
                     height: 100,
                     child: CircularProgressIndicator(
                       value: progress,
-                      strokeWidth: 10,
+                      strokeWidth: 8,
                       color: statusColor,
-                      backgroundColor: AppColors.borderLight,
+                      backgroundColor: context.borderColor,
                       strokeCap: StrokeCap.round,
                     ),
                   ),
@@ -226,14 +223,14 @@ class StudentProfileAttendanceTab extends StatelessWidget {
                         '$percentage%',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 24,
+                          fontSize: 22,
                           color: statusColor,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'الحضور',
                         style: TextStyle(
-                          color: AppColors.textSecondaryLight,
+                          color: context.textSecondaryColor,
                           fontSize: 11,
                         ),
                       ),
@@ -245,10 +242,10 @@ class StudentProfileAttendanceTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 8,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withValues(alpha: isDark ? 0.20 : 0.10),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -263,22 +260,22 @@ class StudentProfileAttendanceTab extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        const AppCard(
-          padding: EdgeInsets.all(16),
+        const SizedBox(height: 16),
+        AppCard(
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Icon(
                 Icons.info_outline_rounded,
-                color: AppColors.infoLight,
+                color: custom.info,
                 size: 20,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'سجل الحضور التفصيلي سيظهر هنا عند ربط البيانات.',
                   style: TextStyle(
-                    color: AppColors.textSecondaryLight,
+                    color: context.textSecondaryColor,
                     fontSize: 13,
                   ),
                 ),
@@ -350,13 +347,15 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.xs,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,25 +365,26 @@ class _SectionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.08),
+                  color: primary.withValues(alpha: isDark ? 0.20 : 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: AppColors.primaryLight, size: 18),
+                child: Icon(icon, color: primary, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
                   fontSize: 15,
+                  color: context.textPrimaryColor,
                 ),
               ),
               if (trailing != null) ...[
                 const Spacer(),
                 Text(
                   trailing!,
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
+                  style: TextStyle(
+                    color: primary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -417,19 +417,19 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
-              fontSize: 14,
+            style: TextStyle(
+              color: context.textSecondaryColor,
+              fontSize: 13,
             ),
           ),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.textPrimaryLight,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: context.textPrimaryColor,
               ),
             ),
           ),
@@ -444,7 +444,7 @@ class _InfoDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(color: AppColors.borderLight, height: 1);
+    return Divider(color: context.borderColor, height: 1);
   }
 }
 
@@ -522,26 +522,29 @@ class _RecordTile extends StatelessWidget {
     return Icons.menu_book_rounded;
   }
 
-  Color get _iconColor {
+  Color _iconColor(BuildContext context) {
+    final custom = context.customColors;
     if (record.type.toUpperCase() == 'REVIEW') {
-      return AppColors.infoLight;
+      return custom.info;
     }
     if (record.type.toUpperCase() == 'MATN') {
-      return AppColors.successLight;
+      return custom.success;
     }
-    return AppColors.secondaryLight;
+    return Theme.of(context).colorScheme.primary;
   }
 
   @override
   Widget build(BuildContext context) {
+    final iconCol = _iconColor(context);
+    final isDark = context.isDark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.xs,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: [
@@ -549,10 +552,10 @@ class _RecordTile extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _iconColor.withValues(alpha: 0.1),
+              color: iconCol.withValues(alpha: isDark ? 0.20 : 0.10),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(_icon, color: _iconColor, size: 20),
+            child: Icon(_icon, color: iconCol, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -561,16 +564,17 @@ class _RecordTile extends StatelessWidget {
               children: [
                 Text(
                   _title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondaryLight,
+                  style: TextStyle(
+                    color: context.textSecondaryColor,
                     fontSize: 12,
                   ),
                 ),
@@ -582,8 +586,8 @@ class _RecordTile extends StatelessWidget {
             children: [
               Text(
                 _grade,
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
+                style: TextStyle(
+                  color: iconCol,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -591,8 +595,8 @@ class _RecordTile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 _date,
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 11,
                 ),
               ),

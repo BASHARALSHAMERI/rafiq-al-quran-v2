@@ -21,6 +21,7 @@ const app = express();
 // reads the real client IP from X-Forwarded-For instead of the proxy address.
 app.set("trust proxy", 1);
 const localDevOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+const vercelOriginPattern = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/i;
 
 const shouldAllowCredentials = (requestPath: string) => {
   return corsCredentialsPaths.some((pathPrefix) => {
@@ -30,7 +31,23 @@ const shouldAllowCredentials = (requestPath: string) => {
 };
 
 const isAllowedCorsOrigin = (origin: string) => {
-  if (allowedCorsOrigins.includes(origin)) {
+  if (allowedCorsOrigins.includes(origin) || allowedCorsOrigins.includes("*")) {
+    return true;
+  }
+
+  const matchesWildcard = allowedCorsOrigins.some((allowed) => {
+    if (allowed.includes("*")) {
+      const regex = new RegExp(`^${allowed.replace(/[-/\\^$+?.()|[\]{}]/g, "\\$&").replace(/\\\*/g, ".*")}$`, "i");
+      return regex.test(origin);
+    }
+    return false;
+  });
+
+  if (matchesWildcard) {
+    return true;
+  }
+
+  if (vercelOriginPattern.test(origin)) {
     return true;
   }
 

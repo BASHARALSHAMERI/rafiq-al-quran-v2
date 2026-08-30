@@ -66,7 +66,7 @@ final halqaReportProvider =
     contextControllerProvider.select((state) => state.selectedCircleId),
   );
 
-  if (circleId == null || circleId.isEmpty) {
+  if (circleId == null || circleId <= 0) {
     return const HalqaReportData(
       totalStudents: 0,
       attendanceRate: 0,
@@ -152,7 +152,7 @@ final halqaReportProvider =
   // Fetch follow-ups for the same month
   final fuItems = await _fetchAllFollowUps(
     dio,
-    circleId: circleId,
+    circleId: circleId.toString(),
     from: fmt.format(from),
     to: fmt.format(to),
   );

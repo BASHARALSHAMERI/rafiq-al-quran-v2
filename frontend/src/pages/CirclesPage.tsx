@@ -15,7 +15,8 @@ import {
   useCirclesQuery,
   useCreateCircleMutation,
   useUpdateCircleMutation,
-  useUpdateCircleStatusMutation
+  useUpdateCircleStatusMutation,
+  useUpdateCircleApprovalStatusMutation
 } from "../features/org/org.hooks";
 import type { Circle, CircleType } from "../features/org/types";
 import { useUsersQuery } from "../features/users/users.hooks";
@@ -89,7 +90,8 @@ export default function CirclesPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const canManage = user?.role === "SUPER_ADMIN" || user?.role === "CENTER_ADMIN";
-  const showCenterFilter = user?.role === "SUPER_ADMIN";
+  const canApprove = user?.role === "SUPER_ADMIN" || user?.role === "SUPERVISOR";
+  const showCenterFilter = user?.role === "SUPER_ADMIN" || user?.role === "SUPERVISOR";
 
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCenterId = parseNumber(searchParams.get("centerId"));
@@ -108,6 +110,7 @@ export default function CirclesPage() {
   const createM = useCreateCircleMutation();
   const updateM = useUpdateCircleMutation();
   const statusM = useUpdateCircleStatusMutation();
+  const approvalM = useUpdateCircleApprovalStatusMutation();
   const attendancePolicyQ = useAttendancePolicy();
 
   const [q, setQ] = useState("");
@@ -119,6 +122,7 @@ export default function CirclesPage() {
 
   const [modal, setModal] = useState<{ mode: FormMode; circle?: Circle } | null>(null);
   const [statusTarget, setStatusTarget] = useState<Circle | null>(null);
+  const [approvalTarget, setApprovalTarget] = useState<{ circle: Circle; status: "APPROVED" | "REJECTED" } | null>(null);
   const [draft, setDraft] = useState<CircleDraft>(emptyDraft);
   const [actionErr, setActionErr] = useState<string | null>(null);
   const [scopeMsg, setScopeMsg] = useState<string | null>(null);
@@ -306,6 +310,31 @@ export default function CirclesPage() {
     }
   };
 
+  const confirmApprovalStatus = async () => {
+    if (!approvalTarget) return;
+
+    try {
+      setActionErr(null);
+      await approvalM.mutateAsync({ circleId: approvalTarget.circle.id, payload: { status: approvalTarget.status } });
+      setApprovalTarget(null);
+      await refreshAll();
+      notifySuccess(
+        approvalTarget.status === "APPROVED"
+          ? ar ? "تم اعتماد الحلقة بنجاح" : "Circle approved successfully"
+          : ar ? "تم رفض الحلقة بنجاح" : "Circle rejected successfully"
+      );
+    } catch (error) {
+      const message = getLocalizedApiErrorMessage(error, {
+        ar,
+        fallback: ar
+          ? "تعذر تحديث حالة الاعتماد. يرجى المحاولة مرة أخرى."
+          : "Unable to update approval status. Please try again."
+      });
+      setActionErr(message);
+      notifyError(message);
+    }
+  };
+
   return (
     <div className="page ctr-page-modern ctr-page-circles relative z-10" dir={ar ? "rtl" : "ltr"}>
       <motion.div variants={stagger} initial="hidden" animate="visible" className="flex flex-col gap-6">
@@ -467,9 +496,12 @@ export default function CirclesPage() {
                       ar={ar}
                       view={view}
                       canManage={canManage}
+                      canApprove={canApprove}
                       pending={pending}
                       openEdit={openEdit}
                       toggleStatus={setStatusTarget}
+                      onApprove={(c) => setApprovalTarget({ circle: c, status: 'APPROVED' })}
+                      onReject={(c) => setApprovalTarget({ circle: c, status: 'REJECTED' })}
                     />
                   ))}
                 </motion.div>
@@ -586,6 +618,42 @@ export default function CirclesPage() {
         }
         cancelLabel={ar ? "إلغاء" : "Cancel"}
         confirmVariant={statusTarget && (statusTarget.isActive ?? true) ? "danger" : "primary"}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(approvalTarget)}
+        onClose={() => setApprovalTarget(null)}
+        onConfirm={() => void confirmApprovalStatus()}
+        isConfirming={approvalM.isPending}
+        title={
+          approvalTarget?.status === "APPROVED"
+            ? ar
+              ? "اعتماد الحلقة"
+              : "Approve circle"
+            : ar
+              ? "رفض الحلقة"
+              : "Reject circle"
+        }
+        message={
+          approvalTarget?.status === "APPROVED"
+            ? ar
+              ? `هل أنت متأكد من اعتماد الحلقة "${approvalTarget.circle.name}"؟`
+              : `Are you sure you want to approve "${approvalTarget.circle.name}"?`
+            : ar
+              ? `هل أنت متأكد من رفض الحلقة "${approvalTarget?.circle.name}"؟`
+              : `Are you sure you want to reject "${approvalTarget?.circle.name}"?`
+        }
+        confirmLabel={
+          approvalTarget?.status === "APPROVED"
+            ? ar
+              ? "اعتماد"
+              : "Approve"
+            : ar
+              ? "رفض"
+              : "Reject"
+        }
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
+        confirmVariant={approvalTarget?.status === "APPROVED" ? "primary" : "danger"}
       />
     </div>
   );

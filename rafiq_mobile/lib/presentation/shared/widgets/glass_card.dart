@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 
 /// بطاقة Glassmorphism — تأثير الزجاج المثلج
@@ -27,18 +29,18 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final radius = borderRadius ?? BorderRadius.circular(20);
+    final isDark = context.isDark;
+    final radius = borderRadius ?? BorderRadius.circular(AppRadius.lg);
     final baseColor = tintColor ??
-        (isDark ? const Color(0xFFFFFFFF) : const Color(0xFF166534));
+        (isDark ? Colors.white : Theme.of(context).colorScheme.primary);
     final bgColor = isDark
-        ? const Color(0xFF1B2129).withValues(alpha: 0.70)
-        : Colors.white.withValues(alpha: 0.70);
+        ? context.cardColor.withValues(alpha: 0.75)
+        : Colors.white.withValues(alpha: 0.75);
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: shadows ?? AppShadows.md,
+        boxShadow: shadows ?? (isDark ? null : AppShadows.sm),
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -50,7 +52,7 @@ class GlassCard extends StatelessWidget {
               borderRadius: radius,
               border: showBorder
                   ? Border.all(
-                      color: baseColor.withValues(alpha: 0.15),
+                      color: baseColor.withValues(alpha: isDark ? 0.20 : 0.12),
                       width: 1,
                     )
                   : null,

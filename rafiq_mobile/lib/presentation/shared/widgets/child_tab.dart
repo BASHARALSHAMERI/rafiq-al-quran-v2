@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_gradients.dart';
 
 /// ChildTab - Used in ParentHome for switching between children
-///
-/// Layout: Pill-shaped button (full width in row)
-/// States: Selected (gradient), Unselected (outlined)
 class ChildTab extends StatelessWidget {
   final String name;
   final bool isSelected;
@@ -20,7 +19,8 @@ class ChildTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
 
     return Expanded(
       child: GestureDetector(
@@ -31,47 +31,35 @@ class ChildTab extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             gradient: isSelected ? AppGradients.primary : null,
-            color: isSelected
-                ? null
-                : (isDark ? AppColors.cardDark : AppColors.cardLight),
-            borderRadius: BorderRadius.circular(12),
-            border: isSelected
-                ? null
-                : Border.all(
-                    color:
-                        (isDark ? AppColors.borderDark : AppColors.borderLight)
-                            .withValues(alpha: 0.5),
-                  ),
+            color: isSelected ? null : context.cardColor,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: isSelected ? null : Border.all(color: context.borderColor),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.primaryLight.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                      spreadRadius: -2,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ]
-                : [
-                    BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: isDark ? 0.08 : 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                : (isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]),
           ),
           child: Text(
             name,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight),
-                ),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: isSelected ? Colors.white : context.textPrimaryColor,
+            ),
           ),
         ),
       ),
@@ -111,59 +99,6 @@ class ChildTabBar extends StatelessWidget {
           ),
         );
       }).toList(),
-    );
-  }
-}
-
-/// Compact Child Tab for smaller spaces
-class ChildTabCompact extends StatelessWidget {
-  final String name;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const ChildTabCompact({
-    super.key,
-    required this.name,
-    this.isSelected = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected ? AppGradients.primary : null,
-          color: isSelected
-              ? null
-              : (isDark ? AppColors.cardDark : AppColors.cardLight),
-          borderRadius: BorderRadius.circular(20),
-          border: isSelected
-              ? null
-              : Border.all(
-                  color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                      .withValues(alpha: 0.5),
-                ),
-        ),
-        child: Text(
-          name,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight),
-              ),
-        ),
-      ),
     );
   }
 }

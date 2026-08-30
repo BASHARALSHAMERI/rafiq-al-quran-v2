@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../application/supervisor/supervisor_ops_providers.dart';
@@ -44,7 +44,6 @@ class _SupervisorOpsDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final reportKey = (
       month: _selectedMonth,
       year: _selectedYear,
@@ -52,7 +51,7 @@ class _SupervisorOpsDashboardScreenState
     final dashboardAsync = ref.watch(supervisorOpsDashboardProvider(reportKey));
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'لوحة العمليات',
         actions: [
@@ -72,7 +71,7 @@ class _SupervisorOpsDashboardScreenState
           onAction: () =>
               ref.invalidate(supervisorOpsDashboardProvider(reportKey)),
         ),
-        data: (dashboard) => _buildContent(context, theme, dashboard),
+        data: (dashboard) => _buildContent(context, dashboard),
       ),
     );
   }
@@ -86,7 +85,12 @@ class _SupervisorOpsDashboardScreenState
   }
 
   Widget _buildContent(
-      BuildContext context, ThemeData theme, SupervisorOpsDashboardDto d) {
+      BuildContext context, SupervisorOpsDashboardDto d) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -115,24 +119,24 @@ class _SupervisorOpsDashboardScreenState
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primaryLight
+                            ? primary
                             : (isFuture
-                                ? Colors.grey.shade200
-                                : AppColors.cardLight),
+                                ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                                : context.cardColor),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
                             color: isSelected
-                                ? AppColors.primaryLight
-                                : AppColors.borderLight),
+                                ? primary
+                                : context.borderColor),
                       ),
                       child: Text(
                         _monthNames[month],
                         style: TextStyle(
                           color: isSelected
-                              ? Colors.white
+                              ? theme.colorScheme.onPrimary
                               : (isFuture
-                                  ? Colors.grey.shade400
-                                  : AppColors.textSecondaryLight),
+                                  ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                                  : context.textSecondaryColor),
                           fontWeight:
                               isSelected ? FontWeight.w700 : FontWeight.w500,
                           fontSize: 12,
@@ -150,8 +154,8 @@ class _SupervisorOpsDashboardScreenState
           Text(
             '${d.profile.fullName} — ${_monthNames[d.period.month]} ${d.period.year}',
             style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimaryLight,
+              fontWeight: FontWeight.w800,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -161,22 +165,24 @@ class _SupervisorOpsDashboardScreenState
             children: [
               Expanded(
                 child: _buildProgressCard(
+                  context: context,
                   title: 'ساعات الدوام',
                   value: '${d.hours.worked.toStringAsFixed(1)}h',
                   target: '${d.hours.target}h',
                   pct: d.hours.progressPct,
-                  color: AppColors.primaryLight,
+                  color: primary,
                   icon: Icons.access_time_rounded,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _buildProgressCard(
+                  context: context,
                   title: 'الزيارات',
                   value: '${d.visits.completed}',
                   target: '${d.visits.target}',
                   pct: d.visits.progressPct,
-                  color: AppColors.successLight,
+                  color: custom.success,
                   icon: Icons.location_on_rounded,
                 ),
               ),
@@ -185,27 +191,27 @@ class _SupervisorOpsDashboardScreenState
           const SizedBox(height: AppSpacing.md),
 
           // Visits breakdown
-          _buildSectionTitle('تفاصيل الزيارات'),
+          _buildSectionTitle(context, 'تفاصيل الزيارات'),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              _buildMiniStat('مكتملة', d.visits.completed, AppColors.successLight),
-              _buildMiniStat('جارية', d.visits.inProgress, AppColors.warningLight),
-              _buildMiniStat('الكل', d.visits.total, AppColors.infoLight),
+              _buildMiniStat(context, 'مكتملة', d.visits.completed, custom.success),
+              _buildMiniStat(context, 'جارية', d.visits.inProgress, custom.warning),
+              _buildMiniStat(context, 'الكل', d.visits.total, custom.info),
             ],
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              _buildMiniStat('خطة منجزة', d.visits.planCompleted, AppColors.successLight),
-              _buildMiniStat('خطة معلقة', d.visits.planPending, AppColors.warningLight),
-              _buildMiniStat('خطة فائتة', d.visits.planMissed, AppColors.errorLight),
+              _buildMiniStat(context, 'خطة منجزة', d.visits.planCompleted, custom.success),
+              _buildMiniStat(context, 'خطة معلقة', d.visits.planPending, custom.warning),
+              _buildMiniStat(context, 'خطة فائتة', d.visits.planMissed, theme.colorScheme.error),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
 
           // Assignments
-          _buildSectionTitle('المراكز المسندة (${d.assignments.centersCount})'),
+          _buildSectionTitle(context, 'المراكز المسندة (${d.assignments.centersCount})'),
           const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: 8,
@@ -216,9 +222,10 @@ class _SupervisorOpsDashboardScreenState
                           horizontal: 12, vertical: 8),
                       child: Text(
                         c.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          color: context.textPrimaryColor,
                         ),
                       ),
                     ))
@@ -228,9 +235,10 @@ class _SupervisorOpsDashboardScreenState
 
           // Unvisited
           if (d.unvisitedCircles.isNotEmpty) ...[
-            _buildSectionTitle('حلقات لم تُزر'),
+            _buildSectionTitle(context, 'حلقات لم تُزر'),
             const SizedBox(height: AppSpacing.sm),
             ...d.unvisitedCircles.map((c) => _buildUnvisitedItem(
+                  context,
                   c.name,
                   c.centerName,
                   Icons.circle_outlined,
@@ -239,9 +247,10 @@ class _SupervisorOpsDashboardScreenState
           ],
 
           if (d.unvisitedCenters.isNotEmpty) ...[
-            _buildSectionTitle('مراكز لم تُزر'),
+            _buildSectionTitle(context, 'مراكز لم تُزر'),
             const SizedBox(height: AppSpacing.sm),
             ...d.unvisitedCenters.map((c) => _buildUnvisitedItem(
+                  context,
                   c.name,
                   '',
                   Icons.business_outlined,
@@ -251,9 +260,9 @@ class _SupervisorOpsDashboardScreenState
 
           // Recent visits
           if (d.recentVisits.isNotEmpty) ...[
-            _buildSectionTitle('آخر الزيارات'),
+            _buildSectionTitle(context, 'آخر الزيارات'),
             const SizedBox(height: AppSpacing.sm),
-            ...d.recentVisits.map((v) => _buildRecentVisitItem(v)),
+            ...d.recentVisits.map((v) => _buildRecentVisitItem(context, v)),
             const SizedBox(height: AppSpacing.lg),
           ],
 
@@ -263,18 +272,19 @@ class _SupervisorOpsDashboardScreenState
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w800,
-        color: AppColors.textPrimaryLight,
+        color: context.textPrimaryColor,
       ),
     );
   }
 
   Widget _buildProgressCard({
+    required BuildContext context,
     required String title,
     required String value,
     required String target,
@@ -291,10 +301,10 @@ class _SupervisorOpsDashboardScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondaryLight)),
+                      color: context.textSecondaryColor)),
               Icon(icon, size: 18, color: color),
             ],
           ),
@@ -303,15 +313,15 @@ class _SupervisorOpsDashboardScreenState
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(value,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimaryLight)),
+                      color: context.textPrimaryColor)),
               const SizedBox(width: 4),
               Text('/ $target',
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textSecondaryLight)),
+                      color: context.textSecondaryColor)),
             ],
           ),
           const SizedBox(height: 8),
@@ -320,7 +330,7 @@ class _SupervisorOpsDashboardScreenState
             child: LinearProgressIndicator(
               value: (pct / 100).clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: AppColors.borderLight,
+              backgroundColor: context.borderColor,
               color: color,
             ),
           ),
@@ -333,15 +343,17 @@ class _SupervisorOpsDashboardScreenState
     );
   }
 
-  Widget _buildMiniStat(String label, int value, Color color) {
+  Widget _buildMiniStat(BuildContext context, String label, int value, Color color) {
+    final isDark = context.isDark;
+
     return Expanded(
       child: Container(
         margin: const EdgeInsets.all(2),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withValues(alpha: isDark ? 0.16 : 0.08),
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withValues(alpha: isDark ? 0.28 : 0.2)),
         ),
         child: Column(
           children: [
@@ -350,32 +362,36 @@ class _SupervisorOpsDashboardScreenState
                     fontSize: 16, fontWeight: FontWeight.w800, color: color)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 10, color: AppColors.textSecondaryLight)),
+                style: TextStyle(
+                    fontSize: 10, color: context.textSecondaryColor)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildUnvisitedItem(String name, String centerName, IconData icon) {
+  Widget _buildUnvisitedItem(BuildContext context, String name, String centerName, IconData icon) {
+    final errColor = Theme.of(context).colorScheme.error;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.errorLight),
+          Icon(icon, size: 16, color: errColor),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: context.textPrimaryColor)),
                 if (centerName.isNotEmpty)
                   Text(centerName,
-                      style: const TextStyle(
-                          fontSize: 11, color: AppColors.textSecondaryLight)),
+                      style: TextStyle(
+                          fontSize: 11, color: context.textSecondaryColor)),
               ],
             ),
           ),
@@ -384,12 +400,13 @@ class _SupervisorOpsDashboardScreenState
     );
   }
 
-  Widget _buildRecentVisitItem(SupervisorOpsRecentVisitDto v) {
+  Widget _buildRecentVisitItem(BuildContext context, SupervisorOpsRecentVisitDto v) {
     final ended = v.endedAt != null;
     final duration = v.durationMinutes != null
         ? '${v.durationMinutes! ~/ 60}h ${v.durationMinutes! % 60}m'
         : '—';
     final date = DateFormat('dd/MM').format(v.startedAt);
+    final custom = context.customColors;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -401,7 +418,7 @@ class _SupervisorOpsDashboardScreenState
               width: 8,
               height: 8,
               decoration: BoxDecoration(
-                color: ended ? AppColors.successLight : AppColors.warningLight,
+                color: ended ? custom.success : custom.warning,
                 shape: BoxShape.circle,
               ),
             ),
@@ -411,21 +428,25 @@ class _SupervisorOpsDashboardScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(v.centerName,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: context.textPrimaryColor)),
                   if (v.circleName != null && v.circleName!.isNotEmpty)
                     Text(v.circleName!,
-                        style: const TextStyle(
-                            fontSize: 11, color: AppColors.textSecondaryLight)),
+                        style: TextStyle(
+                            fontSize: 11, color: context.textSecondaryColor)),
                   Row(
                     children: [
                       Text(date,
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.textSecondaryLight)),
+                          style: TextStyle(
+                              fontSize: 11, color: context.textSecondaryColor)),
                       const SizedBox(width: 8),
                       Text(duration,
-                          style: const TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: context.textPrimaryColor)),
                     ],
                   ),
                 ],
@@ -434,12 +455,14 @@ class _SupervisorOpsDashboardScreenState
             if (v.rating != null)
               Row(
                 children: [
-                  const Icon(Icons.star_rounded,
-                      size: 14, color: AppColors.warningLight),
+                  Icon(Icons.star_rounded,
+                      size: 14, color: custom.warning),
                   const SizedBox(width: 2),
                   Text('${v.rating}',
-                      style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w700)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: context.textPrimaryColor)),
                 ],
               ),
           ],

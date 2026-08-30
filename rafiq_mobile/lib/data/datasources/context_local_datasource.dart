@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'auth_local_datasource.dart';
+import '../models/context_dtos.dart';
 
 class ContextLocalDataSource {
   final AuthLocalDataSource _authLocalDataSource;
@@ -11,6 +12,8 @@ class ContextLocalDataSource {
   static const _centerIdKey = 'selected_center_id';
   static const _circleIdKey = 'selected_circle_id';
   static const _ownerUserIdKey = 'selected_context_user_id';
+  static const _centersKey = 'cached_centers';
+  static const _circlesKey = 'cached_circles';
 
   Future<Box<dynamic>> _box() async {
     if (Hive.isBoxOpen(_boxName)) {
@@ -19,7 +22,7 @@ class ContextLocalDataSource {
     return Hive.openBox<dynamic>(_boxName);
   }
 
-  Future<void> saveSelectedCenter(String centerId) async {
+  Future<void> saveSelectedCenter(int centerId) async {
     final box = await _box();
     final activeUserId = await _currentUserId();
     if (activeUserId == null) {
@@ -31,7 +34,7 @@ class ContextLocalDataSource {
     await box.put(_centerIdKey, centerId);
   }
 
-  Future<void> saveSelectedCircle(String circleId) async {
+  Future<void> saveSelectedCircle(int circleId) async {
     final box = await _box();
     final activeUserId = await _currentUserId();
     if (activeUserId == null) {
@@ -43,22 +46,30 @@ class ContextLocalDataSource {
     await box.put(_circleIdKey, circleId);
   }
 
-  Future<String?> getSelectedCenter() async {
+  Future<int?> getSelectedCenter() async {
     final box = await _box();
     if (!await _isScopeActive(box)) {
       return null;
     }
     final value = box.get(_centerIdKey);
-    return value is String && value.trim().isNotEmpty ? value : null;
+    if (value is int) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 
-  Future<String?> getSelectedCircle() async {
+  Future<int?> getSelectedCircle() async {
     final box = await _box();
     if (!await _isScopeActive(box)) {
       return null;
     }
     final value = box.get(_circleIdKey);
-    return value is String && value.trim().isNotEmpty ? value : null;
+    if (value is int) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 
   Future<void> clear() async {
@@ -66,15 +77,69 @@ class ContextLocalDataSource {
     await _clearBox(box);
   }
 
-  Future<void> saveCurrentCenter(String centerId) =>
+  Future<void> saveCenters(List<CenterDto> centers) async {
+    final box = await _box();
+    final activeUserId = await _currentUserId();
+    if (activeUserId == null) return;
+    await _syncScope(box, activeUserId);
+    
+    final jsonList = centers.map((c) => c.toJson()).toList();
+    await box.put(_centersKey, jsonList);
+  }
+
+  Future<void> saveCircles(List<CircleDto> circles) async {
+    final box = await _box();
+    final activeUserId = await _currentUserId();
+    if (activeUserId == null) return;
+    await _syncScope(box, activeUserId);
+
+    final jsonList = circles.map((c) => c.toJson()).toList();
+    await box.put(_circlesKey, jsonList);
+  }
+
+  Future<List<CenterDto>?> getCachedCenters() async {
+    final box = await _box();
+    if (!await _isScopeActive(box)) return null;
+
+    final data = box.get(_centersKey);
+    if (data is List) {
+      try {
+        return data
+            .map((e) => CenterDto.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<List<CircleDto>?> getCachedCircles() async {
+    final box = await _box();
+    if (!await _isScopeActive(box)) return null;
+
+    final data = box.get(_circlesKey);
+    if (data is List) {
+      try {
+        return data
+            .map((e) => CircleDto.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> saveCurrentCenter(int centerId) =>
       saveSelectedCenter(centerId);
 
-  Future<void> saveCurrentCircle(String circleId) =>
+  Future<void> saveCurrentCircle(int circleId) =>
       saveSelectedCircle(circleId);
 
-  Future<String?> getCurrentCenterId() => getSelectedCenter();
+  Future<int?> getCurrentCenterId() => getSelectedCenter();
 
-  Future<String?> getCurrentCircleId() => getSelectedCircle();
+  Future<int?> getCurrentCircleId() => getSelectedCircle();
 
   Future<void> clearContext() => clear();
 
@@ -121,6 +186,8 @@ class ContextLocalDataSource {
     await box.delete(_centerIdKey);
     await box.delete(_circleIdKey);
     await box.delete(_ownerUserIdKey);
+    await box.delete(_centersKey);
+    await box.delete(_circlesKey);
   }
 
   String? _normalize(dynamic value) {

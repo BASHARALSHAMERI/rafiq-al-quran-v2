@@ -7,14 +7,16 @@ import type {
   UpdateOrganizationBrandingPayload,
   UpdateCenterPayload,
   UpdateCirclePayload,
-  UpdateEntityStatusPayload
+  UpdateEntityStatusPayload,
+  UpdateCircleApprovalStatusPayload,
+  CircleApprovalStatus
 } from "./types";
 
 export const ORG_QUERY_KEYS = {
   all: ["org"] as const,
   branding: () => [...ORG_QUERY_KEYS.all, "branding"] as const,
   centers: () => [...ORG_QUERY_KEYS.all, "centers"] as const,
-  circles: (centerId?: number) => [...ORG_QUERY_KEYS.all, "circles", centerId ?? null] as const
+  circles: (centerId?: number, approvalStatus?: string) => [...ORG_QUERY_KEYS.all, "circles", centerId ?? null, approvalStatus ?? null] as const
 };
 
 export const useOrgBrandingQuery = (options?: { enabled?: boolean }) => {
@@ -40,11 +42,11 @@ export const useCentersQuery = (options?: { enabled?: boolean }) => {
 
 export const useCirclesQuery = (
   centerId?: number,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; approvalStatus?: CircleApprovalStatus }
 ) => {
   return useQuery({
-    queryKey: ORG_QUERY_KEYS.circles(centerId),
-    queryFn: () => orgApi.getCircles({ centerId }),
+    queryKey: ORG_QUERY_KEYS.circles(centerId, options?.approvalStatus),
+    queryFn: () => orgApi.getCircles({ centerId, approvalStatus: options?.approvalStatus }),
     enabled: options?.enabled ?? true,
     staleTime: 300_000,
     gcTime: 600_000,
@@ -128,6 +130,18 @@ export const useUpdateCircleStatusMutation = () => {
   return useMutation({
     mutationFn: (input: { circleId: number; payload: UpdateEntityStatusPayload }) =>
       orgApi.updateCircleStatus(input.circleId, input.payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ORG_QUERY_KEYS.all });
+    }
+  });
+};
+
+export const useUpdateCircleApprovalStatusMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { circleId: number; payload: UpdateCircleApprovalStatusPayload }) =>
+      orgApi.updateCircleApprovalStatus(input.circleId, input.payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ORG_QUERY_KEYS.all });
     }

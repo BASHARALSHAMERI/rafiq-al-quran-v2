@@ -218,9 +218,10 @@ export const adaptStudentMonthlyReport = (
     if (key && !attendanceByDate.has(key)) attendanceByDate.set(key, row);
   }
 
-  // تجميع المتابعة حسب التاريخ.
+  // تجميع المتابعة حسب التاريخ (FINAL فقط).
+  const finalFollowUps = api.followUps.filter((r) => r.status === "FINAL");
   const followUpsByDate = new Map<string, StudentApiFollowUpRow[]>();
-  for (const row of api.followUps) {
+  for (const row of finalFollowUps) {
     const key = dateKey(row.recordDate);
     if (!key) continue;
     const list = followUpsByDate.get(key) ?? [];
@@ -279,14 +280,14 @@ export const adaptStudentMonthlyReport = (
       };
     });
 
-  // الملخص — يُحسب من بيانات الـ API الحقيقية فقط.
-  const memorizationPages = api.followUps
+  // الملخص — يُحسب من بيانات الـ API الحقيقية فقط (FINAL).
+  const memorizationPages = finalFollowUps
     .filter((r) => isMemorization(r.type))
     .reduce((sum, r) => sum + num(r.pagesCount), 0);
-  const revisionPages = api.followUps
+  const revisionPages = finalFollowUps
     .filter((r) => isRevision(r.type))
     .reduce((sum, r) => sum + num(r.pagesCount), 0);
-  const mutunPages = api.followUps
+  const mutunPages = finalFollowUps
     .filter((r) => isMutun(r))
     .reduce((sum, r) => sum + num(r.pagesCount), 0);
 

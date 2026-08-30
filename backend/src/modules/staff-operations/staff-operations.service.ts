@@ -464,6 +464,7 @@ export const staffOperationsService = {
       role: {
         in: [
           Role.CENTER_ADMIN,
+          Role.SUPERVISOR,
           Role.TEACHER,
           Role.ACCOUNTANT,
           Role.FINANCE_MANAGER,

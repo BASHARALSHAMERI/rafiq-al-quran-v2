@@ -21,13 +21,13 @@ class ExamStudentOption {
 final examStudentOptionsProvider =
     FutureProvider.autoDispose<List<ExamStudentOption>>((ref) async {
   final contextState = ref.watch(contextControllerProvider);
-  final selectedCircleId = contextState.selectedCircleId?.trim();
-  final selectedCenterId = contextState.selectedCenterId?.trim();
+  final selectedCircleId = contextState.selectedCircleId;
+  final selectedCenterId = contextState.selectedCenterId;
 
   final query = <String, dynamic>{'role': 'STUDENT'};
-  if (selectedCircleId != null && selectedCircleId.isNotEmpty) {
+  if (selectedCircleId != null && selectedCircleId > 0) {
     query['circleId'] = selectedCircleId;
-  } else if (selectedCenterId != null && selectedCenterId.isNotEmpty) {
+  } else if (selectedCenterId != null && selectedCenterId > 0) {
     query['centerId'] = selectedCenterId;
   }
 

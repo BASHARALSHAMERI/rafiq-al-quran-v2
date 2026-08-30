@@ -6,9 +6,20 @@ part 'context_dtos.g.dart';
 @freezed
 class CenterDto with _$CenterDto {
   const factory CenterDto({
-    required String id,
+    required int id,
     required String name,
-    required String domain,
+    required String code,
+    @Default(true) bool isActive,
+    @Default('MALE') String gender,
+    String? timezone,
+    String? mosqueName,
+    String? locationText,
+    double? latitude,
+    double? longitude,
+    int? allowedRadiusMeters,
+    String? logoUrl,
+    @Default(0) int organizationId,
+    @Default(0) int centerAdminUserId,
   }) = _CenterDto;
 
   factory CenterDto.fromJson(Map<String, dynamic> json) =>
@@ -18,9 +29,21 @@ class CenterDto with _$CenterDto {
 @freezed
 class CircleDto with _$CircleDto {
   const factory CircleDto({
-    required String id,
+    required int id,
+    required int centerId,
     required String name,
-    required String centerId,
+    @Default(0) int teacherId,
+    @Default(true) bool isActive,
+    @Default('MALE') String gender,
+    @Default('HIFZ') String circleType,
+    @Default('APPROVED') String approvalStatus,
+    String? mosqueName,
+    String? locationText,
+    double? latitude,
+    double? longitude,
+    int? allowedRadiusMeters,
+    String? teacherName,
+    int? studentsCount,
   }) = _CircleDto;
 
   factory CircleDto.fromJson(Map<String, dynamic> json) =>

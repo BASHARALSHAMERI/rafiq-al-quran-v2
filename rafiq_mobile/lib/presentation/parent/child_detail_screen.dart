@@ -49,7 +49,6 @@ class ChildDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final state = ref.watch(parentDashboardProvider);
     final parsedId = int.tryParse(childId) ?? 0;
     final parentLinks = DataParsingHelper.asMapList(state.parentData?['parentLinks']);
@@ -63,10 +62,10 @@ class ChildDetailScreen extends ConsumerWidget {
     }
 
     if (link == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF7F8F5),
-        appBar: StandardAppBar(title: ''),
-        body: PageStateView.empty(
+      return Scaffold(
+        backgroundColor: context.surfaceColor,
+        appBar: const StandardAppBar(title: ''),
+        body: const PageStateView.empty(
           title: 'الابن غير موجود',
           message: 'لم يتم العثور على بيانات هذا الابن في الحساب الحالي.',
         ),
@@ -81,23 +80,26 @@ class ChildDetailScreen extends ConsumerWidget {
     final profile = state.childrenProfiles[parsedId];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(title: 'متابعة $name'),
       body: profile == null
           ? const PageStateView.loading(
               title: 'جارٍ تحميل التفاصيل',
               message: 'يتم تجهيز سجل الابن الآن.',
             )
-          : _buildProfileBody(context, theme, name, profile),
+          : _buildProfileBody(context, name, profile),
     );
   }
 
   Widget _buildProfileBody(
     BuildContext context,
-    ThemeData theme,
     String name,
     Map<String, dynamic> profile,
   ) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final custom = context.customColors;
+
     final enrollments = DataParsingHelper.asMapList(profile['studentEnrollments']);
     final firstEnrollment =
         enrollments.isNotEmpty ? enrollments.first : const <String, dynamic>{};
@@ -150,15 +152,15 @@ class ChildDetailScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primaryLight, AppColors.primaryLight.withValues(alpha: 0.8)],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF115E59)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryLight.withValues(alpha: 0.3),
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -176,7 +178,7 @@ class ChildDetailScreen extends ConsumerWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    name.characters.first,
+                    name.isNotEmpty ? name.characters.first : 'ط',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -209,7 +211,7 @@ class ChildDetailScreen extends ConsumerWidget {
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -227,14 +229,14 @@ class ChildDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'نسبة الإنجاز في الحفظ',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: context.textPrimaryColor),
                     ),
-                    Icon(Icons.auto_graph_rounded, color: AppColors.primaryLight, size: 20),
+                    Icon(Icons.auto_graph_rounded, color: primary, size: 20),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -243,8 +245,8 @@ class ChildDetailScreen extends ConsumerWidget {
                   child: LinearProgressIndicator(
                     value: (currentJuzz / 30).clamp(0, 1),
                     minHeight: 12,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    color: AppColors.primaryLight,
+                    backgroundColor: context.borderColor,
+                    color: primary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -253,11 +255,11 @@ class ChildDetailScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'أتمّ $currentJuzz من 30 جزءاً',
-                      style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: context.textSecondaryColor, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     Text(
                       '${((currentJuzz / 30) * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900),
+                      style: TextStyle(color: primary, fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
@@ -282,29 +284,25 @@ class ChildDetailScreen extends ConsumerWidget {
                     title: 'الجزء الحالي',
                     value: currentJuzz > 0 ? '$currentJuzz' : '-',
                     icon: Icons.menu_book_rounded,
-                    color: AppColors.primaryLight,
-                    iconBg: const Color(0xFFEFF6FF),
+                    color: primary,
                   ),
                   _StatCard(
                     title: 'نسبة الحضور',
                     value: attendanceRate,
                     icon: Icons.check_circle_rounded,
-                    color: const Color(0xFF10B981),
-                    iconBg: const Color(0xFFECFDF5),
+                    color: custom.success,
                   ),
                   _StatCard(
                     title: 'التقييم',
                     value: rating,
                     icon: Icons.star_rounded,
-                    color: const Color(0xFFF59E0B),
-                    iconBg: const Color(0xFFFFFBEB),
+                    color: custom.warning,
                   ),
                   _StatCard(
                     title: 'الترتيب',
                     value: rank,
                     icon: Icons.military_tech_rounded,
-                    color: const Color(0xFF8B5CF6),
-                    iconBg: const Color(0xFFF5F3FF),
+                    color: custom.accent,
                   ),
                 ],
               );
@@ -314,11 +312,11 @@ class ChildDetailScreen extends ConsumerWidget {
           const SectionHeader(title: 'آخر الحفظ'),
           const SizedBox(height: AppSpacing.sm),
           if (recentMem.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Text(
                 'لا يوجد سجل حفظ حديث.',
-                style: TextStyle(color: AppColors.textSecondaryLight),
+                style: TextStyle(color: context.textSecondaryColor),
               ),
             )
           else
@@ -327,11 +325,11 @@ class ChildDetailScreen extends ConsumerWidget {
           const SectionHeader(title: 'آخر الحضور'),
           const SizedBox(height: AppSpacing.sm),
           if (recentAtt.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Text(
                 'لا يوجد سجل حضور حديث.',
-                style: TextStyle(color: AppColors.textSecondaryLight),
+                style: TextStyle(color: context.textSecondaryColor),
               ),
             )
           else
@@ -341,7 +339,6 @@ class ChildDetailScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 class _StatCard extends StatelessWidget {
@@ -349,14 +346,12 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
-  final Color iconBg;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
-    required this.iconBg,
   });
 
   @override
@@ -364,12 +359,12 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
+        border: Border.all(color: context.borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: context.isDark ? 0.15 : 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -385,17 +380,17 @@ class _StatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: iconBg,
+                  color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 16, color: color),
               ),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondaryLight,
+                  fontWeight: FontWeight.w700,
+                  color: context.textSecondaryColor,
                 ),
               ),
             ],
@@ -422,7 +417,9 @@ class _MemRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _recordColor(item.grade);
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = _recordColor(context, item.grade);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppCard(
@@ -433,13 +430,13 @@ class _MemRecordCard extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.1),
+                color: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.menu_book_rounded,
                 size: 18,
-                color: AppColors.primaryLight,
+                color: primary,
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
@@ -451,16 +448,18 @@ class _MemRecordCard extends StatelessWidget {
                     '${item.surah} (${item.ayahs})',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: context.textPrimaryColor,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     item.date,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: AppColors.textSecondaryLight,
+                      color: context.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -472,14 +471,14 @@ class _MemRecordCard extends StatelessWidget {
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: context.isDark ? 0.20 : 0.12),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 item.grade,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: color,
                 ),
               ),
@@ -490,20 +489,23 @@ class _MemRecordCard extends StatelessWidget {
     );
   }
 
-  Color _recordColor(String grade) {
+  Color _recordColor(BuildContext context, String grade) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     switch (grade) {
       case 'ممتاز':
-        return AppColors.successLight;
+        return custom.success;
       case 'جيد جداً':
-        return AppColors.primaryLight;
+        return primary;
       case 'جيد':
-        return AppColors.infoLight;
+        return custom.info;
       case 'مقبول':
-        return AppColors.warningLight;
+        return custom.warning;
       case 'ضعيف':
-        return AppColors.errorLight;
+        return Theme.of(context).colorScheme.error;
       default:
-        return AppColors.textSecondaryLight;
+        return context.textSecondaryColor;
     }
   }
 }
@@ -515,7 +517,8 @@ class _AttendanceRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(item.status);
+    final color = _statusColor(context, item.status);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppCard(
@@ -525,16 +528,19 @@ class _AttendanceRecordCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.calendar_month_rounded,
               size: 16,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
                 item.date,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: TextStyle(
+                  color: context.textPrimaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Container(
@@ -543,14 +549,14 @@ class _AttendanceRecordCard extends StatelessWidget {
                 vertical: 6,
               ),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: context.isDark ? 0.20 : 0.12),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 item.status,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: color,
                 ),
               ),
@@ -561,16 +567,18 @@ class _AttendanceRecordCard extends StatelessWidget {
     );
   }
 
-  Color _statusColor(String label) {
+  Color _statusColor(BuildContext context, String label) {
+    final custom = context.customColors;
+
     switch (label) {
       case 'حاضر':
-        return AppColors.successLight;
+        return custom.success;
       case 'غائب':
-        return AppColors.errorLight;
+        return Theme.of(context).colorScheme.error;
       case 'متأخر':
-        return AppColors.warningLight;
+        return custom.warning;
       default:
-        return AppColors.textSecondaryLight;
+        return context.textSecondaryColor;
     }
   }
 }

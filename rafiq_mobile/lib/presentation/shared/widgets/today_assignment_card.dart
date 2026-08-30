@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 
+/// Simple assignment data class
+class AssignmentItem {
+  final String title;
+  final String content;
+
+  const AssignmentItem({
+    required this.title,
+    required this.content,
+  });
+}
+
 /// TodayAssignmentCard - Used in StudentHome
-///
-/// Layout:
-/// - Hifz assignment (icon + title + content)
-/// - Review assignment (icon + title + content)
-/// - Progress bar
-/// - Progress percentage
 class TodayAssignmentCard extends StatelessWidget {
   final AssignmentItem hifz;
   final AssignmentItem review;
@@ -22,24 +29,17 @@ class TodayAssignmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final custom = context.customColors;
+    final primary = theme.colorScheme.primary;
+    final info = custom.info;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-              .withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,11 +48,8 @@ class TodayAssignmentCard extends StatelessWidget {
           // Hifz assignment
           _buildAssignmentRow(
             context,
-            icon: Icons.menu_book,
-            iconColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-            iconBgColor:
-                (isDark ? AppColors.primaryDark : AppColors.primaryLight)
-                    .withValues(alpha: 0.10),
+            icon: Icons.menu_book_rounded,
+            iconColor: primary,
             title: hifz.title,
             content: hifz.content,
           ),
@@ -60,38 +57,31 @@ class TodayAssignmentCard extends StatelessWidget {
           // Review assignment
           _buildAssignmentRow(
             context,
-            icon: Icons.star,
-            iconColor: isDark ? AppColors.infoDark : AppColors.infoLight,
-            iconBgColor: (isDark ? AppColors.infoDark : AppColors.infoLight)
-                .withValues(alpha: 0.10),
+            icon: Icons.bookmark_outline_rounded,
+            iconColor: info,
             title: review.title,
             content: review.content,
           ),
           const SizedBox(height: 16),
           // Progress bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress.clamp(0.0, 1.0),
-              backgroundColor: isDark
-                  ? AppColors.borderDark
-                  : AppColors.borderLight.withValues(alpha: 0.5),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isDark ? AppColors.primaryDark : AppColors.primaryLight,
-              ),
-              minHeight: 8,
+              backgroundColor: context.borderColor,
+              valueColor: AlwaysStoppedAnimation<Color>(primary),
+              minHeight: 7,
             ),
           ),
           const SizedBox(height: 8),
           // Progress text
           Text(
             '${(progress * 100).toInt()}% مكتمل',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: context.textSecondaryColor,
+            ),
           ),
         ],
       ),
@@ -102,21 +92,20 @@ class TodayAssignmentCard extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required Color iconColor,
-    required Color iconBgColor,
     required String title,
     required String content,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return Row(
       children: [
-        // Icon container
         Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: iconBgColor,
-            borderRadius: BorderRadius.circular(10),
+            color: iconColor.withValues(alpha: isDark ? 0.18 : 0.10),
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Icon(
             icon,
@@ -125,7 +114,6 @@ class TodayAssignmentCard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Title + Content
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,23 +121,19 @@ class TodayAssignmentCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: context.textPrimaryColor,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 content,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: context.textSecondaryColor,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -159,17 +143,6 @@ class TodayAssignmentCard extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Simple assignment data class
-class AssignmentItem {
-  final String title;
-  final String content;
-
-  const AssignmentItem({
-    required this.title,
-    required this.content,
-  });
 }
 
 /// Compact version with only one assignment
@@ -191,26 +164,16 @@ class AssignmentCardCompact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color =
-        iconColor ?? (isDark ? AppColors.primaryDark : AppColors.primaryLight);
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
+    final color = iconColor ?? theme.colorScheme.primary;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-              .withValues(alpha: 0.5),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,8 +185,8 @@ class AssignmentCardCompact extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withValues(alpha: isDark ? 0.18 : 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Icon(
                   icon,
@@ -239,22 +202,18 @@ class AssignmentCardCompact extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight,
-                          ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: context.textPrimaryColor,
+                      ),
                     ),
                     Text(
                       content,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        color: context.textSecondaryColor,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -266,12 +225,10 @@ class AssignmentCardCompact extends StatelessWidget {
           if (progress > 0) ...[
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
-                backgroundColor: isDark
-                    ? AppColors.borderDark
-                    : AppColors.borderLight.withValues(alpha: 0.5),
+                backgroundColor: context.borderColor,
                 valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 6,
               ),

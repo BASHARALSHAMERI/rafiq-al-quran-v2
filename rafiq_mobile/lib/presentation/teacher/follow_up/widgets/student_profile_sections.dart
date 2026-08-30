@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/constants/app_radius.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/student_profile.dart';
 
@@ -26,30 +27,25 @@ class StudentProfileHeaderCard extends StatelessWidget {
     final initial = profile.fullName.trim().isEmpty
         ? '؟'
         : profile.fullName.trim().characters.first;
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFF568A78), // Green/teal from the image
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.20 : 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               image: profile.avatarUrl != null
                   ? DecorationImage(
                       image: NetworkImage(profile.avatarUrl!),
@@ -61,8 +57,8 @@ class StudentProfileHeaderCard extends StatelessWidget {
                 ? Center(
                     child: Text(
                       initial,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : theme.colorScheme.primary,
                         fontWeight: FontWeight.w900,
                         fontSize: 22,
                       ),
@@ -70,32 +66,32 @@ class StudentProfileHeaderCard extends StatelessWidget {
                   )
                 : null,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   profile.fullName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                    color: AppColors.textPrimaryLight,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: context.textPrimaryColor,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.calendar_month_outlined,
                       size: 14,
-                      color: AppColors.textSecondaryLight,
+                      color: context.textSecondaryColor,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       _formattedTodayDate(),
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: context.textSecondaryColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -124,6 +120,8 @@ class StudentProfileErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -133,13 +131,13 @@ class StudentProfileErrorState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.errorLight.withValues(alpha: 0.08),
+                color: errorColor.withValues(alpha: context.isDark ? 0.18 : 0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline_rounded,
                 size: 48,
-                color: AppColors.errorLight,
+                color: errorColor,
               ),
             ),
             const SizedBox(height: 20),
@@ -147,6 +145,7 @@ class StudentProfileErrorState extends StatelessWidget {
               'تعذر تحميل ملف الطالب',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w700,
+                color: context.textPrimaryColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -154,20 +153,12 @@ class StudentProfileErrorState extends StatelessWidget {
               error.toString(),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryLight,
+                color: context.textSecondaryColor,
               ),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('إعادة المحاولة'),
             ),

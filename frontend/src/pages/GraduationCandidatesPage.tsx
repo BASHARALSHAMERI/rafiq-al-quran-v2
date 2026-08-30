@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   FileCheck2,
   Pencil,
-  Plus,
   RefreshCw,
   XCircle,
   Search,
@@ -292,12 +291,6 @@ export default function GraduationCandidatesPage({
     }
   }, [formOpen, filters.centerId, centers]);
 
-  useEffect(() => {
-    if (triggerCreate > 0) {
-      openCreateModal();
-    }
-  }, [triggerCreate]);
-
   const centerOptions = centers.map((center) => ({ value: String(center.id), label: center.name }));
   const circleOptions = circles.map((circle) => ({ value: String(circle.id), label: circle.name }));
 
@@ -311,6 +304,12 @@ export default function GraduationCandidatesPage({
     setFormTarget(null);
     setFormDraft(blankCandidateForm());
   };
+
+  useEffect(() => {
+    if (triggerCreate > 0) {
+      openCreateModal();
+    }
+  }, [triggerCreate]);
 
   const openEditModal = (item: GraduationCandidateItem) => {
     setFormMode("edit");

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/auth/auth_providers.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/theme/app_colors.dart';
 import '../shared/widgets/standard_app_bar.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -65,11 +67,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: const StandardAppBar(
         title: 'استعادة الحساب',
-        backgroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -86,22 +89,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   labelText: 'البريد الإلكتروني أو رقم الهاتف',
                   hintText: 'example@mail.com',
                   suffixIcon: const Icon(Icons.person_search_rounded),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF7A9F78),
-                      width: 1.5,
-                    ),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                 ),
                 validator: (value) {
@@ -116,30 +105,30 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 14),
               _InlineMessage(
                 text: _errorMessage!,
-                color: const Color(0xFFDC2626),
-                backgroundColor: const Color(0xFFFEE2E2),
+                color: theme.colorScheme.error,
+                backgroundColor: theme.colorScheme.error.withValues(alpha: 0.12),
               ),
             ],
             const SizedBox(height: 20),
             SizedBox(
-              height: 54,
+              height: 52,
               child: ElevatedButton.icon(
                 onPressed: _isSubmitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7A9F78),
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                 ),
                 icon: _isSubmitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                         ),
                       )
                     : const Icon(Icons.send_rounded),
@@ -147,7 +136,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   _isSubmitting ? 'جاري الإرسال...' : 'إرسال طلب الاستعادة',
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                 ),
               ),
@@ -189,42 +178,44 @@ class _ForgotPasswordIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
-      child: const Column(
+      child: Column(
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundColor: Color(0xFFE8F3E8),
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: isDark ? 0.20 : 0.10),
             child: Icon(
               Icons.mark_email_read_rounded,
-              color: Color(0xFF7A9F78),
+              color: theme.colorScheme.primary,
               size: 28,
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             'نسيت كلمة المرور؟',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
+            style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
+              fontSize: 20,
+              color: context.textPrimaryColor,
             ),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'أدخل البريد الإلكتروني أو رقم الهاتف المرتبط بحسابك. سنرسل لك رابط استعادة لإكمال تعيين كلمة المرور خارج التطبيق.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
+            style: theme.textTheme.bodyMedium?.copyWith(
               height: 1.6,
-              color: Color(0xFF64748B),
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -246,73 +237,71 @@ class _SuccessState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 32,
-            backgroundColor: Color(0xFFE8F3E8),
+            backgroundColor: custom.success.withValues(alpha: isDark ? 0.20 : 0.12),
             child: Icon(
               Icons.check_circle_rounded,
-              color: Color(0xFF16A34A),
+              color: custom.success,
               size: 34,
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'تم إرسال الطلب',
-            style: TextStyle(
-              fontSize: 22,
+            style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF0F172A),
+              fontSize: 20,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
+            style: theme.textTheme.bodyMedium?.copyWith(
               height: 1.6,
-              color: Color(0xFF475569),
+              color: context.textSecondaryColor,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             'المعرّف: $identifier',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF7A9F78),
+              color: theme.colorScheme.primary,
             ),
           ),
           const SizedBox(height: 18),
-          const _InlineMessage(
+          _InlineMessage(
             text:
                 'أكمل إعادة التعيين من الرابط الذي سيصل إليك. لا يوجد إدخال OTP داخل التطبيق في هذه المرحلة.',
-            color: Color(0xFF0F172A),
-            backgroundColor: Color(0xFFE2E8F0),
+            color: context.textPrimaryColor,
+            backgroundColor: context.isDark
+                ? theme.colorScheme.surfaceContainerHighest
+                : AppColors.surfaceVariantLight,
           ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: OutlinedButton(
               onPressed: onBackToLogin,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF0F172A),
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
               child: const Text(
                 'العودة لتسجيل الدخول',
                 style: TextStyle(fontWeight: FontWeight.w800),
@@ -343,7 +332,7 @@ class _InlineMessage extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Text(
         text,

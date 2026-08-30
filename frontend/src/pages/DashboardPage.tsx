@@ -40,10 +40,13 @@ import type {
   AttendanceSummaryItem,
   DashboardFilters,
 } from "../features/dashboard/types";
+import type { FinanceReportDashboardV2 } from "../features/finance-v2/types";
 import type { Role } from "../features/auth/types";
 import { useCentersQuery, useCirclesQuery } from "../features/org/org.hooks";
 import { canReadCenters, canReadCircles } from "../features/org/org.permissions";
 import { roleCanAccessRoute, type AdminRouteId } from "../app/route-meta";
+import { useQuery } from "@tanstack/react-query";
+import { financeV2Api } from "../features/finance-v2/finance-v2.api";
 
 import "../styles/pages/dashboard-v3.css";
 
@@ -63,7 +66,50 @@ function greeting(ar: boolean): string {
   return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 }
 
+function formatMoney(n: number | undefined | null): string {
+  if (n == null) return "—";
+  try {
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
+  } catch { return String(n); }
+}
+
+function adenDateInput(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Aden",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function staffRoleLabel(role: string, ar: boolean): string {
+  const labels: Record<string, [string, string]> = {
+    TEACHER: ["المعلمون", "Teachers"],
+    SUPERVISOR: ["المشرفون", "Supervisors"],
+    CENTER_ADMIN: ["مديرو المراكز", "Center admins"],
+    ACCOUNTANT: ["المحاسبون", "Accountants"],
+    FINANCE_MANAGER: ["مديرو المالية", "Finance managers"],
+    TREASURER: ["أمناء الصندوق", "Treasurers"],
+    AUDITOR: ["المراجعون", "Auditors"],
+    OTHER: ["موظفون آخرون", "Other staff"],
+  };
+  return labels[role]?.[ar ? 0 : 1] ?? role;
+}
+
 type Tone = "primary" | "success" | "warning" | "info" | "neutral" | "danger";
+const ATTENDANCE_ALERT_THRESHOLD = 65;
+
+type CenterPerformance = {
+  centerId: number;
+  centerName: string;
+  circleCount: number;
+  activeStudents: number;
+  present: number;
+  total: number;
+  attendanceRate: number | null;
+};
 
 const activityMeta: Record<string, { icon: ElementType; tone: Tone }> = {
   LOGIN: { icon: CheckCircle, tone: "success" },
@@ -74,6 +120,29 @@ const activityMeta: Record<string, { icon: ElementType; tone: Tone }> = {
   STUDENT_ENROLLED: { icon: GraduationCap, tone: "success" },
 };
 
+const activityMessagesAr: Record<string, string> = {
+  "Saved follow-up draft": "حُفظت مسودة المتابعة",
+  "Recorded final follow-up": "سُجلت متابعة نهائية",
+  "Updated follow-up draft": "حُدّثت مسودة المتابعة",
+  "Finalized follow-up draft": "اعتُمدت مسودة المتابعة",
+  "Created remote recitation slot": "أُنشئت فترة تسميع عن بُعد",
+  "Updated remote recitation slot": "حُدّثت فترة التسميع عن بُعد",
+  "Archived remote recitation slot": "أُرشفت فترة التسميع عن بُعد",
+  "Requested remote recitation booking": "طُلب حجز تسميع عن بُعد",
+  "Approved remote recitation booking": "تمت الموافقة على حجز التسميع عن بُعد",
+  "Rejected remote recitation booking": "رُفض حجز التسميع عن بُعد",
+  "Cancelled remote recitation booking": "أُلغي حجز تسميع عن بُعد",
+  "Completed remote recitation booking": "اكتمل حجز تسميع عن بُعد",
+  "User logged in": "سجّل المستخدم الدخول",
+  "User logged out": "سجّل المستخدم الخروج",
+};
+
+function activityMessage(item: ActivityFeedItem, ar: boolean): string {
+  if (!ar) return item.message;
+  return activityMessagesAr[item.message]
+    ?? (item.activityType === "FOLLOW_UP_RECORDED" ? "سُجل نشاط متابعة" : item.message);
+}
+
 export default function DashboardPage() {
   const { language } = useI18n();
   const ar = language === "ar";
@@ -83,6 +152,9 @@ export default function DashboardPage() {
   const canLoadCenters = canReadCenters(role);
   const canLoadCircles = canReadCircles(role);
   const isSuperAdmin = role === "SUPER_ADMIN";
+  const isFinanceRole = role
+    ? ["ACCOUNTANT", "FINANCE_MANAGER", "TREASURER", "AUDITOR"].includes(role)
+    : false;
 
   const toNumber = (value: string): number | undefined => {
     const parsed = Number(value);
@@ -90,10 +162,8 @@ export default function DashboardPage() {
   };
 
   const now = new Date();
-  const defaultTo = now.toISOString().slice(0, 10);
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
-    .toISOString()
-    .slice(0, 10);
+  const defaultTo = adenDateInput(now);
+  const defaultFrom = adenDateInput(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
 
   const [centerId, setCenterId] = useState<number | undefined>();
   const [circleId, setCircleId] = useState<number | undefined>();
@@ -112,10 +182,27 @@ export default function DashboardPage() {
   const activityQ = useActivityFeedQuery({ ...filters, limit: 10 }, !hasInvalidRange);
   const attendQ = useAttendanceSummaryQuery(filters, !hasInvalidRange);
 
+  const canQueryFinance = !hasInvalidRange && !circleId && (isFinanceRole || isSuperAdmin);
+  const financeDashboardQ = useQuery({
+    queryKey: ["finance", "dashboard", "reports", centerId ?? null],
+    queryFn: () => financeV2Api.getReportDashboard({ centerId }),
+    enabled: canQueryFinance,
+    staleTime: 20_000,
+  });
+
   const metrics = hasInvalidRange ? undefined : metricsQ.data;
+  const attendanceDelta = metrics?.totals.attendanceDelta;
   const activityRows = hasInvalidRange ? [] : activityQ.data ?? [];
   const centers = canLoadCenters ? centersQ.data?.items ?? [] : [];
   const circles = canLoadCircles ? circlesQ.data?.items ?? [] : [];
+  const scopeName = circleId
+    ? circles.find((circle) => circle.id === circleId)?.name ?? `${ar ? "الحلقة" : "Circle"} #${circleId}`
+    : centerId
+      ? centers.find((center) => center.id === centerId)?.name ?? `${ar ? "المركز" : "Center"} #${centerId}`
+      : isSuperAdmin
+        ? ar ? "الجمعية" : "Organization"
+        : ar ? "نطاق صلاحيتك" : "Your access";
+  const scopeLabel = ar ? `نطاق العرض: ${scopeName}` : `Scope: ${scopeName}`;
   const attendanceRows = useMemo<AttendanceSummaryItem[]>(
     () => (hasInvalidRange ? [] : attendQ.data ?? []),
     [attendQ.data, hasInvalidRange],
@@ -148,15 +235,70 @@ export default function DashboardPage() {
     [attendanceRows],
   );
   const topCircles = useMemo(
-    () => sortedAttendance.filter((c) => c.total > 0).slice(0, 3),
+    () => sortedAttendance.filter((c) => c.total > 0 && c.attendanceRate >= ATTENDANCE_ALERT_THRESHOLD).slice(0, 3),
     [sortedAttendance],
   );
-  const bottomCircles = useMemo(
-    () => [...sortedAttendance].filter((c) => c.total > 0).reverse().slice(0, 3),
+  const attentionCircles = useMemo(
+    () => sortedAttendance.filter((c) => c.total > 0 && c.attendanceRate < ATTENDANCE_ALERT_THRESHOLD).reverse().slice(0, 3),
     [sortedAttendance],
   );
+  const unreportedCircles = attendanceRows.filter((circle) => circle.total === 0).length;
 
-  const loading = !hasInvalidRange && (metricsQ.isPending || attendQ.isPending);
+  const centerPerformance = useMemo<CenterPerformance[]>(() => {
+    const grouped = new Map<number, CenterPerformance>();
+    for (const center of centers) {
+      grouped.set(center.id, {
+        centerId: center.id,
+        centerName: center.name,
+        circleCount: 0,
+        activeStudents: 0,
+        present: 0,
+        total: 0,
+        attendanceRate: null,
+      });
+    }
+    for (const circle of attendanceRows) {
+      if (!circle.centerId || !circle.centerName) continue;
+      const current = grouped.get(circle.centerId) ?? {
+        centerId: circle.centerId,
+        centerName: circle.centerName,
+        circleCount: 0,
+        activeStudents: 0,
+        present: 0,
+        total: 0,
+        attendanceRate: null,
+      };
+      current.circleCount += 1;
+      current.activeStudents += circle.activeStudents;
+      current.present += circle.totals.present;
+      current.total += circle.total;
+      current.attendanceRate = current.total > 0 ? Math.round((current.present / current.total) * 100) : null;
+      grouped.set(circle.centerId, current);
+    }
+    return [...grouped.values()].sort((a, b) => (b.attendanceRate ?? -1) - (a.attendanceRate ?? -1));
+  }, [attendanceRows, centers]);
+
+  const topCenters = centerPerformance
+    .filter((center) => center.attendanceRate !== null && center.attendanceRate >= ATTENDANCE_ALERT_THRESHOLD)
+    .slice(0, 3);
+  const attentionCenters = [...centerPerformance]
+    .filter((center) => center.attendanceRate === null || center.attendanceRate < ATTENDANCE_ALERT_THRESHOLD)
+    .sort((a, b) => (a.attendanceRate ?? -1) - (b.attendanceRate ?? -1))
+    .slice(0, 3);
+  const staffAttendance = metrics?.staffAttendance;
+  const staffRecordedTotal = staffAttendance?.recordedTotal ?? 0;
+  const decisionCount =
+    Number(attendanceTotals.absent > 0) +
+    Number(attendanceTotals.late > 0) +
+    Number(attentionCircles.length > 0) +
+    Number(unreportedCircles > 0) +
+    Number((staffAttendance?.totals.absent ?? 0) > 0) +
+    Number((staffAttendance?.totals.late ?? 0) > 0);
+
+  const loading = !hasInvalidRange && (
+    metricsQ.isPending ||
+    attendQ.isPending
+  );
   const hasError = metricsQ.isError || attendQ.isError;
 
   const refresh = () => {
@@ -165,6 +307,7 @@ export default function DashboardPage() {
     void attendQ.refetch();
     if (canLoadCenters) void centersQ.refetch();
     if (canLoadCircles) void circlesQ.refetch();
+    if (canQueryFinance) void financeDashboardQ.refetch();
   };
 
   const resetFilters = () => {
@@ -194,7 +337,7 @@ export default function DashboardPage() {
         day: "numeric",
         month: "long",
         year: "numeric",
-      }).format(now) + (ar ? "هـ" : " AH");
+      }).format(now);
     } catch {
       return "";
     }
@@ -251,6 +394,12 @@ export default function DashboardPage() {
                   <CalendarRange size={14} aria-hidden />
                   {todayGregorian}
                 </span>
+                <span className="dash-header__date-greg">
+                  <RefreshCw size={14} aria-hidden />
+                  {metrics?.lastUpdatedAt
+                    ? `${ar ? "آخر تحديث" : "Last update"}: ${new Date(metrics.lastUpdatedAt).toLocaleString(ar ? "ar-SA" : "en-US")}`
+                    : ar ? "لا توجد بيانات محدثة خلال الفترة" : "No updated data in this period"}
+                </span>
               </div>
             </div>
           </div>
@@ -297,35 +446,25 @@ export default function DashboardPage() {
 
           <label className="dash-fbar__pill">
             <CalendarRange size={14} className="dash-fbar__icon" aria-hidden />
+            <span className="dash-fbar__label">{ar ? "من" : "From"}</span>
             <input
-              type="number"
-              className="dash-fbar__input dash-fbar__input--narrow"
-              placeholder={ar ? "الشهر" : "Month"}
-              min="1"
-              max="12"
-              value={from.split("-")[1] ? parseInt(from.split("-")[1], 10) : ""}
-              onChange={(e) => {
-                const m = e.target.value.padStart(2, "0");
-                setFrom(`${from.split("-")[0] || new Date().getFullYear()}-${m}-01`);
-                const lastDay = new Date(Number(from.split("-")[0] || new Date().getFullYear()), Number(m), 0).getDate();
-                setTo(`${from.split("-")[0] || new Date().getFullYear()}-${m}-${lastDay}`);
-              }}
+              type="date"
+              className="dash-fbar__input"
+              value={from}
+              max={to}
+              onChange={(e) => setFrom(e.target.value)}
             />
           </label>
 
           <label className="dash-fbar__pill">
             <CalendarRange size={14} className="dash-fbar__icon" aria-hidden />
+            <span className="dash-fbar__label">{ar ? "إلى" : "To"}</span>
             <input
-              type="number"
-              className="dash-fbar__input dash-fbar__input--narrow"
-              placeholder={ar ? "السنة" : "Year"}
-              min="2020"
-              max="2099"
-              value={from.split("-")[0] || ""}
-              onChange={(e) => {
-                const y = e.target.value;
-                if (y.length === 4) setFrom(`${y}-${from.split("-")[1] || "01"}-${from.split("-")[2] || "01"}`);
-              }}
+              type="date"
+              className="dash-fbar__input"
+              value={to}
+              min={from}
+              onChange={(e) => setTo(e.target.value)}
             />
           </label>
 
@@ -345,6 +484,7 @@ export default function DashboardPage() {
             </label>
           )}
 
+          <span className="dash-fbar__scope">{scopeLabel}</span>
           <div className="dash-fbar__spacer" />
 
           <button
@@ -375,48 +515,54 @@ export default function DashboardPage() {
           />
         )}
 
+        {!loading && !hasError && !hasInvalidRange && (unreportedCircles > 0 || staffRecordedTotal > 0) && (
+          <motion.aside variants={fadeUp} className="dash-data-note" role="note">
+            <AlertCircle size={18} aria-hidden />
+            <div>
+              <strong>{ar ? "قبل اتخاذ القرار" : "Before deciding"}</strong>
+              <span>
+                {ar
+                  ? `المؤشرات مبنية على السجلات المدخلة فقط؛ ${unreportedCircles} حلقات بلا سجلات، وحضور الموظفين لا يشمل الورديات غير المسجلة.`
+                  : `Indicators use entered records only; ${unreportedCircles} circles have no records, and staff attendance excludes unrecorded shifts.`}
+              </span>
+            </div>
+          </motion.aside>
+        )}
         {/* ── 3. KPI CARDS ── */}
         <motion.section variants={fadeUp} className="dash-kpis" aria-label={ar ? "المؤشرات" : "KPIs"}>
           {loading ? (
-            <KpiSkeleton items={isSuperAdmin ? 5 : 4} />
+            <KpiSkeleton items={4} />
           ) : (
             <>
-              {isSuperAdmin && (
-                <KpiCard
-                  icon={Building2}
-                  tone="primary"
-                  value={centers.length}
-                  label={ar ? "المراكز" : "Centers"}
-                  hasData={canLoadCenters}
-                />
-              )}
               <KpiCard
                 icon={Users}
                 tone="info"
-                value={metrics?.totals?.totalStudents}
-                label={ar ? "الطلاب" : "Students"}
+                value={metrics?.totals.totalStudents}
+                label={ar ? "الطلاب النشطون" : "Active students"}
                 hasData={metrics !== undefined}
               />
               <KpiCard
                 icon={BookOpen}
-                tone="success"
-                value={metrics?.totals?.totalCircles}
-                label={ar ? "الحلقات" : "Circles"}
-                hasData={metrics !== undefined}
-              />
-              <KpiCard
-                icon={GraduationCap}
-                tone="warning"
-                value={metrics?.totals?.totalTeachers}
-                label={ar ? "المعلمون" : "Teachers"}
+                tone="primary"
+                value={metrics?.totals.totalCircles}
+                label={ar ? "الحلقات النشطة" : "Active circles"}
                 hasData={metrics !== undefined}
               />
               <KpiCard
                 icon={ActivityIcon}
-                tone={presentPct >= 85 ? "success" : presentPct >= 65 ? "warning" : "danger"}
+                tone={presentPct >= 85 ? "success" : presentPct >= ATTENDANCE_ALERT_THRESHOLD ? "warning" : "danger"}
                 value={attendanceTotal > 0 ? `${presentPct}%` : undefined}
-                label={ar ? "الحضور" : "Attendance"}
+                label={ar ? "حضور الطلاب" : "Student attendance"}
+                meta={attendanceTotal > 0 && Number.isFinite(attendanceDelta) ? `${(attendanceDelta ?? 0) > 0 ? "+" : ""}${Math.round(attendanceDelta ?? 0)} ${ar ? "نقطة عن الفترة السابقة" : "pts vs previous period"}` : undefined}
                 hasData={attendanceTotal > 0}
+              />
+              <KpiCard
+                icon={ClipboardList}
+                tone={(staffAttendance?.totals.absent ?? 0) > 0 ? "danger" : (staffAttendance?.totals.late ?? 0) > 0 ? "warning" : "success"}
+                value={staffRecordedTotal > 0 ? staffAttendance?.totals.absent : undefined}
+                label={ar ? "سجلات غياب الموظفين" : "Staff absence records"}
+                meta={staffRecordedTotal > 0 ? `${staffRecordedTotal} ${ar ? "سجل حضور مدخل" : "entered attendance records"}` : undefined}
+                hasData={Boolean(staffAttendance?.applicable && staffRecordedTotal > 0)}
               />
             </>
           )}
@@ -424,223 +570,259 @@ export default function DashboardPage() {
 
         {/* ── 4. MAIN GRID — main column + sidebar column ── */}
         <section className="dash-main-grid">
-          {/* ─── MAIN COLUMN ─── */}
-          <div className="dash-main-col">
-            {/* Priorities */}
-            <motion.section variants={fadeUp} className="dash-panel">
-              <div className="dash-panel__head">
-                <h2 className="dash-panel__title">
-                  <span className="dash-panel__title-bar" data-tone="warning" />
-                  {ar ? "نظرة على الأولويات" : "Priorities overview"}
-                </h2>
-                <Link to="/reports" className="dash-panel__link">
-                  {ar ? "التفاصيل" : "Details"}
-                  <ArrowRight size={14} className="rtl:rotate-180" />
-                </Link>
-              </div>
-              <div className="dash-panel__body">
-                {loading ? (
-                  <Skeleton height={200} />
-                ) : (
-                  <div className="dash-priorities">
-                    <PriorityRow
-                      icon={AlertTriangle}
-                      tone="danger"
-                      title={ar ? "حالات غياب" : "Absent records"}
-                      value={attendanceTotals.absent}
-                      sub={
-                        ar
-                          ? `${pct(attendanceTotals.absent)}% من الإجمالي`
-                          : `${pct(attendanceTotals.absent)}% of total`
-                      }
-                      percent={pct(attendanceTotals.absent)}
-                    />
-                    <PriorityRow
-                      icon={Clock}
-                      tone="warning"
-                      title={ar ? "حالات تأخير" : "Late records"}
-                      value={attendanceTotals.late}
-                      sub={
-                        ar
-                          ? `${pct(attendanceTotals.late)}% من الإجمالي`
-                          : `${pct(attendanceTotals.late)}% of total`
-                      }
-                      percent={pct(attendanceTotals.late)}
-                    />
-                    <PriorityRow
-                      icon={ClipboardList}
-                      tone="info"
-                      title={ar ? "حلقات تحتاج متابعة" : "Circles needing follow-up"}
-                      value={bottomCircles.length}
-                      sub={
-                        bottomCircles.length > 0
-                          ? ar
-                            ? `أدنى نسبة: ${Math.round(bottomCircles[0].attendanceRate)}%`
-                            : `Lowest: ${Math.round(bottomCircles[0].attendanceRate)}%`
-                          : ar
-                            ? "—"
-                            : "—"
-                      }
-                    />
-                    <PriorityRow
-                      icon={CheckCircle}
-                      tone="success"
-                      title={ar ? "حلقات منتظمة" : "Regular circles"}
-                      value={topCircles.length}
-                      sub={
-                        topCircles.length > 0
-                          ? ar
-                            ? `أعلى نسبة: ${Math.round(topCircles[0].attendanceRate)}%`
-                            : `Top: ${Math.round(topCircles[0].attendanceRate)}%`
-                          : ar
-                            ? "—"
-                            : "—"
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            </motion.section>
-
-            {/* Role-based comparison: SUPER_ADMIN → centers, CENTER_ADMIN → circles */}
-            <motion.section variants={fadeUp} className="dash-panel">
-              <div className="dash-panel__head">
-                <h2 className="dash-panel__title">
-                  <span className="dash-panel__title-bar" data-tone="info" />
-                  {isSuperAdmin
-                    ? ar ? "مقارنة المراكز" : "Centers comparison"
-                    : ar ? "مقارنة الحلقات" : "Circles comparison"}
-                </h2>
-                <Link to="/reports" className="dash-panel__link">
-                  {ar ? "التفاصيل" : "Details"}
-                  <ArrowRight size={14} className="rtl:rotate-180" />
-                </Link>
-              </div>
-              <div className="dash-panel__body">
-                {loading ? (
-                  <Skeleton height={200} />
-                ) : sortedAttendance.length === 0 ? (
-                  <DashEmpty
-                    icon={BarChart3}
-                    text={
-                      isSuperAdmin
-                        ? ar ? "لا توجد بيانات كافية لمقارنة المراكز." : "Not enough data to compare centers."
-                        : ar ? "لا توجد بيانات كافية لمقارنة الحلقات." : "Not enough data to compare circles."
-                    }
-                    sub={
-                      isSuperAdmin
-                        ? ar ? "ستظهر المقارنة بعد تسجيل الحضور والمتابعة." : "Comparison will appear after attendance is recorded."
-                        : ar ? "ستظهر المقارنة بعد تسجيل الحضور والمتابعة." : "Comparison will appear after attendance is recorded."
-                    }
-                  />
-                ) : (
-                  <div className="dash-compare">
-                    <div className="dash-compare__group">
-                      <p className="dash-compare__group-title">
-                        <Award size={14} aria-hidden /> {ar ? "الأعلى انتظامًا" : "Top regular"}
-                      </p>
-                      {topCircles.map((c) => (
-                        <CircleRow key={`top-${c.circleId}`} item={c} tone="success" ar={ar} showCenter={isSuperAdmin} />
-                      ))}
-                      {topCircles.length === 0 && (
-                        <p className="dash-compare__empty">{ar ? "—" : "—"}</p>
-                      )}
-                    </div>
-                    <div className="dash-compare__group">
-                      <p className="dash-compare__group-title">
-                        <AlertTriangle size={14} aria-hidden />{" "}
-                        {ar ? "تحتاج متابعة" : "Need attention"}
-                      </p>
-                      {bottomCircles.map((c) => (
-                        <CircleRow key={`bot-${c.circleId}`} item={c} tone="danger" ar={ar} showCenter={isSuperAdmin} />
-                      ))}
-                      {bottomCircles.length === 0 && (
-                        <p className="dash-compare__empty">{ar ? "—" : "—"}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.section>
-
-            {/* Activity */}
-            <motion.section variants={fadeUp} className="dash-panel">
-              <div className="dash-panel__head">
-                <h2 className="dash-panel__title">
-                  <span className="dash-panel__title-bar" data-tone="success" />
-                  {ar ? "النشاط الأخير" : "Recent activity"}
-                </h2>
-                {activityRows.length > 0 && (
+          {!isFinanceRole && (
+            <div className="dash-main-col">
+              {/* Decisions */}
+              <motion.section variants={fadeUp} className="dash-panel dash-decisions">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title">
+                    <span className="dash-panel__title-bar" data-tone="warning" />
+                    {ar ? "ما يحتاج قرارك الآن" : "What needs your decision now"}
+                  </h2>
                   <span className="dash-panel__sub">
-                    {ar ? `${activityRows.length} حدث` : `${activityRows.length} events`}
+                    {ar ? `${decisionCount} مؤشرات` : `${decisionCount} indicators`}
                   </span>
-                )}
-              </div>
-              <div className="dash-panel__body dash-panel__body--flush">
-                {loading ? (
-                  <div className="dash-panel__padded">
-                    <Skeleton height={120} />
-                  </div>
-                ) : activityRows.length === 0 ? (
-                  <DashEmpty icon={Inbox} text={ar ? "لا توجد أنشطة حديثة" : "No recent activity"} />
-                ) : (
-                  <ul className="dash-activity">
-                    {activityRows.slice(0, 6).map((a) => (
-                      <ActivityRow key={a.id} item={a} ar={ar} />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </motion.section>
-          </div>
+                </div>
+                <div className="dash-panel__body">
+                  {loading ? (
+                    <Skeleton height={200} />
+                  ) : decisionCount === 0 ? (
+                    <DashEmpty icon={CheckCircle} text={ar ? "لا توجد حالات تستدعي تدخلًا خلال الفترة." : "No cases require intervention in this period."} />
+                  ) : (
+                    <div className="dash-priorities">
+                      {attendanceTotals.absent > 0 && (
+                        <PriorityRow
+                          icon={AlertTriangle}
+                          tone="danger"
+                          title={ar ? "غياب طلاب بدون عذر" : "Unexcused student absence"}
+                          value={attendanceTotals.absent}
+                          sub={<>{ar ? `أولوية عالية · سجلات فعلية · ${scopeName}` : `High priority · actual records · ${scopeName}`}{role && roleCanAccessRoute(role, "reports") && <Link className="dash-prio__action" to="/reports">{ar ? "فتح التقرير" : "Open report"}</Link>}</>}
+                          percent={pct(attendanceTotals.absent)}
+                        />
+                      )}
+                      {attendanceTotals.late > 0 && (
+                        <PriorityRow
+                          icon={Clock}
+                          tone="warning"
+                          title={ar ? "تأخر الطلاب" : "Student lateness"}
+                          value={attendanceTotals.late}
+                          sub={<>{ar ? `أولوية متوسطة · سجلات فعلية · ${scopeName}` : `Medium priority · actual records · ${scopeName}`}{role && roleCanAccessRoute(role, "reports") && <Link className="dash-prio__action" to="/reports">{ar ? "مراجعة" : "Review"}</Link>}</>}
+                          percent={pct(attendanceTotals.late)}
+                        />
+                      )}
+                      {attentionCircles.length > 0 && (
+                        <PriorityRow
+                          icon={ClipboardList}
+                          tone="danger"
+                          title={ar ? "حلقات منخفضة الحضور" : "Low-attendance circles"}
+                          value={attentionCircles.length}
+                          sub={<>{ar ? `أولوية عالية · ${attentionCircles[0].circleName} · ${Math.round(attentionCircles[0].attendanceRate)}% · أقل من حد المتابعة ${ATTENDANCE_ALERT_THRESHOLD}%` : `High priority · ${attentionCircles[0].circleName} · ${Math.round(attentionCircles[0].attendanceRate)}% · below ${ATTENDANCE_ALERT_THRESHOLD}% action threshold`}{role && roleCanAccessRoute(role, "circles") && <Link className="dash-prio__action" to="/circles">{ar ? "فتح الحلقات" : "Open circles"}</Link>}</>}
+                        />
+                      )}
+                      {unreportedCircles > 0 && (
+                        <PriorityRow
+                          icon={AlertCircle}
+                          tone="neutral"
+                          title={ar ? "حلقات بلا سجلات حضور" : "Circles without attendance records"}
+                          value={unreportedCircles}
+                          sub={<>{ar ? `اكتمال بيانات · لا يمكن تقييمها · ${scopeName}` : `Data completeness · cannot be evaluated · ${scopeName}`}{role && roleCanAccessRoute(role, "circles") && <Link className="dash-prio__action" to="/circles">{ar ? "مراجعة الحلقات" : "Review circles"}</Link>}</>}
+                        />
+                      )}
+                      {(staffAttendance?.totals.absent ?? 0) > 0 && (
+                        <PriorityRow
+                          icon={Users}
+                          tone="danger"
+                          title={ar ? "غياب موظفين مسجل" : "Recorded staff absence"}
+                          value={staffAttendance?.totals.absent ?? 0}
+                          sub={<>{ar ? `أولوية عالية · غياب رسمي مسجل · ${scopeName}` : `High priority · recorded absence · ${scopeName}`}{role && roleCanAccessRoute(role, "staff_attendance") && <Link className="dash-prio__action" to="/daily/staff-attendance">{ar ? "فتح الحضور" : "Open attendance"}</Link>}</>}
+                        />
+                      )}
+                      {(staffAttendance?.totals.late ?? 0) > 0 && (
+                        <PriorityRow
+                          icon={Clock}
+                          tone="warning"
+                          title={ar ? "تأخر موظفين" : "Staff lateness"}
+                          value={staffAttendance?.totals.late ?? 0}
+                          sub={<>{ar ? `أولوية متوسطة · سجلات فعلية · ${scopeName}` : `Medium priority · actual records · ${scopeName}`}{role && roleCanAccessRoute(role, "staff_attendance") && <Link className="dash-prio__action" to="/daily/staff-attendance">{ar ? "متابعة" : "Follow up"}</Link>}</>}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.section>
+              {/* Role-based performance */}
+              <motion.section variants={fadeUp} className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title">
+                    <span className="dash-panel__title-bar" data-tone="info" />
+                    {isSuperAdmin && !centerId
+                      ? ar ? "أداء المراكز" : "Centers performance"
+                      : ar ? "أداء الحلقات" : "Circles performance"}
+                  </h2>
+                  {role && roleCanAccessRoute(role, "reports") && <Link to="/reports" className="dash-panel__link">{ar ? "التفاصيل" : "Details"}<ArrowRight size={14} className="rtl:rotate-180" /></Link>}
+                </div>
+                <div className="dash-panel__body">
+                  {loading ? (
+                    <Skeleton height={200} />
+                  ) : isSuperAdmin && !centerId ? (
+                    centerPerformance.length === 0 ? (
+                      <DashEmpty icon={Building2} text={ar ? "لا توجد مراكز ضمن النطاق." : "No centers in scope."} />
+                    ) : (
+                      <div className="dash-compare">
+                        <div className="dash-compare__group">
+                          <p className="dash-compare__group-title"><Award size={14} aria-hidden /> {ar ? "الأعلى حضورًا" : "Highest attendance"}</p>
+                          {topCenters.length === 0 && <p className="dash-compare__empty">{ar ? "لا توجد مراكز فوق حد المتابعة خلال الفترة." : "No centers are above the action threshold in this period."}</p>}
+                          {topCenters.map((center) => <CenterRow key={center.centerId} item={center} tone="success" ar={ar} />)}
+                        </div>
+                        <div className="dash-compare__group">
+                          <p className="dash-compare__group-title"><AlertTriangle size={14} aria-hidden /> {ar ? "تحتاج تدخلًا أو بيانات" : "Need action or data"}</p>
+                          {attentionCenters.map((center) => <CenterRow key={center.centerId} item={center} tone={center.attendanceRate === null ? "neutral" : "danger"} ar={ar} />)}
+                          {attentionCenters.length === 0 && <p className="dash-compare__empty">{ar ? "لا توجد مراكز تحت حد 65%." : "No centers below 65%."}</p>}
+                        </div>
+                      </div>
+                    )
+                  ) : sortedAttendance.length === 0 ? (
+                    <DashEmpty icon={BarChart3} text={ar ? "لا توجد حلقات ضمن النطاق." : "No circles in scope."} />
+                  ) : (
+                    <div className="dash-compare">
+                      <div className="dash-compare__group">
+                        <p className="dash-compare__group-title"><Award size={14} aria-hidden /> {ar ? "الأعلى حضورًا" : "Highest attendance"}</p>
+                        {topCircles.length === 0 && <p className="dash-compare__empty">{ar ? "لا توجد حلقات فوق حد المتابعة خلال الفترة." : "No circles are above the action threshold in this period."}</p>}
+                        {topCircles.map((circle) => <CircleRow key={`top-${circle.circleId}`} item={circle} tone="success" ar={ar} />)}
+                      </div>
+                      <div className="dash-compare__group">
+                        <p className="dash-compare__group-title"><AlertTriangle size={14} aria-hidden /> {ar ? "تحتاج تدخلًا" : "Need intervention"}</p>
+                        {attentionCircles.map((circle) => <CircleRow key={`attention-${circle.circleId}`} item={circle} tone="danger" ar={ar} />)}
+                        {attentionCircles.length === 0 && <p className="dash-compare__empty">{ar ? "لا توجد حلقات تحت حد 65%." : "No circles below 65%."}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.section>
+              {/* Activity */}
+              <motion.section variants={fadeUp} className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title">
+                    <span className="dash-panel__title-bar" data-tone="success" />
+                    {ar ? "النشاط الأخير" : "Recent activity"}
+                  </h2>
+                  {activityRows.length > 0 && (
+                    <span className="dash-panel__sub">
+                      {ar ? `${activityRows.length} حدث` : `${activityRows.length} events`}
+                    </span>
+                  )}
+                </div>
+                <div className="dash-panel__body dash-panel__body--flush">
+                  {loading ? (
+                    <div className="dash-panel__padded">
+                      <Skeleton height={120} />
+                    </div>
+                  ) : activityRows.length === 0 ? (
+                    <DashEmpty icon={Inbox} text={ar ? "لا توجد أنشطة حديثة" : "No recent activity"} />
+                  ) : (
+                    <ul className="dash-activity">
+                      {activityRows.slice(0, 6).map((a) => (
+                        <ActivityRow key={a.id} item={a} ar={ar} />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </motion.section>
+            </div>
+          )}
 
           {/* ─── SIDEBAR COLUMN ─── */}
           <div className="dash-side-col">
-            {/* Operational health */}
-            <motion.section variants={fadeUp} className="dash-panel">
-              <div className="dash-panel__head">
-                <h2 className="dash-panel__title">
-                  <span className="dash-panel__title-bar" data-tone="primary" />
-                  {ar ? "مؤشرات التشغيل" : "Operational health"}
-                </h2>
-                <span className={`dash-pill dash-pill--${healthState.tone}`}>
-                  <span className="dash-pill__dot" />
-                  {healthState.label}
-                </span>
-              </div>
-              <div className="dash-panel__body">
-                {loading ? (
-                  <Skeleton height={100} />
-                ) : attendanceTotal === 0 ? (
-                  <DashEmpty
-                    icon={ActivityIcon}
-                    text={ar ? "لا توجد بيانات تشغيل كافية لهذه الفترة." : "No operational data for this period."}
-                    linkTo="/reports"
-                    linkLabel={ar ? "فتح تقرير الحضور" : "Open attendance report"}
-                  />
-                ) : (
-                  <div className="dash-ops dash-ops--vertical">
-                    <div className="dash-ops__ring">
-                      <ProgressRing percent={presentPct} tone={healthState.tone} />
-                      <div className="dash-ops__ring-meta">
-                        <span className="dash-ops__ring-label">
-                          {ar ? "نسبة الحضور" : "Attendance"}
-                        </span>
-                        <span className="dash-ops__ring-sub">
-                          {attendanceTotals.present} / {attendanceTotal}
-                        </span>
+            {!isFinanceRole && (
+              <motion.section variants={fadeUp} className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title">
+                    <span className="dash-panel__title-bar" data-tone="primary" />
+                    {ar ? "مؤشرات التشغيل" : "Operational health"}
+                  </h2>
+                  <span className={`dash-pill dash-pill--${healthState.tone}`}>
+                    <span className="dash-pill__dot" />
+                    {healthState.label}
+                  </span>
+                </div>
+                <div className="dash-panel__body">
+                    {loading ? (
+                    <Skeleton height={100} />
+                  ) : attendanceTotal === 0 ? (
+                    <DashEmpty
+                      icon={ActivityIcon}
+                      text={ar ? "لا توجد بيانات تشغيل كافية لهذه الفترة." : "No operational data for this period."}
+                      linkTo="/reports"
+                      linkLabel={ar ? "فتح تقرير الحضور" : "Open attendance report"}
+                    />
+                  ) : (
+                    <div className="dash-ops dash-ops--vertical">
+                      <StatusDonut
+                        segments={[
+                          { label: ar ? "حاضر" : "Present", value: attendanceTotals.present, tone: "success" },
+                          { label: ar ? "غائب" : "Absent", value: attendanceTotals.absent, tone: "danger" },
+                          { label: ar ? "متأخر" : "Late", value: attendanceTotals.late, tone: "warning" },
+                          { label: ar ? "بعذر" : "Excused", value: attendanceTotals.excused, tone: "info" },
+                        ]}
+                        centerLabel={ar ? "سجل" : "records"}
+                        ariaLabel={ar ? `توزيع حضور الطلاب من ${attendanceTotal} سجلًا` : `Student attendance distribution from ${attendanceTotal} records`}
+                      />
+                      <div className="dash-ops__bars dash-ops__bars--stack">
+                        <AttBar label={ar ? "حاضر" : "Present"} value={attendanceTotals.present} total={attendanceTotal} tone="success" />
+                        <AttBar label={ar ? "غائب" : "Absent"} value={attendanceTotals.absent} total={attendanceTotal} tone="danger" />
+                        <AttBar label={ar ? "متأخر" : "Late"} value={attendanceTotals.late} total={attendanceTotal} tone="warning" />
+                        <AttBar label={ar ? "بعذر" : "Excused"} value={attendanceTotals.excused} total={attendanceTotal} tone="info" />
                       </div>
                     </div>
-                    <div className="dash-ops__bars dash-ops__bars--stack">
-                      <AttBar label={ar ? "حاضر" : "Present"} value={attendanceTotals.present} total={attendanceTotal} tone="success" />
-                      <AttBar label={ar ? "غائب" : "Absent"} value={attendanceTotals.absent} total={attendanceTotal} tone="danger" />
-                      <AttBar label={ar ? "متأخر" : "Late"} value={attendanceTotals.late} total={attendanceTotal} tone="warning" />
-                      <AttBar label={ar ? "بعذر" : "Excused"} value={attendanceTotals.excused} total={attendanceTotal} tone="info" />
+                  )}
+                </div>
+              </motion.section>
+            )}
+
+            {!isFinanceRole && (
+              <motion.section variants={fadeUp} className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title"><span className="dash-panel__title-bar" data-tone="info" />{ar ? "حضور الموظفين" : "Staff attendance"}</h2>
+                  {staffAttendance?.applicable && staffRecordedTotal > 0 && <span className={`dash-pill dash-pill--${staffAttendance.attendanceRate >= 85 ? "success" : staffAttendance.attendanceRate >= ATTENDANCE_ALERT_THRESHOLD ? "warning" : "danger"}`}>{Math.round(staffAttendance.attendanceRate)}% {ar ? "ضمن السجلات" : "of records"}</span>}
+                </div>
+                <div className="dash-panel__body">
+                  {!staffAttendance?.applicable ? (
+                    <DashEmpty icon={Users} text={ar ? "لا ينطبق حضور الموظفين عند تصفية حلقة محددة." : "Staff attendance does not apply to a single-circle filter."} />
+                  ) : staffRecordedTotal === 0 ? (
+                    <DashEmpty icon={Users} text={ar ? "لا توجد سجلات حضور موظفين خلال الفترة." : "No staff attendance records in this period."} />
+                  ) : (
+                    <div className="dash-staff">
+                      <StatusDonut
+                        segments={[
+                          { label: ar ? "حاضر" : "Present", value: staffAttendance.totals.present, tone: "success" },
+                          { label: ar ? "غائب" : "Absent", value: staffAttendance.totals.absent, tone: "danger" },
+                          { label: ar ? "متأخر" : "Late", value: staffAttendance.totals.late, tone: "warning" },
+                          { label: ar ? "بعذر أو إجازة" : "Excused or leave", value: staffAttendance.totals.excused + staffAttendance.totals.onLeave, tone: "info" },
+                        ]}
+                        centerLabel={ar ? "سجل" : "records"}
+                        ariaLabel={ar ? `توزيع حضور الموظفين من ${staffRecordedTotal} سجلًا` : `Staff attendance distribution from ${staffRecordedTotal} records`}
+                      />
+                      <div className="dash-ops__bars dash-ops__bars--stack">
+                        <AttBar label={ar ? "حاضر" : "Present"} value={staffAttendance.totals.present} total={staffRecordedTotal} tone="success" />
+                        <AttBar label={ar ? "متأخر" : "Late"} value={staffAttendance.totals.late} total={staffRecordedTotal} tone="warning" />
+                        <AttBar label={ar ? "غائب" : "Absent"} value={staffAttendance.totals.absent} total={staffRecordedTotal} tone="danger" />
+                        <AttBar label={ar ? "بعذر أو إجازة" : "Excused or leave"} value={staffAttendance.totals.excused + staffAttendance.totals.onLeave} total={staffRecordedTotal} tone="info" />
+                      </div>
+                      <div className="dash-staff__roles">
+                        {staffAttendance.byRole.map((item) => (
+                          <div key={item.staffRole} className="dash-staff__role"><span>{staffRoleLabel(item.staffRole, ar)}</span><strong>{item.recordedTotal} <small>{ar ? "سجل" : "records"}</small></strong></div>
+                        ))}
+                      </div>
+                      <div className="dash-staff__roles">
+                        <div className="dash-staff__role"><span>{ar ? "وردية مستحقة بلا تسجيل" : "Scheduled without a record"}</span><strong>—</strong></div>
+                        <div className="dash-staff__role"><span>{ar ? "لا وردية فعالة" : "No active shift"}</span><strong>—</strong></div>
+                      </div>
+                      <p className="dash-panel__sub">{ar ? "كفاية البيانات: سجلات فعلية فقط؛ حالتا الوردية بلا تسجيل وعدم وجود وردية غير محسوبتين، ولا تُدمجان مع الغياب." : "Data coverage: recorded attendance only; scheduled-without-record and no-active-shift are not calculated or merged into absence."}</p>
                     </div>
-                  </div>
-                )}
-              </div>
-            </motion.section>
+                  )}
+                </div>
+              </motion.section>
+            )}
 
             {/* Quick links */}
             {quickLinks.length > 0 && (
@@ -675,7 +857,7 @@ export default function DashboardPage() {
             )}
 
             {/* Financial glimpse */}
-            {role && roleCanAccessRoute(role, "finance_invoices") && (
+            {role && roleCanAccessRoute(role, "finance_invoices") && !canQueryFinance && (
               <motion.section variants={fadeUp} className="dash-panel">
                 <div className="dash-panel__head">
                   <h2 className="dash-panel__title">
@@ -727,6 +909,10 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
+
+        {canQueryFinance && financeDashboardQ.data && (
+          <FinancialOverview data={financeDashboardQ.data.kpis} ar={ar} loading={canQueryFinance && financeDashboardQ.isPending} />
+        )}
       </motion.div>
     </div>
   );
@@ -740,12 +926,14 @@ function KpiCard({
   value,
   label,
   hasData,
+  meta,
 }: {
   icon: ElementType;
   tone: Tone;
   value: number | string | undefined | null;
   label: string;
   hasData: boolean;
+  meta?: string;
 }) {
   const display =
     hasData && value !== undefined && value !== null && value !== "" ? value : "—";
@@ -757,6 +945,7 @@ function KpiCard({
         <div className="dash-kpi-card__text">
           <span className="dash-kpi-card__label">{label}</span>
           <span className="dash-kpi-card__value">{display}</span>
+          {meta && <span className="dash-kpi-card__meta">{meta}</span>}
         </div>
         <div className="dash-kpi-card__icon">
           <Icon size={20} aria-hidden />
@@ -766,6 +955,69 @@ function KpiCard({
   );
 }
 
+type DonutSegment = {
+  label: string;
+  value: number;
+  tone: Tone;
+};
+
+function StatusDonut({
+  segments,
+  centerLabel,
+  ariaLabel,
+}: {
+  segments: DonutSegment[];
+  centerLabel: string;
+  ariaLabel: string;
+}) {
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+  const radius = 44;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="dash-donut" role="img" aria-label={ariaLabel}>
+      <div className="dash-donut__visual">
+        <svg viewBox="0 0 108 108" aria-hidden>
+          <circle cx="54" cy="54" r={radius} className="dash-donut__track" fill="none" strokeWidth="12" />
+          {segments.map((segment) => {
+            if (!segment.value || !total) return null;
+            const length = (segment.value / total) * circumference;
+            const dashOffset = offset;
+            offset += length;
+            return (
+              <circle
+                key={segment.label}
+                cx="54"
+                cy="54"
+                r={radius}
+                className={`dash-donut__segment dash-donut__segment--${segment.tone}`}
+                fill="none"
+                strokeWidth="12"
+                strokeDasharray={`${length} ${circumference - length}`}
+                strokeDashoffset={-dashOffset}
+                transform="rotate(-90 54 54)"
+              />
+            );
+          })}
+        </svg>
+        <div className="dash-donut__center">
+          <strong>{total}</strong>
+          <span>{centerLabel}</span>
+        </div>
+      </div>
+      <div className="dash-donut__legend">
+        {segments.map((segment) => (
+          <div key={segment.label} className="dash-donut__legend-row">
+            <span className={`dash-donut__marker dash-donut__marker--${segment.tone}`} />
+            <span>{segment.label}</span>
+            <strong>{segment.value}<small>{total ? Math.round((segment.value / total) * 100) : 0}%</small></strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 function ProgressRing({ percent, tone }: { percent: number; tone: Tone }) {
   const clamped = Math.max(0, Math.min(100, percent));
   const radius = 30;
@@ -877,12 +1129,9 @@ function CircleRow({
         <span className="dash-circle-row__name">
           {showCenter && item.centerName ? item.centerName : item.circleName}
         </span>
-        {showCenter && item.centerName && (
-          <span className="dash-circle-row__sub">{item.circleName}</span>
-        )}
-        {!showCenter && item.centerName && (
-          <span className="dash-circle-row__sub">{item.centerName}</span>
-        )}
+        <span className="dash-circle-row__sub">
+          {item.teacher?.fullName ?? (ar ? "لا يوجد معلم مرتبط" : "No linked teacher")} · {item.activeStudents} {ar ? "طلاب نشطين" : "active students"}
+        </span>
       </div>
       <div className="dash-circle-row__meta">
         <span className={`dash-circle-row__rate dash-circle-row__rate--${tone}`}>
@@ -890,6 +1139,29 @@ function CircleRow({
         </span>
         <span className="dash-circle-row__count">
           {item.total} {ar ? "سجل" : "rec"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CenterRow({ item, tone, ar }: { item: CenterPerformance; tone: Tone; ar: boolean }) {
+  return (
+    <div className="dash-circle-row">
+      <div className="dash-circle-row__text">
+        <span className="dash-circle-row__name">{item.centerName}</span>
+        <span className="dash-circle-row__sub">
+          {item.attendanceRate === null
+            ? ar ? "لا توجد بيانات كافية لتقييم المركز خلال الفترة المحددة" : "Not enough data to evaluate this center"
+            : ar ? `${item.circleCount} حلقات · ${item.activeStudents} ارتباطات طلاب نشطة` : `${item.circleCount} circles · ${item.activeStudents} active student enrollments`}
+        </span>
+      </div>
+      <div className="dash-circle-row__meta">
+        <span className={`dash-circle-row__rate dash-circle-row__rate--${tone}`}>
+          {item.attendanceRate === null ? "—" : `${item.attendanceRate}%`}
+        </span>
+        <span className="dash-circle-row__count">
+          {item.attendanceRate === null ? ar ? "لا بيانات" : "No data" : ar ? "حضور الطلاب" : "Student attendance"}
         </span>
       </div>
     </div>
@@ -911,7 +1183,7 @@ function ActivityRow({ item, ar }: { item: ActivityFeedItem; ar: boolean }) {
         <Icon size={14} aria-hidden />
       </span>
       <div className="dash-activity__body">
-        <p className="dash-activity__msg">{item.message}</p>
+        <p className="dash-activity__msg">{activityMessage(item, ar)}</p>
         <p className="dash-activity__meta">
           <span>{when}</span>
           {item.center?.name && (
@@ -929,6 +1201,124 @@ function ActivityRow({ item, ar }: { item: ActivityFeedItem; ar: boolean }) {
         </p>
       </div>
     </li>
+  );
+}
+
+function FinanceBar({
+  label,
+  value,
+  pct,
+  tone,
+  format,
+}: {
+  label: string;
+  value: number;
+  pct: number;
+  tone: Tone;
+  format: (n: number) => string;
+}) {
+  return (
+    <div className="dash-finance-bar">
+      <div className="dash-finance-bar__head">
+        <span className="dash-finance-bar__label">{label}</span>
+        <span className="dash-finance-bar__val">{format(value)}</span>
+      </div>
+      <div className="dash-finance-bar__track">
+        <div
+          className={`dash-finance-bar__fill dash-finance-bar__fill--${tone}`}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FinancialOverview({
+  data,
+  ar,
+  loading,
+}: {
+  data: FinanceReportDashboardV2["kpis"];
+  ar: boolean;
+  loading: boolean;
+}) {
+  const rate = data.collectionRate;
+  const tone: Tone = rate >= 80 ? "success" : rate >= 60 ? "warning" : "danger";
+
+  return (
+    <motion.section variants={fadeUp} className="dash-panel dash-finance">
+      <div className="dash-panel__head">
+        <h2 className="dash-panel__title">
+          <span className="dash-panel__title-bar" data-tone="primary" />
+          {ar ? "الوضع المالي الحالي" : "Current financial position"}
+        </h2>
+        <span className={`dash-pill dash-pill--${tone}`}>
+          <span className="dash-pill__dot" />
+          {rate >= 80
+            ? ar ? "جيد" : "Good"
+            : rate >= 60
+              ? ar ? "مقبول" : "Fair"
+              : ar ? "تحتاج متابعة" : "Needs attention"}
+        </span>
+      </div>
+      <div className="dash-panel__body">
+        <p className="dash-finance__scope-note">{ar ? "أرقام تراكمية حالية؛ لا تتأثر بفلتر التاريخ أعلاه." : "Current cumulative figures; the date filter above does not apply."}</p>
+        {loading ? (
+          <Skeleton height={200} />
+        ) : (
+          <div className="dash-finance__grid">
+            <div className="dash-finance__ring-col">
+              <div className="dash-finance__ring">
+                <ProgressRing percent={rate} tone={tone} />
+                <div className="dash-ops__ring-meta dash-finance__ring-meta">
+                  <span className="dash-ops__ring-label">
+                    {ar ? "نسبة التحصيل" : "Collection rate"}
+                  </span>
+                  <span className="dash-ops__ring-sub">
+                    {formatMoney(data.totalCollected)} / {formatMoney(data.totalInvoiced)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="dash-finance__bars-col">
+              <FinanceBar
+                label={ar ? "إجمالي الفواتير" : "Total invoiced"}
+                value={data.totalInvoiced}
+                pct={100}
+                tone="primary"
+                format={formatMoney}
+              />
+              <FinanceBar
+                label={ar ? "المحصل" : "Collected"}
+                value={data.totalCollected}
+                pct={data.totalInvoiced > 0 ? Math.round((data.totalCollected / data.totalInvoiced) * 100) : 0}
+                tone="success"
+                format={formatMoney}
+              />
+              <FinanceBar
+                label={ar ? "المتبقي" : "Outstanding"}
+                value={data.outstanding}
+                pct={data.totalInvoiced > 0 ? Math.round((data.outstanding / data.totalInvoiced) * 100) : 0}
+                tone="warning"
+                format={formatMoney}
+              />
+            </div>
+          </div>
+        )}
+        {!loading && (
+          <div className="dash-finance__summary">
+            <span className="dash-finance__summary-item">
+              <ClipboardList size={14} />
+              {data.totalInvoicesCount} {ar ? "فاتورة" : "invoices"}
+            </span>
+            <span className="dash-finance__summary-item">
+              <Wallet size={14} />
+              {ar ? "الرصيد النقدي: " : "Cash balance: "}{formatMoney(data.totalCashBalance)}
+            </span>
+          </div>
+        )}
+      </div>
+    </motion.section>
   );
 }
 
@@ -1024,6 +1414,6 @@ function buildQuickLinks(role: Role | undefined, ar: boolean): QuickLink[] {
     },
   ];
   return candidates
-    .filter((c) => roleCanAccessRoute(role, c.id))
+    .filter((c) => !["golden_records", "finance_invoices"].includes(c.id) && roleCanAccessRoute(role, c.id))
     .map((c) => c.link);
 }

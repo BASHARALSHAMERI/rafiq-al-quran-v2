@@ -39,7 +39,7 @@ export const getVisitStatusBadge = (status: string, ar: boolean) => {
     return <Badge variant="success" size="sm">{ar ? "مكتملة" : "Completed"}</Badge>;
   }
   if (normalized === "MISSED") {
-    return <Badge variant="destructive" size="sm">{ar ? "زيارة فائتة" : "Missed"}</Badge>;
+    return <Badge variant="error" size="sm">{ar ? "زيارة فائتة" : "Missed"}</Badge>;
   }
   if (normalized === "IN_PROGRESS") {
     return <Badge variant="warning" size="sm">{ar ? "قيد التنفيذ" : "In Progress"}</Badge>;

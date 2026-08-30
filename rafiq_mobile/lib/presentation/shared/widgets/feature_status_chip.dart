@@ -22,37 +22,43 @@ class FeatureStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolved = _resolveStyle();
+    final isDark = context.isDark;
+    final resolved = _resolveStyle(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: resolved.color.withValues(alpha: 0.10),
+        color: resolved.color.withValues(alpha: isDark ? 0.16 : 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: resolved.color.withValues(alpha: 0.18)),
+        border: Border.all(
+          color: resolved.color.withValues(alpha: isDark ? 0.28 : 0.18),
+        ),
       ),
       child: Text(
         resolved.label,
         style: TextStyle(
           color: resolved.color,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
       ),
     );
   }
 
-  _ChipStyle _resolveStyle() {
+  _ChipStyle _resolveStyle(BuildContext context) {
     if (label != null && color != null) {
       return _ChipStyle(label!, color!);
     }
 
+    final custom = context.customColors;
+
     return switch (availability ?? FeatureAvailability.later) {
       FeatureAvailability.available =>
-        const _ChipStyle('متاح', AppColors.successLight),
+        _ChipStyle('متاح', custom.success),
       FeatureAvailability.webOnly =>
-        const _ChipStyle('من الويب', AppColors.infoLight),
+        _ChipStyle('من الويب', custom.info),
       FeatureAvailability.later =>
-        const _ChipStyle('لاحقًا', AppColors.warningLight),
+        _ChipStyle('لاحقًا', custom.warning),
     };
   }
 }

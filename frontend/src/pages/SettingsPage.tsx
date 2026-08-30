@@ -37,38 +37,25 @@ type SettingsDraft = {
   associationGeoRadiusMeters: number | null;
 };
 
-const formatDateTime = (value: string | null | undefined, locale: "ar-SA-u-nu-latn" | "en-US"): string => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString(locale, {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-};
-
 function SettingsPage() {
   const { language } = useI18n();
   const ar = language === "ar";
-  const locale = ar ? "ar-SA-u-nu-latn" : "en-US";
 
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
 
-  // Authorization: General Manager (SUPER_ADMIN) only
-  if (authUser?.role !== "SUPER_ADMIN") {
-    return <ForbiddenPage />;
-  }
-
-  const brandingQ = useOrgBrandingQuery();
+  const canManageSettings = authUser?.role === "SUPER_ADMIN";
+  const brandingQ = useOrgBrandingQuery({ enabled: canManageSettings });
   const updateBrandingM = useUpdateOrgBrandingMutation();
 
   const [draft, setDraft] = useState<SettingsDraft | null>(null);
   const [savedSettings, setSavedSettings] = useState<SettingsDraft | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Authorization: General Manager (SUPER_ADMIN) only
+  if (!canManageSettings) {
+    return <ForbiddenPage />;
+  }
 
   // Initialize baseline settings from fetched data
   const baseline = savedSettings ?? {

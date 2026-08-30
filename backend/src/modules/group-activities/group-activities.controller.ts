@@ -36,5 +36,17 @@ export const groupActivitiesController = {
     } catch (error) {
       next(error);
     }
+  }) as RequestHandler,
+
+  remove: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+      const id = parseInt(String(req.params.id ?? "0"), 10);
+      if (!id) throw new AppError("Invalid ID", 400);
+      const data = await groupActivitiesService.remove(req.scope, id);
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
   }) as RequestHandler
 };

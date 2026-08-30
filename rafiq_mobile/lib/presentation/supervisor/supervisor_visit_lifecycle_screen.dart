@@ -242,10 +242,12 @@ class _SupervisorVisitLifecycleScreenState
   @override
   Widget build(BuildContext context) {
     final contextState = ref.watch(contextControllerProvider);
-    final centerId = int.tryParse(contextState.selectedCenterId ?? '');
+    final centerId = contextState.selectedCenterId;
     final circlesAsync = ref.watch(orgCirclesProvider(centerId));
+    final custom = context.customColors;
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(
         title: 'زيارة الحلقة',
         subtitle: 'دورة زيارة إشرافية مرتبطة بالخطة',
@@ -324,27 +326,27 @@ class _SupervisorVisitLifecycleScreenState
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.sm),
                         decoration: BoxDecoration(
-                          color: AppColors.warningLight.withValues(alpha: 0.1),
+                          color: custom.warning.withValues(alpha: context.isDark ? 0.18 : 0.10),
                           borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(
-                            color: AppColors.warningLight.withValues(alpha: 0.3),
+                            color: custom.warning.withValues(alpha: 0.3),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
                             Icon(
                               Icons.info_outline_rounded,
                               size: 18,
-                              color: AppColors.warningLight,
+                              color: custom.warning,
                             ),
-                            SizedBox(width: AppSpacing.sm),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 'يجب اعتماد "سجل الحضور مكتمل" من قائمة التحقق أولاً.',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.warningLight,
+                                  fontWeight: FontWeight.w700,
+                                  color: custom.warning,
                                 ),
                               ),
                             ),
@@ -431,6 +433,7 @@ class _VisitStatusCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isOpen = log?.isOpen == true;
     final isDone = log != null && !isOpen;
+    final custom = context.customColors;
 
     return EnterpriseCard(
       child: Column(
@@ -443,6 +446,7 @@ class _VisitStatusCard extends StatelessWidget {
                   circle.name,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
@@ -453,10 +457,10 @@ class _VisitStatusCard extends StatelessWidget {
                         ? 'مكتملة'
                         : 'لم تبدأ',
                 color: isOpen
-                    ? AppColors.warningLight
+                    ? custom.warning
                     : isDone
-                        ? AppColors.successLight
-                        : AppColors.textSecondaryLight,
+                        ? custom.success
+                        : context.textSecondaryColor,
               ),
             ],
           ),
@@ -471,7 +475,7 @@ class _VisitStatusCard extends StatelessWidget {
           _InfoRow(
             icon: Icons.groups_rounded,
             text: 'عدد الطلاب: ${circle.studentsCount}',
-            iconColor: AppColors.successLight,
+            iconColor: custom.success,
           ),
           const SizedBox(height: AppSpacing.sm),
           _InfoRow(
@@ -481,14 +485,14 @@ class _VisitStatusCard extends StatelessWidget {
                 : isDone
                     ? 'مدة الزيارة: ${log?.durationMinutes ?? 0} دقيقة'
                     : 'ابدأ الزيارة لتفعيل المؤقت',
-            iconColor: AppColors.primaryLight,
+            iconColor: theme.colorScheme.primary,
           ),
           if (log != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _InfoRow(
               icon: Icons.location_on_outlined,
               text: 'حالة الموقع: ${_geoLabel(log!.startGeoState)}',
-              iconColor: AppColors.infoLight,
+              iconColor: custom.info,
             ),
           ],
         ],
@@ -514,9 +518,11 @@ class _ChecklistItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return InkWell(
       onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: EnterpriseCard(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -527,10 +533,10 @@ class _ChecklistItemCard extends StatelessWidget {
             Icon(
               checked ? Icons.check_circle_rounded : Icons.circle_outlined,
               color: checked
-                  ? AppColors.successLight
+                  ? custom.success
                   : isRequired
-                      ? AppColors.warningLight
-                      : AppColors.textSecondaryLight,
+                      ? custom.warning
+                      : context.textSecondaryColor,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -538,7 +544,9 @@ class _ChecklistItemCard extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: isRequired ? AppColors.warningLight : null,
+                  color: isRequired
+                      ? custom.warning
+                      : context.textPrimaryColor,
                 ),
               ),
             ),
@@ -546,15 +554,15 @@ class _ChecklistItemCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.warningLight.withValues(alpha: 0.12),
+                  color: custom.warning.withValues(alpha: context.isDark ? 0.20 : 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text(
+                child: Text(
                   'مطلوب',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.warningLight,
+                    color: custom.warning,
                   ),
                 ),
               ),
@@ -578,6 +586,8 @@ class _RatingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return EnterpriseCard(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -587,7 +597,7 @@ class _RatingCard extends StatelessWidget {
             onPressed: enabled ? () => onChanged(value) : null,
             icon: Icon(
               value <= rating ? Icons.star_rounded : Icons.star_border_rounded,
-              color: AppColors.warningLight,
+              color: value <= rating ? custom.warning : context.borderColor,
               size: 32,
             ),
           );
@@ -602,17 +612,19 @@ class _CompletedVisitBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const EnterpriseCard(
-      accentColor: AppColors.successLight,
+    final custom = context.customColors;
+
+    return EnterpriseCard(
+      accentColor: custom.success,
       child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: AppColors.successLight),
-          SizedBox(width: AppSpacing.sm),
+          Icon(Icons.check_circle_rounded, color: custom.success),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'تم إنهاء الزيارة وحفظها ضمن سجل الزيارات الإشرافية.',
               style: TextStyle(
-                color: AppColors.successLight,
+                color: custom.success,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -631,15 +643,17 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: isDark ? 0.20 : 0.12),
         borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12),
       ),
     );
   }
@@ -648,24 +662,27 @@ class _StatusPill extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
-  final Color iconColor;
+  final Color? iconColor;
 
   const _InfoRow({
     required this.icon,
     required this.text,
-    this.iconColor = AppColors.textSecondaryLight,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: iconColor),
+        Icon(icon, size: 18, color: iconColor ?? context.textSecondaryColor),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: context.textPrimaryColor,
+            ),
           ),
         ),
       ],

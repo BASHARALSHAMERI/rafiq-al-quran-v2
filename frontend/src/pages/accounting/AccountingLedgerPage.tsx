@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, Printer, RefreshCw, CheckCircle, Clock, FileText, Filter, Calendar } from "lucide-react";
+import { BookOpen, Printer, RefreshCw, CheckCircle, Clock, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { useI18n } from "../../app/i18n";
 import { Button } from "../../components/ui/Button";
 import {
   FinancePageShell,
@@ -125,6 +126,7 @@ function VouchersKpi({
 }
 
 export default function AccountingLedgerPage() {
+  const { language } = useI18n();
   const brandingQ = useOrgBrandingQuery();
   const accountsQ = useAccountingAccountsQuery();
   const accounts = useMemo(() => accountsQ.data ?? [], [accountsQ.data]);
@@ -289,7 +291,7 @@ export default function AccountingLedgerPage() {
               >
                 <option value="">كل الأشهر</option>
                 {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{brandingQ.data?.language === "en" ? EN_MONTHS[i] : AR_MONTHS[i]}</option>
+                  <option key={i + 1} value={i + 1}>{language === "en" ? EN_MONTHS[i] : AR_MONTHS[i]}</option>
                 ))}
               </select>
             </div>

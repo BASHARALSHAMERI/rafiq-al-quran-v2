@@ -10,6 +10,8 @@ class AppLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -17,17 +19,19 @@ class AppLoadingState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(
-              color: AppColors.primaryLight,
+            CircularProgressIndicator(
+              strokeWidth: 3,
+              color: theme.colorScheme.primary,
             ),
             if (message != null) ...[
               const SizedBox(height: AppSpacing.md),
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondaryLight,
-                    ),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.textSecondaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ],

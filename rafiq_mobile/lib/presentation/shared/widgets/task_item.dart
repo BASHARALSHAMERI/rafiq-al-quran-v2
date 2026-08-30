@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 
-/// TaskItem - Used in TeacherHome for today's tasks
-///
-/// Layout: [Checkbox] Task text (strikethrough if done)
-/// Style: Card with subtle border
+/// TaskItem - Used for today's tasks
 class TaskItem extends StatelessWidget {
   final String text;
   final bool done;
@@ -21,33 +20,23 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final successColor = context.customColors.success;
+    final theme = Theme.of(context);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.cardDark : AppColors.cardLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                  .withValues(alpha: 0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: context.cardColor,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: context.borderColor),
           ),
           child: Row(
             children: [
-              // Custom checkbox
               GestureDetector(
                 onTap: onChanged != null ? () => onChanged!(!done) : null,
                 child: Container(
@@ -55,19 +44,9 @@ class TaskItem extends StatelessWidget {
                   height: 22,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: done
-                        ? (isDark
-                            ? AppColors.successDark
-                            : AppColors.successLight)
-                        : Colors.transparent,
+                    color: done ? successColor : Colors.transparent,
                     border: Border.all(
-                      color: done
-                          ? (isDark
-                              ? AppColors.successDark
-                              : AppColors.successLight)
-                          : (isDark
-                              ? AppColors.borderDark
-                              : AppColors.borderLight),
+                      color: done ? successColor : context.borderColor,
                       width: 2,
                     ),
                   ),
@@ -81,21 +60,17 @@ class TaskItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Task text
               Expanded(
                 child: Text(
                   text,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
-                        color: done
-                            ? (isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight)
-                            : (isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight),
-                        decoration: done ? TextDecoration.lineThrough : null,
-                      ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: done
+                        ? context.textSecondaryColor
+                        : context.textPrimaryColor,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                  ),
                 ),
               ),
             ],
@@ -161,26 +136,17 @@ class _TaskItemInteractiveState extends State<TaskItemInteractive>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final successColor = context.customColors.success;
+    final borderColor = context.borderColor;
 
     return GestureDetector(
       onTap: _toggle,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                .withValues(alpha: 0.5),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.08 : 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: borderColor),
         ),
         child: Row(
           children: [
@@ -194,13 +160,13 @@ class _TaskItemInteractiveState extends State<TaskItemInteractive>
                     shape: BoxShape.circle,
                     color: Color.lerp(
                       Colors.transparent,
-                      isDark ? AppColors.successDark : AppColors.successLight,
+                      successColor,
                       _controller.value,
                     ),
                     border: Border.all(
                       color: Color.lerp(
-                        isDark ? AppColors.borderDark : AppColors.borderLight,
-                        isDark ? AppColors.successDark : AppColors.successLight,
+                        borderColor,
+                        successColor,
                         _controller.value,
                       )!,
                       width: 2,
@@ -222,13 +188,10 @@ class _TaskItemInteractiveState extends State<TaskItemInteractive>
                 duration: const Duration(milliseconds: 200),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                       fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       color: _done
-                          ? (isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight)
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight),
+                          ? context.textSecondaryColor
+                          : context.textPrimaryColor,
                       decoration: _done ? TextDecoration.lineThrough : null,
                     ),
                 child: Text(widget.text),

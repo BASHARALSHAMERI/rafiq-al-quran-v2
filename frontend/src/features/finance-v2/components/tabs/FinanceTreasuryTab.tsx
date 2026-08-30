@@ -13,7 +13,6 @@ import {
   useSubmitFinanceV2FundTransferMutation,
   useApproveFinanceV2FundTransferMutation,
   usePostFinanceV2FundTransferMutation,
-  useRejectFinanceV2FundTransferMutation,
   useFinanceV2AccountsQuery,
   useFinanceV2ReportCashflowQuery,
   useUpdateFinanceV2AccountLedgerMutation,
@@ -143,8 +142,8 @@ export default function FinanceTreasuryTab({
     setTreasuryError("");
 
     try {
-      let fromId = posInt(transferForm.fromAccountId);
-      let toId = posInt(transferForm.toAccountId);
+      const fromId = posInt(transferForm.fromAccountId);
+      const toId = posInt(transferForm.toAccountId);
 
 
 

@@ -153,7 +153,7 @@ export function FinanceExpenseCategoriesTab({
           {
             id: "actions",
             header: ar ? "الإجراءات" : "Actions",
-            stickyRight: true,
+            isActions: true,
             render: (row: any) => (
               <div className="flex gap-2">
                 {canManage && (
@@ -250,10 +250,10 @@ export function FinanceExpenseCategoriesTab({
         onConfirm={handleDelete}
         title={ar ? "حذف التصنيف" : "Delete Category"}
         message={ar ? "هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ لا يمكن التراجع عن هذه العملية." : "Are you sure you want to delete this category? This action cannot be undone."}
-        confirmText={ar ? "حذف" : "Delete"}
-        cancelText={ar ? "إلغاء" : "Cancel"}
-        isDestructive={true}
-        isLoading={deleteM.isPending}
+        confirmLabel={ar ? "حذف" : "Delete"}
+        cancelLabel={ar ? "إلغاء" : "Cancel"}
+        confirmVariant="danger"
+        isConfirming={deleteM.isPending}
       />
     </div>
   );

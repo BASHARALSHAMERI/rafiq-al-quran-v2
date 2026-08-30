@@ -70,7 +70,7 @@ export const validateCenter = (d: CenterDraft, ar: boolean, geoEnforcement?: str
       : "Admin required";
   }
 
-  if (geoEnforcement === "REQUIRED" && (!d.latitude || !d.longitude)) {
+  if ((geoEnforcement === "REQUIRED" || geoEnforcement === "STRICT") && (!d.latitude || !d.longitude)) {
     return ar
       ? "تحديد الموقع الجغرافي للمركز إلزامي بناءً على سياسة الحضور"
       : "Center location is required by the attendance policy";

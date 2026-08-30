@@ -6,7 +6,7 @@ import '../widgets/primary_button.dart';
 
 class AppEmptyState extends StatelessWidget {
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final IconData icon;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -15,15 +15,19 @@ class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.icon = Icons.inbox_outlined,
     this.actionLabel,
     this.onAction,
-    this.iconSize = 64,
+    this.iconSize = 56,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final isDark = context.isDark;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -34,32 +38,37 @@ class AppEmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.1),
+                color: primary.withValues(alpha: isDark ? 0.18 : 0.08),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: primary.withValues(alpha: isDark ? 0.28 : 0.16),
+                ),
               ),
               child: Icon(
                 icon,
                 size: iconSize,
-                color: AppColors.primaryLight,
+                color: primary,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryLight,
-                  ),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: context.textPrimaryColor,
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
-            ),
+            if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                subtitle!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.textSecondaryColor,
+                ),
+              ),
+            ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
               PrimaryButton(

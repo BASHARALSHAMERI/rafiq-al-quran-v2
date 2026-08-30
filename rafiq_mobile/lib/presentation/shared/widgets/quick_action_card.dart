@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_gradients.dart';
 
-/// QuickAction component matching quran-companions design
-///
-/// Layout: Square button with icon top, label bottom
-/// Variants: primary (gradient), secondary (outlined)
-/// Used in: All role home screens
 enum QuickActionVariant {
   primary,
   secondary,
@@ -28,66 +25,70 @@ class QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
     final isPrimary = variant == QuickActionVariant.primary;
     final foregroundColor = isPrimary
         ? Colors.white
-        : AppColors.primaryLight;
-    final backgroundColor = isPrimary 
-        ? null 
-        : (isDark ? AppColors.cardDark : Colors.white);
+        : theme.colorScheme.primary;
+    final backgroundColor = isPrimary ? null : context.cardColor;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Ink(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
           decoration: BoxDecoration(
             gradient: isPrimary ? AppGradients.primary : null,
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.025),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: isPrimary ? null : Border.all(color: context.borderColor),
+            boxShadow: isPrimary
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : (isDark ? null : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: isPrimary
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : foregroundColor.withValues(alpha: 0.08),
+                      ? Colors.white.withValues(alpha: 0.20)
+                      : foregroundColor.withValues(alpha: isDark ? 0.18 : 0.10),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
-                  size: 18,
+                  size: 20,
                   color: foregroundColor,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      height: 1.2,
-                      color: isPrimary
-                          ? Colors.white
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight),
-                    ),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  height: 1.2,
+                  color: isPrimary ? Colors.white : context.textPrimaryColor,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -117,45 +118,53 @@ class QuickActionCardSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
     final isPrimary = variant == QuickActionVariant.primary;
     final foregroundColor = isPrimary
         ? Colors.white
-        : AppColors.primaryLight;
-    final backgroundColor = isPrimary 
-        ? null 
-        : (isDark ? AppColors.cardDark : Colors.white);
+        : theme.colorScheme.primary;
+    final backgroundColor = isPrimary ? null : context.cardColor;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         child: Ink(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
           decoration: BoxDecoration(
             gradient: isPrimary ? AppGradients.primary : null,
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: isPrimary ? null : Border.all(color: context.borderColor),
+            boxShadow: isPrimary
+                ? [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.22),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : (isDark ? null : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: isPrimary
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : foregroundColor.withValues(alpha: 0.08),
+                      ? Colors.white.withValues(alpha: 0.20)
+                      : foregroundColor.withValues(alpha: isDark ? 0.18 : 0.10),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -167,16 +176,12 @@ class QuickActionCardSmall extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 10,
-                      height: 1.2,
-                      color: isPrimary
-                          ? Colors.white
-                          : (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight),
-                    ),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  height: 1.2,
+                  color: isPrimary ? Colors.white : context.textPrimaryColor,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

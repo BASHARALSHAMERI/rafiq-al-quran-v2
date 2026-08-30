@@ -115,7 +115,7 @@ export const orgController = {
         throw new AppError("Scope not resolved", 500);
       }
 
-      const query = res.locals.validatedQuery as { centerId?: number; circleId?: number };
+      const query = res.locals.validatedQuery as { centerId?: number; circleId?: number; approvalStatus?: string };
       const circles = await orgService.listCircles(req.scope, query);
 
       res.json({
@@ -172,6 +172,24 @@ export const orgController = {
 
       const params = res.locals.validatedParams as { id: number };
       const circle = await orgService.updateCircleStatus(req.scope, params.id, req.body as { isActive: boolean });
+      res.json({
+        ok: true,
+        data: circle
+      });
+    } catch (error) {
+      next(error);
+    }
+  }) as RequestHandler,
+
+  updateCircleApprovalStatus: (async (req, res, next) => {
+    try {
+      if (!req.scope) {
+        throw new AppError("Scope not resolved", 500);
+      }
+
+      const params = res.locals.validatedParams as { id: number };
+      const body = req.body as { status: 'APPROVED' | 'REJECTED' };
+      const circle = await orgService.updateCircleApprovalStatus(req.scope, params.id, body.status);
       res.json({
         ok: true,
         data: circle

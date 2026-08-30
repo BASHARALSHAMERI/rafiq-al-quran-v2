@@ -20,7 +20,8 @@ import {
   orgBrandingUpdateBodySchema,
   orgEntityIdParamSchema,
   updateCenterBodySchema,
-  updateCircleBodySchema
+  updateCircleBodySchema,
+  updateCircleApprovalStatusBodySchema
 } from "./org.validation";
 
 const orgRouter = Router();
@@ -111,6 +112,15 @@ orgRouter.patch(
   verifyScope("circle", "params", "id"),
   validateBody(circleStatusBodySchema),
   orgController.updateCircleStatus
+);
+
+orgRouter.patch(
+  "/circles/:id/approval",
+  requireRoles([Role.SUPER_ADMIN, Role.SUPERVISOR]),
+  validateParams(orgEntityIdParamSchema),
+  verifyScope("circle", "params", "id"),
+  validateBody(updateCircleApprovalStatusBodySchema),
+  orgController.updateCircleApprovalStatus
 );
 
 export default orgRouter;

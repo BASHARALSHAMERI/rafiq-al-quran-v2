@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_radius.dart';
 import '../../../../core/constants/quran_data.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../domain/entities/student_profile.dart';
@@ -16,6 +17,9 @@ class StudentFollowUpLastRecords extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     FollowUpRecord? latestOf(String type) {
       for (final record in records) {
         if (record.type == type) {
@@ -45,12 +49,12 @@ class StudentFollowUpLastRecords extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'تاريخ آخر متابعة للطالب',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 14,
-            color: AppColors.textPrimaryLight,
+            color: context.textPrimaryColor,
           ),
         ),
         const SizedBox(height: 10),
@@ -60,7 +64,7 @@ class StudentFollowUpLastRecords extends StatelessWidget {
               child: _LastRecordCard(
                 title: 'آخر حفظ',
                 value: formatRange(memorization),
-                color: AppColors.secondaryLight,
+                color: primary,
                 icon: Icons.menu_book_rounded,
               ),
             ),
@@ -69,7 +73,7 @@ class StudentFollowUpLastRecords extends StatelessWidget {
               child: _LastRecordCard(
                 title: 'آخر مراجعة',
                 value: formatRange(review),
-                color: AppColors.infoLight,
+                color: custom.info,
                 icon: Icons.autorenew_rounded,
               ),
             ),
@@ -78,7 +82,7 @@ class StudentFollowUpLastRecords extends StatelessWidget {
               child: _LastRecordCard(
                 title: 'آخر متن',
                 value: matn?.matnName ?? 'لم يسجل بعد',
-                color: AppColors.successLight,
+                color: custom.success,
                 icon: Icons.bookmark_added_rounded,
               ),
             ),
@@ -88,6 +92,7 @@ class StudentFollowUpLastRecords extends StatelessWidget {
     );
   }
 }
+
 class FollowUpNoticeBanner extends StatelessWidget {
   final Color color;
   final String title;
@@ -104,13 +109,15 @@ class FollowUpNoticeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        color: color.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.28 : 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,15 +130,17 @@ class FollowUpNoticeBanner extends StatelessWidget {
               fontSize: 14,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            message,
-            style: const TextStyle(
-              color: AppColors.textPrimaryLight,
-              height: 1.5,
-              fontSize: 13,
+          if (message.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              message,
+              style: TextStyle(
+                color: context.textPrimaryColor,
+                height: 1.5,
+                fontSize: 13,
+              ),
             ),
-          ),
+          ],
           if (action != null) ...[
             const SizedBox(height: 12),
             action!,
@@ -141,6 +150,7 @@ class FollowUpNoticeBanner extends StatelessWidget {
     );
   }
 }
+
 class FollowUpHorizontalStepper extends StatelessWidget {
   final FollowUpSessionSection activeSection;
   final Map<FollowUpSessionSection, bool> saved;
@@ -157,33 +167,36 @@ class FollowUpHorizontalStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     final steps = [
       (
         section: FollowUpSessionSection.memorization,
         label: 'الحفظ',
         icon: Icons.menu_book_rounded,
-        color: AppColors.secondaryLight,
+        color: primary,
       ),
       (
         section: FollowUpSessionSection.review,
         label: 'المراجعة',
         icon: Icons.autorenew_rounded,
-        color: AppColors.infoLight,
+        color: custom.info,
       ),
       (
         section: FollowUpSessionSection.matn,
         label: 'المتون',
         icon: Icons.bookmark_added_rounded,
-        color: AppColors.successLight,
+        color: custom.success,
       ),
     ];
 
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: steps.map((step) {
@@ -196,9 +209,9 @@ class FollowUpHorizontalStepper extends StatelessWidget {
                   ? Icons.check_circle_rounded
                   : step.icon;
           final statusColor = hasIssue
-              ? AppColors.errorLight
+              ? Theme.of(context).colorScheme.error
               : isSaved
-                  ? AppColors.successLight
+                  ? custom.success
                   : step.color;
 
           return Expanded(
@@ -210,7 +223,7 @@ class FollowUpHorizontalStepper extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 11),
                 decoration: BoxDecoration(
                   color: isActive ? step.color : Colors.transparent,
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -228,7 +241,7 @@ class FollowUpHorizontalStepper extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         color: isActive
                             ? Colors.white
-                            : AppColors.textSecondaryLight,
+                            : context.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -261,19 +274,14 @@ class FollowUpSectionShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showHeader = icon != null || title != null || description != null;
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,13 +293,9 @@ class FollowUpSectionShell extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color.withValues(alpha: 0.15), color.withValues(alpha: 0.05)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: color.withValues(alpha: 0.1)),
+                      color: color.withValues(alpha: isDark ? 0.20 : 0.10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: color.withValues(alpha: isDark ? 0.30 : 0.15)),
                     ),
                     child: Icon(icon!, size: 20, color: color),
                   ),
@@ -303,18 +307,18 @@ class FollowUpSectionShell extends StatelessWidget {
                       if (title != null)
                         Text(
                           title!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 16,
-                            color: AppColors.textPrimaryLight,
+                            color: context.textPrimaryColor,
                           ),
                         ),
                       if (description != null) ...[
                         const SizedBox(height: 2),
                         Text(
                           description!,
-                          style: const TextStyle(
-                            color: AppColors.textSecondaryLight,
+                          style: TextStyle(
+                            color: context.textSecondaryColor,
                             fontSize: 12,
                             height: 1.4,
                           ),
@@ -393,10 +397,10 @@ class FollowUpSurahDropdown extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -404,11 +408,12 @@ class FollowUpSurahDropdown extends StatelessWidget {
           key: ValueKey('$label-${selected?.number}-$minSurahNumber'),
           initialValue: selected?.number,
           isExpanded: true,
-          icon: const Icon(
+          dropdownColor: context.cardColor,
+          icon: Icon(
             Icons.keyboard_arrow_down_rounded,
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
           ),
-          decoration: followUpFieldDecoration(accent),
+          decoration: followUpFieldDecoration(context, accent),
           items: surahs
               .map(
                 (item) => DropdownMenuItem<int>(
@@ -416,10 +421,10 @@ class FollowUpSurahDropdown extends StatelessWidget {
                   child: Center(
                     child: Text(
                       item.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 15,
-                        color: AppColors.textPrimaryLight,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                   ),
@@ -457,7 +462,8 @@ class FollowUpNotesField extends StatelessWidget {
       minLines: minLines,
       maxLines: maxLines,
       onChanged: onChanged,
-      decoration: followUpFieldDecoration(AppColors.primaryLight).copyWith(
+      style: TextStyle(color: context.textPrimaryColor),
+      decoration: followUpFieldDecoration(context, Theme.of(context).colorScheme.primary).copyWith(
         hintText: hint,
         alignLabelWithHint: true,
       ),
@@ -480,12 +486,14 @@ class FollowUpRatingBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['ضعيف', 'مقبول', 'جيد', 'جيد جداً', 'ممتاز'];
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: 0.2)),
+        color: accent.withValues(alpha: isDark ? 0.16 : 0.05),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.15)),
       ),
       child: Column(
         children: [
@@ -502,8 +510,8 @@ class FollowUpRatingBox extends StatelessWidget {
                         ? Icons.star_rounded
                         : Icons.star_outline_rounded,
                     color: value <= rating
-                        ? AppColors.warningLight
-                        : AppColors.borderLight,
+                        ? context.customColors.warning
+                        : context.borderColor,
                     size: 36,
                   ),
                 ),
@@ -543,19 +551,21 @@ class FollowUpInfoBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: isDark ? 0.16 : 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                color: AppColors.textSecondaryLight,
+              style: TextStyle(
+                color: context.textSecondaryColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -597,10 +607,10 @@ class FollowUpAyahInput extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 13,
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -608,12 +618,12 @@ class FollowUpAyahInput extends StatelessWidget {
           controller: controller,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 15,
-            color: AppColors.textPrimaryLight,
+            color: context.textPrimaryColor,
           ),
-          decoration: followUpFieldDecoration(accent),
+          decoration: followUpFieldDecoration(context, accent),
           onChanged: (value) {
             final parsed = int.tryParse(value);
             if (parsed != null && parsed < 1) {
@@ -656,10 +666,10 @@ class FollowUpStatusChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? color : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(14),
+          color: selected ? color : context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: selected ? color : AppColors.borderLight,
+            color: selected ? color : context.borderColor,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -669,7 +679,7 @@ class FollowUpStatusChip extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: selected ? Colors.white : AppColors.textSecondaryLight,
+              color: selected ? Colors.white : context.textSecondaryColor,
             ),
             const SizedBox(width: 6),
             Text(
@@ -677,7 +687,7 @@ class FollowUpStatusChip extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
-                color: selected ? Colors.white : AppColors.textSecondaryLight,
+                color: selected ? Colors.white : context.textSecondaryColor,
               ),
             ),
           ],
@@ -687,25 +697,28 @@ class FollowUpStatusChip extends StatelessWidget {
   }
 }
 
-InputDecoration followUpFieldDecoration(Color focusColor) {
+InputDecoration followUpFieldDecoration(BuildContext context, Color focusColor) {
+  final theme = Theme.of(context);
+  final isDark = context.isDark;
+
   return InputDecoration(
     filled: true,
-    fillColor: const Color(0xFFFBFBFA),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    fillColor: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFFBFBFA),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: AppColors.borderLight.withValues(alpha: 0.8)),
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: context.borderColor),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: AppColors.borderLight.withValues(alpha: 0.8)),
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      borderSide: BorderSide(color: context.borderColor),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       borderSide: BorderSide(color: focusColor, width: 1.5),
     ),
-    hintStyle: const TextStyle(
-      color: AppColors.textSecondaryLight,
+    hintStyle: TextStyle(
+      color: context.textSecondaryColor,
       fontSize: 14,
     ),
     labelStyle: TextStyle(
@@ -731,19 +744,14 @@ class _LastRecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.cardLight,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.25 : 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -765,10 +773,10 @@ class _LastRecordCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimaryLight,
+              color: context.textPrimaryColor,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -809,6 +817,10 @@ class AchievementMiniCard extends StatelessWidget {
 
     final formattedDate = record!.recordDate.toIso8601String().split('T').first;
     final ratingVal = record!.rating ?? 0;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
 
     showModalBottomSheet(
       context: context,
@@ -817,9 +829,9 @@ class AchievementMiniCard extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: context.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           child: Column(
@@ -831,7 +843,7 @@ class AchievementMiniCard extends StatelessWidget {
                   width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.borderLight,
+                    color: context.borderColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -842,10 +854,10 @@ class AchievementMiniCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6F3),
-                      borderRadius: BorderRadius.circular(12),
+                      color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(icon, color: const Color(0xFF568A78), size: 24),
+                    child: Icon(icon, color: primary, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -854,20 +866,18 @@ class AchievementMiniCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: TextStyle(
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.textSecondaryLight,
-                            fontFamily: 'Cairo',
+                            color: context.textSecondaryColor,
                           ),
                         ),
                         Text(
                           _formatRecordRange(record),
-                          style: const TextStyle(
-                            fontSize: 17,
+                          style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.textPrimaryLight,
-                            fontFamily: 'Cairo',
+                            color: context.textPrimaryColor,
                           ),
                         ),
                       ],
@@ -875,34 +885,32 @@ class AchievementMiniCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
-              const Divider(color: AppColors.borderLight, height: 1),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
+              Divider(color: context.borderColor, height: 1),
+              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'تاريخ التسجيل:',
                     style: TextStyle(
-                      fontFamily: 'Cairo',
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: AppColors.textSecondaryLight,
+                      color: context.textSecondaryColor,
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.borderLight.withValues(alpha: 0.5),
+                      color: isDark ? theme.colorScheme.surfaceContainerHighest : AppColors.surfaceVariantLight,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       formattedDate,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
-                        color: AppColors.textPrimaryLight,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                   ),
@@ -913,20 +921,19 @@ class AchievementMiniCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'التقييم:',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                     ),
                     Row(
                       children: List.generate(5, (index) {
                         return Icon(
                           index < ratingVal ? Icons.star_rounded : Icons.star_border_rounded,
-                          color: index < ratingVal ? AppColors.warningLight : AppColors.borderLight,
+                          color: index < ratingVal ? custom.warning : context.borderColor,
                           size: 22,
                         );
                       }),
@@ -939,38 +946,31 @@ class AchievementMiniCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'حالة الإتقان:',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: record!.matnStatus == 'COMPLETED'
-                            ? AppColors.successLight.withValues(alpha: 0.12)
-                            : AppColors.warningLight.withValues(alpha: 0.12),
+                        color: (record!.matnStatus == 'COMPLETED'
+                                ? custom.success
+                                : custom.warning)
+                            .withValues(alpha: isDark ? 0.20 : 0.12),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: record!.matnStatus == 'COMPLETED'
-                              ? AppColors.successLight
-                              : AppColors.warningLight,
-                          width: 1,
-                        ),
                       ),
                       child: Text(
                         record!.matnStatus == 'COMPLETED' ? 'متقن' : 'يحتاج متابعة',
                         style: TextStyle(
-                          fontFamily: 'Cairo',
                           fontWeight: FontWeight.w900,
                           fontSize: 12,
                           color: record!.matnStatus == 'COMPLETED'
-                              ? AppColors.successLight
-                              : AppColors.warningLight,
+                              ? custom.success
+                              : custom.warning,
                         ),
                       ),
                     ),
@@ -982,35 +982,32 @@ class AchievementMiniCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'بواسطة المعلم:',
                       style: TextStyle(
-                        fontFamily: 'Cairo',
                         fontWeight: FontWeight.w700,
                         fontSize: 13,
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                     ),
                     Text(
                       record!.teacherName!,
-                      style: const TextStyle(
-                        fontFamily: 'Cairo',
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
-                        color: AppColors.textPrimaryLight,
+                        color: context.textPrimaryColor,
                       ),
                     ),
                   ],
                 ),
               ],
-              const SizedBox(height: 20),
-              const Text(
+              const SizedBox(height: 18),
+              Text(
                 'ملاحظات وتوجيهات المعلم:',
                 style: TextStyle(
-                  fontFamily: 'Cairo',
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
-                  color: AppColors.textPrimaryLight,
+                  color: context.textPrimaryColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1018,18 +1015,17 @@ class AchievementMiniCard extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.borderLight.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderLight),
+                  color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: context.borderColor),
                 ),
                 child: Text(
                   record!.notes ?? 'لا توجد ملاحظات مسجلة.',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
                     fontSize: 13,
                     height: 1.5,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryLight,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
@@ -1042,7 +1038,7 @@ class AchievementMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFF568A78);
+    final primary = Theme.of(context).colorScheme.primary;
     final value = _formatRecordRange(record);
 
     return InteractiveCardWrapper(
@@ -1050,27 +1046,26 @@ class AchievementMiniCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: context.borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, size: 13, color: accentColor),
+                Icon(icon, size: 13, color: primary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 11,
-                      color: AppColors.textSecondaryLight,
-                      fontFamily: 'Cairo',
+                      color: context.textSecondaryColor,
                     ),
                   ),
                 ),
@@ -1081,11 +1076,10 @@ class AchievementMiniCard extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 12,
-                color: AppColors.textPrimaryLight,
-                fontFamily: 'Cairo',
+                color: context.textPrimaryColor,
               ),
             ),
           ],
@@ -1120,6 +1114,9 @@ class PlanProgressMiniCard extends StatelessWidget {
 
     final safeExecuted = executed.isNaN || executed.isInfinite ? 0.0 : executed;
     final safeTarget = target.isNaN || target.isInfinite ? 0.0 : target;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final isDark = context.isDark;
 
     String motivationMessage = 'لم يتم تسجيل أي صفحات من الخطة بعد. فلنبدأ بهمة ونشاط! 💪';
     if (displayPercent >= 100) {
@@ -1137,9 +1134,9 @@ class PlanProgressMiniCard extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: context.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           child: Column(
@@ -1151,7 +1148,7 @@ class PlanProgressMiniCard extends StatelessWidget {
                   width: 44,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.borderLight,
+                    color: context.borderColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1162,10 +1159,10 @@ class PlanProgressMiniCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6F3),
-                      borderRadius: BorderRadius.circular(12),
+                      color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    child: Icon(icon, color: const Color(0xFF568A78), size: 24),
+                    child: Icon(icon, color: primary, size: 24),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -1174,20 +1171,18 @@ class PlanProgressMiniCard extends StatelessWidget {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            fontSize: 15,
+                          style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF3B6657),
-                            fontFamily: 'Cairo',
+                            color: primary,
                           ),
                         ),
                         Text(
                           rangeText,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF2C4C41),
-                            fontFamily: 'Cairo',
+                            color: context.textPrimaryColor,
                           ),
                         ),
                       ],
@@ -1195,15 +1190,13 @@ class PlanProgressMiniCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
-              const Divider(color: AppColors.borderLight, height: 1),
+              const SizedBox(height: 20),
+              Divider(color: context.borderColor, height: 1),
               const SizedBox(height: 20),
 
-              // Progress Gauge & Numbers
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // Circular Progress Indicator
                   SizedBox(
                     width: 90,
                     height: 90,
@@ -1216,55 +1209,51 @@ class PlanProgressMiniCard extends StatelessWidget {
                           child: CircularProgressIndicator(
                             value: clampedRate.clamp(0.0, 1.0),
                             strokeWidth: 8,
-                            backgroundColor: const Color(0xFF568A78).withValues(alpha: 0.12),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF568A78)),
+                            backgroundColor: primary.withValues(alpha: 0.12),
+                            valueColor: AlwaysStoppedAnimation<Color>(primary),
                           ),
                         ),
                         Text(
                           '$displayPercent%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF3B6657),
-                            fontFamily: 'Cairo',
+                            color: primary,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Details
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildDetailRow('المنجز:', '${safeExecuted.toStringAsFixed(1)} صفحة'),
+                      _buildDetailRow(context, 'المنجز:', '${safeExecuted.toStringAsFixed(1)} صفحة'),
                       const SizedBox(height: 10),
-                      _buildDetailRow('المستهدف:', '${safeTarget.toStringAsFixed(1)} صفحة'),
+                      _buildDetailRow(context, 'المستهدف:', '${safeTarget.toStringAsFixed(1)} صفحة'),
                       const SizedBox(height: 10),
-                      _buildDetailRow('المتبقي:', '${(safeTarget - safeExecuted).clamp(0.0, double.infinity).toStringAsFixed(1)} صفحة'),
+                      _buildDetailRow(context, 'المتبقي:', '${(safeTarget - safeExecuted).clamp(0.0, double.infinity).toStringAsFixed(1)} صفحة'),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Motivation box
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6F3),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF568A78).withValues(alpha: 0.3)),
+                  color: primary.withValues(alpha: isDark ? 0.16 : 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: primary.withValues(alpha: isDark ? 0.25 : 0.15)),
                 ),
                 child: Text(
                   motivationMessage,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
+                  style: TextStyle(
                     fontSize: 13,
                     height: 1.4,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF2C4C41),
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
@@ -1275,26 +1264,24 @@ class PlanProgressMiniCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Row(
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondaryLight,
-            fontFamily: 'Cairo',
+            color: context.textSecondaryColor,
           ),
         ),
         const SizedBox(width: 8),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w900,
-            color: AppColors.textPrimaryLight,
-            fontFamily: 'Cairo',
+            color: context.textPrimaryColor,
           ),
         ),
       ],
@@ -1303,7 +1290,8 @@ class PlanProgressMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentColor = Color(0xFF568A78);
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
     final safeRate = rate.isNaN || rate.isInfinite ? 0.0 : rate;
     final clampedRate = safeRate > 1.0 ? safeRate / 100.0 : safeRate;
 
@@ -1315,27 +1303,26 @@ class PlanProgressMiniCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFF6F3),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accentColor.withValues(alpha: 0.5), width: 1.2),
+          color: primary.withValues(alpha: isDark ? 0.16 : 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: primary.withValues(alpha: isDark ? 0.25 : 0.20)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, size: 13, color: accentColor),
+                Icon(icon, size: 13, color: primary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 11,
-                      color: Color(0xFF3B6657),
-                      fontFamily: 'Cairo',
+                      color: primary,
                     ),
                   ),
                 ),
@@ -1348,11 +1335,10 @@ class PlanProgressMiniCard extends StatelessWidget {
                     final displayPercent = (animValue * 100).round().clamp(0, 100);
                     return Text(
                       '$displayPercent%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 11,
-                        color: Color(0xFF3B6657),
-                        fontFamily: 'Cairo',
+                        color: primary,
                       ),
                     );
                   },
@@ -1364,11 +1350,10 @@ class PlanProgressMiniCard extends StatelessWidget {
               rangeText,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 12,
-                color: Color(0xFF2C4C41),
-                fontFamily: 'Cairo',
+                color: context.textPrimaryColor,
               ),
             ),
             const SizedBox(height: 6),
@@ -1381,8 +1366,8 @@ class PlanProgressMiniCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                   child: LinearProgressIndicator(
                     value: animValue.clamp(0.0, 1.0),
-                    backgroundColor: accentColor.withValues(alpha: 0.15),
-                    valueColor: const AlwaysStoppedAnimation<Color>(accentColor),
+                    backgroundColor: primary.withValues(alpha: 0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(primary),
                     minHeight: 3.5,
                   ),
                 );
@@ -1391,11 +1376,10 @@ class PlanProgressMiniCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${safeExecuted.toStringAsFixed(1)} / ${safeTarget.toStringAsFixed(1)} ص',
-              style: const TextStyle(
-                color: Color(0xFF4A7D6C),
-                fontSize: 9.5,
+              style: TextStyle(
+                color: context.textSecondaryColor,
+                fontSize: 10,
                 fontWeight: FontWeight.w800,
-                fontFamily: 'Cairo',
               ),
             ),
           ],
@@ -1404,6 +1388,7 @@ class PlanProgressMiniCard extends StatelessWidget {
     );
   }
 }
+
 class InteractiveCardWrapper extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;

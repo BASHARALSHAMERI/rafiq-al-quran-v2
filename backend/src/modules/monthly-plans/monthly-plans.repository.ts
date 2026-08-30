@@ -177,6 +177,24 @@ export const monthlyPlansRepository = {
     };
   },
 
+  async calcTotalMemorizedPages(studentId: number, circleId: number, beforeDate: Date) {
+    const records = await prisma.followUpRecord.findMany({
+      where: {
+        studentId,
+        circleId,
+        type: "NEW_MEMORIZATION",
+        status: "FINAL",
+        recordDate: { lt: beforeDate }
+      },
+      select: { pagesCount: true }
+    });
+
+    return records.reduce(
+      (sum, r) => sum + (r.pagesCount ? Number(r.pagesCount) : 0),
+      0
+    );
+  },
+
   async findReviewSettings(teacherId: number, circleId: number, organizationId: number) {
     return prisma.reviewPlanSettings.findFirst({
       where: {
@@ -338,8 +356,7 @@ export const monthlyPlansRepository = {
         reviewToSurah: input.reviewToSurah,
         reviewToAyah: input.reviewToAyah,
         reviewTargetPages: input.reviewTargetPages,
-        reviewDailyRate: input.reviewDailyRate,
-        status: MonthlyPlanStatus.PENDING
+        reviewDailyRate: input.reviewDailyRate
       },
       include: {
         student: {

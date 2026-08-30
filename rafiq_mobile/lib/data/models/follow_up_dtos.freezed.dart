@@ -697,8 +697,6 @@ mixin _$CreateFollowUpRequestDto {
   int? get toSurah => throw _privateConstructorUsedError;
   int? get fromAyah => throw _privateConstructorUsedError;
   int? get toAyah => throw _privateConstructorUsedError;
-  int? get fromPage => throw _privateConstructorUsedError;
-  int? get toPage => throw _privateConstructorUsedError;
   double? get pagesCount => throw _privateConstructorUsedError;
   int? get rating => throw _privateConstructorUsedError;
   int? get matnId => throw _privateConstructorUsedError;
@@ -730,8 +728,6 @@ abstract class $CreateFollowUpRequestDtoCopyWith<$Res> {
       int? toSurah,
       int? fromAyah,
       int? toAyah,
-      int? fromPage,
-      int? toPage,
       double? pagesCount,
       int? rating,
       int? matnId,
@@ -765,8 +761,6 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
     Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
-    Object? fromPage = freezed,
-    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
     Object? matnId = freezed,
@@ -815,14 +809,6 @@ class _$CreateFollowUpRequestDtoCopyWithImpl<$Res,
       toAyah: freezed == toAyah
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
-              as int?,
-      fromPage: freezed == fromPage
-          ? _value.fromPage
-          : fromPage // ignore: cast_nullable_to_non_nullable
-              as int?,
-      toPage: freezed == toPage
-          ? _value.toPage
-          : toPage // ignore: cast_nullable_to_non_nullable
               as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
@@ -876,8 +862,6 @@ abstract class _$$CreateFollowUpRequestDtoImplCopyWith<$Res>
       int? toSurah,
       int? fromAyah,
       int? toAyah,
-      int? fromPage,
-      int? toPage,
       double? pagesCount,
       int? rating,
       int? matnId,
@@ -910,8 +894,6 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
     Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
-    Object? fromPage = freezed,
-    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
     Object? matnId = freezed,
@@ -961,14 +943,6 @@ class __$$CreateFollowUpRequestDtoImplCopyWithImpl<$Res>
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
               as int?,
-      fromPage: freezed == fromPage
-          ? _value.fromPage
-          : fromPage // ignore: cast_nullable_to_non_nullable
-              as int?,
-      toPage: freezed == toPage
-          ? _value.toPage
-          : toPage // ignore: cast_nullable_to_non_nullable
-              as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
           : pagesCount // ignore: cast_nullable_to_non_nullable
@@ -1015,8 +989,6 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
       this.toSurah,
       this.fromAyah,
       this.toAyah,
-      this.fromPage,
-      this.toPage,
       this.pagesCount,
       this.rating,
       this.matnId,
@@ -1052,10 +1024,6 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
   @override
   final int? toAyah;
   @override
-  final int? fromPage;
-  @override
-  final int? toPage;
-  @override
   final double? pagesCount;
   @override
   final int? rating;
@@ -1072,7 +1040,7 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
 
   @override
   String toString() {
-    return 'CreateFollowUpRequestDto(studentId: $studentId, circleId: $circleId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, fromPage: $fromPage, toPage: $toPage, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, idempotencyKey: $idempotencyKey)';
+    return 'CreateFollowUpRequestDto(studentId: $studentId, circleId: $circleId, recordDate: $recordDate, type: $type, status: $status, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, idempotencyKey: $idempotencyKey)';
   }
 
   @override
@@ -1095,9 +1063,6 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
             (identical(other.fromAyah, fromAyah) ||
                 other.fromAyah == fromAyah) &&
             (identical(other.toAyah, toAyah) || other.toAyah == toAyah) &&
-            (identical(other.fromPage, fromPage) ||
-                other.fromPage == fromPage) &&
-            (identical(other.toPage, toPage) || other.toPage == toPage) &&
             (identical(other.pagesCount, pagesCount) ||
                 other.pagesCount == pagesCount) &&
             (identical(other.rating, rating) || other.rating == rating) &&
@@ -1113,28 +1078,25 @@ class _$CreateFollowUpRequestDtoImpl implements _CreateFollowUpRequestDto {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hashAll([
-        runtimeType,
-        studentId,
-        circleId,
-        recordDate,
-        type,
-        status,
-        surah,
-        fromSurah,
-        toSurah,
-        fromAyah,
-        toAyah,
-        fromPage,
-        toPage,
-        pagesCount,
-        rating,
-        matnId,
-        matnName,
-        matnStatus,
-        notes,
-        idempotencyKey
-      ]);
+  int get hashCode => Object.hash(
+      runtimeType,
+      studentId,
+      circleId,
+      recordDate,
+      type,
+      status,
+      surah,
+      fromSurah,
+      toSurah,
+      fromAyah,
+      toAyah,
+      pagesCount,
+      rating,
+      matnId,
+      matnName,
+      matnStatus,
+      notes,
+      idempotencyKey);
 
   @JsonKey(ignore: true)
   @override
@@ -1163,8 +1125,6 @@ abstract class _CreateFollowUpRequestDto implements CreateFollowUpRequestDto {
       final int? toSurah,
       final int? fromAyah,
       final int? toAyah,
-      final int? fromPage,
-      final int? toPage,
       final double? pagesCount,
       final int? rating,
       final int? matnId,
@@ -1196,10 +1156,6 @@ abstract class _CreateFollowUpRequestDto implements CreateFollowUpRequestDto {
   int? get fromAyah;
   @override
   int? get toAyah;
-  @override
-  int? get fromPage;
-  @override
-  int? get toPage;
   @override
   double? get pagesCount;
   @override
@@ -1234,8 +1190,6 @@ mixin _$UpdateFollowUpRequestDto {
   int? get toSurah => throw _privateConstructorUsedError;
   int? get fromAyah => throw _privateConstructorUsedError;
   int? get toAyah => throw _privateConstructorUsedError;
-  int? get fromPage => throw _privateConstructorUsedError;
-  int? get toPage => throw _privateConstructorUsedError;
   double? get pagesCount => throw _privateConstructorUsedError;
   int? get rating => throw _privateConstructorUsedError;
   int? get matnId => throw _privateConstructorUsedError;
@@ -1264,8 +1218,6 @@ abstract class $UpdateFollowUpRequestDtoCopyWith<$Res> {
       int? toSurah,
       int? fromAyah,
       int? toAyah,
-      int? fromPage,
-      int? toPage,
       double? pagesCount,
       int? rating,
       int? matnId,
@@ -1296,8 +1248,6 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
     Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
-    Object? fromPage = freezed,
-    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
     Object? matnId = freezed,
@@ -1334,14 +1284,6 @@ class _$UpdateFollowUpRequestDtoCopyWithImpl<$Res,
       toAyah: freezed == toAyah
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
-              as int?,
-      fromPage: freezed == fromPage
-          ? _value.fromPage
-          : fromPage // ignore: cast_nullable_to_non_nullable
-              as int?,
-      toPage: freezed == toPage
-          ? _value.toPage
-          : toPage // ignore: cast_nullable_to_non_nullable
               as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
@@ -1392,8 +1334,6 @@ abstract class _$$UpdateFollowUpRequestDtoImplCopyWith<$Res>
       int? toSurah,
       int? fromAyah,
       int? toAyah,
-      int? fromPage,
-      int? toPage,
       double? pagesCount,
       int? rating,
       int? matnId,
@@ -1423,8 +1363,6 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
     Object? toSurah = freezed,
     Object? fromAyah = freezed,
     Object? toAyah = freezed,
-    Object? fromPage = freezed,
-    Object? toPage = freezed,
     Object? pagesCount = freezed,
     Object? rating = freezed,
     Object? matnId = freezed,
@@ -1461,14 +1399,6 @@ class __$$UpdateFollowUpRequestDtoImplCopyWithImpl<$Res>
       toAyah: freezed == toAyah
           ? _value.toAyah
           : toAyah // ignore: cast_nullable_to_non_nullable
-              as int?,
-      fromPage: freezed == fromPage
-          ? _value.fromPage
-          : fromPage // ignore: cast_nullable_to_non_nullable
-              as int?,
-      toPage: freezed == toPage
-          ? _value.toPage
-          : toPage // ignore: cast_nullable_to_non_nullable
               as int?,
       pagesCount: freezed == pagesCount
           ? _value.pagesCount
@@ -1513,8 +1443,6 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
       this.toSurah,
       this.fromAyah,
       this.toAyah,
-      this.fromPage,
-      this.toPage,
       this.pagesCount,
       this.rating,
       this.matnId,
@@ -1541,10 +1469,6 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
   @override
   final int? toAyah;
   @override
-  final int? fromPage;
-  @override
-  final int? toPage;
-  @override
   final double? pagesCount;
   @override
   final int? rating;
@@ -1561,7 +1485,7 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
 
   @override
   String toString() {
-    return 'UpdateFollowUpRequestDto(recordDate: $recordDate, type: $type, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, fromPage: $fromPage, toPage: $toPage, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, lockVersion: $lockVersion)';
+    return 'UpdateFollowUpRequestDto(recordDate: $recordDate, type: $type, surah: $surah, fromSurah: $fromSurah, toSurah: $toSurah, fromAyah: $fromAyah, toAyah: $toAyah, pagesCount: $pagesCount, rating: $rating, matnId: $matnId, matnName: $matnName, matnStatus: $matnStatus, notes: $notes, lockVersion: $lockVersion)';
   }
 
   @override
@@ -1579,9 +1503,6 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
             (identical(other.fromAyah, fromAyah) ||
                 other.fromAyah == fromAyah) &&
             (identical(other.toAyah, toAyah) || other.toAyah == toAyah) &&
-            (identical(other.fromPage, fromPage) ||
-                other.fromPage == fromPage) &&
-            (identical(other.toPage, toPage) || other.toPage == toPage) &&
             (identical(other.pagesCount, pagesCount) ||
                 other.pagesCount == pagesCount) &&
             (identical(other.rating, rating) || other.rating == rating) &&
@@ -1606,8 +1527,6 @@ class _$UpdateFollowUpRequestDtoImpl implements _UpdateFollowUpRequestDto {
       toSurah,
       fromAyah,
       toAyah,
-      fromPage,
-      toPage,
       pagesCount,
       rating,
       matnId,
@@ -1640,8 +1559,6 @@ abstract class _UpdateFollowUpRequestDto implements UpdateFollowUpRequestDto {
       final int? toSurah,
       final int? fromAyah,
       final int? toAyah,
-      final int? fromPage,
-      final int? toPage,
       final double? pagesCount,
       final int? rating,
       final int? matnId,
@@ -1667,10 +1584,6 @@ abstract class _UpdateFollowUpRequestDto implements UpdateFollowUpRequestDto {
   int? get fromAyah;
   @override
   int? get toAyah;
-  @override
-  int? get fromPage;
-  @override
-  int? get toPage;
   @override
   double? get pagesCount;
   @override

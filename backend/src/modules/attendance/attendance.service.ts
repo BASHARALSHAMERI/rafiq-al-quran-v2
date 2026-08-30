@@ -148,6 +148,16 @@ export const attendanceService = {
     });
     const existingByStudentId = new Map(existingRows.map((item) => [item.studentId, item]));
 
+    // ponytail: whole-date duplicate guard — if all students already have attendance, reject
+    if (existingRows.length > 0 && existingRows.length === normalizedRecords.length) {
+      throw new AppError(
+        "تم تسجيل حضور جميع الطلاب لهذا التاريخ مسبقًا. استخدم التعديل الفردي لتغيير حالة طالب.",
+        409,
+        { circleId: input.circleId, date: input.date },
+        "ATTENDANCE_ALREADY_RECORDED"
+      );
+    }
+
     normalizedRecords.forEach((record) => {
       const existing = existingByStudentId.get(record.studentId);
       if (!existing) {

@@ -20,7 +20,8 @@ const resolveScopedCircleIds = async (
 ): Promise<number[]> => {
   if (scope.allAccess) {
     if (query.circleId) {
-      return [query.circleId];
+      const organizationCircleIds = await dashboardRepository.findCircleIdsByOrganization(scope.organizationId);
+      return organizationCircleIds.includes(query.circleId) ? [query.circleId] : [];
     }
 
     if (query.centerId) {
@@ -59,7 +60,22 @@ export const dashboardService = {
     const range = dashboardDomain.resolveDateRange(query.from, query.to);
     const circleIds = await resolveScopedCircleIds(scope, query);
 
-    const [totalStudents, totalTeachers, totalCircles, attendanceGroups, prevStats] = await Promise.all([
+    const staffApplicable = !query.circleId;
+    const staffCenterIds = query.centerId
+      ? [query.centerId]
+      : scope.allAccess
+        ? undefined
+        : scope.centerIds;
+
+    const [
+      totalStudents,
+      totalTeachers,
+      totalCircles,
+      attendanceGroups,
+      prevStats,
+      latestStudentAttendanceUpdate,
+      staffAttendanceResult
+    ] = await Promise.all([
       dashboardRepository.countDistinctStudents(circleIds),
       dashboardRepository.countDistinctTeachers(circleIds),
       dashboardRepository.countCircles(circleIds),
@@ -69,7 +85,15 @@ export const dashboardService = {
         range,
         centerIds: query.centerId ? [query.centerId] : scope.centerIds,
         circleIds,
-      })
+      }),
+      dashboardRepository.latestStudentAttendanceUpdate(circleIds, range),
+      staffApplicable
+        ? dashboardRepository.staffAttendanceSummary({
+            organizationId: scope.organizationId,
+            centerIds: staffCenterIds,
+            range
+          })
+        : Promise.resolve(null)
     ]);
 
     const totalsByStatus = {
@@ -106,6 +130,34 @@ export const dashboardService = {
     const currAvgAttendance = dashboardDomain.attendanceRate(totalsByStatus.present, attendanceTotal);
     const attendanceTrend = currAvgAttendance > prevStats.avgAttendance ? "up" : currAvgAttendance < prevStats.avgAttendance ? "down" : "stable";
 
+    const staffTotals = {
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+      onLeave: 0
+    };
+    const staffByRole = new Map<string, typeof staffTotals>();
+
+    for (const row of staffAttendanceResult?.groups ?? []) {
+      const key = row.status === AttendanceStatus.ON_LEAVE ? "onLeave" : row.status.toLowerCase();
+      staffTotals[key as keyof typeof staffTotals] += row._count._all;
+      const roleTotals = staffByRole.get(row.staffRole) ?? {
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        onLeave: 0
+      };
+      roleTotals[key as keyof typeof roleTotals] += row._count._all;
+      staffByRole.set(row.staffRole, roleTotals);
+    }
+
+    const staffRecordedTotal = Object.values(staffTotals).reduce((sum, value) => sum + value, 0);
+    const latestUpdate = [latestStudentAttendanceUpdate, staffAttendanceResult?.latestUpdatedAt]
+      .filter((value): value is Date => Boolean(value))
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
     return {
       filters: {
         centerId: query.centerId ?? null,
@@ -119,9 +171,34 @@ export const dashboardService = {
         totalCircles,
         attendanceTotal,
         attendanceRate: currAvgAttendance,
+        previousAttendanceRate: prevStats.avgAttendance,
+        attendanceDelta: Number((currAvgAttendance - prevStats.avgAttendance).toFixed(2)),
         attendanceTrend
       },
-      attendanceByStatus: totalsByStatus
+      attendanceByStatus: totalsByStatus,
+      staffAttendance: {
+        applicable: staffApplicable,
+        dataKind: "RECORDED_ATTENDANCE",
+        coverage: {
+          scheduledWithoutRecord: null,
+          withoutActiveShift: null,
+          dataSufficiency: "RECORDED_ONLY"
+        },
+        totals: staffTotals,
+        recordedTotal: staffRecordedTotal,
+        attendanceRate: dashboardDomain.staffAttendanceRate(
+          staffTotals.present,
+          staffTotals.late,
+          staffTotals.absent
+        ),
+        byRole: [...staffByRole.entries()].map(([staffRole, totals]) => ({
+          staffRole,
+          ...totals,
+          recordedTotal: Object.values(totals).reduce((sum, value) => sum + value, 0)
+        })),
+        lastUpdatedAt: staffAttendanceResult?.latestUpdatedAt ?? null
+      },
+      lastUpdatedAt: latestUpdate
     };
   },
 
@@ -131,6 +208,7 @@ export const dashboardService = {
 
     return dashboardRepository.activityFeed({
       organizationId: scope.organizationId,
+      centerId: query.centerId,
       circleIds,
       range,
       limit: query.limit
@@ -154,6 +232,8 @@ export const dashboardService = {
         circleName: string;
         centerId: number | null;
         centerName: string | null;
+        teacher: { id: number; fullName: string } | null;
+        activeStudents: number;
         totals: {
           present: number;
           absent: number;
@@ -171,6 +251,8 @@ export const dashboardService = {
           circleName: row.circleName,
           centerId: row.centerId,
           centerName: row.centerName,
+          teacher: row.teacher,
+          activeStudents: row.activeStudents,
           totals: {
             present: 0,
             absent: 0,
@@ -211,7 +293,7 @@ export const dashboardService = {
   },
 
   validateDashboardRole(scope: ScopeContext) {
-    const allowed = ["SUPER_ADMIN", "CENTER_ADMIN", "SUPERVISOR", "TEACHER"];
+    const allowed = ["SUPER_ADMIN", "CENTER_ADMIN", "SUPERVISOR", "TEACHER", "ACCOUNTANT", "FINANCE_MANAGER", "TREASURER", "AUDITOR"];
 
     if (!allowed.includes(scope.role)) {
       throw new AppError("لوحة التحكم مقيدة لدورك", 403);

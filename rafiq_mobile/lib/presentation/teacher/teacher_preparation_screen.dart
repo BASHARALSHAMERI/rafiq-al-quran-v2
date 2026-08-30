@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/teacher/teacher_panel_providers.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/teacher_panel_dtos.dart';
 import '../shared/states/app_empty_state.dart';
@@ -14,19 +16,6 @@ import '../shared/states/app_loading_state.dart';
 import '../shared/widgets/leave_request_sheet.dart';
 import '../shared/widgets/standard_app_bar.dart';
 
-// ─────────────────────────────────────────────
-//  CONSTANTS
-// ─────────────────────────────────────────────
-const _kGreen = Color(0xFF4C9872);
-const _kRed = Color(0xFFC65D65);
-const _kOrange = Color(0xFFDDA638);
-const _kGray = Color(0xFF8A9BAE);
-const _kCardBg = Colors.white;
-const _kPageBg = Color(0xFFF7F8F5);
-
-// ─────────────────────────────────────────────
-//  SCREEN
-// ─────────────────────────────────────────────
 class TeacherPreparationScreen extends ConsumerStatefulWidget {
   const TeacherPreparationScreen({super.key});
 
@@ -37,7 +26,6 @@ class TeacherPreparationScreen extends ConsumerStatefulWidget {
 
 class _TeacherPreparationScreenState
     extends ConsumerState<TeacherPreparationScreen> {
-  // Always load current month – month navigation removed as per user request
   final YearMonth _period = currentYearMonth();
   bool _isSubmitting = false;
   bool _isRequestingExcuse = false;
@@ -49,7 +37,6 @@ class _TeacherPreparationScreenState
 
   Future<Position?> _resolveCurrentLocation() async {
     try {
-      // Check permission quickly without blocking
       var permission = await Geolocator.checkPermission().timeout(
         const Duration(seconds: 3),
         onTimeout: () => LocationPermission.denied,
@@ -65,7 +52,6 @@ class _TeacherPreparationScreenState
         return null;
       }
 
-      // Only send coordinates when the device returns a real location.
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       ).timeout(const Duration(seconds: 8));
@@ -78,10 +64,9 @@ class _TeacherPreparationScreenState
     required TeacherPreparationDto preparation,
     required bool isCheckIn,
   }) async {
-    if (_isSubmitting) return; // Guard against double-tap
+    if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
     try {
-      // Get location in parallel — don't block the action
       final position = await _resolveCurrentLocation();
       final dataSource = ref.read(teacherPanelRemoteDataSourceProvider);
       if (isCheckIn) {
@@ -97,7 +82,6 @@ class _TeacherPreparationScreenState
           longitude: position?.longitude,
         );
       }
-      // Refresh provider data and wait for it
       await _refresh();
 
       if (!mounted) return;
@@ -124,7 +108,6 @@ class _TeacherPreparationScreenState
     }
   }
 
-  // ── Excuse type options (frontend-only enum merged into reason string)
   static const List<String> _excuseTypes = [
     'مرض',
     'سفر',
@@ -157,7 +140,6 @@ class _TeacherPreparationScreenState
       return;
     }
 
-    // Merge excuseType + optional note into the `reason` field
     final note = noteController.text.trim();
     final reason = note.isEmpty ? selectedType! : '$selectedType - $note';
 
@@ -168,7 +150,6 @@ class _TeacherPreparationScreenState
             date: DateFormat('yyyy-MM-dd').format(preparation.today.date),
             reason: reason,
           );
-      // Refresh provider data and wait for it
       await _refresh();
 
       if (!mounted) return;
@@ -260,7 +241,7 @@ class _TeacherPreparationScreenState
   Future<void> _selectActiveCircle(int circleId) async {
     await ref
         .read(contextControllerProvider.notifier)
-        .selectCircle('$circleId');
+        .selectCircle(circleId);
     if (!mounted) return;
     await _refresh();
   }
@@ -268,9 +249,11 @@ class _TeacherPreparationScreenState
   @override
   Widget build(BuildContext context) {
     final preparationAsync = ref.watch(teacherPreparationProvider(_period));
+    final theme = Theme.of(context);
+    final custom = context.customColors;
 
     return Scaffold(
-      backgroundColor: _kPageBg,
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(
         title: 'تحضيري',
       ),
@@ -296,7 +279,7 @@ class _TeacherPreparationScreenState
 
           return RefreshIndicator(
             onRefresh: _refresh,
-            color: _kGreen,
+            color: theme.colorScheme.primary,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -331,8 +314,7 @@ class _TeacherPreparationScreenState
                       value: '${preparation.stats.totalDays}',
                       label: 'الإجمالي',
                       icon: Icons.calendar_month_rounded,
-                      iconColor: _kGreen,
-                      iconBg: const Color(0xFFEFF9F4),
+                      iconColor: theme.colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -341,8 +323,7 @@ class _TeacherPreparationScreenState
                       value: '${preparation.stats.absentDays}',
                       label: 'أيام الغياب',
                       icon: Icons.cancel_outlined,
-                      iconColor: _kRed,
-                      iconBg: const Color(0xFFFCF2F2),
+                      iconColor: theme.colorScheme.error,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -351,8 +332,7 @@ class _TeacherPreparationScreenState
                       value: '${preparation.stats.presentDays}',
                       label: 'أيام الحضور',
                       icon: Icons.check_circle_outline_rounded,
-                      iconColor: _kGreen,
-                      iconBg: const Color(0xFFEFF9F4),
+                      iconColor: custom.success,
                     ),
                   ),
                 ]),
@@ -363,8 +343,7 @@ class _TeacherPreparationScreenState
                       value: '${preparation.stats.excusedDays}',
                       label: 'أعذار مقبولة',
                       icon: Icons.info_outline_rounded,
-                      iconColor: _kOrange,
-                      iconBg: const Color(0xFFFEF9EF),
+                      iconColor: custom.warning,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -373,8 +352,7 @@ class _TeacherPreparationScreenState
                       value: '${preparation.stats.onLeaveDays}',
                       label: 'أيام الإجازة',
                       icon: Icons.beach_access_rounded,
-                      iconColor: _kOrange,
-                      iconBg: const Color(0xFFFEF9EF),
+                      iconColor: custom.info,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -411,9 +389,6 @@ class _TeacherPreparationScreenState
   }
 }
 
-// ─────────────────────────────────────────────
-//  TODAY CARD  — mirrors the 3 screenshot states
-// ─────────────────────────────────────────────
 class _TodayCard extends StatelessWidget {
   final TeacherPreparationDto preparation;
   final bool isBusy;
@@ -436,6 +411,8 @@ class _TodayCard extends StatelessWidget {
     final status = preparation.today.status;
     final geo = preparation.today.geoCheck;
     final att = preparation.today.attendance;
+    final custom = context.customColors;
+    final theme = Theme.of(context);
 
     final isNotCheckedIn = status == 'not_checked_in';
     final isCheckedIn = status == 'checked_in';
@@ -443,22 +420,21 @@ class _TodayCard extends StatelessWidget {
     final isExcuse = status == 'excuse_requested';
     final isOnLeave = status == 'on_leave';
 
-    // Status label + colour (right side header)
     final (statusLabel, statusColor, statusIcon) = status == 'on_leave'
-        ? ('في إجازة', _kOrange, Icons.beach_access_rounded)
+        ? ('في إجازة', custom.warning, Icons.beach_access_rounded)
         : switch (status) {
             'checked_in' => (
                 'حاضر',
-                _kGreen,
+                custom.success,
                 Icons.check_circle_outline_rounded
               ),
-            'checked_out' => ('غادر', _kGray, Icons.exit_to_app_rounded),
+            'checked_out' => ('غادر', context.textSecondaryColor, Icons.exit_to_app_rounded),
             'excuse_requested' => (
                 'مُقدم عذر',
-                _kOrange,
+                custom.warning,
                 Icons.info_outline_rounded
               ),
-            _ => ('لم يُسجّل', _kGray, Icons.info_outline_rounded),
+            _ => ('لم يُسجّل', context.textSecondaryColor, Icons.info_outline_rounded),
           };
 
     final isOutside = geo.state == 'outside_range';
@@ -472,25 +448,17 @@ class _TodayCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ────────────────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status (left — shown right of date in RTL)
               Row(children: [
                 Icon(statusIcon, color: statusColor, size: 22),
                 const SizedBox(width: 6),
@@ -501,21 +469,20 @@ class _TodayCard extends StatelessWidget {
                         color: statusColor)),
               ]),
               const Spacer(),
-              // Date (right — shown left in RTL, small label above)
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                const Text('حالة اليوم',
+                Text('حالة اليوم',
                     style: TextStyle(
-                        color: Colors.black45,
+                        color: context.textSecondaryColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(
                   DateFormat('EEEE، d MMMM y', 'ar')
                       .format(preparation.today.date),
-                  style: const TextStyle(
-                      fontSize: 15,
+                  style: TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: Colors.black87),
+                      color: context.textPrimaryColor),
                 ),
               ]),
             ],
@@ -523,7 +490,6 @@ class _TodayCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // ── Geo banners (visible after check-in) ──────────
           _ShiftSummary(
             circleName: preparation.circle.name,
             locationText: preparation.circle.locationText,
@@ -538,7 +504,7 @@ class _TodayCard extends StatelessWidget {
               text: isOutside && hasGeoDetail
                   ? 'خارج النطاق (${geo.distanceMeters} م / ${geo.allowedRadiusMeters} م)'
                   : geo.message,
-              color: isOutside ? _kRed : _kGreen,
+              color: isOutside ? theme.colorScheme.error : custom.success,
               isAlert: isOutside,
             ),
             if (hasGeoDetail) ...[
@@ -547,14 +513,13 @@ class _TodayCard extends StatelessWidget {
                 icon: Icons.location_on_rounded,
                 text:
                     '${isOutside ? 'تم التسجيل من خارج النطاق' : 'داخل النطاق'} — المسافة ${geo.distanceMeters} متر',
-                color: _kOrange,
+                color: custom.warning,
                 isAlert: false,
               ),
             ],
             const SizedBox(height: 18),
           ],
 
-          // ── Location pills (visible when NOT checked in) ────
           if (isNotCheckedIn || isExcuse) ...[
             const Row(children: [
               Expanded(
@@ -572,7 +537,6 @@ class _TodayCard extends StatelessWidget {
             const SizedBox(height: 18),
           ],
 
-          // ── Times ─────────────────────────────────────────
           if (isCheckedIn && att?.checkInTime != null) ...[
             _TimeTile(
                 label: 'وقت الوصول',
@@ -598,7 +562,6 @@ class _TodayCard extends StatelessWidget {
             const SizedBox(height: 18),
           ],
 
-          // ── Action buttons — conditional on status ─────────
           if (isNotCheckedIn) ...[
             _ActionButtons(
               isBusy: isBusy,
@@ -627,9 +590,6 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  GEO BANNER (red / orange full-width strip)
-// ─────────────────────────────────────────────
 class _CircleSelectorCard extends StatelessWidget {
   final TeacherPreparationDto preparation;
   final ValueChanged<int> onChanged;
@@ -646,24 +606,18 @@ class _CircleSelectorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'اختيار الحلقة',
             style: TextStyle(
               fontWeight: FontWeight.w900,
-              color: Colors.black87,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 10),
@@ -674,7 +628,7 @@ class _CircleSelectorCard extends StatelessWidget {
                 : preparation.activeCircles.first.circleId,
             decoration: InputDecoration(
               filled: true,
-              fillColor: const Color(0xFFF7F8F5),
+              fillColor: context.surfaceColor,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -718,13 +672,16 @@ class _ShiftSummary extends StatelessWidget {
     final shiftText = shiftStart == null || shiftEnd == null
         ? 'لا توجد وردية محددة لليوم'
         : '${_fmtTime(shiftStart)} - ${_fmtTime(shiftEnd)}';
+    final custom = context.customColors;
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F8F5),
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF7F8F5),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,20 +689,20 @@ class _ShiftSummary extends StatelessWidget {
           _InfoLine(
             icon: Icons.groups_rounded,
             label: circleName,
-            color: _kGreen,
+            color: theme.colorScheme.primary,
           ),
           const SizedBox(height: 8),
           _InfoLine(
             icon: Icons.schedule_rounded,
             label: shiftText,
-            color: _kOrange,
+            color: custom.warning,
           ),
           if (locationText != null) ...[
             const SizedBox(height: 8),
             _InfoLine(
               icon: Icons.place_outlined,
               label: locationText!,
-              color: _kGray,
+              color: context.textSecondaryColor,
             ),
           ],
         ],
@@ -774,8 +731,8 @@ class _InfoLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: context.textPrimaryColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -790,18 +747,21 @@ class _OnLeaveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
-        color: _kOrange.withValues(alpha: 0.10),
+        color: custom.warning.withValues(alpha: isDark ? 0.18 : 0.10),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Text(
-        'ط£ظ†طھ ظپظٹ ط¥ط¬ط§ط²ط© ط§ظ„ظٹظˆظ…طŒ ظˆظ„ط§ ظٹظ„ط²ظ… طھط³ط¬ظٹظ„ ط­ط¶ظˆط±.',
+      child: Text(
+        'أنت في إجازة اليوم، ولا يلزم تسجيل حضور.',
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: _kOrange,
+          color: custom.warning,
           fontWeight: FontWeight.w800,
           fontSize: 14,
         ),
@@ -825,11 +785,13 @@ class _GeoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: isDark ? 0.18 : 0.10),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(children: [
@@ -845,9 +807,6 @@ class _GeoBanner extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  LOCATION PILL (before check-in)
-// ─────────────────────────────────────────────
 class _LocationPill extends StatelessWidget {
   final String text;
   final IconData icon;
@@ -856,19 +815,22 @@ class _LocationPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, size: 15, color: Colors.black45),
+        Icon(icon, size: 15, color: context.textSecondaryColor),
         const SizedBox(width: 6),
         Flexible(
           child: Text(text,
-              style: const TextStyle(
-                  color: Colors.black54,
+              style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w600),
               overflow: TextOverflow.ellipsis),
@@ -878,9 +840,6 @@ class _LocationPill extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  TIME TILE (وقت الوصول / وقت المغادرة)
-// ─────────────────────────────────────────────
 class _TimeTile extends StatelessWidget {
   final String label;
   final String time;
@@ -891,26 +850,30 @@ class _TimeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F6),
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF8F8F6),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(children: [
-        Icon(icon, color: _kGreen, size: 18),
+        Icon(icon, color: primary, size: 18),
         const SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label,
-              style: const TextStyle(
-                  color: Colors.black45,
+              style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 11,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text(time,
-              style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 18,
+              style: TextStyle(
+                  color: context.textPrimaryColor,
+                  fontSize: 17,
                   fontWeight: FontWeight.w900)),
         ]),
       ]),
@@ -918,15 +881,11 @@ class _TimeTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  ACTION BUTTONS (not_checked_in state)
-// ─────────────────────────────────────────────
 class _ActionButtons extends StatelessWidget {
   final bool isBusy;
   final VoidCallback? onCheckIn;
   final VoidCallback onRequestExcuse;
   final VoidCallback onRequestLeave;
-
   final String? errorMsg;
 
   const _ActionButtons({
@@ -939,6 +898,9 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
     return Column(children: [
       if (errorMsg != null)
         Padding(
@@ -946,19 +908,19 @@ class _ActionButtons extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _kRed.withValues(alpha: 0.08),
+              color: theme.colorScheme.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _kRed.withValues(alpha: 0.15)),
+              border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline_rounded, size: 16, color: _kRed),
+                Icon(Icons.info_outline_rounded, size: 16, color: theme.colorScheme.error),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     errorMsg!,
-                    style: const TextStyle(
-                      color: _kRed,
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -969,15 +931,12 @@ class _ActionButtons extends StatelessWidget {
           ),
         ),
       Row(children: [
-        // طلب عذر (outline)
         Expanded(
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              foregroundColor: Colors.black87,
-              side: const BorderSide(color: Colors.black12, width: 1.5),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
             onPressed: isBusy ? null : onRequestExcuse,
             icon: const Icon(Icons.description_outlined, size: 18),
@@ -987,25 +946,24 @@ class _ActionButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // تسجيل الحضور (filled green)
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              backgroundColor: onCheckIn == null ? _kGray : _kGreen,
-              foregroundColor: Colors.white,
+              backgroundColor: primary,
+              foregroundColor: theme.colorScheme.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
             onPressed: isBusy ? null : onCheckIn,
             icon: isBusy
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
+                        color: theme.colorScheme.onPrimary, strokeWidth: 2))
                 : const Icon(Icons.login_rounded, size: 18),
             label: Text(isBusy ? '...' : 'تسجيل الحضور',
                 style:
@@ -1019,10 +977,8 @@ class _ActionButtons extends StatelessWidget {
         child: OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            foregroundColor: Colors.black87,
-            side: const BorderSide(color: Colors.black12, width: 1.5),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
           ),
           onPressed: isBusy ? null : onRequestLeave,
           icon: const Icon(Icons.beach_access_outlined, size: 18),
@@ -1035,9 +991,6 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  CHECK-OUT BUTTON  (checked_in state)
-// ─────────────────────────────────────────────
 class _CheckOutButton extends StatelessWidget {
   final bool isBusy;
   final VoidCallback? onCheckOut;
@@ -1051,18 +1004,16 @@ class _CheckOutButton extends StatelessWidget {
       child: OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 15),
-          foregroundColor: Colors.black87,
-          side: const BorderSide(color: Colors.black12, width: 1.5),
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         ),
         onPressed: isBusy ? null : onCheckOut,
         icon: isBusy
-            ? const SizedBox(
+            ? SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
-                    color: Colors.black54, strokeWidth: 2))
+                    color: Theme.of(context).colorScheme.primary, strokeWidth: 2))
             : const Icon(Icons.logout_rounded, size: 18),
         label: Text(isBusy ? '...' : 'تسجيل المغادرة',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
@@ -1071,19 +1022,16 @@ class _CheckOutButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  COMPLETION BADGE (checked_out state)
-// ─────────────────────────────────────────────
 class _CompletionBadge extends StatelessWidget {
   const _CompletionBadge();
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         '✓ تم تسجيل الحضور والمغادرة',
         style: TextStyle(
-          color: _kGreen,
+          color: context.customColors.success,
           fontWeight: FontWeight.w800,
           fontSize: 15,
         ),
@@ -1092,30 +1040,25 @@ class _CompletionBadge extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  EXCUSED BADGE
-// ─────────────────────────────────────────────
 class _ExcusedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: _kOrange.withValues(alpha: 0.10),
+        color: custom.warning.withValues(alpha: context.isDark ? 0.18 : 0.10),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: const Text('تم رفع طلب العذر وبانتظار المراجعة.',
+      child: Text('تم رفع طلب العذر وبانتظار المراجعة.',
           textAlign: TextAlign.center,
           style: TextStyle(
-              color: _kOrange, fontWeight: FontWeight.w700, fontSize: 14)),
+              color: custom.warning, fontWeight: FontWeight.w700, fontSize: 14)),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-//  SECTION TITLE
-// ─────────────────────────────────────────────
 class _SectionTitle extends StatelessWidget {
   final String text;
   const _SectionTitle({required this.text});
@@ -1125,61 +1068,53 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       text,
       textAlign: TextAlign.right,
-      style: const TextStyle(
-          fontSize: 19, fontWeight: FontWeight.w900, color: Colors.black87),
+      style: TextStyle(
+          fontSize: 18, fontWeight: FontWeight.w800, color: context.textPrimaryColor),
     );
   }
 }
 
-// ─────────────────────────────────────────────
-//  STAT CARD  (إجمالي / غياب / حضور)
-//  Mirrors the mockup: number + label left, icon circle right
-// ─────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
   final Color iconColor;
-  final Color iconBg;
 
   const _StatCard({
     required this.value,
     required this.label,
     required this.icon,
     required this.iconColor,
-    required this.iconBg,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(children: [
-        // Number + icon
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(value,
-                style: const TextStyle(
-                    fontSize: 26,
+                style: TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.w900,
-                    color: Colors.black87)),
+                    color: context.textPrimaryColor)),
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-              child: Icon(icon, color: iconColor, size: 20),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: isDark ? 0.20 : 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
             ),
           ],
         ),
@@ -1187,8 +1122,8 @@ class _StatCard extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: Text(label,
-              style: const TextStyle(
-                  color: Colors.black45,
+              style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w600)),
         ),
@@ -1197,16 +1132,12 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  HISTORY ROW
-//  Right: day name + date | Left: time range + location icon | OR excuse badge
-// ─────────────────────────────────────────────
 class _HistoryItem {
   final DateTime date;
   final String dayName;
   final String formattedDate;
-  final String status; // PRESENT | LATE | EXCUSED | ABSENT
-  final String? timeRange; // 'HH:mm → HH:mm' or null
+  final String status;
+  final String? timeRange;
   final String? note;
 
   const _HistoryItem({
@@ -1230,44 +1161,45 @@ class _HistoryRow extends StatelessWidget {
     final isAbsent = item.status == 'ABSENT';
     final isOnLeave = item.status == 'ON_LEAVE';
     final showBadge = isExcuse || isAbsent || isOnLeave;
+    final custom = context.customColors;
+    final isDark = context.isDark;
 
-    final Color badgeColor = isAbsent ? _kRed : _kOrange;
+    final Color badgeColor = isAbsent ? Theme.of(context).colorScheme.error : custom.warning;
     final String badgeLabel = isOnLeave ? 'إجازة' : (isExcuse ? 'مرض' : 'غياب');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _kCardBg,
-        borderRadius: BorderRadius.circular(18),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(children: [
-        // ── Right icon (nav arrow or X)
         Icon(
           showBadge ? Icons.cancel_outlined : Icons.exit_to_app_rounded,
-          color: showBadge ? badgeColor : _kGreen,
+          color: showBadge ? badgeColor : custom.success,
           size: 24,
         ),
         const SizedBox(width: 12),
 
-        // ── Day + Date
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(item.dayName,
-              style: const TextStyle(
+              style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: Colors.black87)),
+                  fontSize: 14,
+                  color: context.textPrimaryColor)),
           const SizedBox(height: 2),
           Text(item.formattedDate,
-              style: const TextStyle(
-                  color: Colors.black45,
+              style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: FontWeight.w600)),
           if (item.note != null && item.note!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               item.note!,
-              style: const TextStyle(
-                color: Colors.black54,
+              style: TextStyle(
+                color: context.textSecondaryColor,
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
               ),
@@ -1277,27 +1209,26 @@ class _HistoryRow extends StatelessWidget {
 
         const Spacer(),
 
-        // ── Left side: time range OR badge
         if (showBadge)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: badgeColor.withValues(alpha: 0.10),
+              color: badgeColor.withValues(alpha: isDark ? 0.18 : 0.10),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(badgeLabel,
                 style: TextStyle(
                     color: badgeColor,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+                    fontSize: 12)),
           )
         else if (item.timeRange != null)
           Row(children: [
-            const Icon(Icons.location_on_outlined, color: _kGreen, size: 15),
+            Icon(Icons.location_on_outlined, color: custom.success, size: 15),
             const SizedBox(width: 4),
             Text(item.timeRange!,
-                style: const TextStyle(
-                    color: Colors.black54,
+                style: TextStyle(
+                    color: context.textSecondaryColor,
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
           ]),
@@ -1306,9 +1237,6 @@ class _HistoryRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-//  HELPER: build timeline from DTO
-// ─────────────────────────────────────────────
 List<_HistoryItem> _buildTimeline(TeacherPreparationDto preparation) {
   final items = <_HistoryItem>[];
   final recordsByDate = {
@@ -1357,19 +1285,11 @@ List<_HistoryItem> _buildTimeline(TeacherPreparationDto preparation) {
   return items;
 }
 
-// ─────────────────────────────────────────────
-//  HELPER: format time
-// ─────────────────────────────────────────────
 String _fmtTime(DateTime? value) {
   if (value == null) return '--:--';
   return DateFormat('hh:mm a', 'ar').format(value.toLocal());
 }
 
-
-// ─────────────────────────────────────────────
-//  EXCUSE BOTTOM SHEET
-//  Matches the web mockup: type dropdown + optional note + send button
-// ─────────────────────────────────────────────
 class _ExcuseBottomSheet extends StatefulWidget {
   final List<String> excuseTypes;
   final TextEditingController noteController;
@@ -1393,94 +1313,93 @@ class _ExcuseBottomSheetState extends State<_ExcuseBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.surfaceColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.fromLTRB(20, 16, 20, 24 + bottomPadding),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Handle bar
           Center(
             child: Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.black12,
+                color: context.borderColor,
                 borderRadius: BorderRadius.circular(100),
               ),
             ),
           ),
           const SizedBox(height: 20),
 
-          // ── Title row
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'طلب عذر غياب',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Colors.black87,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
               GestureDetector(
                 onTap: widget.onCancel,
-                child: const Icon(Icons.close_rounded,
-                    color: Colors.black45, size: 22),
+                child: Icon(Icons.close_rounded,
+                    color: context.textSecondaryColor, size: 22),
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // ── Excuse type label
-          const Text(
+          Text(
             'نوع العذر',
             textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 8),
 
-          // ── Dropdown
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _kGreen, width: 1.5),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: primary, width: 1.5),
             ),
             child: DropdownButtonHideUnderline(
               child: ButtonTheme(
                 alignedDropdown: true,
                 child: DropdownButton<String>(
                   value: _selectedType,
-                  hint: const Text(
+                  dropdownColor: context.cardColor,
+                  hint: Text(
                     'اختر نوع العذر',
-                    style: TextStyle(color: Colors.black45, fontSize: 15),
+                    style: TextStyle(color: context.textSecondaryColor, fontSize: 15),
                   ),
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: Colors.black54),
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: context.textSecondaryColor),
                   isExpanded: true,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   items: widget.excuseTypes.map((type) {
                     return DropdownMenuItem<String>(
                       value: type,
                       child: Text(
                         type,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          color: context.textPrimaryColor,
                         ),
                       ),
                     );
@@ -1492,53 +1411,35 @@ class _ExcuseBottomSheetState extends State<_ExcuseBottomSheet> {
           ),
           const SizedBox(height: 20),
 
-          // ── Note field
-          const Text(
+          Text(
             'وصف العذر (اختياري)',
             textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: Colors.black87,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: widget.noteController,
             maxLines: 4,
-            decoration: InputDecoration(
+            style: TextStyle(color: context.textPrimaryColor),
+            decoration: const InputDecoration(
               hintText: 'اكتب تفاصيل العذر...',
-              hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
-              filled: true,
-              fillColor: const Color(0xFFF8F8F8),
-              contentPadding: const EdgeInsets.all(14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Colors.black12, width: 0.8),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Colors.black12, width: 0.8),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: _kGreen, width: 1.5),
-              ),
             ),
           ),
           const SizedBox(height: 24),
 
-          // ── Submit button
           SizedBox(
-            height: 52,
+            height: 50,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _selectedType != null ? _kGreen : Colors.black12,
-                foregroundColor: Colors.white,
+                backgroundColor: primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
               ),
               onPressed: _selectedType == null

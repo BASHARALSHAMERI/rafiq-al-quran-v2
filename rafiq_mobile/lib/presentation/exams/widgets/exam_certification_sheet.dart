@@ -99,6 +99,8 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
     final totalDeductions = scoreDeductions + questionDeductions;
     final finalScore = (maxScore - totalDeductions).clamp(0.0, maxScore);
     final isPass = finalScore >= passScore;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return ExamSheetScaffold(
       title: 'مراجعة وحفظ التقييم',
@@ -123,7 +125,7 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
             child: FilledButton.icon(
               onPressed: widget.isSubmitting ? null : widget.onSave,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
+                backgroundColor: primary,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
@@ -158,33 +160,33 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
               _ScoreChip(
                 label: 'التجويد النظري',
                 value: widget.theoreticalTajweedScore,
-                color: AppColors.infoLight,
+                color: custom.info,
               ),
               _ScoreChip(
                 label: 'الأداء العام',
                 value: widget.performanceScore,
-                color: AppColors.infoLight,
+                color: custom.info,
               ),
               _ScoreChip(
                 label: 'خصومات الأسئلة',
                 value: -questionDeductions,
-                color: AppColors.warningLight,
+                color: custom.warning,
               ),
               _ScoreChip(
                 label: 'الإجمالي الكلي للخصم',
                 value: -totalDeductions,
-                color: AppColors.errorLight,
+                color: Theme.of(context).colorScheme.error,
               ),
               _ScoreChip(
                 label: 'النتيجة الحالية',
                 value: finalScore,
-                color: isPass ? AppColors.successLight : AppColors.warningLight,
+                color: isPass ? custom.success : custom.warning,
                 bold: true,
               ),
               _ScoreChip(
                 label: 'حالة الاجتياز',
                 valueText: isPass ? 'مجتاز ✓' : 'غير مجتاز',
-                color: isPass ? AppColors.successLight : AppColors.errorLight,
+                color: isPass ? custom.success : Theme.of(context).colorScheme.error,
                 bold: true,
               ),
             ],
@@ -206,7 +208,7 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
             label: 'جوانب التميز',
             options: examStrengthSuggestions,
             selected: splitListText(widget.strengthNotes),
-            color: AppColors.successLight,
+            color: custom.success,
             onChanged: (list) => widget.onStrengthNotesChanged(list.join('، ')),
           ),
           const SizedBox(height: 12),
@@ -215,7 +217,7 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
             label: 'جوانب القصور',
             options: examWeaknessSuggestions,
             selected: splitListText(widget.weaknessNotes),
-            color: AppColors.warningLight,
+            color: custom.warning,
             onChanged: (list) => widget.onWeaknessNotesChanged(list.join('، ')),
           ),
           const SizedBox(height: 10),
@@ -225,7 +227,8 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
             controller: _committeeController,
             minLines: 3,
             maxLines: 5,
-            decoration: examInputDecoration('الملاحظات الختامية للجنة...'),
+            style: TextStyle(color: context.textPrimaryColor),
+            decoration: examInputDecoration(context, 'الملاحظات الختامية للجنة...'),
             onChanged: widget.onCommitteeNotesChanged,
           ),
         ],
@@ -234,13 +237,17 @@ class _ExamCertificationSheetState extends State<ExamCertificationSheet> {
   }
 
   Widget _sectionTitle(BuildContext ctx, String text, IconData icon) {
+    final primary = Theme.of(ctx).colorScheme.primary;
+
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.primaryLight),
+        Icon(icon, size: 18, color: primary),
         const SizedBox(width: 8),
         Text(text,
-            style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+            style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  color: ctx.textPrimaryColor,
                 )),
       ],
     );
@@ -271,9 +278,10 @@ class _SearchableMultiSelect extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondaryLight,
+          style: TextStyle(
+                color: context.textSecondaryColor,
                 fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
         ),
         const SizedBox(height: 8),
@@ -297,9 +305,9 @@ class _SearchableMultiSelect extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.borderColor),
             ),
             child: Row(
               children: [
@@ -307,10 +315,10 @@ class _SearchableMultiSelect extends StatelessWidget {
                   child: selected.isEmpty
                       ? Text(
                           'اختر من القائمة...',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textSecondaryLight,
-                                  ),
+                          style: TextStyle(
+                                color: context.textSecondaryColor,
+                                fontSize: 13,
+                              ),
                         )
                       : Wrap(
                           spacing: 6,
@@ -320,25 +328,25 @@ class _SearchableMultiSelect extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.1),
+                                      color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
-                                          color: color.withValues(alpha: 0.2)),
+                                          color: color.withValues(alpha: context.isDark ? 0.35 : 0.20)),
                                     ),
                                     child: Text(
                                       s,
                                       style: TextStyle(
                                         color: color,
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ))
                               .toList(),
                         ),
                 ),
-                const Icon(Icons.search_rounded,
-                    size: 18, color: AppColors.textSecondaryLight),
+                Icon(Icons.search_rounded,
+                    size: 18, color: context.textSecondaryColor),
               ],
             ),
           ),
@@ -383,9 +391,9 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -394,7 +402,7 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.borderLight,
+              color: context.borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -405,9 +413,10 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
                 Expanded(
                   child: Text(
                     widget.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
+                      color: context.textPrimaryColor,
                     ),
                   ),
                 ),
@@ -422,14 +431,15 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TextField(
               autofocus: true,
+              style: TextStyle(color: context.textPrimaryColor),
               decoration: InputDecoration(
                 hintText: 'بحث...',
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
-                fillColor: AppColors.background,
+                fillColor: context.surfaceColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
               ),
               onChanged: (v) => setState(() => _query = v),
@@ -455,8 +465,8 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
                   title: Text(
                     opt,
                     style: TextStyle(
-                      fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
-                      color: isSel ? widget.color : AppColors.textPrimaryLight,
+                      fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                      color: isSel ? widget.color : context.textPrimaryColor,
                     ),
                   ),
                   trailing: Checkbox(
@@ -508,24 +518,26 @@ class _ScoreChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
+        color: color.withValues(alpha: context.isDark ? 0.12 : 0.07),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withValues(alpha: context.isDark ? 0.25 : 0.20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.textSecondaryLight,
+              style: TextStyle(
+                    color: context.textSecondaryColor,
+                    fontSize: 11,
                   ),
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
           Text(_displayValue,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              style: TextStyle(
                     color: color,
                     fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
+                    fontSize: 14,
                   )),
         ],
       ),
@@ -540,33 +552,33 @@ class _QuestionsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     if (questions.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderLight),
+          border: Border.all(color: context.borderColor),
         ),
         child: Text('لا توجد أسئلة مرتبطة',
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppColors.textSecondaryLight)),
+            style: TextStyle(color: context.textSecondaryColor, fontSize: 13)),
       );
     }
 
-    final headerStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: AppColors.textSecondaryLight,
-          fontWeight: FontWeight.w700,
+    final headerStyle = TextStyle(
+          color: context.textSecondaryColor,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
         );
-    final cellStyle = Theme.of(context).textTheme.bodySmall;
+    final cellStyle = TextStyle(color: context.textPrimaryColor, fontSize: 12);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -583,7 +595,7 @@ class _QuestionsTable extends StatelessWidget {
             // رأس الجدول
             TableRow(
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.07),
+                color: primary.withValues(alpha: context.isDark ? 0.15 : 0.07),
               ),
               children: [
                 _Cell(child: Text('#', style: headerStyle)),
@@ -607,29 +619,29 @@ class _QuestionsTable extends StatelessWidget {
             ...questions.map((q) {
               final total = q.totalDeduction;
               return TableRow(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: AppColors.borderLight),
+                    top: BorderSide(color: context.borderColor),
                   ),
                 ),
                 children: [
                   _Cell(
                     child: Text('${q.orderIndex}',
                         style:
-                            cellStyle?.copyWith(fontWeight: FontWeight.w700)),
+                            cellStyle.copyWith(fontWeight: FontWeight.w800)),
                   ),
                   _Cell(
                     child: Text(
                       '${surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
-                      style: cellStyle?.copyWith(fontSize: 10),
+                      style: cellStyle.copyWith(fontSize: 10),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   _Cell(
                     child: Text(
                       _fmt(q.prompting),
-                      style: cellStyle?.copyWith(
-                        color: q.prompting > 0 ? AppColors.errorLight : null,
+                      style: cellStyle.copyWith(
+                        color: q.prompting > 0 ? Theme.of(context).colorScheme.error : null,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -637,8 +649,8 @@ class _QuestionsTable extends StatelessWidget {
                   _Cell(
                     child: Text(
                       _fmt(q.reminding),
-                      style: cellStyle?.copyWith(
-                        color: q.reminding > 0 ? Colors.orange : null,
+                      style: cellStyle.copyWith(
+                        color: q.reminding > 0 ? context.customColors.warning : null,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -646,8 +658,8 @@ class _QuestionsTable extends StatelessWidget {
                   _Cell(
                     child: Text(
                       _fmt(q.tajweed),
-                      style: cellStyle?.copyWith(
-                        color: q.tajweed > 0 ? AppColors.infoLight : null,
+                      style: cellStyle.copyWith(
+                        color: q.tajweed > 0 ? context.customColors.info : null,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -655,9 +667,9 @@ class _QuestionsTable extends StatelessWidget {
                   _Cell(
                     child: Text(
                       total == 0 ? '—' : _fmt(total),
-                      style: cellStyle?.copyWith(
-                        color: total > 0 ? AppColors.errorLight : null,
-                        fontWeight: total > 0 ? FontWeight.w700 : null,
+                      style: cellStyle.copyWith(
+                        color: total > 0 ? Theme.of(context).colorScheme.error : null,
+                        fontWeight: total > 0 ? FontWeight.w800 : null,
                       ),
                       textAlign: TextAlign.center,
                     ),

@@ -44,6 +44,9 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = context.borderColor;
+
     return TextFormField(
       controller: controller,
       onChanged: onChanged,
@@ -56,6 +59,10 @@ class CustomTextField extends StatelessWidget {
       maxLines: obscureText ? 1 : maxLines,
       minLines: obscureText ? 1 : minLines,
       autovalidateMode: autovalidateMode,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
@@ -67,30 +74,30 @@ class CustomTextField extends StatelessWidget {
               vertical: AppSpacing.md,
             ),
         filled: true,
-        fillColor: Theme.of(context).cardColor,
+        fillColor: theme.cardColor,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: const BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: const BorderSide(
-            color: AppColors.primaryLight,
-            width: 1.2,
+          borderSide: BorderSide(
+            color: theme.colorScheme.primary,
+            width: 1.5,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: const BorderSide(
-            color: AppColors.errorLight,
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
             width: 1.2,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          borderSide: const BorderSide(
-            color: AppColors.errorLight,
-            width: 1.4,
+          borderSide: BorderSide(
+            color: theme.colorScheme.error,
+            width: 1.5,
           ),
         ),
       ),

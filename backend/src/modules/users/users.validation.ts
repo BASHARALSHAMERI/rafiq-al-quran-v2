@@ -23,7 +23,9 @@ export const usersQuerySchema = z
       })
     ]).optional(),
     centerId: z.coerce.number().int().positive().optional(),
-    circleId: z.coerce.number().int().positive().optional()
+    circleId: z.coerce.number().int().positive().optional(),
+    page: z.coerce.number().int().positive().optional(),
+    limit: z.coerce.number().int().positive().max(100).optional()
   })
   .strict();
 

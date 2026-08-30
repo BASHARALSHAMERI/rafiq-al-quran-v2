@@ -256,7 +256,7 @@ export const ADMIN_ROUTES: AdminRouteMeta[] = [
     get label() { return labels.nav.dashboard; },
     routeIcon: LayoutDashboard,
     section: "home",
-    allowedRoles: CORE_STAFF,
+    allowedRoles: [...CORE_STAFF, "ACCOUNTANT", "FINANCE_MANAGER", "TREASURER", "AUDITOR"],
     sidebar: true,
   },
   {

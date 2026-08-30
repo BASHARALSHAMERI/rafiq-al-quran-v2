@@ -3,12 +3,12 @@ import '../entities/circle.dart';
 
 abstract class ContextRepository {
   Future<List<Center>> getMyCenters();
-  Future<List<Circle>> getMyCircles({required String centerId});
+  Future<List<Circle>> getMyCircles({required int centerId});
 
-  Future<void> saveCurrentCenter(String centerId);
-  Future<void> saveCurrentCircle(String circleId);
+  Future<void> saveCurrentCenter(int centerId);
+  Future<void> saveCurrentCircle(int circleId);
 
-  Future<String?> getCurrentCenterId();
-  Future<String?> getCurrentCircleId();
+  Future<int?> getCurrentCenterId();
+  Future<int?> getCurrentCircleId();
   Future<void> clearContext();
 }

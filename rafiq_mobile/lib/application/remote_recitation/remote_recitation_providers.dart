@@ -22,7 +22,7 @@ final teacherRemoteRecitationCircleIdProvider = Provider<int?>((ref) {
   final selectedCircleId = ref.watch(
     contextControllerProvider.select((state) => state.selectedCircleId),
   );
-  return int.tryParse(selectedCircleId ?? '');
+  return selectedCircleId;
 });
 
 final teacherRemoteRecitationSettingsProvider =

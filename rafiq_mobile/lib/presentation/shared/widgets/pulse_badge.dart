@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+
 /// Badge بتأثير نبض — للإشعارات والتنبيهات
 class PulseBadge extends StatefulWidget {
   final Widget child;
-  final Color color;
+  final Color? color;
   final double size;
   final bool animate;
   final int? count;
@@ -11,7 +13,7 @@ class PulseBadge extends StatefulWidget {
   const PulseBadge({
     super.key,
     required this.child,
-    this.color = const Color(0xFFEF4444),
+    this.color,
     this.size = 10,
     this.animate = true,
     this.count,
@@ -53,6 +55,8 @@ class _PulseBadgeState extends State<PulseBadge>
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = widget.color ?? (context.isDark ? AppColors.errorDark : AppColors.errorLight);
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -84,7 +88,7 @@ class _PulseBadgeState extends State<PulseBadge>
                       height: widget.size,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: widget.color,
+                        color: effectiveColor,
                       ),
                     ),
                   ),
@@ -96,13 +100,13 @@ class _PulseBadgeState extends State<PulseBadge>
                       ? const EdgeInsets.symmetric(horizontal: 4, vertical: 2)
                       : null,
                   decoration: BoxDecoration(
-                    color: widget.color,
+                    color: effectiveColor,
                     shape: widget.count != null
                         ? BoxShape.rectangle
                         : BoxShape.circle,
                     borderRadius:
                         widget.count != null ? BorderRadius.circular(10) : null,
-                    border: Border.all(color: Colors.white, width: 1.5),
+                    border: Border.all(color: context.cardColor, width: 1.5),
                   ),
                   child: widget.count != null
                       ? Text(

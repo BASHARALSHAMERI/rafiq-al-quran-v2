@@ -112,7 +112,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       }
     }
 
-    final circleId = int.tryParse(contextState.selectedCircleId ?? '');
+    final circleId = contextState.selectedCircleId;
 
     final attendanceAsync = circleId != null
         ? ref.watch(todayAttendanceProvider(circleId.toString()))
@@ -174,6 +174,9 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       );
     }
 
+    final custom = context.customColors;
+    final errColor = Theme.of(context).colorScheme.error;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -184,7 +187,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
       children: [
         if (!contextState.hasSelectedCircle) ...[
           FollowUpNoticeBanner(
-            color: AppColors.errorLight,
+            color: errColor,
             title: 'يجب اختيار الحلقة أولاً للاعتماد',
             message: '',
             action: OutlinedButton.icon(
@@ -196,7 +199,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           const SizedBox(height: 14),
         ] else if (hasAttendanceError) ...[
           FollowUpNoticeBanner(
-            color: AppColors.errorLight,
+            color: errColor,
             title: 'تعذر التحقق من حالة الحضور والتحضير اليوم',
             message:
                 'يمكنك إدخال البيانات وحفظها كمسودة، لكن اعتماد المتابعة النهائي يحتاج تحقق الحضور أولاً.',
@@ -209,24 +212,24 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
           ),
           const SizedBox(height: 14),
         ] else if (!isPrepared) ...[
-          const FollowUpNoticeBanner(
-            color: AppColors.warningLight,
+          FollowUpNoticeBanner(
+            color: custom.warning,
             title: 'تنبيه: لم يتم تحضير الطالب اليوم',
             message:
                 'يمكنك حفظ العمل كمسودة الآن، ويجب تسجيل حضور الطالب قبل اعتماد المتابعة النهائي.',
           ),
           const SizedBox(height: 14),
         ] else if (isAbsent) ...[
-          const FollowUpNoticeBanner(
-            color: AppColors.errorLight,
+          FollowUpNoticeBanner(
+            color: errColor,
             title: 'تنبيه: الطالب مسجل غائب اليوم',
             message:
                 'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب.',
           ),
           const SizedBox(height: 14),
         ] else if (isExcused) ...[
-          const FollowUpNoticeBanner(
-            color: AppColors.errorLight,
+          FollowUpNoticeBanner(
+            color: errColor,
             title: 'تنبيه: الطالب مسجل غائب بعذر اليوم',
             message:
                 'لا يمكن إدخال أو حفظ بيانات المتابعة (حفظ، مراجعة، أو متون) لطالب مسجل غائب بعذر.',
@@ -235,7 +238,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         ],
         if (issues.isNotEmpty) ...[
           FollowUpNoticeBanner(
-            color: AppColors.errorLight,
+            color: errColor,
             title: 'يرجى مراجعة وتصحيح التنبيهات قبل الحفظ',
             message: issues.join('\n'),
           ),
@@ -558,16 +561,17 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
         (_saved[section] ?? false);
     final finalLocked = baseLocked || blocksFinalRecord;
     final draftLocked = baseLocked || blocksDraft;
-    final accent = _sectionAccent(section);
+    final accent = _sectionAccent(context, section);
+    final custom = context.customColors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_saved[section] == true)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: FollowUpNoticeBanner(
-              color: AppColors.successLight,
+              color: custom.success,
               title: 'تم حفظ هذا القسم',
               message: 'عدل أي حقل لتسجيل نسخة جديدة.',
             ),
@@ -578,7 +582,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
               : () => _submit(section, _SubmissionMode.finalRecord),
           style: FilledButton.styleFrom(
             backgroundColor: accent,
-            disabledBackgroundColor: AppColors.borderLight,
+            disabledBackgroundColor: context.borderColor,
             minimumSize: const Size(double.infinity, 52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -653,14 +657,14 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     });
   }
 
-  Color _sectionAccent(FollowUpSessionSection section) {
+  Color _sectionAccent(BuildContext context, FollowUpSessionSection section) {
     switch (section) {
       case FollowUpSessionSection.memorization:
-        return AppColors.secondaryLight;
+        return Theme.of(context).colorScheme.primary;
       case FollowUpSessionSection.review:
-        return AppColors.infoLight;
+        return context.customColors.info;
       case FollowUpSessionSection.matn:
-        return AppColors.successLight;
+        return context.customColors.success;
     }
   }
 
@@ -716,9 +720,7 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
     _SubmissionMode mode,
   ) {
     final issues = <String>[];
-    final circleId = int.tryParse(
-      ref.read(contextControllerProvider).selectedCircleId ?? '',
-    );
+    final circleId = ref.read(contextControllerProvider).selectedCircleId;
     if (circleId == null || circleId <= 0) {
       issues.add('اختر الحلقة الحالية قبل تسجيل المتابعة.');
       return _BuildResult(issues: issues);
@@ -754,10 +756,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             toSurah: _newToSurah?.number ?? _newFromSurah?.number,
             fromAyah: range.fromAyah,
             toAyah: range.toAyah,
-            fromPage: QuranData.getPageNumber(_newFromSurah!.number, range.fromAyah),
-            toPage: QuranData.getPageNumber((_newToSurah ?? _newFromSurah)!.number, range.toAyah),
             pagesCount: range.pagesCount,
-            rating: _newRating,
+            rating: _newRating * 20,
             notes: notes,
             idempotencyKey: _idempotencyKeys[FollowUpSessionSection.memorization],
           ),
@@ -791,10 +791,8 @@ class _StudentFollowUpTabState extends ConsumerState<StudentFollowUpTab> {
             toSurah: _reviewToSurah?.number ?? _reviewFromSurah?.number,
             fromAyah: range.fromAyah,
             toAyah: range.toAyah,
-            fromPage: QuranData.getPageNumber(_reviewFromSurah!.number, range.fromAyah),
-            toPage: QuranData.getPageNumber((_reviewToSurah ?? _reviewFromSurah)!.number, range.toAyah),
             pagesCount: range.pagesCount,
-            rating: _reviewRating,
+            rating: _reviewRating * 20,
             notes: notes,
             idempotencyKey: _idempotencyKeys[FollowUpSessionSection.review],
           ),

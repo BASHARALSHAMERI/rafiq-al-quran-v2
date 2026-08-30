@@ -31,3 +31,5 @@ playwright-report/
 test-results/
 ts_errors_fresh.txt
 .ts_errors_*.txt
+.vercel
+.env*

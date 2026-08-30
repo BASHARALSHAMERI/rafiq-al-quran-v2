@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 
-/// SectionHeader component matching quran-companions design
-///
-/// Layout: [Green bar] Title ---- Action >
-/// Used to separate sections in home screens
+/// SectionHeader component
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? action;
@@ -19,48 +17,45 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accentColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    final theme = Theme.of(context);
+    final accentColor = theme.colorScheme.primary;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 5,
-          height: 24,
+          width: 4,
+          height: 20,
           decoration: BoxDecoration(
             color: accentColor,
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 17,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: context.textPrimaryColor,
+            ),
           ),
         ),
         if (action != null && onAction != null)
           DecoratedBox(
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.08),
+              color: accentColor.withValues(alpha: context.isDark ? 0.16 : 0.08),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: accentColor.withValues(alpha: 0.12),
+                color: accentColor.withValues(alpha: context.isDark ? 0.25 : 0.12),
               ),
             ),
             child: TextButton(
               onPressed: onAction,
               style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: const Size(0, 32),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(999),
@@ -107,20 +102,19 @@ class SectionHeaderMinimal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final accentColor = theme.colorScheme.primary;
 
     return Row(
       children: [
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                ),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: context.textPrimaryColor,
+            ),
           ),
         ),
         if (action != null && onAction != null)
@@ -138,17 +132,15 @@ class SectionHeaderMinimal extends StatelessWidget {
                   action!,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
                   ),
                 ),
                 const SizedBox(width: 2),
                 Icon(
-                  Icons.chevron_left,
+                  Icons.chevron_left_rounded,
                   size: 16,
-                  color:
-                      isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                  color: accentColor,
                 ),
               ],
             ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/theme/app_colors.dart';
 
 class SecondaryButton extends StatelessWidget {
   final String label;
@@ -11,6 +10,7 @@ class SecondaryButton extends StatelessWidget {
   final bool isLoading;
   final bool isFullWidth;
   final Color? color;
+  final double height;
 
   const SecondaryButton({
     super.key,
@@ -20,22 +20,28 @@ class SecondaryButton extends StatelessWidget {
     this.isLoading = false,
     this.isFullWidth = true,
     this.color,
+    this.height = 50,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? AppColors.primaryLight;
+    final theme = Theme.of(context);
+    final effectiveColor = color ?? theme.colorScheme.primary;
 
     final defaultStyle = OutlinedButton.styleFrom(
       foregroundColor: effectiveColor,
-      side: BorderSide(color: effectiveColor),
-      minimumSize: isFullWidth ? const Size.fromHeight(52) : const Size(0, 52),
+      side: BorderSide(color: effectiveColor.withValues(alpha: 0.8), width: 1.2),
+      minimumSize: Size(isFullWidth ? double.infinity : 0, height),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md), // 12px
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
+      ),
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
       ),
     );
 
@@ -44,10 +50,10 @@ class SecondaryButton extends StatelessWidget {
         onPressed: null,
         style: defaultStyle,
         child: SizedBox(
-          width: 24,
-          height: 24,
+          width: 20,
+          height: 20,
           child: CircularProgressIndicator(
-            strokeWidth: 2.5,
+            strokeWidth: 2.2,
             color: effectiveColor,
           ),
         ),
@@ -58,7 +64,7 @@ class SecondaryButton extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: onPressed,
         style: defaultStyle,
-        icon: Icon(icon, size: 20),
+        icon: Icon(icon, size: 18),
         label: Text(label),
       );
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/app_colors.dart';
 import 'primary_button.dart';
@@ -48,18 +49,11 @@ class PageStateView extends StatelessWidget {
         actionLabel = null,
         onAction = null;
 
-  Color _iconContainerColor() {
-    return switch (_variant) {
-      _PageStateVariant.error => AppColors.errorLight.withValues(alpha: 0.10),
-      _PageStateVariant.empty => AppColors.textSecondaryLight.withValues(alpha: 0.08),
-      _ => AppColors.primaryLight.withValues(alpha: 0.08),
-    };
-  }
-
   Color _iconColor(BuildContext context) {
+    final isDark = context.isDark;
     return switch (_variant) {
-      _PageStateVariant.error => AppColors.errorLight,
-      _PageStateVariant.empty => AppColors.textSecondaryLight,
+      _PageStateVariant.error => isDark ? AppColors.errorDark : AppColors.errorLight,
+      _PageStateVariant.empty => context.textSecondaryColor,
       _ => Theme.of(context).colorScheme.primary,
     };
   }
@@ -67,30 +61,42 @@ class PageStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = context.isDark;
+    final iconColor = _iconColor(context);
 
     if (_variant == _PageStateVariant.loading) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: AppColors.primaryLight,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: theme.colorScheme.primary,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(title, style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryLight,
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.textPrimaryColor,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.textSecondaryColor,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -104,13 +110,16 @@ class PageStateView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: _iconContainerColor(),
-                borderRadius: BorderRadius.circular(20),
+                color: iconColor.withValues(alpha: isDark ? 0.18 : 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(
+                  color: iconColor.withValues(alpha: isDark ? 0.25 : 0.15),
+                ),
               ),
               child: Icon(
                 icon,
                 size: 36,
-                color: _iconColor(context),
+                color: iconColor,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -118,7 +127,8 @@ class PageStateView extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
+                color: context.textPrimaryColor,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -126,7 +136,7 @@ class PageStateView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondaryLight,
+                color: context.textSecondaryColor,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
@@ -135,6 +145,7 @@ class PageStateView extends StatelessWidget {
                 label: actionLabel!,
                 onPressed: onAction,
                 icon: Icons.refresh_rounded,
+                isFullWidth: false,
               ),
             ],
           ],

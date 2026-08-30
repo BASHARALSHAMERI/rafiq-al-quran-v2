@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../../core/theme/app_colors.dart';
 
 class LeaveRequestSheet extends StatefulWidget {
@@ -54,55 +57,70 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'طلب إجازة',
-                style: TextStyle(
-                  fontSize: 20,
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Colors.black87,
+                  color: context.textPrimaryColor,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
-              const Text(
+              const SizedBox(height: AppSpacing.lg),
+              Text(
                 'نوع الإجازة',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.textSecondaryColor,
                 ),
               ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12),
+                  color: context.isDark
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : AppColors.surfaceVariantLight,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: context.borderColor),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedType,
+                    dropdownColor: context.cardColor,
                     isExpanded: true,
-                    hint: const Text('اختر نوع الإجازة'),
+                    hint: Text(
+                      'اختر نوع الإجازة',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: context.textSecondaryColor,
+                      ),
+                    ),
                     items: widget.leaveTypes.map((t) {
                       return DropdownMenuItem(
                         value: t,
-                        child: Text(widget.leaveTypeLabels[t] ?? t),
+                        child: Text(
+                          widget.leaveTypeLabels[t] ?? t,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -111,34 +129,35 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'تاريخ البداية',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: context.textSecondaryColor,
                           ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: widget.startDateController,
                           readOnly: true,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                           onTap: () =>
                               _selectDate(context, widget.startDateController),
                           decoration: InputDecoration(
                             hintText: 'YYYY-MM-DD',
-                            filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              borderSide: BorderSide(color: context.borderColor),
                             ),
                           ),
                         ),
@@ -150,27 +169,28 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'تاريخ النهاية',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: context.textSecondaryColor,
                           ),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: widget.endDateController,
                           readOnly: true,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                           onTap: () =>
                               _selectDate(context, widget.endDateController),
                           decoration: InputDecoration(
                             hintText: 'YYYY-MM-DD',
-                            filled: true,
-                            fillColor: const Color(0xFFF5F5F5),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              borderSide: BorderSide(color: context.borderColor),
                             ),
                           ),
                         ),
@@ -179,48 +199,47 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text(
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 'ملاحظات (اختياري)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.textSecondaryColor,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: widget.noteController,
                 maxLines: 3,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: context.textPrimaryColor,
+                ),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: 'اكتب سبب الإجازة هنا...',
-                  filled: true,
-                  fillColor: const Color(0xFFF5F5F5),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    borderSide: BorderSide(color: context.borderColor),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
                   Expanded(
                     child: TextButton(
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                       ),
                       onPressed: widget.onCancel,
-                      child: const Text(
+                      child: Text(
                         'إلغاء',
-                        style: TextStyle(
-                          color: Colors.black54,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: context.textSecondaryColor,
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -230,12 +249,12 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
                     flex: 2,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                       ),
                       onPressed: _canSubmit
@@ -245,7 +264,7 @@ class _LeaveRequestSheetState extends State<LeaveRequestSheet> {
                         'تقديم الطلب',
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                       ),
                     ),

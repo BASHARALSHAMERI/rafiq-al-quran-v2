@@ -26,6 +26,8 @@ type FindUsersInput = {
   role?: Role | Role[];
   userIds?: number[];
   includeInactive?: boolean;
+  page?: number;
+  limit?: number;
 };
 
 type FindUserByIdInput = {
@@ -238,6 +240,7 @@ const baseUserSelect = {
     },
     select: {
       circleId: true,
+      startDate: true,
       circle: {
         select: {
           id: true,
@@ -1047,13 +1050,29 @@ export const usersRepository = {
       { includeInactive: input.includeInactive }
     );
 
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 1000;
+    const skip = (page - 1) * limit;
+
     const users = await prisma.user.findMany({
       where,
       orderBy: [{ role: "asc" }, { fullName: "asc" }],
-      select: baseUserSelect
+      select: baseUserSelect,
+      skip,
+      take: limit,
     });
 
-    return users.map((user) => syncLegacyNameMirrors(user));
+    const total = await prisma.user.count({ where });
+
+    return {
+      data: users.map((user) => syncLegacyNameMirrors(user)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   async findUserById(input: FindUserByIdInput) {

@@ -87,6 +87,8 @@ class _QuestionEvaluationSheetState
   @override
   Widget build(BuildContext context) {
     final q = widget.question;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return ExamSheetScaffold(
       title: 'تقييم إجابة السؤال',
@@ -121,7 +123,7 @@ class _QuestionEvaluationSheetState
                   Navigator.of(context).pop();
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
+                  backgroundColor: primary,
                   minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
@@ -145,8 +147,8 @@ class _QuestionEvaluationSheetState
                   Text(
                     ' ص ${_preview!.fromPage}-${_preview!.toPage}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.w600,
+                          color: primary,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(width: 8),
@@ -157,7 +159,7 @@ class _QuestionEvaluationSheetState
                       _showFullMushaf
                           ? Icons.visibility_off_rounded
                           : Icons.menu_book_rounded,
-                      color: AppColors.primaryLight,
+                      color: primary,
                       size: 20,
                     ),
                     padding: EdgeInsets.zero,
@@ -170,33 +172,33 @@ class _QuestionEvaluationSheetState
             child: Column(
               children: [
                 if (_isLoadingPreview)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Center(
                       child: CircularProgressIndicator(
-                          color: AppColors.primaryLight),
+                          color: primary),
                     ),
                   ),
                 if (_previewError != null)
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.errorLight.withValues(alpha: 0.05),
+                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.errorLight.withValues(alpha: 0.15)),
+                      border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.error_outline_rounded,
-                                color: AppColors.errorLight, size: 20),
+                            Icon(Icons.error_outline_rounded,
+                                color: Theme.of(context).colorScheme.error, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _previewError!,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.errorLight,
+                                      color: Theme.of(context).colorScheme.error,
                                       fontWeight: FontWeight.w600,
                                     ),
                               ),
@@ -254,7 +256,7 @@ class _QuestionEvaluationSheetState
                     icon: const Icon(Icons.refresh_rounded, size: 15),
                     label: const Text('تصفير الكل'),
                     style: TextButton.styleFrom(
-                        foregroundColor: AppColors.errorLight),
+                        foregroundColor: Theme.of(context).colorScheme.error),
                   )
                 : null,
             child: Column(
@@ -263,7 +265,7 @@ class _QuestionEvaluationSheetState
                   label: 'خطأ تلقيني',
                   penaltyLabel: 'لكل مرة: -$_promptingPenalty',
                   value: _prompting,
-                  color: AppColors.errorLight,
+                  color: Theme.of(context).colorScheme.error,
                   canEdit: widget.canEdit,
                   onDecrement: () => setState(() {
                     _prompting = _clampHalf(_prompting - _promptingPenalty);
@@ -277,7 +279,7 @@ class _QuestionEvaluationSheetState
                   label: 'خطأ تنبيهي',
                   penaltyLabel: 'لكل مرة: -$_remindingPenalty',
                   value: _reminding,
-                  color: Colors.orange,
+                  color: custom.warning,
                   canEdit: widget.canEdit,
                   onDecrement: () => setState(() {
                     _reminding = _clampHalf(_reminding - _remindingPenalty);
@@ -291,7 +293,7 @@ class _QuestionEvaluationSheetState
                   label: 'خطأ تجويدي',
                   penaltyLabel: 'لكل مرة: -$_tajweedPenalty',
                   value: _tajweed,
-                  color: AppColors.infoLight,
+                  color: custom.info,
                   canEdit: widget.canEdit,
                   onDecrement: () => setState(() {
                     _tajweed = _clampHalf(_tajweed - _tajweedPenalty);
@@ -306,10 +308,10 @@ class _QuestionEvaluationSheetState
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.errorLight.withValues(alpha: 0.07),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                        color: AppColors.errorLight.withValues(alpha: 0.2)),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -318,24 +320,19 @@ class _QuestionEvaluationSheetState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('إجمالي الخصم',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700)),
+                                style: TextStyle(fontWeight: FontWeight.w800, color: context.textPrimaryColor)),
                             Text('سيتم خصمه من الدرجة النهائية',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                        color: AppColors.textSecondaryLight)),
+                                style: TextStyle(
+                                    color: context.textSecondaryColor, fontSize: 12)),
                           ],
                         ),
                       ),
                       Text(
                         '-${_totalDeductions % 1 == 0 ? _totalDeductions.toInt() : _totalDeductions}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppColors.errorLight,
-                              fontWeight: FontWeight.w800,
+                        style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 20,
                             ),
                       ),
                     ],
@@ -368,9 +365,9 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,11 +375,10 @@ class _SectionCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w800)),
+                child: Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: context.textPrimaryColor),
+                ),
               ),
               if (trailing != null) trailing!,
             ],
@@ -410,30 +406,34 @@ class _AyahCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withValues(alpha: 0.04),
+        color: primary.withValues(alpha: context.isDark ? 0.12 : 0.04),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: AppColors.primaryLight.withValues(alpha: 0.15)),
+            color: primary.withValues(alpha: context.isDark ? 0.25 : 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.w700,
+              style: TextStyle(
+                    color: primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
                   )),
           const SizedBox(height: 6),
           if (ayah != null)
             Text(
               ayah!.text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              style: TextStyle(
                     fontFamily: 'Amiri',
                     fontSize: 15,
                     height: 1.8,
+                    color: context.textPrimaryColor,
                   ),
               textDirection: TextDirection.rtl,
               maxLines: 4,
@@ -442,10 +442,7 @@ class _AyahCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'سورة ${surahName(surah).replaceFirst('سورة ', '')} • آية $ayahNum',
-            style: Theme.of(context)
-                .textTheme
-                .labelSmall
-                ?.copyWith(color: AppColors.textSecondaryLight),
+            style: TextStyle(color: context.textSecondaryColor, fontSize: 11),
           ),
         ],
       ),
@@ -460,6 +457,8 @@ class _MushafView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       constraints: const BoxConstraints(maxHeight: 320),
       child: SingleChildScrollView(
@@ -476,14 +475,14 @@ class _MushafView extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.08),
+                      color: primary.withValues(alpha: context.isDark ? 0.15 : 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       surahName(s.surahNumber),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: AppColors.primaryLight,
-                            fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                            color: primary,
+                            fontWeight: FontWeight.w800,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -494,10 +493,11 @@ class _MushafView extends StatelessWidget {
                     children: s.ayahs.map((a) {
                       return Text(
                         '${a.text} ﴿${a.ayahNumber}﴾ ',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        style: TextStyle(
                               fontFamily: 'Amiri',
                               fontSize: 15,
                               height: 2,
+                              color: context.textPrimaryColor,
                             ),
                         textDirection: TextDirection.rtl,
                       );
@@ -537,9 +537,9 @@ class _DeductionCounter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
+        color: color.withValues(alpha: context.isDark ? 0.12 : 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        border: Border.all(color: color.withValues(alpha: context.isDark ? 0.25 : 0.18)),
       ),
       child: Row(
         children: [
@@ -548,13 +548,14 @@ class _DeductionCounter extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                    style: TextStyle(
+                          fontWeight: FontWeight.w800,
                           color: color,
                         )),
                 Text(penaltyLabel,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
+                    style: TextStyle(
+                          color: context.textSecondaryColor,
+                          fontSize: 11,
                         )),
               ],
             ),
@@ -571,9 +572,10 @@ class _DeductionCounter extends StatelessWidget {
                 width: 44,
                 child: Text(
                   value % 1 == 0 ? value.toInt().toString() : value.toString(),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: value > 0 ? color : AppColors.textSecondaryLight,
+                  style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: value > 0 ? color : context.textSecondaryColor,
                       ),
                   textAlign: TextAlign.center,
                 ),
@@ -606,7 +608,7 @@ class _CounterBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: onPressed != null
-          ? color.withValues(alpha: 0.1)
+          ? color.withValues(alpha: context.isDark ? 0.20 : 0.10)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
@@ -618,7 +620,7 @@ class _CounterBtn extends StatelessWidget {
               size: 18,
               color: onPressed != null
                   ? color
-                  : AppColors.textSecondaryLight),
+                  : context.textSecondaryColor),
         ),
       ),
     );

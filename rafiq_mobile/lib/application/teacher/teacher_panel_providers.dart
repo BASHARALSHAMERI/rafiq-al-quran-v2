@@ -29,7 +29,7 @@ final teacherMonthlyPlansProvider =
   final selectedCircleId = ref.watch(
     contextControllerProvider.select((state) => state.selectedCircleId),
   );
-  final circleId = int.tryParse(selectedCircleId ?? '');
+  final circleId = selectedCircleId;
   if (circleId == null) {
     return TeacherMonthlyPlansListDto(
       month: period.month,
@@ -62,7 +62,7 @@ final teacherPreparationProvider =
   final selectedCircleId = ref.watch(
     contextControllerProvider.select((state) => state.selectedCircleId),
   );
-  final circleId = int.tryParse(selectedCircleId ?? '');
+  final circleId = selectedCircleId;
   if (circleId == null) {
     return null;
   }
@@ -80,7 +80,7 @@ final teacherHalqaMonthlyReportProvider =
   final selectedCircleId = ref.watch(
     contextControllerProvider.select((state) => state.selectedCircleId),
   );
-  final circleId = int.tryParse(selectedCircleId ?? '');
+  final circleId = selectedCircleId;
   if (circleId == null) {
     return null;
   }

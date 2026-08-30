@@ -134,14 +134,15 @@ const followUpReport = async (scope: ScopeContext, filters: ReportFilterInput): 
     circleName: row.circle.name
   }));
 
-  const totalSessions = mappedRows.length;
+  const finalRows = mappedRows.filter((row) => row.status === "FINAL");
+  const totalSessions = finalRows.length;
   let totalHifzPages = 0;
   let totalReviewPages = 0;
   let ratingSum = 0;
   let ratingCount = 0;
   const uniqueStudents = new Set<string>();
 
-  mappedRows.forEach(row => {
+  finalRows.forEach(row => {
     uniqueStudents.add(row.studentName);
     if (row.type === "NEW_MEMORIZATION") {
       totalHifzPages += row.pagesCount;
@@ -653,6 +654,7 @@ const buildTeacherMonthlyHalqaData = async (
     }),
     prisma.followUpRecord.findMany({
       where: {
+        status: "FINAL",
         circleId: circle.id,
         recordDate: {
           gte: window.from,
@@ -672,6 +674,7 @@ const buildTeacherMonthlyHalqaData = async (
     }),
     prisma.followUpRecord.findMany({
       where: {
+        status: "FINAL",
         circleId: circle.id,
         recordDate: {
           gte: previousWindow.from,
@@ -767,7 +770,7 @@ const buildTeacherMonthlyHalqaData = async (
     if (row.type === "NEW_MEMORIZATION") {
       current.hifzPages += pages;
       if (row.toSurah && row.toAyah) {
-        current.lastMemorized = `${row.surah ?? row.toSurah} - آية ${row.toAyah}`;
+        current.lastMemorized = `سورة ${row.toSurah} - آية ${row.toAyah}`;
       }
     } else if (row.type === "REVIEW") {
       current.reviewPages += pages;

@@ -13,7 +13,7 @@ class ContextRemoteDataSource {
     if (centerResponse != null) {
       return centerResponse
           .map(_toCenterDto)
-          .where((item) => item.id.trim().isNotEmpty)
+          .where((item) => item.id > 0)
           .toList(growable: false);
     }
 
@@ -32,7 +32,7 @@ class ContextRemoteDataSource {
     if (fallbackCenterResponse != null) {
       return fallbackCenterResponse
           .map(_toCenterDto)
-          .where((item) => item.id.trim().isNotEmpty)
+          .where((item) => item.id > 0)
           .toList(growable: false);
     }
 
@@ -67,17 +67,18 @@ class ContextRemoteDataSource {
     return response
         .map(_toCircleDto)
         .where((item) =>
-            item.id.trim().isNotEmpty && item.centerId.trim().isNotEmpty)
+            item.id > 0 && item.centerId > 0)
         .toList(growable: false);
   }
 
   List<CenterDto> _centersFromCircles(
       List<Map<String, dynamic>> circlesResponse) {
-    final centersById = <String, CenterDto>{};
+    final centersById = <int, CenterDto>{};
     for (final item in circlesResponse) {
       final centerMap = _extractCenterMap(item);
-      final centerId = _stringValue(centerMap['id'] ?? item['centerId']);
-      if (centerId.isEmpty) {
+      final centerIdStr = _stringValue(centerMap['id'] ?? item['centerId']);
+      final centerId = int.tryParse(centerIdStr) ?? 0;
+      if (centerId <= 0) {
         continue;
       }
 
@@ -91,7 +92,7 @@ class ContextRemoteDataSource {
           ],
           fallback: 'مركز $centerId',
         ),
-        domain: _nonEmptyString(
+        code: _nonEmptyString(
           [
             centerMap['code'],
             centerMap['domain'],
@@ -176,7 +177,7 @@ class ContextRemoteDataSource {
 
   CenterDto _toCenterDto(Map<String, dynamic> json) {
     return CenterDto(
-      id: _stringValue(json['id']),
+      id: int.tryParse(_stringValue(json['id'])) ?? 0,
       name: _nonEmptyString(
         [
           json['name'],
@@ -184,7 +185,7 @@ class ContextRemoteDataSource {
         ],
         fallback: 'مركز',
       ),
-      domain: _nonEmptyString(
+      code: _nonEmptyString(
         [
           json['domain'],
           json['code'],
@@ -197,7 +198,7 @@ class ContextRemoteDataSource {
   CircleDto _toCircleDto(Map<String, dynamic> json) {
     final centerMap = _extractCenterMap(json);
     return CircleDto(
-      id: _stringValue(json['id']),
+      id: int.tryParse(_stringValue(json['id'])) ?? 0,
       name: _nonEmptyString(
         [
           json['name'],
@@ -205,7 +206,7 @@ class ContextRemoteDataSource {
         ],
         fallback: 'حلقة',
       ),
-      centerId: _stringValue(centerMap['id'] ?? json['centerId']),
+      centerId: int.tryParse(_stringValue(centerMap['id'] ?? json['centerId'])) ?? 0,
     );
   }
 

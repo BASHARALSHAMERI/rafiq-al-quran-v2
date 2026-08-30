@@ -32,6 +32,8 @@ import groupActivitiesRouter from "../modules/group-activities/group-activities.
 import monthlyPlansRouter from "../modules/monthly-plans/monthly-plans.routes";
 import remoteRecitationRouter from "../modules/remote-recitation/remote-recitation.routes";
 import publicCertificatesRouter from "../modules/certificates/certificates.public.routes";
+import matnCatalogsRouter from "../modules/matn-catalogs/matn-catalogs.routes";
+import geoRouter from "../modules/geo/geo.routes";
 
 const router = Router();
 
@@ -50,6 +52,7 @@ router.use(publicCertificatesRouter);
 
 router.use("/auth", authRouter);
 router.use("/org", orgRouter);
+router.use("/geo", geoRouter);
 router.use("/users", usersRouter);
 router.use("/dashboard", dashboardRouter);
 router.use(attendanceRouter);
@@ -75,5 +78,6 @@ router.use(goldenRecordsRouter);
 router.use(groupActivitiesRouter);
 router.use(monthlyPlansRouter);
 router.use(remoteRecitationRouter);
+router.use(matnCatalogsRouter);
 
 export default router;

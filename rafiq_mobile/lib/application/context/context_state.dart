@@ -7,8 +7,8 @@ class ContextState {
   final String? error;
   final List<Center> centers;
   final List<Circle> circles;
-  final String? selectedCenterId;
-  final String? selectedCircleId;
+  final int? selectedCenterId;
+  final int? selectedCircleId;
 
   const ContextState({
     this.isInitialized = false,
@@ -20,11 +20,9 @@ class ContextState {
     this.selectedCircleId,
   });
 
-  bool get hasSelectedCenter =>
-      selectedCenterId != null && selectedCenterId!.trim().isNotEmpty;
+  bool get hasSelectedCenter => selectedCenterId != null;
 
-  bool get hasSelectedCircle =>
-      selectedCircleId != null && selectedCircleId!.trim().isNotEmpty;
+  bool get hasSelectedCircle => selectedCircleId != null;
 
   bool get hasCompleteContext => hasSelectedCenter && hasSelectedCircle;
 
@@ -48,14 +46,34 @@ class ContextState {
     }
   }
 
+  /// Look up the selected center entity
+  Center? get selectedCenter {
+    if (selectedCenterId == null) return null;
+    try {
+      return centers.firstWhere((c) => c.id == selectedCenterId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Look up the selected circle entity
+  Circle? get selectedCircle {
+    if (selectedCircleId == null) return null;
+    try {
+      return circles.firstWhere((c) => c.id == selectedCircleId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   ContextState copyWith({
     bool? isInitialized,
     bool? isLoading,
     String? error,
     List<Center>? centers,
     List<Circle>? circles,
-    String? selectedCenterId,
-    String? selectedCircleId,
+    int? selectedCenterId,
+    int? selectedCircleId,
     bool clearError = false,
     bool clearCenter = false,
     bool clearCircle = false,

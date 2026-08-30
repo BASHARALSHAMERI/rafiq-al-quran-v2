@@ -59,5 +59,18 @@ export const followUpsController = {
     } catch (error) {
       next(error);
     }
+  }) as RequestHandler,
+
+  removeFollowUp: (async (req, res, next) => {
+    try {
+      if (!req.scope) throw new AppError("Scope not resolved", 500);
+
+      const params = res.locals.validatedParams as { id: number };
+      const data = await followUpsService.removeFollowUp(req.scope, params.id);
+
+      res.json({ ok: true, data });
+    } catch (error) {
+      next(error);
+    }
   }) as RequestHandler
 };

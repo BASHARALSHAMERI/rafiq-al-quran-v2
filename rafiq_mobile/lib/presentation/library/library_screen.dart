@@ -50,10 +50,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final currentRole = ref.read(currentUserRoleProvider);
     final usesContextFilters = _usesContextFilters(currentRole);
     final centerId = usesContextFilters
-        ? int.tryParse(contextState.selectedCenterId ?? '')
+        ? contextState.selectedCenterId
         : null;
     final circleId = usesContextFilters
-        ? int.tryParse(contextState.selectedCircleId ?? '')
+        ? contextState.selectedCircleId
         : null;
     final search = _searchController.text.trim();
     final key =
@@ -142,21 +142,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final theme = Theme.of(context);
     final libraryState = ref.watch(libraryControllerProvider);
     final contextState = ref.watch(contextControllerProvider);
+    final primary = theme.colorScheme.primary;
     _ensureDataLoaded();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF8),
+      backgroundColor: context.surfaceColor,
       appBar: PremiumAppBar(
         title: 'المكتبة الرقمية',
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF334155)),
+            icon: Icon(Icons.refresh_rounded, color: context.textPrimaryColor),
             onPressed: _refresh,
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
+        color: primary,
         onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.only(bottom: 32),
@@ -193,9 +195,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             const SizedBox(height: 16),
             libraryState.when(
               initial: () => const SizedBox.shrink(),
-              loading: () => const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
+              loading: () => Padding(
+                padding: const EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator(color: primary)),
               ),
               error: (message) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -253,14 +255,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         children: [
                           Text(
                             'العناصر المتاحة',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: context.textPrimaryColor,
                             ),
                           ),
                           Text(
                             '${items.length} عنصر',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondaryLight,
+                            style: TextStyle(
+                              color: context.textSecondaryColor,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -339,13 +344,16 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: context.borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: context.isDark ? 0.15 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -355,23 +363,24 @@ class _SearchField extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         textAlign: TextAlign.right,
+        style: TextStyle(color: context.textPrimaryColor),
         decoration: InputDecoration(
           hintText: 'ابحث عن الكتب أو الملفات أو المناهج...',
-          hintStyle: const TextStyle(
-            color: Color(0xFF94A3B8),
+          hintStyle: TextStyle(
+            color: context.textSecondaryColor,
             fontSize: 14,
           ),
           suffixIcon: controller.text.trim().isEmpty
-              ? const Icon(
+              ? Icon(
                   Icons.search_rounded,
-                  color: Color(0xFF7A9F78),
+                  color: primary,
                   size: 24,
                 )
               : IconButton(
                   onPressed: onClear,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close_rounded,
-                    color: Color(0xFF7A9F78),
+                    color: primary,
                   ),
                 ),
           border: InputBorder.none,
@@ -397,9 +406,9 @@ class _ContextHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Wrap(
         spacing: 8,
@@ -424,18 +433,28 @@ class _ContextPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF537A5A)),
+          Icon(icon, size: 16, color: primary),
           const SizedBox(width: 6),
-          Text(text),
+          Text(
+            text,
+            style: TextStyle(
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -453,26 +472,27 @@ class _LoadIssueBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7),
+        color: custom.warning.withValues(alpha: context.isDark ? 0.20 : 0.12),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+        border: Border.all(color: custom.warning.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF92400E)),
+          Icon(icon, size: 18, color: custom.warning),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Color(0xFF78350F),
+              style: TextStyle(
+                color: custom.warning,
                 fontSize: 12.5,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -532,20 +552,22 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF7A9F78) : Colors.white,
+          color: isSelected ? primary : context.cardColor,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
+            color: isSelected ? Colors.transparent : context.borderColor,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF7A9F78).withValues(alpha: 0.3),
+                    color: primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -555,8 +577,8 @@ class _CategoryChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFF475569),
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? Colors.white : context.textSecondaryColor,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
             fontSize: 14,
           ),
         ),
@@ -581,17 +603,18 @@ class _LibraryItemCard extends StatelessWidget {
     final description = item.description?.trim().isNotEmpty == true
         ? item.description!.trim()
         : 'بدون وصف';
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight, width: 0.5),
+        border: Border.all(color: context.borderColor, width: 0.8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: context.isDark ? 0.15 : 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -603,7 +626,7 @@ class _LibraryItemCard extends StatelessWidget {
             children: [
               _ActionButton(
                 icon: Icons.file_download_outlined,
-                color: const Color(0xFF7A9F78),
+                color: primary,
                 isSolid: false,
                 onTap: onDownload,
               ),
@@ -614,7 +637,7 @@ class _LibraryItemCard extends StatelessWidget {
                     : item.type == 'VIDEO'
                         ? Icons.play_circle_outline_rounded
                         : Icons.visibility_rounded,
-                color: const Color(0xFF334155),
+                color: context.textPrimaryColor,
                 isSolid: true,
                 onTap: onOpen,
               ),
@@ -628,18 +651,18 @@ class _LibraryItemCard extends StatelessWidget {
                 Text(
                   item.title,
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
-                    color: Color(0xFF1E293B),
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '$description • ${(item.fileSize / 1024 / 1024).toStringAsFixed(1)} MB',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
+                  style: TextStyle(
+                    color: context.textSecondaryColor,
                     fontSize: 12,
                   ),
                 ),
@@ -661,7 +684,7 @@ class _LibraryItemCard extends StatelessWidget {
             itemId: item.id,
             hasCover: item.hasCover,
             type: item.type,
-            fallbackColor: _colorForType(item.type),
+            fallbackColor: _colorForType(context, item.type),
             fallbackIcon: _iconForType(item.type),
           ),
         ],
@@ -708,16 +731,19 @@ class _LibraryItemCard extends StatelessWidget {
     }
   }
 
-  Color _colorForType(String type) {
+  Color _colorForType(BuildContext context, String type) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     switch (type) {
       case 'AUDIO':
-        return const Color(0xFF7C3AED); // Violet
+        return custom.accent;
       case 'VIDEO':
-        return const Color(0xFFF59E0B); // Amber
+        return custom.warning;
       case 'DOCUMENT':
-        return const Color(0xFF1B5E20); // Green
+        return primary;
       default:
-        return const Color(0xFF64748B); // Slate
+        return context.textSecondaryColor;
     }
   }
 }
@@ -739,6 +765,7 @@ class _TypeFilterRow extends StatelessWidget {
       ('AUDIO', 'صوتيات', Icons.audiotrack_rounded),
       ('VIDEO', 'مرئيات', Icons.play_circle_outline_rounded),
     ];
+    final primary = Theme.of(context).colorScheme.primary;
 
     return SizedBox(
       height: 40,
@@ -755,11 +782,10 @@ class _TypeFilterRow extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF7A9F78) : Colors.white,
+                color: isSelected ? primary : context.cardColor,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color:
-                      isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
+                  color: isSelected ? Colors.transparent : context.borderColor,
                 ),
               ),
               child: Row(
@@ -767,16 +793,15 @@ class _TypeFilterRow extends StatelessWidget {
                   Icon(
                     type.$3,
                     size: 16,
-                    color: isSelected ? Colors.white : const Color(0xFF64748B),
+                    color: isSelected ? Colors.white : context.textSecondaryColor,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     type.$2,
                     style: TextStyle(
-                      color:
-                          isSelected ? Colors.white : const Color(0xFF475569),
+                      color: isSelected ? Colors.white : context.textSecondaryColor,
                       fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w600,
+                          isSelected ? FontWeight.w800 : FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),
@@ -797,26 +822,27 @@ class _TypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: context.borderColor),
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Color(0xFF7A9F78),
+        style: TextStyle(
+          color: primary,
           fontSize: 10,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
   }
 }
 
-/// يعرض صورة الغلاف إذا وُجدت، وإلا يعرض مستطيلاً ملوناً مع أيقونة.
-/// يقرأ الـ JWT token من SecureStorage ويُلحقه بالرابط للمصادقة.
 class _CoverThumbnail extends StatefulWidget {
   final int itemId;
   final bool hasCover;
@@ -958,6 +984,8 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -965,10 +993,10 @@ class _ActionButton extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: isSolid ? color.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSolid ? color.withValues(alpha: isDark ? 0.20 : 0.10) : Colors.transparent,
           shape: BoxShape.circle,
           border:
-              isSolid ? null : Border.all(color: color.withValues(alpha: 0.24)),
+              isSolid ? null : Border.all(color: color.withValues(alpha: 0.28)),
         ),
         child: Center(
           child: Icon(icon, color: color, size: 20),

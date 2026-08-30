@@ -79,6 +79,7 @@ export const reportsRepository = {
   }) {
     return prisma.followUpRecord.findMany({
       where: {
+        status: "FINAL",
         recordDate: { gte: input.range.from, lte: input.range.to },
         circle: {
           center: {

@@ -23,7 +23,7 @@ class ContextController extends StateNotifier<ContextState> {
         clearError: true,
       );
 
-      if (savedCenterId != null && savedCenterId.trim().isNotEmpty) {
+      if (savedCenterId != null) {
         try {
           final centers = await repo.getMyCenters();
           final circles = await repo.getMyCircles(centerId: savedCenterId);
@@ -72,7 +72,7 @@ class ContextController extends StateNotifier<ContextState> {
 
   Future<void> loadCirclesForSelectedCenter() async {
     final centerId = state.selectedCenterId;
-    if (centerId == null || centerId.trim().isEmpty) {
+    if (centerId == null) {
       state = state.copyWith(error: 'الرجاء اختيار المركز أولًا.');
       return;
     }
@@ -100,7 +100,7 @@ class ContextController extends StateNotifier<ContextState> {
     }
   }
 
-  Future<void> selectCenter(String centerId) async {
+  Future<void> selectCenter(int centerId) async {
     state = state.copyWith(
       isLoading: true,
       clearError: true,
@@ -129,7 +129,7 @@ class ContextController extends StateNotifier<ContextState> {
     }
   }
 
-  Future<void> selectCircle(String circleId) async {
+  Future<void> selectCircle(int circleId) async {
     try {
       final repo = _ref.read(contextRepositoryProvider);
       await repo.saveCurrentCircle(circleId);

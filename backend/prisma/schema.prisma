@@ -9,78 +9,78 @@ datasource db {
 }
 
 model Organization {
-  id                       Int                       @id @default(autoincrement())
-  name                     String                    @db.VarChar(120)
-  code                     String                    @unique @db.VarChar(60)
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  logoUrl                  String?                   @map("logo_url") @db.VarChar(500)
-  description              String?                   @db.VarChar(500)
-  address                  String?                   @db.VarChar(255)
-  phone                    String?                   @db.VarChar(32)
-  email                    String?                   @db.VarChar(191)
-  associationLocationName  String?                   @map("association_location_name") @db.VarChar(255)
-  associationAddress       String?                   @map("association_address") @db.VarChar(255)
-  associationLatitude      Decimal?                  @map("association_latitude") @db.Decimal(10, 7)
-  associationLongitude     Decimal?                  @map("association_longitude") @db.Decimal(10, 7)
-  associationGeoRadiusMeters Int?                    @map("association_geo_radius_meters")
-  activityLogs             ActivityLog[]
-  accountingAccounts       AccountingAccount[]
-  journalEntries           JournalEntry[]
-  journalEntryLines        JournalEntryLine[]
-  attendancePolicy         AttendancePolicy?
-  auditLogs                AuditLog[]
-  centers                  Center[]
-  donations                Donation[]
-  donors                   Donor[]
-  ExamGradeScale           ExamGradeScale[]
-  examNominationRequests   ExamNominationRequest[]
-  examQuestionBankItems    ExamQuestionBankItem[]
-  exams                    Exam[]
-  financeMovements         FinanceAccountMovement[]
-  financeAccounts          FinanceAccount[]
-  financeDeductionEvents   FinanceDeductionEvent[]
-  financeDeductionRules    FinanceDeductionRule[]
-  financeTransfers         FinanceFundTransfer[]
-  financePolicies          FinancePolicyProfile[]
-  financeSettings          FinanceSettings?
-  fiscalYears              FiscalYear[]
-  fiscalPeriods            FiscalPeriod[]
-  financeVouchers          FinanceVoucher[]
-  goldenRecords            GoldenRecord[]
-  graduationCandidates     GraduationCandidate[]
-  groupActivities          GroupActivity[]
-  libraryCategories        LibraryCategory[]
-  libraryItems             LibraryItem[]
-  matnCatalogs             MatnCatalog[]
-  monthlyPlans             MonthlyPlan[]
-  notifications            Notification[]
-  payments                 Payment[]
-  payrollBatches           PayrollBatch[]
-  payrollProfiles          PayrollProfile[]
-  reportFiles              ReportFile[]
-  reportRuns               ReportRun[]
-  reviewPlanSettings       ReviewPlanSettings[]
-  rewardBatches            RewardBatch[]
-  rewardProfiles           RewardProfile[]
-  staffAttendances         StaffAttendanceRecord[]
-  staffExcuses             StaffExcuseRequest[]
-  staffLeaveRequests       StaffLeaveRequest[]
-  staffSchedules           StaffScheduleAssignment[]
-  studentFeeProfiles       StudentFeeProfile[]
-  currencies               Currency[]
-  exchangeRates            ExchangeRate[]
-  documentSequences        DocumentSequence[]
-  salaryGrades             SalaryGrade[]
-  suppliers                Supplier[]
-  expenseCategories        ExpenseCategory[]
-  expenseInvoices          ExpenseInvoice[]
-  expensePayments          ExpensePayment[]
-  assetCategories          AssetCategory[]
-  fixedAssets              FixedAsset[]
-  assetCustodyLogs         AssetCustodyLog[]
-  assetDepreciationEntries AssetDepreciationEntry[]
-  staffAssignments         StaffAssignment[]
+  id                         Int                       @id @default(autoincrement())
+  name                       String                    @db.VarChar(120)
+  code                       String                    @unique @db.VarChar(60)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  logoUrl                    String?                   @map("logo_url") @db.VarChar(500)
+  description                String?                   @db.VarChar(500)
+  address                    String?                   @db.VarChar(255)
+  phone                      String?                   @db.VarChar(32)
+  email                      String?                   @db.VarChar(191)
+  associationLocationName    String?                   @map("association_location_name") @db.VarChar(255)
+  associationAddress         String?                   @map("association_address") @db.VarChar(255)
+  associationLatitude        Decimal?                  @map("association_latitude") @db.Decimal(10, 7)
+  associationLongitude       Decimal?                  @map("association_longitude") @db.Decimal(10, 7)
+  associationGeoRadiusMeters Int?                      @map("association_geo_radius_meters")
+  activityLogs               ActivityLog[]
+  accountingAccounts         AccountingAccount[]
+  journalEntries             JournalEntry[]
+  journalEntryLines          JournalEntryLine[]
+  attendancePolicy           AttendancePolicy?
+  auditLogs                  AuditLog[]
+  centers                    Center[]
+  donations                  Donation[]
+  donors                     Donor[]
+  ExamGradeScale             ExamGradeScale[]
+  examNominationRequests     ExamNominationRequest[]
+  examQuestionBankItems      ExamQuestionBankItem[]
+  exams                      Exam[]
+  financeMovements           FinanceAccountMovement[]
+  financeAccounts            FinanceAccount[]
+  financeDeductionEvents     FinanceDeductionEvent[]
+  financeDeductionRules      FinanceDeductionRule[]
+  financeTransfers           FinanceFundTransfer[]
+  financePolicies            FinancePolicyProfile[]
+  financeSettings            FinanceSettings?
+  fiscalYears                FiscalYear[]
+  fiscalPeriods              FiscalPeriod[]
+  financeVouchers            FinanceVoucher[]
+  goldenRecords              GoldenRecord[]
+  graduationCandidates       GraduationCandidate[]
+  groupActivities            GroupActivity[]
+  libraryCategories          LibraryCategory[]
+  libraryItems               LibraryItem[]
+  matnCatalogs               MatnCatalog[]
+  monthlyPlans               MonthlyPlan[]
+  notifications              Notification[]
+  payments                   Payment[]
+  payrollBatches             PayrollBatch[]
+  payrollProfiles            PayrollProfile[]
+  reportFiles                ReportFile[]
+  reportRuns                 ReportRun[]
+  reviewPlanSettings         ReviewPlanSettings[]
+  rewardBatches              RewardBatch[]
+  rewardProfiles             RewardProfile[]
+  staffAttendances           StaffAttendanceRecord[]
+  staffExcuses               StaffExcuseRequest[]
+  staffLeaveRequests         StaffLeaveRequest[]
+  staffSchedules             StaffScheduleAssignment[]
+  studentFeeProfiles         StudentFeeProfile[]
+  currencies                 Currency[]
+  exchangeRates              ExchangeRate[]
+  documentSequences          DocumentSequence[]
+  salaryGrades               SalaryGrade[]
+  suppliers                  Supplier[]
+  expenseCategories          ExpenseCategory[]
+  expenseInvoices            ExpenseInvoice[]
+  expensePayments            ExpensePayment[]
+  assetCategories            AssetCategory[]
+  fixedAssets                FixedAsset[]
+  assetCustodyLogs           AssetCustodyLog[]
+  assetDepreciationEntries   AssetDepreciationEntry[]
+  staffAssignments           StaffAssignment[]
 
   studentYearlyAchievementSnapshots StudentYearlyAchievementSnapshot[]
   supervisorNotes                   SupervisorNote[]
@@ -169,9 +169,9 @@ model Center {
   userCenterAccesses                UserCenterAccess[]
 
   @@unique([organizationId, code])
+  @@unique([organizationId, name])
   @@index([organizationId])
   @@index([organizationId, timezone])
-  @@unique([organizationId, name])
   @@index([centerAdminUserId])
   @@map("centers")
 }
@@ -191,6 +191,9 @@ model Circle {
   latitude                 Decimal?                  @db.Decimal(10, 7)
   longitude                Decimal?                  @db.Decimal(10, 7)
   allowedRadiusMeters      Int?                      @map("allowed_radius_meters")
+  approvalStatus           CircleApprovalStatus      @default(PENDING) @map("approval_status")
+  approvedById             Int?                      @map("approved_by_id")
+  approvedAt               DateTime?                 @map("approved_at")
   activityLogs             ActivityLog[]
   attendanceRecords        AttendanceRecord[]
   auditLogs                AuditLog[]
@@ -223,12 +226,14 @@ model Circle {
   supervisorVisitLogs               SupervisorVisitLog[]
   supervisorVisitPlanItems          SupervisorVisitPlanItem[]
   userCircleAccesses                UserCircleAccess[]
+  approvedBy                        User?                              @relation("CircleApprovedBy", fields: [approvedById], references: [id])
 
   @@unique([centerId, name])
   @@index([centerId])
   @@index([teacherId])
   @@index([gender])
   @@index([circleType])
+  @@index([approvalStatus])
   @@map("circles")
 }
 
@@ -357,6 +362,7 @@ model User {
   centerSupervisorLinks                    CenterSupervisor[]           @relation("CenterSupervisorUser")
   managedCenters                           Center[]                     @relation("ManagedCenters")
   taughtCircles                            Circle[]                     @relation("TeacherCircles")
+  approvedCircles                          Circle[]                     @relation("CircleApprovedBy")
   examAttemptCommitteeAssignments          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeAssignedBy")
   examAttemptCommitteeMemberships          ExamAttemptCommitteeMember[] @relation("ExamAttemptCommitteeUser")
   examAttemptsApproved                     ExamAttempt[]                @relation("ExamAttemptApprovedBy")
@@ -508,20 +514,20 @@ model TeacherProfile {
 }
 
 model SupervisorProfile {
-  userId               Int                     @id
-  assignedAt           DateTime?               @db.Date
-  status               SupervisorProfileStatus @default(ACTIVE)
-  educationLevel       String?                 @db.VarChar(120)
-  yearsExperience      Int?
-  quranQualification   KhatmType?
-  professionalNotes    String?                 @db.VarChar(500)
-  monthlyHoursTarget   Int                     @default(80) @map("monthly_hours_target")
-  monthlyVisitsTarget  Int                     @default(20) @map("monthly_visits_target")
-  createdByUserId      Int?
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  createdByUser        User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
-  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              Int                     @id
+  assignedAt          DateTime?               @db.Date
+  status              SupervisorProfileStatus @default(ACTIVE)
+  educationLevel      String?                 @db.VarChar(120)
+  yearsExperience     Int?
+  quranQualification  KhatmType?
+  professionalNotes   String?                 @db.VarChar(500)
+  monthlyHoursTarget  Int                     @default(80) @map("monthly_hours_target")
+  monthlyVisitsTarget Int                     @default(20) @map("monthly_visits_target")
+  createdByUserId     Int?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  createdByUser       User?                   @relation("SupervisorProfileCreatedBy", fields: [createdByUserId], references: [id])
+  user                User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([createdByUserId])
@@ -752,28 +758,28 @@ model AttendancePolicy {
 }
 
 model StaffScheduleAssignment {
-  id             Int                 @id @default(autoincrement())
-  organizationId Int                 @map("organization_id")
-  userId         Int                 @map("user_id")
-  staffRole      StaffRoleType       @map("staff_role")
-  centerId       Int?                @map("center_id")
-  isHeadquarters Boolean             @default(false) @map("is_headquarters")
-  circleId       Int?                @map("circle_id")
-  sourceType     ScheduleSourceType  @default(MANUAL) @map("source_type")
-  isActive       Boolean             @default(true) @map("is_active")
-  effectiveFrom  DateTime            @default(now()) @map("effective_from") @db.Date
-  effectiveTo    DateTime?           @map("effective_to") @db.Date
-  latitude       Decimal?            @map("latitude") @db.Decimal(10, 7)
-  longitude      Decimal?            @map("longitude") @db.Decimal(10, 7)
-  allowedRadiusMeters Int?           @map("allowed_radius_meters")
-  locationText   String?             @map("location_text") @db.VarChar(255)
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  center         Center?             @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  circle         Circle?             @relation(fields: [circleId], references: [id])
-  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User                @relation("StaffSchedules", fields: [userId], references: [id], onDelete: Cascade)
-  slots          StaffScheduleSlot[]
+  id                  Int                 @id @default(autoincrement())
+  organizationId      Int                 @map("organization_id")
+  userId              Int                 @map("user_id")
+  staffRole           StaffRoleType       @map("staff_role")
+  centerId            Int?                @map("center_id")
+  isHeadquarters      Boolean             @default(false) @map("is_headquarters")
+  circleId            Int?                @map("circle_id")
+  sourceType          ScheduleSourceType  @default(MANUAL) @map("source_type")
+  isActive            Boolean             @default(true) @map("is_active")
+  effectiveFrom       DateTime            @default(now()) @map("effective_from") @db.Date
+  effectiveTo         DateTime?           @map("effective_to") @db.Date
+  latitude            Decimal?            @map("latitude") @db.Decimal(10, 7)
+  longitude           Decimal?            @map("longitude") @db.Decimal(10, 7)
+  allowedRadiusMeters Int?                @map("allowed_radius_meters")
+  locationText        String?             @map("location_text") @db.VarChar(255)
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  center              Center?             @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  circle              Circle?             @relation(fields: [circleId], references: [id])
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                User                @relation("StaffSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  slots               StaffScheduleSlot[]
 
   @@index([organizationId])
   @@index([userId, isActive])
@@ -911,48 +917,48 @@ model SupervisorVisitLog {
 }
 
 model FinanceDeductionRule {
-  id                 Int                     @id @default(autoincrement())
-  organizationId     Int                     @map("organization_id")
-  triggerType        DeductionTriggerType    @map("trigger_type")
-  thresholdCount     Int?                    @map("threshold_count")
-  amount             Decimal                 @map("amount") @db.Decimal(10, 2)
-  deductionType      DeductionCalcType       @default(FIXED) @map("deduction_type")
-  isActive           Boolean                 @default(true) @map("is_active")
-  description        String?                 @db.VarChar(500)
-  createdAt          DateTime                @default(now()) @map("created_at")
-  updatedAt          DateTime                @updatedAt @map("updated_at")
-  events             FinanceDeductionEvent[]
-  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             Int                     @id @default(autoincrement())
+  organizationId Int                     @map("organization_id")
+  triggerType    DeductionTriggerType    @map("trigger_type")
+  thresholdCount Int?                    @map("threshold_count")
+  amount         Decimal                 @map("amount") @db.Decimal(10, 2)
+  deductionType  DeductionCalcType       @default(FIXED) @map("deduction_type")
+  isActive       Boolean                 @default(true) @map("is_active")
+  description    String?                 @db.VarChar(500)
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  events         FinanceDeductionEvent[]
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, triggerType])
   @@map("finance_deduction_rules")
 }
 
 model FinanceDeductionEvent {
-  id                  Int                  @id @default(autoincrement())
-  organizationId      Int                  @map("organization_id")
-  userId              Int                  @map("user_id")
-  centerId            Int?                 @map("center_id")
-  isHeadquarters      Boolean              @default(false) @map("is_headquarters")
-  ruleId              Int                  @map("rule_id")
-  month               Int
-  year                Int
-  triggerType         DeductionTriggerType @map("trigger_type")
-  occurrenceCount     Int                  @default(1) @map("occurrence_count")
-  calculatedAmount    Decimal              @map("calculated_amount") @db.Decimal(10, 2)
-  status              DeductionEventStatus @default(DEDUCTION_PENDING)
-  payrollBatchId      Int?                 @map("payroll_batch_id")
-  reviewedById        Int?                 @map("reviewed_by_id")
-  reviewedAt          DateTime?            @map("reviewed_at")
-  reviewNote          String?              @map("review_note") @db.VarChar(500)
-  details             Json?
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  center              Center?              @relation(fields: [centerId], references: [id], onDelete: Cascade)
-  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  reviewedBy          User?                @relation("DeductionsReviewed", fields: [reviewedById], references: [id])
-  rule                FinanceDeductionRule @relation(fields: [ruleId], references: [id])
-  user                User                 @relation("UserDeductions", fields: [userId], references: [id], onDelete: Cascade)
+  id               Int                  @id @default(autoincrement())
+  organizationId   Int                  @map("organization_id")
+  userId           Int                  @map("user_id")
+  centerId         Int?                 @map("center_id")
+  isHeadquarters   Boolean              @default(false) @map("is_headquarters")
+  ruleId           Int                  @map("rule_id")
+  month            Int
+  year             Int
+  triggerType      DeductionTriggerType @map("trigger_type")
+  occurrenceCount  Int                  @default(1) @map("occurrence_count")
+  calculatedAmount Decimal              @map("calculated_amount") @db.Decimal(10, 2)
+  status           DeductionEventStatus @default(DEDUCTION_PENDING)
+  payrollBatchId   Int?                 @map("payroll_batch_id")
+  reviewedById     Int?                 @map("reviewed_by_id")
+  reviewedAt       DateTime?            @map("reviewed_at")
+  reviewNote       String?              @map("review_note") @db.VarChar(500)
+  details          Json?
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  center           Center?              @relation(fields: [centerId], references: [id], onDelete: Cascade)
+  organization     Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewedBy       User?                @relation("DeductionsReviewed", fields: [reviewedById], references: [id])
+  rule             FinanceDeductionRule @relation(fields: [ruleId], references: [id])
+  user             User                 @relation("UserDeductions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId, month, year, triggerType], name: "deduction_event_no_duplicate")
   @@index([organizationId, month, year])
@@ -2387,8 +2393,8 @@ model LibraryCategory {
   items          LibraryItem[]
 
   @@unique([organizationId, code])
-  @@index([organizationId])
   @@unique([organizationId, name])
+  @@index([organizationId])
   @@index([centerId])
   @@map("library_categories")
 }
@@ -2540,6 +2546,12 @@ enum BookCategory {
   MATN
   SIRA
   GENERAL
+}
+
+enum CircleApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum Role {
@@ -3307,8 +3319,8 @@ model FiscalPeriod {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fiscalYear     FiscalYear     @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   closedBy       User?          @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
   journalEntries JournalEntry[] @relation("JournalEntryFiscalPeriod")
 
@@ -3351,8 +3363,8 @@ model Supplier {
   invoices     ExpenseInvoice[]
   fixedAssets  FixedAsset[]
 
-  @@index([organizationId])
   @@unique([organizationId, name])
+  @@index([organizationId])
   @@index([isActive])
   @@map("suppliers")
 }

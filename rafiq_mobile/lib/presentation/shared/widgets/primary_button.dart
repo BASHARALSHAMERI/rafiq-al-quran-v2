@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 
 class PrimaryButton extends StatelessWidget {
@@ -24,13 +23,15 @@ class PrimaryButton extends StatelessWidget {
     this.isFullWidth = true,
     this.backgroundColor,
     this.foregroundColor,
-    this.height = 52,
+    this.height = 50,
   });
 
   @override
   Widget build(BuildContext context) {
-    final resolvedBackground = backgroundColor ?? AppColors.primaryLight;
-    final resolvedForeground = foregroundColor ?? Colors.white;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final resolvedBackground = backgroundColor ?? theme.colorScheme.primary;
+    final resolvedForeground = foregroundColor ?? theme.colorScheme.onPrimary;
 
     final button = FilledButton.icon(
       onPressed: isLoading ? null : onPressed,
@@ -43,13 +44,13 @@ class PrimaryButton extends StatelessWidget {
                 color: resolvedForeground,
               ),
             )
-          : Icon(icon ?? Icons.arrow_forward_rounded, size: 18),
+          : (icon != null ? Icon(icon, size: 18) : const SizedBox.shrink()),
       label: Text(label),
       style: FilledButton.styleFrom(
         backgroundColor: resolvedBackground,
         foregroundColor: resolvedForeground,
-        disabledBackgroundColor: resolvedBackground.withValues(alpha: 0.55),
-        disabledForegroundColor: resolvedForeground.withValues(alpha: 0.9),
+        disabledBackgroundColor: resolvedBackground.withValues(alpha: 0.4),
+        disabledForegroundColor: resolvedForeground.withValues(alpha: 0.7),
         minimumSize: Size(isFullWidth ? double.infinity : 0, height),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
@@ -67,21 +68,19 @@ class PrimaryButton extends StatelessWidget {
       ),
     );
 
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 180),
-      opacity: onPressed == null && !isLoading ? 0.7 : 1,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: onPressed == null && !isLoading
-              ? null
-              : [
-                  ...AppShadows.primaryGlow.map((shadow) => shadow.copyWith(
-                      color: resolvedBackground.withValues(alpha: 0.18))),
-                ],
-        ),
-        child: button,
+    if (isDark || onPressed == null) {
+      return button;
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          ...AppShadows.primaryGlow.map((shadow) =>
+              shadow.copyWith(color: resolvedBackground.withValues(alpha: 0.16))),
+        ],
       ),
+      child: button,
     );
   }
 }

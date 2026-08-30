@@ -13,6 +13,7 @@ import { Button } from "../../../../components/ui/Button";
 import { notifySuccess, notifyError } from "../../../../shared/ui/feedback";
 import { getLocalizedApiErrorMessage } from "../../../../shared/api/error";
 import useClientPagination from "../../../../shared/ui/useClientPagination";
+import { useCentersQuery } from "../../../org/org.hooks";
 import type { TuitionPlanV2 } from "../../types";
 
 type Props = {
@@ -23,21 +24,24 @@ type Props = {
 
 export default function FinanceTuitionPlansTab({ centerId, isAdmin, ar }: Props) {
   const [planModal, setPlanModal] = useState<{ mode: "create" | "edit"; id?: number } | null>(null);
-  const [planForm, setPlanForm] = useState({ name: "", monthlyAmount: "", planKind: "MONTHLY" });
+  const [planForm, setPlanForm] = useState({ name: "", monthlyAmount: "", planKind: "MONTHLY", centerId: "" });
 
   const plansQ = useFinanceV2TuitionPlansQuery(centerId);
   const plans = useMemo(() => plansQ.data?.rows ?? [], [plansQ.data]);
   const plansPagination = useClientPagination(plans, { initialPageSize: 10 });
+
+  const centersQ = useCentersQuery();
+  const centers = useMemo(() => centersQ.data?.items ?? [], [centersQ.data?.items]);
 
   const createPlanM = useCreateFinanceV2TuitionPlanMutation();
   const updatePlanM = useUpdateFinanceV2TuitionPlanMutation();
 
   const openPlanModal = (mode: "create" | "edit", plan?: TuitionPlanV2) => {
     if (mode === "create") {
-      setPlanForm({ name: "", monthlyAmount: "", planKind: "MONTHLY" });
+      setPlanForm({ name: "", monthlyAmount: "", planKind: "MONTHLY", centerId: String(centerId ?? "") });
       setPlanModal({ mode: "create" });
     } else if (plan) {
-      setPlanForm({ name: plan.name, monthlyAmount: String(plan.monthlyAmount), planKind: plan.planKind });
+      setPlanForm({ name: plan.name, monthlyAmount: String(plan.monthlyAmount), planKind: plan.planKind, centerId: String(plan.centerId) });
       setPlanModal({ mode: "edit", id: plan.id });
     }
   };
@@ -47,10 +51,11 @@ export default function FinanceTuitionPlansTab({ centerId, isAdmin, ar }: Props)
       if (!planForm.name.trim()) { notifyError(ar ? "الاسم مطلوب" : "Name is required"); return; }
       const amt = Number(planForm.monthlyAmount);
       if (!amt || amt <= 0) { notifyError(ar ? "المبلغ غير صحيح" : "Invalid amount"); return; }
-      if (!centerId) { notifyError(ar ? "اختر مركزاً أولاً" : "Select a center first"); return; }
+      const pCenterId = Number(planForm.centerId);
+      if (!pCenterId) { notifyError(ar ? "اختر مركزاً" : "Select a center"); return; }
 
       if (planModal?.mode === "create") {
-        await createPlanM.mutateAsync({ centerId, name: planForm.name, monthlyAmount: amt, planKind: planForm.planKind });
+        await createPlanM.mutateAsync({ centerId: pCenterId, name: planForm.name, monthlyAmount: amt, planKind: planForm.planKind });
       } else if (planModal?.mode === "edit" && planModal.id) {
         await updatePlanM.mutateAsync({ id: planModal.id, payload: { name: planForm.name, monthlyAmount: amt, planKind: planForm.planKind } });
       }
@@ -87,6 +92,7 @@ export default function FinanceTuitionPlansTab({ centerId, isAdmin, ar }: Props)
           <FinanceDataTable<TuitionPlanV2>
             rows={plansPagination.pagedRows}
             columns={[
+              { header: ar ? "المركز" : "Center", render: (p) => <span className="text-sm text-text-secondary">{p.center?.name ?? `#${p.centerId}`}</span> },
               { header: ar ? "الاسم" : "Name", render: (p) => <span className="font-bold">{p.name}</span> },
               { header: ar ? "المبلغ" : "Amount", render: (p) => <FinanceMoney amount={p.monthlyAmount} baseCurrency="YER" /> },
               {
@@ -129,6 +135,13 @@ export default function FinanceTuitionPlansTab({ centerId, isAdmin, ar }: Props)
         >
           <div className="space-y-4">
             <div>
+              <label className="block text-sm font-medium mb-1">{ar ? "المركز" : "Center"}</label>
+              <select className="w-full fin-input" value={planForm.centerId} disabled={planModal?.mode === "edit"} onChange={(e) => setPlanForm({ ...planForm, centerId: e.target.value })}>
+                <option value="">{ar ? "اختر المركز..." : "Select center..."}</option>
+                {centers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">{ar ? "اسم الخطة" : "Plan Name"}</label>
               <input className="w-full fin-input" value={planForm.name} onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })} />
             </div>
@@ -150,7 +163,11 @@ export default function FinanceTuitionPlansTab({ centerId, isAdmin, ar }: Props)
             </div>
             <div className="pt-4 flex justify-end gap-2 border-t dark:border-gray-800">
               <Button variant="secondary" onClick={() => setPlanModal(null)}>{ar ? "إلغاء" : "Cancel"}</Button>
-              <Button variant="primary" isLoading={createPlanM.isPending || updatePlanM.isPending} onClick={handleSavePlan}>
+              <Button
+                variant="primary"
+                isLoading={createPlanM.isPending || updatePlanM.isPending}
+                onClick={handleSavePlan}
+              >
                 {ar ? "حفظ" : "Save"}
               </Button>
             </div>

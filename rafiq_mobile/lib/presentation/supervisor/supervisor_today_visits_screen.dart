@@ -97,21 +97,26 @@ class _SupervisorTodayVisitsScreenState
     final selected = await showModalBottomSheet<OrgCircleDto>(
       context: context,
       showDragHandle: true,
+      backgroundColor: context.surfaceColor,
       builder: (context) => SafeArea(
         child: ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            const Text(
+            Text(
               'اختر الحلقة للزيارة الطارئة',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                color: context.textPrimaryColor,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             ...circles.map(
               (circle) => ListTile(
-                leading: const Icon(Icons.groups_rounded),
-                title: Text(circle.name),
-                subtitle: Text(circle.teacherName ?? 'المعلم غير محدد'),
+                leading: Icon(Icons.groups_rounded, color: Theme.of(context).colorScheme.primary),
+                title: Text(circle.name, style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w700)),
+                subtitle: Text(circle.teacherName ?? 'المعلم غير محدد', style: TextStyle(color: context.textSecondaryColor)),
                 onTap: () => Navigator.of(context).pop(circle),
               ),
             ),
@@ -160,11 +165,11 @@ class _SupervisorTodayVisitsScreenState
   @override
   Widget build(BuildContext context) {
     final visitsAsync = ref.watch(supervisorTodayVisitsProvider);
-    final centerId = int.tryParse(
-        ref.watch(contextControllerProvider).selectedCenterId ?? '');
+    final centerId = ref.watch(contextControllerProvider).selectedCenterId;
     final circlesAsync = ref.watch(orgCirclesProvider(centerId));
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(
         title: 'زيارات اليوم',
         subtitle: 'الخطة اليومية والزيارات المكتملة',
@@ -268,6 +273,7 @@ class _PlanItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = DateFormat('EEEE، d MMMM', 'ar').format(item.plannedDate);
+    final custom = context.customColors;
 
     return EnterpriseCard(
       child: Column(
@@ -278,13 +284,14 @@ class _PlanItemCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.circle?.name ?? item.center?.name ?? 'زيارة مركز',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
-              _Pill(label: item.priority, color: AppColors.warningLight),
+              _Pill(label: item.priority, color: custom.warning),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -318,12 +325,14 @@ class _VisitLogCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return EnterpriseCard(
       child: Row(
         children: [
           Icon(
             log.isOpen ? Icons.timer_rounded : Icons.check_circle_rounded,
-            color: log.isOpen ? AppColors.warningLight : AppColors.successLight,
+            color: log.isOpen ? custom.warning : custom.success,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
@@ -332,14 +341,14 @@ class _VisitLogCard extends StatelessWidget {
               children: [
                 Text(
                   log.circle?.name ?? log.center?.name ?? 'زيارة',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  style: TextStyle(fontWeight: FontWeight.w900, color: context.textPrimaryColor),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   log.isOpen
                       ? 'بدأت ${DateFormat('hh:mm a', 'ar').format(log.startedAt)}'
                       : 'المدة ${log.durationMinutes ?? 0} دقيقة',
-                  style: const TextStyle(color: AppColors.textSecondaryLight),
+                  style: TextStyle(color: context.textSecondaryColor),
                 ),
               ],
             ),
@@ -361,7 +370,7 @@ class _CompactEmpty extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(color: AppColors.textSecondaryLight),
+        style: TextStyle(color: context.textSecondaryColor),
       ),
     );
   }
@@ -375,15 +384,17 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: isDark ? 0.20 : 0.12),
         borderRadius: BorderRadius.circular(99),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12),
       ),
     );
   }
@@ -399,14 +410,15 @@ class _InfoLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 17, color: AppColors.textSecondaryLight),
+        Icon(icon, size: 17, color: context.textSecondaryColor),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
+            style: TextStyle(
+              color: context.textSecondaryColor,
               fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/teacher/teacher_panel_providers.dart';
 
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/quran_data.dart';
 import '../../core/theme/app_colors.dart';
@@ -133,10 +134,11 @@ class _TeacherMonthlyPlanDetailsScreenState
   Widget build(BuildContext context) {
     final planAsync =
         ref.watch(teacherMonthlyPlanDetailsProvider(widget.planId));
+    final custom = context.customColors;
+    final theme = Theme.of(context);
 
     return Scaffold(
-
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'الخطة الشهرية'),
       body: planAsync.when(
         loading: () => const AppLoadingState(
@@ -195,8 +197,8 @@ class _TeacherMonthlyPlanDetailsScreenState
                       : plan.notes,
                   isApproved: isApproved,
                   accent: _selectedTab == _PlanTab.hifz
-                      ? AppColors.primaryLight
-                      : AppColors.infoLight,
+                      ? theme.colorScheme.primary
+                      : custom.info,
                   pageSubtitle: _selectedTab == _PlanTab.review
                       ? 'النطاق نفسه محسوب للمراجعة مرتين'
                       : 'عدد الصفحات محسوب تلقائياً من نطاق الآيات',
@@ -205,28 +207,27 @@ class _TeacherMonthlyPlanDetailsScreenState
                 if (isApproved) ...[
                   const SizedBox(height: AppSpacing.md),
                   const _ApprovedStateCard(),
-
                 ] else ...[
                   const SizedBox(height: AppSpacing.lg),
                   SizedBox(
-                    height: 52,
+                    height: 50,
                     child: ElevatedButton.icon(
                       onPressed: _isApproving ? null : () => _approvePlan(plan),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryLight,
-                        foregroundColor: Colors.white,
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         elevation: 0,
                       ),
                       icon: _isApproving
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: theme.colorScheme.onPrimary,
                               ),
                             )
                           : const Icon(Icons.check_rounded),
@@ -235,7 +236,6 @@ class _TeacherMonthlyPlanDetailsScreenState
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                     ),
@@ -269,22 +269,31 @@ class _StudentHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = context.isDark;
+    final primary = theme.colorScheme.primary;
+
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
-                child: Text(
-                  studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                    fontFamily: 'Cairo',
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: isDark ? 0.20 : 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    studentName.trim().isEmpty ? 'ط' : studentName.trim()[0],
+                    style: TextStyle(
+                      color: isDark ? Colors.white : primary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
               ),
@@ -295,21 +304,19 @@ class _StudentHeaderCard extends StatelessWidget {
                   children: [
                     Text(
                       studentName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
-                        color: AppColors.textPrimaryLight,
-                        fontFamily: 'Cairo',
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       periodLabel,
-                      style: const TextStyle(
-                        color: AppColors.textSecondaryLight,
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                   ],
@@ -319,13 +326,13 @@ class _StudentHeaderCard extends StatelessWidget {
               if (levelLabel != null)
                 _StatusChip(
                   label: levelLabel!,
-                  color: _levelColor(levelLabel!),
-                  background: _levelColor(levelLabel!).withValues(alpha: 0.08),
+                  color: _levelColor(levelLabel!, context),
+                  background: _levelColor(levelLabel!, context).withValues(alpha: isDark ? 0.20 : 0.10),
                 ),
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.borderLight),
+          Divider(height: 1, color: context.borderColor),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -357,7 +364,6 @@ class _StudentHeaderCard extends StatelessWidget {
   }
 }
 
-
 class _PlanTabSelector extends StatelessWidget {
   final _PlanTab selectedTab;
   final ValueChanged<_PlanTab> onChanged;
@@ -369,11 +375,14 @@ class _PlanTabSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F0),
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF1F3F0),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Row(
         children: [
@@ -410,19 +419,23 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          color: selected
+              ? (context.isDark ? theme.colorScheme.surfaceContainer : Colors.white)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -435,10 +448,9 @@ class _TabButton extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 13,
-            fontFamily: 'Cairo',
             color: selected
-                ? AppColors.textPrimaryLight
-                : AppColors.textSecondaryLight,
+                ? context.textPrimaryColor
+                : context.textSecondaryColor,
           ),
         ),
       ),
@@ -472,6 +484,8 @@ class _PlanDetailsCard extends StatelessWidget {
     final rangeStart = _formatSegmentStart(segment);
     final rangeEnd = _formatSegmentEnd(segment);
     final latestReachedStr = _formatLatestReached(latestReached);
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return AppCard(
       padding: const EdgeInsets.all(14),
@@ -483,11 +497,10 @@ class _PlanDetailsCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
-                  color: AppColors.textPrimaryLight,
-                  fontFamily: 'Cairo',
+                  color: context.textPrimaryColor,
                 ),
               ),
               if (!isApproved && onEdit != null)
@@ -505,7 +518,6 @@ class _PlanDetailsCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                   ),
@@ -513,7 +525,7 @@ class _PlanDetailsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.borderLight),
+          Divider(height: 1, color: context.borderColor),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,23 +535,21 @@ class _PlanDetailsCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'النطاق المقترح للشهر',
                       style: TextStyle(
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$rangeStart - $rangeEnd',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
-                        color: AppColors.textPrimaryLight,
-                        fontFamily: 'Cairo',
+                        color: context.textPrimaryColor,
                       ),
                     ),
                   ],
@@ -551,23 +561,21 @@ class _PlanDetailsCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'آخر موضع وصل إليه',
                       style: TextStyle(
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       latestReachedStr,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
-                        color: AppColors.textPrimaryLight,
-                        fontFamily: 'Cairo',
+                        color: context.textPrimaryColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -581,9 +589,9 @@ class _PlanDetailsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: accent.withValues(alpha: 0.12)),
+              color: accent.withValues(alpha: isDark ? 0.16 : 0.05),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.12)),
             ),
             child: Row(
               children: [
@@ -599,7 +607,6 @@ class _PlanDetailsCard extends StatelessWidget {
                           color: accent,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -609,7 +616,6 @@ class _PlanDetailsCard extends StatelessWidget {
                           color: accent.withValues(alpha: 0.8),
                           fontWeight: FontWeight.w700,
                           fontSize: 11,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                     ],
@@ -624,17 +630,16 @@ class _PlanDetailsCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: context.borderColor),
               ),
               child: Text(
                 note!,
-                style: const TextStyle(
-                  color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                  color: context.textSecondaryColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  fontFamily: 'Cairo',
                   height: 1.4,
                 ),
               ),
@@ -646,34 +651,35 @@ class _PlanDetailsCard extends StatelessWidget {
   }
 }
 
-
 class _ApprovedStateCard extends StatelessWidget {
   const _ApprovedStateCard();
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: AppColors.successLight.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: custom.success.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
-          color: AppColors.successLight.withValues(alpha: 0.16),
+          color: custom.success.withValues(alpha: isDark ? 0.25 : 0.16),
         ),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_rounded, color: AppColors.successLight, size: 20),
-          SizedBox(width: 8),
+          Icon(Icons.check_rounded, color: custom.success, size: 20),
+          const SizedBox(width: 8),
           Text(
             'تم اعتماد الخطة',
             style: TextStyle(
-              color: AppColors.successLight,
+              color: custom.success,
               fontWeight: FontWeight.w800,
               fontSize: 15,
-              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -696,31 +702,30 @@ class _HeaderMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
           Text(
             value,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 15,
               height: 1.2,
-              fontFamily: 'Cairo',
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textSecondaryLight,
+            style: TextStyle(
+              color: context.textSecondaryColor,
               fontWeight: FontWeight.w700,
               fontSize: 11,
-              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -754,7 +759,6 @@ class _StatusChip extends StatelessWidget {
           color: color,
           fontWeight: FontWeight.w800,
           fontSize: 11,
-          fontFamily: 'Cairo',
         ),
       ),
     );
@@ -809,13 +813,15 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
     final pageMultiplier = _selectedTab == _PlanTab.hifz ? 1 : 2;
     final targetPages = selectedRange.estimatedPages * pageMultiplier;
     final dailyRate = targetPages / 22;
+    final theme = Theme.of(context);
+    final custom = context.customColors;
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F8F5),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: context.surfaceColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: SafeArea(
           top: false,
@@ -830,24 +836,25 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                     width: 46,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD9DDD4),
+                      color: context.borderColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                Text(
                   'تعديل الخطة',
-                  style: TextStyle(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    fontSize: 24,
+                    fontSize: 22,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'يمكنك تعديل نطاق الحفظ والمراجعة ثم حفظ الخطة قبل اعتمادها.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondaryLight,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                        color: context.textSecondaryColor,
                         fontWeight: FontWeight.w600,
                         height: 1.4,
                       ),
@@ -866,9 +873,10 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                         _selectedTab == _PlanTab.hifz
                             ? 'نطاق الحفظ'
                             : 'نطاق المراجعة',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 20,
+                          fontSize: 18,
+                          color: context.textPrimaryColor,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -876,8 +884,8 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                         _selectedTab == _PlanTab.hifz
                             ? 'عند اختيار السورة تُضبط الآية تلقائياً ويمكن اختيار آية أخرى من القائمة المقيدة.'
                             : 'خطة المراجعة مضبوطة افتراضياً لتكرار المادة مرتين خلال الشهر.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondaryLight,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                              color: context.textSecondaryColor,
                               fontWeight: FontWeight.w600,
                               height: 1.35,
                             ),
@@ -895,8 +903,8 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                           });
                         },
                         accent: _selectedTab == _PlanTab.hifz
-                            ? AppColors.primaryLight
-                            : AppColors.infoLight,
+                            ? theme.colorScheme.primary
+                            : custom.info,
                       ),
                     ],
                   ),
@@ -906,8 +914,8 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                   targetPages: targetPages,
                   dailyRate: dailyRate,
                   accent: _selectedTab == _PlanTab.hifz
-                      ? AppColors.primaryLight
-                      : AppColors.infoLight,
+                      ? theme.colorScheme.primary
+                      : custom.info,
                   subtitle: _selectedTab == _PlanTab.hifz
                       ? 'محسوبة تلقائياً من النطاق'
                       : 'محسوبة تلقائياً من النطاق × مرتين',
@@ -917,17 +925,19 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'ملاحظات المعلم',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          fontSize: 18,
+                          fontSize: 16,
+                          color: context.textPrimaryColor,
                         ),
                       ),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _notesController,
                         maxLines: 4,
+                        style: TextStyle(color: context.textPrimaryColor),
                         decoration: const InputDecoration(
                           hintText: 'أضف ملاحظة مرتبطة بالخطة أو بالتعديل...',
                         ),
@@ -938,7 +948,7 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                 const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   width: double.infinity,
-                  height: 56,
+                  height: 52,
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop(
@@ -950,18 +960,18 @@ class _MonthlyPlanEditSheetState extends State<_MonthlyPlanEditSheet> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryLight,
-                      foregroundColor: Colors.white,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(22),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                     ),
                     icon: const Icon(Icons.save_outlined),
                     label: const Text(
                       'حفظ التعديلات',
                       style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -1015,7 +1025,6 @@ bool _isValidOrderedRange(QuranRangeValue range) {
 
 bool _isApproved(String status) => status.trim().toUpperCase() == 'APPROVED';
 
-
 String _formatLatestReached(TeacherPlanLatestReachedDto? latestReached) {
   if (latestReached?.toSurah == null || latestReached?.toAyah == null) {
     return 'لا يوجد سجل حفظ نهائي بعد';
@@ -1068,16 +1077,17 @@ String? _levelLabel(String? level) {
   }
 }
 
-Color _levelColor(String level) {
+Color _levelColor(String level, BuildContext context) {
+  final custom = context.customColors;
   switch (level) {
     case 'مبتدئ':
-      return AppColors.warningLight;
+      return custom.warning;
     case 'متوسط':
-      return AppColors.infoLight;
+      return custom.info;
     case 'متقدم':
-      return AppColors.successLight;
+      return custom.success;
     default:
-      return AppColors.primaryLight;
+      return Theme.of(context).colorScheme.primary;
   }
 }
 
@@ -1096,12 +1106,14 @@ class _TargetPagesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withValues(alpha: 0.12)),
+        color: accent.withValues(alpha: isDark ? 0.16 : 0.05),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.12)),
       ),
       child: Row(
         children: [
@@ -1109,8 +1121,8 @@ class _TargetPagesCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              color: context.cardColor,
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: accent.withValues(alpha: 0.1)),
             ),
             child: Icon(Icons.adjust_rounded, color: accent, size: 20),
@@ -1120,13 +1132,12 @@ class _TargetPagesCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'الصفحات المستهدفة',
                   style: TextStyle(
-                    color: AppColors.textSecondaryLight,
+                    color: context.textSecondaryColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
-                    fontFamily: 'Cairo',
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1136,7 +1147,6 @@ class _TargetPagesCard extends StatelessWidget {
                     color: accent,
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
-                    fontFamily: 'Cairo',
                     height: 1.2,
                   ),
                 ),
@@ -1147,7 +1157,6 @@ class _TargetPagesCard extends StatelessWidget {
                     color: accent.withValues(alpha: 0.8),
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
-                    fontFamily: 'Cairo',
                   ),
                 ),
               ],
@@ -1158,4 +1167,3 @@ class _TargetPagesCard extends StatelessWidget {
     );
   }
 }
-

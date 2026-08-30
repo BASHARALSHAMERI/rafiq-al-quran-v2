@@ -59,10 +59,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // === Green background top section ===
+          // === Gradient background top section ===
           Positioned(
             top: 0,
             left: 0,
@@ -113,7 +114,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         'رفقاء القرآن',
                         style: theme.textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           fontSize: 28,
                         ),
                       )
@@ -130,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         'تسجيل الدخول إلى نظام الحلقات',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.80),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 14,
                         ),
                       )
@@ -151,11 +152,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
               child: Container(
                 decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor,
+                  color: context.cardColor,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
                   ),
+                  border: Border.all(color: context.borderColor),
                   boxShadow: AppShadows.xl,
                 ),
                 padding: const EdgeInsets.all(24),
@@ -171,7 +173,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 20),
                           decoration: BoxDecoration(
-                            color: AppColors.borderLight,
+                            color: context.borderColor,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -180,14 +182,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         'أهلاً بك',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
+                          color: context.textPrimaryColor,
                         ),
                       ).animate().fadeIn(delay: 250.ms),
 
                       const SizedBox(height: 4),
                       Text(
                         'يرجى تسجيل الدخول للمتابعة',
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: context.textSecondaryColor,
+                        ),
                       ).animate().fadeIn(delay: 320.ms),
 
                       const SizedBox(height: 24),
@@ -196,11 +201,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       TextFormField(
                         controller: _identifierController,
                         keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: context.textPrimaryColor),
                         decoration: InputDecoration(
                           labelText: 'البريد الإلكتروني أو رقم الهاتف',
-                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                          prefixIcon: Icon(Icons.person_outline_rounded, color: context.textSecondaryColor),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: context.borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: context.borderColor),
                           ),
                         ),
                         validator: (value) {
@@ -226,11 +237,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        style: TextStyle(color: context.textPrimaryColor),
                         decoration: InputDecoration(
                           labelText: 'كلمة المرور',
-                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          prefixIcon: Icon(Icons.lock_outline_rounded, color: context.textSecondaryColor),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: context.borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: context.borderColor),
                           ),
                           suffixIcon: IconButton(
                             onPressed: () => setState(
@@ -239,6 +256,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               _obscurePassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
+                              color: context.textSecondaryColor,
                             ),
                           ),
                         ),
@@ -278,7 +296,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const SizedBox(width: 8),
                           Text('تذكرني',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface)),
+                                  color: context.textPrimaryColor)),
                           const Spacer(),
                           TextButton(
                             onPressed: () =>
@@ -287,7 +305,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               'نسيت كلمة المرور؟',
                               style: TextStyle(
                                   color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600),
+                                  fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],
@@ -316,7 +334,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         'بالدخول أنت توافق على شروط الاستخدام وسياسة الخصوصية',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight, fontSize: 11),
+                            color: context.textSecondaryColor, fontSize: 11),
                       ).animate().fadeIn(delay: 600.ms),
                     ],
                   ),
@@ -330,7 +348,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-/// زر الدخول بـ gradient ومؤشر تحميل متكامل
 class _GradientLoginButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onPressed;
@@ -350,8 +367,8 @@ class _GradientLoginButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: onPressed != null
               ? AppGradients.deepPrimary
-              : const LinearGradient(
-                  colors: [Color(0xFFCBD5E1), Color(0xFFCBD5E1)]),
+              : LinearGradient(
+                  colors: [context.borderColor, context.borderColor]),
           borderRadius: BorderRadius.circular(14),
           boxShadow: onPressed != null ? AppShadows.primaryGlow : null,
         ),
@@ -373,7 +390,7 @@ class _GradientLoginButton extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     SizedBox(width: 8),

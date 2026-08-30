@@ -34,8 +34,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(notificationControllerProvider);
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       appBar: PremiumAppBar(
         title: 'الإشعارات',
         actions: [
@@ -50,7 +53,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ),
       body: state.when(
         initial: () => const SizedBox.shrink(),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(child: CircularProgressIndicator(color: primary)),
         error: (message) => AppEmptyState(
           title: 'تعذر تحميل الإشعارات',
           subtitle: message,
@@ -70,31 +73,33 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           }
 
           return RefreshIndicator(
+            color: primary,
             onRefresh: () => ref
                 .read(notificationControllerProvider.notifier)
                 .loadNotifications(),
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               itemCount: notifications.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => Divider(height: 1, color: context.borderColor),
               itemBuilder: (context, index) {
                 final notification = notifications[index];
+                final typeColor = _getColorForType(context, notification.type);
+
                 return InkWell(
                   onTap: () => _openNotification(notification),
                   child: Container(
                     color: notification.isRead
                         ? Colors.transparent
-                        : AppColors.primaryLight.withValues(alpha: 0.05),
+                        : primary.withValues(alpha: isDark ? 0.12 : 0.05),
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
-                          backgroundColor: _getColorForType(notification.type)
-                              .withValues(alpha: 0.1),
+                          backgroundColor: typeColor.withValues(alpha: isDark ? 0.20 : 0.10),
                           child: Icon(
                             _getIconForType(notification.type),
-                            color: _getColorForType(notification.type),
+                            color: typeColor,
                           ),
                         ),
                         const SizedBox(width: AppSpacing.md),
@@ -111,18 +116,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                       notification.title,
                                       style: TextStyle(
                                         fontWeight: notification.isRead
-                                            ? FontWeight.normal
-                                            : FontWeight.bold,
-                                        color: AppColors.textPrimaryLight,
+                                            ? FontWeight.w600
+                                            : FontWeight.w900,
+                                        color: context.textPrimaryColor,
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ),
                                   Text(
                                     DateFormat('d MMM', 'ar')
                                         .format(notification.createdAt),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: AppColors.textSecondaryLight,
+                                      color: context.textSecondaryColor,
                                     ),
                                   ),
                                 ],
@@ -130,8 +136,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               const SizedBox(height: AppSpacing.xs),
                               Text(
                                 notification.message,
-                                style: const TextStyle(
-                                  color: AppColors.textSecondaryLight,
+                                style: TextStyle(
+                                  color: context.textSecondaryColor,
+                                  fontSize: 13,
                                 ),
                               ),
                               if (unreadCount > 0 && index == 0)
@@ -140,9 +147,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                       const EdgeInsets.only(top: AppSpacing.xs),
                                   child: Text(
                                     'غير المقروء: $unreadCount',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: AppColors.textSecondaryLight,
+                                      color: primary,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -187,29 +195,32 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  Color _getColorForType(String type) {
+  Color _getColorForType(BuildContext context, String type) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     switch (type) {
       case 'EXAM_PUBLISHED':
-        return AppColors.primaryLight;
+        return primary;
       case 'EXAM_SCORED':
-        return AppColors.successLight;
+        return custom.success;
       case 'GOLDEN_RECORD_NOMINATION_APPROVED':
-        return AppColors.warningLight;
+        return custom.warning;
       default:
-        return AppColors.secondaryLight;
+        return custom.accent;
     }
   }
 
   IconData _getIconForType(String type) {
     switch (type) {
       case 'EXAM_PUBLISHED':
-        return Icons.fact_check_outlined;
+        return Icons.quiz_outlined;
       case 'EXAM_SCORED':
-        return Icons.grading_rounded;
+        return Icons.grade_outlined;
       case 'GOLDEN_RECORD_NOMINATION_APPROVED':
-        return Icons.verified_outlined;
+        return Icons.star_outline_rounded;
       default:
-        return Icons.notifications_rounded;
+        return Icons.notifications_outlined;
     }
   }
 }

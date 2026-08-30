@@ -102,7 +102,7 @@ final teacherCircleOverviewProvider =
   final selectedCenterName = ref.watch(
     contextControllerProvider.select((state) => state.selectedCenterName),
   );
-  final circleId = int.tryParse(selectedCircleId ?? '');
+  final circleId = selectedCircleId;
   if (circleId == null) {
     return null;
   }

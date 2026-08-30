@@ -4,11 +4,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../application/context/context_controller.dart';
 import '../../application/org/org_providers.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
-import '../shared/widgets/standard_app_bar.dart';
 import '../../data/models/org_dtos.dart';
 import '../shared/states/app_empty_state.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class SupervisorCirclesScreen extends ConsumerWidget {
   const SupervisorCirclesScreen({super.key});
@@ -16,11 +17,12 @@ class SupervisorCirclesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contextState = ref.watch(contextControllerProvider);
-    final centerId = int.tryParse(contextState.selectedCenterId ?? '');
-    final selectedCircleId = int.tryParse(contextState.selectedCircleId ?? '');
+    final centerId = contextState.selectedCenterId;
+    final selectedCircleId = contextState.selectedCircleId;
     final circlesAsync = ref.watch(orgCirclesProvider(centerId));
 
     return Scaffold(
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'الحلقات المكلف بها'),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(orgCirclesProvider(centerId)),
@@ -103,12 +105,15 @@ class _CirclesSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: [
@@ -116,7 +121,7 @@ class _CirclesSummaryCard extends StatelessWidget {
             child: _StatTile(
               label: 'الإجمالي',
               value: '$totalCount',
-              color: AppColors.primaryLight,
+              color: primary,
               icon: Icons.groups_rounded,
             ),
           ),
@@ -125,7 +130,7 @@ class _CirclesSummaryCard extends StatelessWidget {
             child: _StatTile(
               label: 'النشطة',
               value: '$activeCount',
-              color: AppColors.successLight,
+              color: custom.success,
               icon: Icons.check_circle_rounded,
             ),
           ),
@@ -134,7 +139,7 @@ class _CirclesSummaryCard extends StatelessWidget {
             child: _StatTile(
               label: 'الانحرافات',
               value: '$alertsCount',
-              color: AppColors.warningLight,
+              color: custom.warning,
               icon: Icons.warning_amber_rounded,
             ),
           ),
@@ -159,11 +164,13 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
+        color: color.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         children: [
@@ -172,16 +179,18 @@ class _StatTile extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   color: color,
                 ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: context.textSecondaryColor,
+            ),
           ),
         ],
       ),
@@ -201,15 +210,17 @@ class _CircleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final alerts = _circleAlerts(circle);
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
         border: Border.all(
-          color: isCurrent ? AppColors.primaryLight : AppColors.borderLight,
-          width: isCurrent ? 1.4 : 1,
+          color: isCurrent ? primary : context.borderColor,
+          width: isCurrent ? 1.5 : 1,
         ),
       ),
       child: Column(
@@ -225,14 +236,16 @@ class _CircleCard extends StatelessWidget {
                       circle.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
+                            color: context.textPrimaryColor,
                           ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       circle.centerName ?? 'المركز الحالي',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight,
-                          ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.textSecondaryColor,
+                      ),
                     ),
                   ],
                 ),
@@ -240,8 +253,8 @@ class _CircleCard extends StatelessWidget {
               _StatusBadge(
                 label: circle.isActive ? 'نشطة' : 'متوقفة',
                 color: circle.isActive
-                    ? AppColors.successLight
-                    : AppColors.errorLight,
+                    ? custom.success
+                    : Theme.of(context).colorScheme.error,
               ),
             ],
           ),
@@ -270,9 +283,10 @@ class _CircleCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               circle.locationText!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
+              style: TextStyle(
+                fontSize: 13,
+                color: context.textSecondaryColor,
+              ),
             ),
           ],
           if (alerts.isNotEmpty) ...[
@@ -284,7 +298,7 @@ class _CircleCard extends StatelessWidget {
                   .map(
                     (alert) => _StatusBadge(
                       label: alert,
-                      color: AppColors.warningLight,
+                      color: custom.warning,
                     ),
                   )
                   .toList(growable: false),
@@ -311,19 +325,29 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: isDark ? theme.colorScheme.surfaceContainerHighest : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.primaryLight),
+          Icon(icon, size: 15, color: theme.colorScheme.primary),
           const SizedBox(width: 6),
-          Text(text),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: context.textPrimaryColor,
+            ),
+          ),
         ],
       ),
     );
@@ -341,17 +365,20 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: isDark ? 0.18 : 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: color,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
         ),
       ),
     );
@@ -363,21 +390,28 @@ class _CurrentCircleBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: primary.withValues(alpha: isDark ? 0.18 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: AppColors.primaryLight),
-          SizedBox(width: 8),
+          Icon(Icons.check_circle_rounded, color: primary),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'هذه هي الحلقة المحددة حاليًا في سياق التطبيق.',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: context.textPrimaryColor,
+                fontSize: 13,
+              ),
             ),
           ),
         ],

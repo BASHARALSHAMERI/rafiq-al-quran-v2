@@ -38,8 +38,10 @@ class MemorizationSectionForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return FollowUpSectionShell(
-      color: AppColors.secondaryLight,
+      color: primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -47,10 +49,10 @@ class MemorizationSectionForm extends StatelessWidget {
             header!,
             const SizedBox(height: 16),
           ],
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'نطاق الحفظ',
             icon: Icons.straighten_rounded,
-            color: AppColors.secondaryLight,
+            color: primary,
           ),
           const SizedBox(height: 10),
           Row(
@@ -61,7 +63,7 @@ class MemorizationSectionForm extends StatelessWidget {
                   label: 'من سورة',
                   selected: fromSurah,
                   onChanged: onFromSurahChanged,
-                  accent: AppColors.secondaryLight,
+                  accent: primary,
                 ),
               ),
               const SizedBox(width: 10),
@@ -70,7 +72,7 @@ class MemorizationSectionForm extends StatelessWidget {
                   label: 'من آية',
                   controller: fromAyahController,
                   maxAyah: fromSurah?.ayahCount,
-                  accent: AppColors.secondaryLight,
+                  accent: primary,
                   onChanged: onNotesChanged,
                 ),
               ),
@@ -85,7 +87,7 @@ class MemorizationSectionForm extends StatelessWidget {
                   label: 'إلى سورة',
                   selected: toSurah,
                   onChanged: onToSurahChanged,
-                  accent: AppColors.secondaryLight,
+                  accent: primary,
                 ),
               ),
               const SizedBox(width: 10),
@@ -94,7 +96,7 @@ class MemorizationSectionForm extends StatelessWidget {
                   label: 'إلى آية',
                   controller: toAyahController,
                   maxAyah: toSurah?.ayahCount,
-                  accent: AppColors.secondaryLight,
+                  accent: primary,
                   onChanged: onNotesChanged,
                 ),
               ),
@@ -102,27 +104,27 @@ class MemorizationSectionForm extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           FollowUpInfoBox(
-            color: AppColors.secondaryLight,
+            color: primary,
             title: 'الصفحات التقريبية',
             value: '$estimatedPages صفحة',
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'التقييم',
             icon: Icons.star_rounded,
-            color: AppColors.secondaryLight,
+            color: primary,
           ),
           const SizedBox(height: 10),
           FollowUpRatingBox(
             rating: rating,
-            accent: AppColors.secondaryLight,
+            accent: primary,
             onChanged: onRatingChanged,
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'ملاحظات المعلم',
             icon: Icons.edit_note_rounded,
-            color: AppColors.secondaryLight,
+            color: primary,
           ),
           const SizedBox(height: 10),
           FollowUpNotesField(
@@ -172,8 +174,10 @@ class ReviewSectionForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return FollowUpSectionShell(
-      color: AppColors.infoLight,
+      color: custom.info,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -181,10 +185,10 @@ class ReviewSectionForm extends StatelessWidget {
             header!,
             const SizedBox(height: 16),
           ],
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'نطاق المراجعة',
             icon: Icons.straighten_rounded,
-            color: AppColors.infoLight,
+            color: custom.info,
           ),
           const SizedBox(height: 10),
           Row(
@@ -195,7 +199,7 @@ class ReviewSectionForm extends StatelessWidget {
                   label: 'من سورة',
                   selected: fromSurah,
                   onChanged: onFromSurahChanged,
-                  accent: AppColors.infoLight,
+                  accent: custom.info,
                 ),
               ),
               const SizedBox(width: 10),
@@ -204,7 +208,7 @@ class ReviewSectionForm extends StatelessWidget {
                   label: 'من آية',
                   controller: fromAyahController,
                   maxAyah: fromSurah?.ayahCount,
-                  accent: AppColors.infoLight,
+                  accent: custom.info,
                   onChanged: onNotesChanged,
                 ),
               ),
@@ -219,7 +223,7 @@ class ReviewSectionForm extends StatelessWidget {
                   label: 'إلى سورة',
                   selected: toSurah,
                   onChanged: onToSurahChanged,
-                  accent: AppColors.infoLight,
+                  accent: custom.info,
                 ),
               ),
               const SizedBox(width: 10),
@@ -228,7 +232,7 @@ class ReviewSectionForm extends StatelessWidget {
                   label: 'إلى آية',
                   controller: toAyahController,
                   maxAyah: toSurah?.ayahCount,
-                  accent: AppColors.infoLight,
+                  accent: custom.info,
                   onChanged: onNotesChanged,
                 ),
               ),
@@ -236,27 +240,27 @@ class ReviewSectionForm extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           FollowUpInfoBox(
-            color: AppColors.infoLight,
+            color: custom.info,
             title: 'الصفحات التقريبية',
             value: '$estimatedPages صفحة',
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'تقييم المراجعة',
             icon: Icons.star_rounded,
-            color: AppColors.infoLight,
+            color: custom.info,
           ),
           const SizedBox(height: 10),
           FollowUpRatingBox(
             rating: rating,
-            accent: AppColors.infoLight,
+            accent: custom.info,
             onChanged: onRatingChanged,
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'ملاحظات المراجعة',
             icon: Icons.edit_note_rounded,
-            color: AppColors.infoLight,
+            color: custom.info,
           ),
           const SizedBox(height: 10),
           FollowUpNotesField(
@@ -302,8 +306,10 @@ class MatnSectionForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return FollowUpSectionShell(
-      color: AppColors.successLight,
+      color: custom.success,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -311,16 +317,17 @@ class MatnSectionForm extends StatelessWidget {
             header!,
             const SizedBox(height: 16),
           ],
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'اسم المتن',
             icon: Icons.library_books_rounded,
-            color: AppColors.successLight,
+            color: custom.success,
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             key: ValueKey(selectedMatn),
             initialValue: selectedMatn,
-            decoration: followUpFieldDecoration(AppColors.successLight)
+            dropdownColor: context.cardColor,
+            decoration: followUpFieldDecoration(context, custom.success)
                 .copyWith(labelText: 'اختر المتن'),
             items: const [
               'تحفة الأطفال',
@@ -330,7 +337,10 @@ class MatnSectionForm extends StatelessWidget {
                 .map(
                   (item) => DropdownMenuItem<String>(
                     value: item,
-                    child: Text(item),
+                    child: Text(
+                      item,
+                      style: TextStyle(color: context.textPrimaryColor),
+                    ),
                   ),
                 )
                 .toList(growable: false),
@@ -341,10 +351,10 @@ class MatnSectionForm extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'الدرس أو الأبيات',
             icon: Icons.format_list_numbered_rounded,
-            color: AppColors.successLight,
+            color: custom.success,
           ),
           const SizedBox(height: 10),
           FollowUpNotesField(
@@ -355,10 +365,10 @@ class MatnSectionForm extends StatelessWidget {
             onChanged: onLessonChanged,
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'حالة الإتقان',
             icon: Icons.flag_rounded,
-            color: AppColors.successLight,
+            color: custom.success,
           ),
           const SizedBox(height: 10),
           Row(
@@ -368,7 +378,7 @@ class MatnSectionForm extends StatelessWidget {
                   label: 'متقن',
                   icon: Icons.check_circle_rounded,
                   selected: matnStatus == 'COMPLETED',
-                  color: AppColors.successLight,
+                  color: custom.success,
                   onTap: onCompletedSelected,
                 ),
               ),
@@ -378,17 +388,17 @@ class MatnSectionForm extends StatelessWidget {
                   label: 'يحتاج متابعة',
                   icon: Icons.pending_rounded,
                   selected: matnStatus == 'PENDING',
-                  color: AppColors.warningLight,
+                  color: custom.warning,
                   onTap: onPendingSelected,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 18),
-          const FollowUpFieldGroupLabel(
+          FollowUpFieldGroupLabel(
             label: 'ملاحظات المعلم',
             icon: Icons.edit_note_rounded,
-            color: AppColors.successLight,
+            color: custom.success,
           ),
           const SizedBox(height: 10),
           FollowUpNotesField(

@@ -26,14 +26,14 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     final profileAsync = ref.watch(studentProfileProvider(widget.studentId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'متابعة الطالب',
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh_rounded,
-              color: AppColors.textPrimaryLight,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             onPressed: () =>
                 ref.invalidate(studentProfileProvider(widget.studentId)),
@@ -42,8 +42,10 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
       ),
       body: profileAsync.when(
         data: _buildBody,
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primaryLight),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         error: (error, _) => StudentProfileErrorState(
           error: error,

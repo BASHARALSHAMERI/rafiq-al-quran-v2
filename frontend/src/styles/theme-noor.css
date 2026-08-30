@@ -490,6 +490,29 @@
   --md: 768px;
   --lg: 1024px;
   --xl: 1280px;
+
+  /* ─── Noor V4 Flat Modern colors ─── */
+  --noor-50:  #ecfdf5;
+  --noor-100: #d1fae5;
+  --noor-200: #a7f3d0;
+  --noor-300: #6ee7b7;
+  --noor-400: #34d399;
+  --noor-500: #10b981;
+  --noor-600: #059669;
+  --noor-700: #047857;
+  --noor-800: #065f46;
+  --noor-900: #064e3b;
+
+  --night-50:  #eef2ff;
+  --night-100: #e0e7ff;
+  --night-200: #c7d2fe;
+  --night-300: #a5b4fc;
+  --night-400: #818cf8;
+  --night-500: #6366f1;
+  --night-600: #4f46e5;
+  --night-700: #4338ca;
+  --night-800: #3730a3;
+  --night-900: #312e81;
 }
 
 [data-theme="dark"] {

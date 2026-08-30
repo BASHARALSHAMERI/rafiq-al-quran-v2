@@ -39,9 +39,7 @@ class _DailyRecord {
 
 final _teacherRecordsProvider =
     FutureProvider.autoDispose<List<_DailyRecord>>((ref) async {
-  final circleId = int.tryParse(
-    ref.watch(contextControllerProvider).selectedCircleId ?? '',
-  );
+  final circleId = ref.watch(contextControllerProvider).selectedCircleId;
   if (circleId == null) {
     return const <_DailyRecord>[];
   }
@@ -119,9 +117,11 @@ class RecordsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recordsAsync = ref.watch(_teacherRecordsProvider);
+    final theme = Theme.of(context);
+    final custom = context.customColors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'السجل اليومي'),
       body: recordsAsync.when(
         loading: () => const AppLoadingState(
@@ -160,17 +160,17 @@ class RecordsScreen extends ConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.calendar_month_rounded,
                                 size: 16,
-                                color: AppColors.textSecondaryLight,
+                                color: context.textSecondaryColor,
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 DateFormat('EEEE، d MMMM', 'ar')
                                     .format(day.date),
-                                style: const TextStyle(
-                                  color: AppColors.textSecondaryLight,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: context.textSecondaryColor,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -192,9 +192,10 @@ class RecordsScreen extends ConsumerWidget {
                                         children: [
                                           Text(
                                             entry.student,
-                                            style: const TextStyle(
-                                              fontSize: 18,
+                                            style: theme.textTheme.titleMedium?.copyWith(
+                                              fontSize: 16,
                                               fontWeight: FontWeight.w800,
+                                              color: context.textPrimaryColor,
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -206,14 +207,13 @@ class RecordsScreen extends ConsumerWidget {
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                   horizontal: 10,
-                                                  vertical: 5,
+                                                  vertical: 4,
                                                 ),
                                                 decoration: BoxDecoration(
                                                   color: DataParsingHelper.followUpTypeColor(entry.type)
-                                                      .withValues(alpha: 0.10),
+                                                      .withValues(alpha: context.isDark ? 0.18 : 0.10),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                          999),
+                                                      BorderRadius.circular(999),
                                                 ),
                                                 child: Text(
                                                   entry.type,
@@ -221,14 +221,14 @@ class RecordsScreen extends ConsumerWidget {
                                                     color:
                                                         DataParsingHelper.followUpTypeColor(entry.type),
                                                     fontWeight: FontWeight.w700,
+                                                    fontSize: 11,
                                                   ),
                                                 ),
                                               ),
                                               Text(
                                                 entry.detail,
-                                                style: const TextStyle(
-                                                  color: AppColors
-                                                      .textSecondaryLight,
+                                                style: theme.textTheme.bodyMedium?.copyWith(
+                                                  color: context.textSecondaryColor,
                                                   fontWeight: FontWeight.w600,
                                                 ),
                                               ),
@@ -246,8 +246,8 @@ class RecordsScreen extends ConsumerWidget {
                                           Icons.star_rounded,
                                           size: 16,
                                           color: starIndex < entry.stars
-                                              ? AppColors.warningLight
-                                              : AppColors.borderLight,
+                                              ? custom.warning
+                                              : context.borderColor,
                                         ),
                                       ),
                                     ),

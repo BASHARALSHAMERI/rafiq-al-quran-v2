@@ -33,7 +33,7 @@ type InvitationDelivery = {
   issuedAt: Date;
 };
 
-type ListUsersQuery = { role?: Role | Role[]; centerId?: number; circleId?: number };
+type ListUsersQuery = { role?: Role | Role[]; centerId?: number; circleId?: number; page?: number; limit?: number };
 
 type CreateUserInput = {
   fullName?: string;
@@ -670,7 +670,9 @@ export const usersService = {
         organizationId: scope.organizationId,
         role: query.role,
         userIds: selfScopedIds,
-        includeInactive: true
+        includeInactive: true,
+        page: query.page,
+        limit: query.limit
       });
     }
 
@@ -679,7 +681,9 @@ export const usersService = {
         return usersRepository.findUsers({
           organizationId: scope.organizationId,
           role: query.role,
-          includeInactive: true
+          includeInactive: true,
+          page: query.page,
+          limit: query.limit
         });
       }
 
@@ -701,7 +705,9 @@ export const usersService = {
         organizationId: scope.organizationId,
         role: query.role,
         userIds: usersDomain.uniqueIds(relatedUserIds),
-        includeInactive: true
+        includeInactive: true,
+        page: query.page,
+        limit: query.limit
       });
     }
 
@@ -726,7 +732,9 @@ export const usersService = {
       organizationId: scope.organizationId,
       role: query.role,
       userIds: visibleIds,
-      includeInactive: true
+      includeInactive: true,
+      page: query.page,
+      limit: query.limit
     });
   },
 

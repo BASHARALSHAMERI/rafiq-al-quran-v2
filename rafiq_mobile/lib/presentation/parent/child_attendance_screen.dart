@@ -22,10 +22,10 @@ class ChildAttendanceScreen extends ConsumerWidget {
 
     final profile = state.childrenProfiles[cId];
     if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF7F8F5),
-        appBar: StandardAppBar(title: 'سجل الحضور'),
-        body: PageStateView.loading(message: 'جاري تحميل سجل الحضور...'),
+      return Scaffold(
+        backgroundColor: context.surfaceColor,
+        appBar: const StandardAppBar(title: 'سجل الحضور'),
+        body: const PageStateView.loading(message: 'جاري تحميل سجل الحضور...'),
       );
     }
 
@@ -41,9 +41,10 @@ class ChildAttendanceScreen extends ConsumerWidget {
 
     final attendanceLogs =
         profile['attendancesAsStudent'] as List<dynamic>? ?? [];
+    final isDark = context.isDark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'سجل الحضور'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -53,12 +54,14 @@ class ChildAttendanceScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 16)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: context.textPrimaryColor)),
                 const SizedBox(height: 2),
                 Text('$halqa • نسبة الحضور $attendanceRate%',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondaryLight)),
+                    style: TextStyle(
+                        fontSize: 12, color: context.textSecondaryColor)),
               ],
             ),
           ),
@@ -66,11 +69,11 @@ class ChildAttendanceScreen extends ConsumerWidget {
           const SectionHeader(title: 'سجل الحضور'),
           const SizedBox(height: 8),
           if (attendanceLogs.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
               child: Center(
                   child: Text('لا يوجد سجل حضور مسجل.',
-                      style: TextStyle(color: AppColors.textSecondaryLight))),
+                      style: TextStyle(color: context.textSecondaryColor))),
             ),
           ...attendanceLogs.map(
             (log) {
@@ -82,28 +85,37 @@ class ChildAttendanceScreen extends ConsumerWidget {
                   : 'غير معروف';
 
               final status = log['status']?.toString() ?? 'PRESENT';
-              final style = _getStatusStyle(status);
+              final style = _getStatusStyle(context, status);
+              final statusColor = style['color'] as Color;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: AppCard(
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today_rounded,
-                          size: 16, color: AppColors.textSecondaryLight),
+                      Icon(Icons.calendar_today_rounded,
+                          size: 16, color: context.textSecondaryColor),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(dateFormatted)),
+                      Expanded(
+                        child: Text(
+                          dateFormatted,
+                          style: TextStyle(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: style['color'].withValues(alpha: 0.1),
+                          color: statusColor.withValues(alpha: isDark ? 0.20 : 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(style['label'],
                             style: TextStyle(
-                                color: style['color'],
-                                fontWeight: FontWeight.w700,
+                                color: statusColor,
+                                fontWeight: FontWeight.w800,
                                 fontSize: 11)),
                       ),
                     ],
@@ -117,19 +129,21 @@ class ChildAttendanceScreen extends ConsumerWidget {
     );
   }
 
-  Map<String, dynamic> _getStatusStyle(String status) {
+  Map<String, dynamic> _getStatusStyle(BuildContext context, String status) {
+    final custom = context.customColors;
+
     switch (status.toUpperCase()) {
       case 'PRESENT':
       case 'حاضر':
-        return {'label': 'حاضر', 'color': AppColors.successLight};
+        return {'label': 'حاضر', 'color': custom.success};
       case 'ABSENT':
       case 'غائب':
-        return {'label': 'غائب', 'color': AppColors.errorLight};
+        return {'label': 'غائب', 'color': Theme.of(context).colorScheme.error};
       case 'LATE':
       case 'متأخر':
-        return {'label': 'متأخر', 'color': AppColors.warningLight};
+        return {'label': 'متأخر', 'color': custom.warning};
       default:
-        return {'label': status, 'color': AppColors.textSecondaryLight};
+        return {'label': status, 'color': context.textSecondaryColor};
     }
   }
 }

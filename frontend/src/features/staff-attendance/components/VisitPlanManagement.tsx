@@ -409,17 +409,17 @@ function PlanItemModal({
                 const dayOfWeekMap = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
                 const dateObj = new Date(form.plannedDate);
                 const dayStr = dayOfWeekMap[dateObj.getDay()];
-                const row = circle.weeklySchedule.find((s) => s.dayOfWeek === dayStr) as any;
-                if (row?.startTime && row?.endTime) {
-                  recommendedTime = `${row.startTime} - ${row.endTime}`;
-                  recommendedStart = row.startTime;
-                  recommendedEnd = row.endTime;
+                const row = circle.weeklySchedule.find((s) => s.mode === "CLOCK" && s.day === dayStr);
+                if (row?.mode === "CLOCK" && row.fromTime && row.toTime) {
+                  recommendedTime = `${row.fromTime} - ${row.toTime}`;
+                  recommendedStart = row.fromTime;
+                  recommendedEnd = row.toTime;
                 } else {
-                  const firstRow = circle.weeklySchedule[0] as any;
-                  if (firstRow?.startTime && firstRow?.endTime) {
-                    recommendedTime = `${firstRow.startTime} - ${firstRow.endTime}`;
-                    recommendedStart = firstRow.startTime;
-                    recommendedEnd = firstRow.endTime;
+                  const firstRow = circle.weeklySchedule.find((s) => s.mode === "CLOCK");
+                  if (firstRow?.fromTime && firstRow?.toTime) {
+                    recommendedTime = `${firstRow.fromTime} - ${firstRow.toTime}`;
+                    recommendedStart = firstRow.fromTime;
+                    recommendedEnd = firstRow.toTime;
                   }
                 }
               }

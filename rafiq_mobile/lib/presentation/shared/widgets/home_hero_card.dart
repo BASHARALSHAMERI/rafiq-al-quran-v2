@@ -24,37 +24,41 @@ class HomeHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = context.isDark;
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [Color(0xFF064E3B), Color(0xFF0F1728)]
+              : const [Color(0xFF14532D), Color(0xFF166534)],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 60),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 52),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'السلام عليكم، ${greeting.replaceFirst('أهلاً، ', '').replaceFirst('أهلاً، ', '')}',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 22,
-                    ),
+              Expanded(
+                child: Text(
+                  'السلام عليكم، ${greeting.replaceFirst('أهلاً، ', '').replaceFirst('أهلاً، ', '')}',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
                   ),
-                ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               HeroIconButton(
                 icon: Icons.notifications_none_rounded,
                 onPressed: onNotificationTap,
@@ -67,16 +71,19 @@ class HomeHeroCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.calendar_month_rounded, 
-                         size: 14, color: Colors.white.withValues(alpha: 0.9)),
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      size: 14,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       dateLabel,
@@ -89,7 +96,7 @@ class HomeHeroCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   const SizedBox(width: 4),
@@ -102,20 +109,24 @@ class HomeHeroCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                  Expanded(
+                    child: Text(
+                      subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
             ],
-          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+          ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.15, end: 0),
         ],
-      ).animate().fadeIn(duration: 400.ms),
+      ).animate().fadeIn(duration: 300.ms),
     );
   }
 }
@@ -141,30 +152,30 @@ class HeroIconButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            width: 44,
-            height: 44,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.notifications_none_rounded,
+            child: Icon(
+              icon,
               color: Colors.white,
-              size: 24,
+              size: 22,
             ),
           ),
         ),
         if (unreadCount > 0)
           Positioned(
-            top: 4,
-            right: 4,
+            top: 2,
+            right: 2,
             child: Container(
               width: 10,
               height: 10,
               decoration: BoxDecoration(
                 color: AppColors.errorLight,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primaryLight, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
               ),
             ),
           ),
@@ -172,4 +183,3 @@ class HeroIconButton extends StatelessWidget {
     );
   }
 }
-

@@ -166,7 +166,7 @@ class ExamSheetScaffold extends StatelessWidget {
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Material(
-          color: AppColors.surfaceLight,
+          color: context.cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.92,
@@ -177,7 +177,7 @@ class ExamSheetScaffold extends StatelessWidget {
                   width: 56,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: AppColors.borderLight,
+                    color: context.borderColor,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -194,7 +194,10 @@ class ExamSheetScaffold extends StatelessWidget {
                               style: Theme.of(context)
                                   .textTheme
                                   .titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.w800),
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                    color: context.textPrimaryColor,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -203,7 +206,7 @@ class ExamSheetScaffold extends StatelessWidget {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: AppColors.textSecondaryLight,
+                                    color: context.textSecondaryColor,
                                   ),
                             ),
                           ],
@@ -211,12 +214,12 @@ class ExamSheetScaffold extends StatelessWidget {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close_rounded),
+                        icon: Icon(Icons.close_rounded, color: context.textSecondaryColor),
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: context.borderColor),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -253,16 +256,19 @@ class ExamSectionHeader extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+            color: context.textPrimaryColor,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textSecondaryLight,
-              ),
+          style: TextStyle(
+            fontSize: 12,
+            color: context.textSecondaryColor,
+          ),
         ),
       ],
     );
@@ -287,34 +293,37 @@ class ExamSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return TextField(
       controller: controller,
       onChanged: onChanged,
+      style: TextStyle(color: context.textPrimaryColor),
       decoration: InputDecoration(
         hintText: hintText,
         filled: true,
-        fillColor: Colors.white,
-        prefixIcon: const Icon(Icons.search_rounded),
+        fillColor: context.cardColor,
+        prefixIcon: Icon(Icons.search_rounded, color: context.textSecondaryColor),
         suffixIcon: query.isEmpty
             ? null
             : IconButton(
                 onPressed: onClear,
-                icon: const Icon(Icons.close_rounded),
+                icon: Icon(Icons.close_rounded, color: context.textSecondaryColor),
               ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: context.borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.borderLight),
+          borderSide: BorderSide(color: context.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(
-            color: AppColors.primaryLight,
+          borderSide: BorderSide(
+            color: primary,
             width: 1.4,
           ),
         ),
@@ -335,20 +344,21 @@ class ExamStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = examStatusColors(status);
+    final colors = examStatusColors(context, status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: light ? Colors.white.withValues(alpha: 0.16) : colors.$1,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         examStatusLabel(status),
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: light ? Colors.white : colors.$2,
-              fontWeight: FontWeight.w700,
-            ),
+        style: TextStyle(
+          color: light ? Colors.white : colors.$2,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -369,9 +379,9 @@ class ExamPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -382,10 +392,11 @@ class ExamPill extends StatelessWidget {
           Flexible(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -406,28 +417,32 @@ class ExamInlineWarningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warningLight.withValues(alpha: 0.08),
+        color: custom.warning.withValues(alpha: context.isDark ? 0.18 : 0.08),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.warningLight.withValues(alpha: 0.18),
+          color: custom.warning.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.info_outline_rounded,
-            color: AppColors.warningLight,
+            color: custom.warning,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimaryLight,
-                  ),
+              style: TextStyle(
+                color: context.textPrimaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           if (onRetry != null)
@@ -472,12 +487,16 @@ String examStatusLabel(String status) {
   }
 }
 
-(Color, Color) examStatusColors(String status) {
+(Color, Color) examStatusColors(BuildContext context, String status) {
+  final custom = context.customColors;
+  final isDark = context.isDark;
+  final alpha = isDark ? 0.22 : 0.10;
+
   switch (status) {
     case 'PUBLISHED':
       return (
-        AppColors.successLight.withValues(alpha: 0.08),
-        AppColors.successLight,
+        custom.success.withValues(alpha: alpha),
+        custom.success,
       );
     case 'EVALUATED':
     case 'APPROVED':
@@ -485,49 +504,52 @@ String examStatusLabel(String status) {
     case 'CENTER_APPROVED':
     case 'IN_PROGRESS':
       return (
-        AppColors.infoLight.withValues(alpha: 0.08),
-        AppColors.infoLight,
+        custom.info.withValues(alpha: alpha),
+        custom.info,
       );
     case 'SCHEDULED':
     case 'SUBMITTED':
     case 'RETURNED':
     case 'DEFERRED':
       return (
-        AppColors.warningLight.withValues(alpha: 0.08),
-        AppColors.warningLight,
+        custom.warning.withValues(alpha: alpha),
+        custom.warning,
       );
     case 'REJECTED':
     case 'CANCELLED':
       return (
-        AppColors.errorLight.withValues(alpha: 0.08),
-        AppColors.errorLight,
+        Theme.of(context).colorScheme.error.withValues(alpha: alpha),
+        Theme.of(context).colorScheme.error,
       );
     default:
-      return (AppColors.borderLight, AppColors.textSecondaryLight);
+      return (context.borderColor, context.textSecondaryColor);
   }
 }
 
 InputDecoration examInputDecoration(
+  BuildContext context,
   String hintText, {
   String? helperText,
 }) {
+  final primary = Theme.of(context).colorScheme.primary;
+
   return InputDecoration(
     hintText: hintText,
     helperText: helperText,
     filled: true,
-    fillColor: Colors.white,
+    fillColor: context.cardColor,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: AppColors.borderLight),
+      borderSide: BorderSide(color: context.borderColor),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: AppColors.borderLight),
+      borderSide: BorderSide(color: context.borderColor),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(18),
-      borderSide: const BorderSide(color: AppColors.primaryLight, width: 1.4),
+      borderSide: BorderSide(color: primary, width: 1.4),
     ),
   );
 }

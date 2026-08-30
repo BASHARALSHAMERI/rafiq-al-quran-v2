@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertCircle,
   CheckCircle,
   Clock,
   Search,

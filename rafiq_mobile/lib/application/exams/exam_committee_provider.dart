@@ -21,9 +21,9 @@ class ExamCommitteeOption {
 final examCommitteeOptionsProvider =
     FutureProvider.autoDispose<List<ExamCommitteeOption>>((ref) async {
   final contextState = ref.watch(contextControllerProvider);
-  final selectedCenterId = contextState.selectedCenterId?.trim();
+  final selectedCenterId = contextState.selectedCenterId;
 
-  if (selectedCenterId == null || selectedCenterId.isEmpty) {
+  if (selectedCenterId == null || selectedCenterId <= 0) {
     return const [];
   }
 

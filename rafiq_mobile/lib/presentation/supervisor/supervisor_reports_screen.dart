@@ -30,48 +30,51 @@ class _SupervisorReportsScreenState
   String _searchQuery = "";
   String _selectedHalqa = "all";
 
-  Map<String, dynamic> _getPerformanceLabel(int overallPercent) {
+  Map<String, dynamic> _getPerformanceLabel(BuildContext context, int overallPercent) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
+
     if (overallPercent >= 85) {
       return {
         "label": "ممتاز",
-        "bg": AppColors.successLight.withValues(alpha: 0.1),
-        "color": AppColors.successLight
+        "bg": custom.success.withValues(alpha: isDark ? 0.20 : 0.10),
+        "color": custom.success
       };
     }
     if (overallPercent >= 75) {
       return {
         "label": "جيد جداً",
-        "bg": AppColors.primaryLight.withValues(alpha: 0.1),
-        "color": AppColors.primaryLight
+        "bg": primary.withValues(alpha: isDark ? 0.20 : 0.10),
+        "color": primary
       };
     }
     if (overallPercent >= 65) {
       return {
         "label": "جيد",
-        "bg": AppColors.infoLight.withValues(alpha: 0.1),
-        "color": AppColors.infoLight
+        "bg": custom.info.withValues(alpha: isDark ? 0.20 : 0.10),
+        "color": custom.info
       };
     }
     if (overallPercent >= 50) {
       return {
         "label": "مقبول",
-        "bg": AppColors.warningLight.withValues(alpha: 0.1),
-        "color": AppColors.warningLight
+        "bg": custom.warning.withValues(alpha: isDark ? 0.20 : 0.10),
+        "color": custom.warning
       };
     }
     return {
       "label": "ضعيف",
-      "bg": AppColors.errorLight.withValues(alpha: 0.1),
-      "color": AppColors.errorLight
+      "bg": Theme.of(context).colorScheme.error.withValues(alpha: isDark ? 0.20 : 0.10),
+      "color": Theme.of(context).colorScheme.error
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final contextState = ref.watch(contextControllerProvider);
-    final centerId = int.tryParse(contextState.selectedCenterId ?? '');
-    final circleId = int.tryParse(contextState.selectedCircleId ?? '');
+    final centerId = contextState.selectedCenterId;
+    final circleId = contextState.selectedCircleId;
     final reportKey = (
       year: _selectedYear,
       month: _selectedMonth,
@@ -81,7 +84,7 @@ class _SupervisorReportsScreenState
     final reportAsync = ref.watch(supervisorDashboardProvider(reportKey));
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'التقارير الإشرافية',
         actions: [
@@ -114,14 +117,19 @@ class _SupervisorReportsScreenState
             return true;
           }).toList();
 
-          return _buildContent(context, theme, dashboard, filteredHalaqat);
+          return _buildContent(context, dashboard, filteredHalaqat);
         },
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, ThemeData theme,
+  Widget _buildContent(BuildContext context,
       SupervisorDashboardDto dashboard, List<HalqaReportDto> filteredHalaqat) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -151,26 +159,26 @@ class _SupervisorReportsScreenState
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppColors.primaryLight
+                            ? primary
                             : (isFuture
-                                ? Colors.grey.shade200
-                                : AppColors.cardLight),
+                                ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+                                : context.cardColor),
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         border: Border.all(
                             color: isSelected
-                                ? AppColors.primaryLight
-                                : AppColors.borderLight),
+                                ? primary
+                                : context.borderColor),
                       ),
                       child: Text(
                         'شهر $month',
                         style: TextStyle(
                           color: isSelected
-                              ? Colors.white
+                              ? theme.colorScheme.onPrimary
                               : (isFuture
-                                  ? Colors.grey.shade400
-                                  : AppColors.textSecondaryLight),
+                                  ? (isDark ? Colors.grey.shade600 : Colors.grey.shade400)
+                                  : context.textSecondaryColor),
                           fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                              isSelected ? FontWeight.w800 : FontWeight.w600,
                           fontSize: 12,
                         ),
                       ),
@@ -194,29 +202,29 @@ class _SupervisorReportsScreenState
             childAspectRatio: 2.25,
             children: [
               _buildStatCard(
+                  context,
                   'إجمالي الطلاب',
                   '${dashboard.overallStats.totalStudents}',
                   Icons.people_alt_rounded,
-                  AppColors.primaryLight,
-                  theme),
+                  primary),
               _buildStatCard(
+                  context,
                   'متوسط الحضور',
                   '${dashboard.overallStats.avgAttendance}%',
                   Icons.check_circle_rounded,
-                  AppColors.successLight,
-                  theme),
+                  custom.success),
               _buildStatCard(
+                  context,
                   'صفحات محفوظة',
                   '${dashboard.overallStats.totalHifzPages}',
                   Icons.menu_book_rounded,
-                  AppColors.infoLight,
-                  theme),
+                  custom.info),
               _buildStatCard(
+                  context,
                   'تنفيذ الخطط',
                   '${dashboard.overallStats.avgPlanCompletion}%',
                   Icons.bar_chart_rounded,
-                  AppColors.warningLight,
-                  theme),
+                  custom.warning),
             ],
           ).animate().fadeIn().slideY(begin: 0.1, end: 0),
           const SizedBox(height: 8),
@@ -229,16 +237,18 @@ class _SupervisorReportsScreenState
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      const Icon(Icons.star_rounded,
-                          color: AppColors.warningLight, size: 20),
+                      Icon(Icons.star_rounded,
+                          color: custom.warning, size: 20),
                       const SizedBox(height: 4),
                       Text('${dashboard.overallStats.avgRating}',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: context.textPrimaryColor)),
                       Text('متوسط التقدير العام',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppColors.textSecondaryLight,
-                              fontSize: 10)),
+                          style: TextStyle(
+                              color: context.textSecondaryColor,
+                              fontSize: 11)),
                     ],
                   ),
                 ),
@@ -249,17 +259,18 @@ class _SupervisorReportsScreenState
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      const Icon(Icons.person_off_rounded,
-                          color: AppColors.errorLight, size: 20),
+                      Icon(Icons.person_off_rounded,
+                          color: theme.colorScheme.error, size: 20),
                       const SizedBox(height: 4),
                       Text('${dashboard.overallStats.strugglingStudents}',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.errorLight)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: theme.colorScheme.error)),
                       Text('طلاب متعثرون',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppColors.textSecondaryLight,
-                              fontSize: 10)),
+                          style: TextStyle(
+                              color: context.textSecondaryColor,
+                              fontSize: 11)),
                     ],
                   ),
                 ),
@@ -277,27 +288,24 @@ class _SupervisorReportsScreenState
                 flex: 2,
                 child: TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
+                  style: TextStyle(color: context.textPrimaryColor),
                   decoration: InputDecoration(
                     hintText: 'ابحث عن حلقة أو معلم...',
                     filled: true,
-                    fillColor: AppColors.cardLight,
+                    fillColor: context.cardColor,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        size: 18, color: AppColors.textSecondaryLight),
+                    prefixIcon: Icon(Icons.search_rounded,
+                        size: 18, color: context.textSecondaryColor),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight)),
+                        borderSide: BorderSide(color: context.borderColor)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide:
-                            const BorderSide(color: AppColors.borderLight)),
+                        borderSide: BorderSide(color: context.borderColor)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        borderSide: BorderSide(
-                            color:
-                                AppColors.primaryLight.withValues(alpha: 0.5))),
+                        borderSide: BorderSide(color: primary, width: 1.5)),
                   ),
                 ),
               ),
@@ -306,33 +314,36 @@ class _SupervisorReportsScreenState
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.cardLight,
+                    color: context.cardColor,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: AppColors.borderLight),
+                    border: Border.all(color: context.borderColor),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedHalqa,
+                      dropdownColor: context.cardColor,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 18),
-                      style: const TextStyle(
+                      icon: Icon(Icons.keyboard_arrow_down_rounded,
+                          size: 18, color: context.textSecondaryColor),
+                      style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textPrimaryLight,
-                          fontFamily: 'Tajawal',
-                          fontWeight: FontWeight.w500),
+                          color: context.textPrimaryColor,
+                          fontWeight: FontWeight.w600),
                       onChanged: (String? newValue) {
                         if (newValue != null) {
                           setState(() => _selectedHalqa = newValue);
                         }
                       },
                       items: [
-                        const DropdownMenuItem(
-                            value: "all", child: Text("كل الحلقات")),
+                        DropdownMenuItem(
+                            value: "all",
+                            child: Text("كل الحلقات",
+                                style: TextStyle(color: context.textPrimaryColor))),
                         ...dashboard.halaqat.map((h) => DropdownMenuItem(
                             value: h.id,
-                            child:
-                                Text(h.name, overflow: TextOverflow.ellipsis))),
+                            child: Text(h.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: context.textPrimaryColor)))),
                       ],
                     ),
                   ),
@@ -347,7 +358,7 @@ class _SupervisorReportsScreenState
             final h = filteredHalaqat[index];
             final overallPercent =
                 ((h.avgAttendance + h.avgHifz + h.avgReview) / 3).round();
-            final perfInfo = _getPerformanceLabel(overallPercent);
+            final perfInfo = _getPerformanceLabel(context, overallPercent);
             final halqaIntId = int.tryParse(h.id) ?? 0;
 
             return Padding(
@@ -371,20 +382,22 @@ class _SupervisorReportsScreenState
                                   : Icons.trending_down_rounded,
                               size: 18,
                               color: h.trend == 'up'
-                                  ? AppColors.successLight
-                                  : AppColors.errorLight,
+                                  ? custom.success
+                                  : theme.colorScheme.error,
                             ),
                             const SizedBox(width: 8),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(h.name,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w700)),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: context.textPrimaryColor)),
                                 Text('${h.teacher} · ${h.students} طالب',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                        color: AppColors.textSecondaryLight,
-                                        fontSize: 10)),
+                                    style: TextStyle(
+                                        color: context.textSecondaryColor,
+                                        fontSize: 11)),
                               ],
                             ),
                           ],
@@ -399,8 +412,8 @@ class _SupervisorReportsScreenState
                           child: Text(perfInfo['label'],
                               style: TextStyle(
                                   color: perfInfo['color'],
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800)),
                         ),
                       ],
                     ),
@@ -408,45 +421,50 @@ class _SupervisorReportsScreenState
                     Row(
                       children: [
                         _buildProgressBar(
+                            context,
                             'الحضور',
                             h.avgAttendance,
                             h.avgAttendance > 80
-                                ? AppColors.successLight
-                                : AppColors.warningLight),
+                                ? custom.success
+                                : custom.warning),
                         const SizedBox(width: 8),
                         _buildProgressBar(
+                            context,
                             'الحفظ',
                             h.avgHifz,
                             h.avgHifz > 70
-                                ? AppColors.primaryLight
-                                : AppColors.errorLight),
+                                ? primary
+                                : theme.colorScheme.error),
                         const SizedBox(width: 8),
                         _buildProgressBar(
+                            context,
                             'المراجعة',
                             h.avgReview,
                             h.avgReview > 60
-                                ? AppColors.infoLight
-                                : AppColors.warningLight),
+                                ? custom.info
+                                : custom.warning),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.star_rounded,
-                            size: 14, color: AppColors.warningLight),
+                        Icon(Icons.star_rounded,
+                            size: 14, color: custom.warning),
                         const SizedBox(width: 4),
                         Text('${h.avgRating}',
-                            style: theme.textTheme.labelSmall
-                                ?.copyWith(fontWeight: FontWeight.w700)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                color: context.textPrimaryColor)),
                       ],
                     ),
                   ],
                 ),
-              )
-                  .animate()
-                  .fadeIn(delay: (200 + index * 50).ms)
-                  .slideY(begin: 0.1, end: 0, duration: 300.ms),
-            );
+              ),
+            )
+                .animate()
+                .fadeIn(delay: (200 + index * 50).ms)
+                .slideY(begin: 0.1, end: 0, duration: 300.ms);
           }),
           const SizedBox(height: AppSpacing.lg),
 
@@ -461,10 +479,10 @@ class _SupervisorReportsScreenState
                   children: [
                     Icon(Icons.check_circle_outline_rounded,
                         size: 48,
-                        color: AppColors.successLight.withValues(alpha: 0.5)),
+                        color: custom.success.withValues(alpha: 0.5)),
                     const SizedBox(height: 16),
-                    const Text('لا يوجد طلاب متعثرون حالياً',
-                        style: TextStyle(color: AppColors.textSecondaryLight)),
+                    Text('لا يوجد طلاب متعثرون حالياً',
+                        style: TextStyle(color: context.textSecondaryColor)),
                   ],
                 ),
               ),
@@ -476,10 +494,10 @@ class _SupervisorReportsScreenState
               child: Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: AppColors.cardLight,
+                  color: context.cardColor,
                   borderRadius: BorderRadius.circular(AppRadius.xl),
                   border: Border.all(
-                      color: AppColors.errorLight.withValues(alpha: 0.3)),
+                      color: theme.colorScheme.error.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -492,17 +510,17 @@ class _SupervisorReportsScreenState
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                  color: AppColors.errorLight
-                                      .withValues(alpha: 0.1),
+                                  color: theme.colorScheme.error
+                                      .withValues(alpha: isDark ? 0.20 : 0.10),
                                   borderRadius: BorderRadius.circular(999)),
                               alignment: Alignment.center,
                               child: Text(
                                   s.name.characters.isNotEmpty
                                       ? s.name.characters.first
                                       : '؟',
-                                  style: const TextStyle(
-                                      color: AppColors.errorLight,
-                                      fontWeight: FontWeight.w800,
+                                  style: TextStyle(
+                                      color: theme.colorScheme.error,
+                                      fontWeight: FontWeight.w900,
                                       fontSize: 14)),
                             ),
                             const SizedBox(width: 8),
@@ -510,13 +528,14 @@ class _SupervisorReportsScreenState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(s.name,
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700)),
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 13,
+                                        color: context.textPrimaryColor)),
                                 Text(s.halqa,
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                        color: AppColors.textSecondaryLight,
-                                        fontSize: 10)),
+                                    style: TextStyle(
+                                        color: context.textSecondaryColor,
+                                        fontSize: 11)),
                               ],
                             ),
                           ],
@@ -525,15 +544,15 @@ class _SupervisorReportsScreenState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                              color:
-                                  AppColors.errorLight.withValues(alpha: 0.1),
+                              color: theme.colorScheme.error
+                                  .withValues(alpha: isDark ? 0.20 : 0.10),
                               borderRadius:
                                   BorderRadius.circular(AppRadius.sm)),
                           child: Text(s.reason,
-                              style: const TextStyle(
-                                  color: AppColors.errorLight,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700)),
+                              style: TextStyle(
+                                  color: theme.colorScheme.error,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800)),
                         ),
                       ],
                     ),
@@ -544,23 +563,24 @@ class _SupervisorReportsScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('إنجاز الحفظ',
+                              Text('إنجاز الحفظ',
                                   style: TextStyle(
                                       fontSize: 10,
-                                      color: AppColors.textSecondaryLight)),
+                                      color: context.textSecondaryColor)),
                               const SizedBox(height: 4),
                               LinearProgressIndicator(
                                 value: (s.hifzPercent / 100).clamp(0.0, 1.0),
                                 minHeight: 6,
-                                backgroundColor: AppColors.borderLight,
-                                color: AppColors.errorLight,
+                                backgroundColor: context.borderColor,
+                                color: theme.colorScheme.error,
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               const SizedBox(height: 4),
                               Text('${s.hifzPercent}%',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 10,
-                                      fontWeight: FontWeight.w700)),
+                                      fontWeight: FontWeight.w800,
+                                      color: context.textPrimaryColor)),
                             ],
                           ),
                         ),
@@ -569,25 +589,26 @@ class _SupervisorReportsScreenState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('الحضور',
+                              Text('الحضور',
                                   style: TextStyle(
                                       fontSize: 10,
-                                      color: AppColors.textSecondaryLight)),
+                                      color: context.textSecondaryColor)),
                               const SizedBox(height: 4),
                               LinearProgressIndicator(
                                 value: (s.attendance / 100).clamp(0.0, 1.0),
                                 minHeight: 6,
-                                backgroundColor: AppColors.borderLight,
+                                backgroundColor: context.borderColor,
                                 color: s.attendance < 70
-                                    ? AppColors.errorLight
-                                    : AppColors.warningLight,
+                                    ? theme.colorScheme.error
+                                    : custom.warning,
                                 borderRadius: BorderRadius.circular(3),
                               ),
                               const SizedBox(height: 4),
                               Text('${s.attendance}%',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 10,
-                                      fontWeight: FontWeight.w700)),
+                                      fontWeight: FontWeight.w800,
+                                      color: context.textPrimaryColor)),
                             ],
                           ),
                         ),
@@ -601,13 +622,13 @@ class _SupervisorReportsScreenState
                   .slideY(begin: 0.1, end: 0, duration: 300.ms),
             );
           }),
-          const SizedBox(height: 100), // BottomNav padding
+          const SizedBox(height: 100),
         ],
       ),
     );
   }
 
-  Widget _buildProgressBar(String label, int value, Color color) {
+  Widget _buildProgressBar(BuildContext context, String label, int value, Color color) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,18 +637,20 @@ class _SupervisorReportsScreenState
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondaryLight)),
+                  style: TextStyle(
+                      fontSize: 10, color: context.textSecondaryColor)),
               Text('$value%',
-                  style: const TextStyle(
-                      fontSize: 10, fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimaryColor)),
             ],
           ),
           const SizedBox(height: 4),
           LinearProgressIndicator(
             value: (value / 100).clamp(0.0, 1.0),
             minHeight: 6,
-            backgroundColor: AppColors.borderLight,
+            backgroundColor: context.borderColor,
             color: color,
             borderRadius: BorderRadius.circular(3),
           ),
@@ -637,7 +660,7 @@ class _SupervisorReportsScreenState
   }
 
   Widget _buildStatCard(
-      String title, String value, IconData icon, Color color, ThemeData theme) {
+      BuildContext context, String title, String value, IconData icon, Color color) {
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -653,8 +676,8 @@ class _SupervisorReportsScreenState
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.textSecondaryLight, fontSize: 10),
+                  style: TextStyle(
+                      color: context.textSecondaryColor, fontSize: 11),
                 ),
               ),
               const SizedBox(width: 8),
@@ -666,8 +689,10 @@ class _SupervisorReportsScreenState
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
             child: Text(value,
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800)),
+                style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                    color: context.textPrimaryColor)),
           ),
         ],
       ),

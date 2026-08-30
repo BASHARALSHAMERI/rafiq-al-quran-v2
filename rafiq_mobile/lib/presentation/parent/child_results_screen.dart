@@ -24,8 +24,6 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
   @override
   void initState() {
     super.initState();
-    // We assume the parent data is already loaded from the list/detail flow,
-    // but we can trigger a load of attempts to be sure we have them.
     Future.microtask(() {
       final state = ref.read(parentDashboardProvider);
       final profile = state.childrenProfiles[int.tryParse(widget.childId) ?? 0];
@@ -54,13 +52,15 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
     final state = ref.watch(parentDashboardProvider);
     final examState = ref.watch(examControllerProvider);
     final cId = int.tryParse(widget.childId) ?? 0;
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
 
     final profile = state.childrenProfiles[cId];
     if (profile == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF7F8F5),
-        appBar: StandardAppBar(title: 'نتائج الطالب'),
-        body: PageStateView.loading(message: 'جاري تحميل النتائج...'),
+      return Scaffold(
+        backgroundColor: context.surfaceColor,
+        appBar: const StandardAppBar(title: 'نتائج الطالب'),
+        body: const PageStateView.loading(message: 'جاري تحميل النتائج...'),
       );
     }
 
@@ -73,15 +73,12 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
     final teacher =
         firstCircle?['teacher']?['fullName']?.toString() ?? 'غير محدد';
 
-    // Filter exams for this specific child
     final studentAttempts =
         examState.attempts.where((a) => a.studentId == cId).toList();
-
-    // Memorization logs from profile
     final followUps = profile['followUpsAsStudent'] as List<dynamic>? ?? [];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'نتائج الطالب'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -91,12 +88,14 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 16)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: context.textPrimaryColor)),
                 const SizedBox(height: 2),
                 Text('$halqa • المعلم: $teacher',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondaryLight)),
+                    style: TextStyle(
+                        fontSize: 12, color: context.textSecondaryColor)),
               ],
             ),
           ),
@@ -104,11 +103,11 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
           const SectionHeader(title: 'الاختبارات'),
           const SizedBox(height: 8),
           if (studentAttempts.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                   child: Text('لا توجد اختبارات مسجلة.',
-                      style: TextStyle(color: AppColors.textSecondaryLight))),
+                      style: TextStyle(color: context.textSecondaryColor))),
             ),
           ...studentAttempts.map(
             (attempt) => Padding(
@@ -116,28 +115,30 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
               child: AppCard(
                 child: Row(
                   children: [
-                    const Icon(Icons.quiz_rounded,
-                        color: AppColors.primaryLight),
+                    Icon(Icons.quiz_rounded, color: primary),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(attempt.exam?.title ?? 'اختبار',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: context.textPrimaryColor)),
                           Text(
                             '${attempt.reviewedAt != null ? DateFormat('yyyy-MM-dd').format(DateTime.tryParse(attempt.reviewedAt.toString()) ?? DateTime.now()) : 'قيد المراجعة'} • ${attempt.status == 'REVIEWED' ? (attempt.gradeLabel ?? '-') : attempt.status}',
-                            style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textSecondaryLight),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: context.textSecondaryColor),
                           ),
                         ],
                       ),
                     ),
                     if (attempt.totalScore != null)
                       Text('${attempt.totalScore!.round()}%',
-                          style: const TextStyle(fontWeight: FontWeight.w800)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: context.textPrimaryColor)),
                   ],
                 ),
               ),
@@ -147,40 +148,48 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
           const SectionHeader(title: 'سجل الحفظ'),
           const SizedBox(height: 8),
           if (followUps.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                   child: Text('لا يوجد سجل حفظ متاح.',
-                      style: TextStyle(color: AppColors.textSecondaryLight))),
+                      style: TextStyle(color: context.textSecondaryColor))),
             ),
           ...followUps.take(10).map(
             (item) {
               final label =
                   'سورة ${item['surah'] ?? ''} (${item['fromAyah']}-${item['toAyah']})';
               final grade = item['rating']?.toString() ?? 'GOOD';
-              final style = _getGradeStyle(grade);
+              final style = _getGradeStyle(context, grade);
+              final statusColor = style['color'] as Color;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: AppCard(
                   child: Row(
                     children: [
-                      const Icon(Icons.menu_book_rounded,
-                          color: AppColors.primaryLight),
+                      Icon(Icons.menu_book_rounded, color: primary),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(label)),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: context.textPrimaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: style['color'].withValues(alpha: 0.1),
+                          color: statusColor.withValues(alpha: isDark ? 0.20 : 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(style['label'],
                             style: TextStyle(
-                                color: style['color'],
+                                color: statusColor,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w700)),
+                                fontWeight: FontWeight.w800)),
                       ),
                     ],
                   ),
@@ -197,27 +206,29 @@ class _ChildResultsScreenState extends ConsumerState<ChildResultsScreen> {
     if (value is int) {
       return value;
     }
-
     return int.tryParse('$value');
   }
 
-  Map<String, dynamic> _getGradeStyle(String grade) {
+  Map<String, dynamic> _getGradeStyle(BuildContext context, String grade) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+
     switch (grade.toUpperCase()) {
       case 'EXCELLENT':
       case 'ممتاز':
-        return {'label': 'ممتاز', 'color': AppColors.successLight};
+        return {'label': 'ممتاز', 'color': custom.success};
       case 'V_GOOD':
       case 'جيد جداً':
       case 'جيد جدا':
-        return {'label': 'جيد جداً', 'color': AppColors.primaryLight};
+        return {'label': 'جيد جداً', 'color': primary};
       case 'GOOD':
       case 'جيد':
-        return {'label': 'جيد', 'color': AppColors.infoLight};
+        return {'label': 'جيد', 'color': custom.info};
       case 'ACCEPTABLE':
       case 'مقبول':
-        return {'label': 'مقبول', 'color': AppColors.warningLight};
+        return {'label': 'مقبول', 'color': custom.warning};
       default:
-        return {'label': 'ضعيف', 'color': AppColors.errorLight};
+        return {'label': 'ضعيف', 'color': Theme.of(context).colorScheme.error};
     }
   }
 }

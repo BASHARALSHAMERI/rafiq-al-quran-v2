@@ -23,6 +23,8 @@ class TeacherHomePage extends ConsumerWidget {
     final user =
         ref.watch(authControllerProvider.select((state) => state.user));
     final overviewAsync = ref.watch(teacherCircleOverviewProvider);
+    final custom = context.customColors;
+    final theme = Theme.of(context);
     final now = DateTime.now();
 
     HijriCalendarConfig.language = 'ar';
@@ -36,7 +38,7 @@ class TeacherHomePage extends ConsumerWidget {
         '${RouteNames.teacherAttendance}?date=${DateFormat('yyyy-MM-dd').format(now)}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(teacherCircleOverviewProvider);
@@ -86,10 +88,9 @@ class TeacherHomePage extends ConsumerWidget {
                         Icons.info_outline_rounded,
                     },
                     color: switch (item.severity) {
-                      TeacherAttentionSeverity.absent => AppColors.errorLight,
-                      TeacherAttentionSeverity.late => AppColors.warningLight,
-                      TeacherAttentionSeverity.pending =>
-                        AppColors.primaryLight,
+                      TeacherAttentionSeverity.absent => theme.colorScheme.error,
+                      TeacherAttentionSeverity.late => custom.warning,
+                      TeacherAttentionSeverity.pending => theme.colorScheme.primary,
                     },
                     onTap: () => context.go(RouteNames.teacherStudentProfile(item.studentId)),
                   ),
@@ -105,8 +106,8 @@ class TeacherHomePage extends ConsumerWidget {
                         ? Icons.check_rounded
                         : Icons.schedule_rounded,
                     color: task.done
-                        ? AppColors.successLight
-                        : AppColors.warningLight,
+                        ? custom.success
+                        : custom.warning,
                     onTap: task.done
                         ? null
                         : () {
@@ -125,7 +126,7 @@ class TeacherHomePage extends ConsumerWidget {
               }
 
               return RoleHomeLayout(
-                greeting: 'أهلاً، ${user?.name ?? 'المعلم'}',
+                greeting: 'أهلاً، ${user?.fullName ?? 'المعلم'}',
                 subtitle: '${data.centerName} - ${data.circleName}',
                 dateLabel: dateLabel,
                 metrics: [

@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../application/auth/auth_controller.dart';
 import '../../application/context/context_controller.dart';
+import '../../application/theme/theme_mode_provider.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/router/route_names.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_gradients.dart';
-import '../../core/theme/app_shadows.dart';
 import '../shared/widgets/feature_status_chip.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final contextState = ref.watch(contextControllerProvider);
+    final currentThemeMode = ref.watch(themeModeProvider);
     final theme = Theme.of(context);
     final user = authState.user;
 
@@ -51,7 +52,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             : null);
 
     return Scaffold(
-      backgroundColor: AppColors.surfaceLight,
+      backgroundColor: context.surfaceColor,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           _buildSliverAppBar(
@@ -69,6 +70,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           roleConfig: roleConfig,
           centerDisplay: centerDisplay,
           circleDisplay: circleDisplay,
+          currentThemeMode: currentThemeMode,
         ),
       ),
     );
@@ -84,12 +86,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String? circleDisplay,
     required bool innerBoxIsScrolled,
   }) {
+    final isDark = context.isDark;
+
     return SliverAppBar(
       expandedHeight: 240,
       pinned: true,
       elevation: 0,
       scrolledUnderElevation: 2,
-      backgroundColor: AppColors.primaryLight,
+      backgroundColor: isDark ? const Color(0xFF0F1728) : const Color(0xFF14532D),
       surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false,
       centerTitle: false,
@@ -141,22 +145,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required _RoleConfig roleConfig,
     required String? centerDisplay,
     required String? circleDisplay,
+    required ThemeMode currentThemeMode,
   }) {
+    final custom = context.customColors;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
       children: [
         // ── § 1 معلومات الحساب ─────────────────────────────────────────────
-        const _SectionHeader(
+        _SectionHeader(
           icon: Icons.person_pin_rounded,
           title: 'معلومات الحساب',
-          iconColor: AppColors.primaryLight,
+          iconColor: theme.colorScheme.primary,
         ),
         const SizedBox(height: 10),
         _InfoCard(
           rows: [
             _InfoRow(
               icon: Icons.phone_rounded,
-              iconColor: AppColors.primaryLight,
+              iconColor: theme.colorScheme.primary,
               label: 'رقم الهاتف',
               value: user?.phone?.trim().isNotEmpty == true
                   ? user!.phone!.trim()
@@ -165,14 +172,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (centerDisplay != null)
               _InfoRow(
                 icon: Icons.mosque_rounded,
-                iconColor: AppColors.primaryLight,
+                iconColor: theme.colorScheme.primary,
                 label: 'المركز',
                 value: centerDisplay,
               ),
             if (circleDisplay != null)
               _InfoRow(
                 icon: Icons.groups_rounded,
-                iconColor: AppColors.primaryLight,
+                iconColor: theme.colorScheme.primary,
                 label: 'الحلقة',
                 value: circleDisplay,
               ),
@@ -188,25 +195,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
         const SizedBox(height: 28),
 
-        // ── § 2 الإعدادات ──────────────────────────────────────────────────
-        const _SectionHeader(
+        // ── § 2 الإعدادات والمظهر ──────────────────────────────────────────
+        _SectionHeader(
           icon: Icons.tune_rounded,
-          title: 'الإعدادات',
-          iconColor: AppColors.infoLight,
+          title: 'الإعدادات والمظهر',
+          iconColor: custom.info,
         ),
         const SizedBox(height: 10),
-        const _SettingsGroup(
+        _SettingsGroup(
           items: [
             _SettingsItem(
+              icon: Icons.palette_outlined,
+              iconColor: theme.colorScheme.primary,
+              title: 'مظهر التطبيق',
+              trailing: _ThemeModeSelector(
+                currentMode: currentThemeMode,
+                onModeSelected: (mode) {
+                  ref.read(themeModeProvider.notifier).setThemeMode(mode);
+                },
+              ),
+            ),
+            const _SettingsItem(
               icon: Icons.language_rounded,
-              iconColor: AppColors.infoLight,
+              iconColor: Color(0xFF0284C7),
               title: 'اللغة',
               trailing: Text(
                 'العربية',
                 style: TextStyle(
-                  color: AppColors.textSecondaryLight,
                   fontSize: 13,
-                  fontFamily: 'Cairo',
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -214,21 +230,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             _SettingsItem(
               icon: Icons.notifications_rounded,
-              iconColor: AppColors.warningLight,
+              iconColor: custom.warning,
               title: 'الإشعارات',
               trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
-                color: AppColors.warningLight,
-              ),
-              enabled: false,
-            ),
-            _SettingsItem(
-              icon: Icons.dark_mode_rounded,
-              iconColor: AppColors.textSecondaryLight,
-              title: 'المظهر',
-              trailing: FeatureStatusChip.custom(
-                label: 'لاحقًا',
-                color: AppColors.warningLight,
+                color: custom.warning,
               ),
               enabled: false,
             ),
@@ -238,41 +244,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 28),
 
         // ── § 3 الأمان والخصوصية ──────────────────────────────────────────
-        const _SectionHeader(
+        _SectionHeader(
           icon: Icons.security_rounded,
           title: 'الأمان والخصوصية',
-          iconColor: AppColors.successLight,
+          iconColor: custom.success,
         ),
         const SizedBox(height: 10),
-        const _SettingsGroup(
+        _SettingsGroup(
           items: [
             _SettingsItem(
               icon: Icons.lock_reset_rounded,
-              iconColor: AppColors.primaryLight,
+              iconColor: theme.colorScheme.primary,
               title: 'تغيير كلمة المرور',
               trailing: FeatureStatusChip.custom(
-                label: 'غير متاح حاليًا',
-                color: AppColors.warningLight,
+                label: 'من الويب',
+                color: custom.info,
               ),
               enabled: false,
             ),
             _SettingsItem(
               icon: Icons.verified_user_rounded,
-              iconColor: AppColors.successLight,
+              iconColor: custom.success,
               title: 'سياسة الخصوصية',
               trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
-                color: AppColors.warningLight,
+                color: custom.warning,
               ),
               enabled: false,
             ),
             _SettingsItem(
               icon: Icons.description_rounded,
-              iconColor: AppColors.infoLight,
+              iconColor: custom.info,
               title: 'شروط الاستخدام',
               trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
-                color: AppColors.warningLight,
+                color: custom.warning,
               ),
               enabled: false,
             ),
@@ -282,43 +288,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 28),
 
         // ── § 4 عن التطبيق ─────────────────────────────────────────────────
-        const _SectionHeader(
+        _SectionHeader(
           icon: Icons.info_outline_rounded,
           title: 'عن التطبيق',
-          iconColor: AppColors.accentLight,
+          iconColor: custom.accent,
         ),
         const SizedBox(height: 10),
         _SettingsGroup(
           items: [
             _SettingsItem(
               icon: Icons.verified_rounded,
-              iconColor: AppColors.accentLight,
+              iconColor: custom.accent,
               title: 'إصدار التطبيق',
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.accentLight.withValues(alpha: 0.10),
+                  color: custom.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'v 2.4.0',
+                child: Text(
+                  'v 2.5.0',
                   style: TextStyle(
-                    color: AppColors.accentLight,
+                    color: custom.accent,
                     fontSize: 11,
-                    fontFamily: 'Cairo',
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               enabled: false,
             ),
-            const _SettingsItem(
+            _SettingsItem(
               icon: Icons.support_agent_rounded,
-              iconColor: AppColors.infoLight,
+              iconColor: custom.info,
               title: 'الدعم الفني',
               trailing: FeatureStatusChip.custom(
                 label: 'لاحقًا',
-                color: AppColors.warningLight,
+                color: custom.warning,
               ),
               enabled: false,
             ),
@@ -355,21 +360,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (!mounted) return;
       setState(() => _isLoggingOut = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('حدث خطأ أثناء تسجيل الخروج. حاول مجدداً.'),
-          backgroundColor: AppColors.errorLight,
+        SnackBar(
+          content: const Text('حدث خطأ أثناء تسجيل الخروج. حاول مجدداً.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
   Future<bool> _showLogoutDialog() async {
+    final errorColor = Theme.of(context).colorScheme.error;
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
+        backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
         title: Row(
           children: [
@@ -377,33 +385,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.errorLight.withValues(alpha: 0.10),
+                color: errorColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.logout_rounded,
-                color: AppColors.errorLight,
+                color: errorColor,
                 size: 20,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'تسجيل الخروج',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontWeight: FontWeight.w800,
-                fontSize: 17,
-              ),
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           'هل أنت متأكد من تسجيل الخروج من حسابك؟',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 14,
-            color: AppColors.textSecondaryLight,
-          ),
+          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                color: context.textSecondaryColor,
+              ),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
@@ -413,41 +417,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.borderLight),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                   ),
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondaryLight,
-                    ),
-                  ),
+                  child: const Text('إلغاء'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.errorLight,
+                    backgroundColor: errorColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                   ),
                   onPressed: () => Navigator.of(ctx).pop(true),
                   child: const Text(
                     'تسجيل الخروج',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -457,6 +450,102 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
     return result ?? false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _ThemeModeSelector — منتقي مظهر التطبيق
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ThemeModeSelector extends StatelessWidget {
+  final ThemeMode currentMode;
+  final ValueChanged<ThemeMode> onModeSelected;
+
+  const _ThemeModeSelector({
+    required this.currentMode,
+    required this.onModeSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.isDark
+            ? theme.colorScheme.surfaceContainerHighest
+            : AppColors.surfaceVariantLight,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: context.borderColor),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildOption(
+            icon: Icons.wb_sunny_rounded,
+            label: 'فاتح',
+            selected: currentMode == ThemeMode.light,
+            onTap: () => onModeSelected(ThemeMode.light),
+            primary: primary,
+          ),
+          _buildOption(
+            icon: Icons.nightlight_round,
+            label: 'داكن',
+            selected: currentMode == ThemeMode.dark,
+            onTap: () => onModeSelected(ThemeMode.dark),
+            primary: primary,
+          ),
+          _buildOption(
+            icon: Icons.brightness_auto_rounded,
+            label: 'تلقائي',
+            selected: currentMode == ThemeMode.system,
+            onTap: () => onModeSelected(ThemeMode.system),
+            primary: primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOption({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    required Color primary,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected ? primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: selected ? Colors.white : null,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: selected ? Colors.white : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -537,9 +626,17 @@ class _ProfileHeroHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: AppGradients.deepPrimary,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? const [Color(0xFF064E3B), Color(0xFF0F1728)]
+              : const [Color(0xFF14532D), Color(0xFF166534)],
+        ),
       ),
       child: SafeArea(
         bottom: false,
@@ -548,25 +645,17 @@ class _ProfileHeroHeader extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Avatar
               _AvatarWidget(roleConfig: roleConfig),
-
               const SizedBox(height: 14),
-
-              // الاسم
               Text(
                 userName,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
                   fontSize: 20,
-                  fontFamily: 'Cairo',
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              // pills
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -596,10 +685,6 @@ class _ProfileHeroHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _AvatarWidget
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _AvatarWidget extends StatelessWidget {
   final _RoleConfig roleConfig;
 
@@ -611,8 +696,8 @@ class _AvatarWidget extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 88,
-          height: 88,
+          width: 84,
+          height: 84,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.15),
@@ -630,11 +715,10 @@ class _AvatarWidget extends StatelessWidget {
           ),
           child: Icon(
             roleConfig.icon,
-            size: 42,
+            size: 40,
             color: Colors.white.withValues(alpha: 0.92),
           ),
         ),
-        // Badge دور صغير في الزاوية
         Positioned(
           bottom: -2,
           left: -2,
@@ -660,10 +744,6 @@ class _AvatarWidget extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _HeaderPill — شريحة الرأس
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _HeaderPill extends StatelessWidget {
   final IconData icon;
@@ -697,7 +777,6 @@ class _HeaderPill extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 12,
-              fontFamily: 'Cairo',
             ),
           ),
         ],
@@ -705,10 +784,6 @@ class _HeaderPill extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _SectionHeader — عنوان القسم مع خط وأيقونة
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final IconData icon;
@@ -729,7 +804,7 @@ class _SectionHeader extends StatelessWidget {
           width: 30,
           height: 30,
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.10),
+            color: iconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 16),
@@ -739,14 +814,14 @@ class _SectionHeader extends StatelessWidget {
           title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimaryLight,
+                color: context.textPrimaryColor,
                 fontSize: 14,
               ),
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Divider(
-            color: AppColors.borderLight,
+            color: context.borderColor,
             thickness: 1,
           ),
         ),
@@ -754,10 +829,6 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// _InfoCard + _InfoRow — بطاقة معلومات الحساب
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _InfoCard extends StatelessWidget {
   final List<_InfoRow> rows;
@@ -768,10 +839,9 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.sm,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: List.generate(rows.length, (i) {
@@ -781,11 +851,11 @@ class _InfoCard extends StatelessWidget {
             children: [
               _buildRow(context, row),
               if (!isLast)
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   indent: 56,
-                  color: AppColors.borderLight,
+                  color: context.borderColor,
                 ),
             ],
           );
@@ -804,7 +874,7 @@ class _InfoCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: row.iconColor.withValues(alpha: 0.09),
+              color: row.iconColor.withValues(alpha: context.isDark ? 0.18 : 0.10),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(row.icon, color: row.iconColor, size: 18),
@@ -816,9 +886,8 @@ class _InfoCard extends StatelessWidget {
               Text(
                 row.label,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondaryLight,
+                  color: context.textSecondaryColor,
                   fontSize: 11,
-                  fontFamily: 'Cairo',
                 ),
               ),
               const SizedBox(height: 2),
@@ -826,8 +895,7 @@ class _InfoCard extends StatelessWidget {
                 row.value,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: row.valueColor ?? AppColors.textPrimaryLight,
-                  fontFamily: 'Cairo',
+                  color: row.valueColor ?? context.textPrimaryColor,
                 ),
               ),
             ],
@@ -854,10 +922,6 @@ class _InfoRow {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _SettingsGroup + _SettingsItem — مجموعة إعدادات بنمط iOS
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _SettingsGroup extends StatelessWidget {
   final List<_SettingsItem> items;
 
@@ -867,10 +931,9 @@ class _SettingsGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: AppShadows.sm,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: List.generate(items.length, (i) {
@@ -880,11 +943,11 @@ class _SettingsGroup extends StatelessWidget {
             children: [
               _buildItem(context, item),
               if (!isLast)
-                const Divider(
+                Divider(
                   height: 1,
                   thickness: 1,
                   indent: 56,
-                  color: AppColors.borderLight,
+                  color: context.borderColor,
                 ),
             ],
           );
@@ -899,48 +962,44 @@ class _SettingsGroup extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         onTap: null,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           child: Row(
             children: [
-              // أيقونة
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
                   color: item.enabled
-                      ? item.iconColor.withValues(alpha: 0.10)
-                      : AppColors.borderLight.withValues(alpha: 0.60),
+                      ? item.iconColor.withValues(alpha: context.isDark ? 0.18 : 0.10)
+                      : context.borderColor.withValues(alpha: 0.60),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   item.icon,
                   color: item.enabled
                       ? item.iconColor
-                      : AppColors.textSecondaryLight.withValues(alpha: 0.45),
+                      : context.textSecondaryColor.withValues(alpha: 0.50),
                   size: 18,
                 ),
               ),
               const SizedBox(width: 12),
-              // عنوان
               Expanded(
                 child: Text(
                   item.title,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: item.enabled
-                        ? AppColors.textPrimaryLight
-                        : AppColors.textSecondaryLight.withValues(alpha: 0.60),
-                    fontFamily: 'Cairo',
+                        ? context.textPrimaryColor
+                        : context.textSecondaryColor.withValues(alpha: 0.60),
                   ),
                 ),
               ),
-              // trailing
               if (item.trailing != null) ...[
                 item.trailing!,
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
               ],
             ],
           ),
@@ -966,10 +1025,6 @@ class _SettingsItem {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _DangerZone — منطقة تسجيل الخروج
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _DangerZone extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onLogout;
@@ -981,72 +1036,68 @@ class _DangerZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Divider with label
         Row(
           children: [
-            Expanded(child: Divider(color: AppColors.errorLight.withValues(alpha: 0.25))),
+            Expanded(child: Divider(color: errorColor.withValues(alpha: 0.25))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'منطقة الخروج',
                 style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.errorLight.withValues(alpha: 0.70),
-                  fontFamily: 'Cairo',
+                  color: errorColor.withValues(alpha: 0.80),
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: AppColors.errorLight.withValues(alpha: 0.25))),
+            Expanded(child: Divider(color: errorColor.withValues(alpha: 0.25))),
           ],
         ),
-
         const SizedBox(height: 14),
-
-        // Logout Button
         Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             onTap: isLoading ? null : onLogout,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.errorLight.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
+                color: errorColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(
-                  color: AppColors.errorLight.withValues(alpha: 0.25),
+                  color: errorColor.withValues(alpha: 0.30),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (isLoading)
-                    const SizedBox(
+                    SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        color: AppColors.errorLight,
+                        color: errorColor,
                       ),
                     )
                   else
-                    const Icon(
+                    Icon(
                       Icons.logout_rounded,
-                      color: AppColors.errorLight,
+                      color: errorColor,
                       size: 20,
                     ),
                   const SizedBox(width: 10),
                   Text(
                     isLoading ? 'جاري الخروج...' : 'تسجيل الخروج',
-                    style: const TextStyle(
-                      color: AppColors.errorLight,
+                    style: TextStyle(
+                      color: errorColor,
                       fontWeight: FontWeight.w800,
                       fontSize: 15,
-                      fontFamily: 'Cairo',
                     ),
                   ),
                 ],

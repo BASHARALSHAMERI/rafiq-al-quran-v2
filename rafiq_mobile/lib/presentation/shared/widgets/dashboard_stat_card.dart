@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 
-/// StatCard component matching quran-companions design
-///
-/// Layout: Icon (square) | Value (large) + Label (small)
-/// Used in: TeacherHome, SupervisorHome grids
+/// StatCard component for Dashboard overview
 enum StatColor {
   primary,
   success,
@@ -16,20 +15,21 @@ enum StatColor {
 }
 
 Color _resolveStatColor(BuildContext context, StatColor color) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final custom = context.customColors;
+  final isDark = context.isDark;
   switch (color) {
     case StatColor.primary:
-      return isDark ? AppColors.primaryDark : AppColors.primaryLight;
+      return Theme.of(context).colorScheme.primary;
     case StatColor.success:
-      return isDark ? AppColors.successDark : AppColors.successLight;
+      return custom.success;
     case StatColor.warning:
-      return isDark ? AppColors.warningDark : AppColors.warningLight;
+      return custom.warning;
     case StatColor.destructive:
       return isDark ? AppColors.errorDark : AppColors.errorLight;
     case StatColor.info:
-      return isDark ? AppColors.infoDark : AppColors.infoLight;
+      return custom.info;
     case StatColor.accent:
-      return isDark ? AppColors.accentLight : AppColors.accentLight;
+      return isDark ? AppColors.accentDark : AppColors.accentLight;
   }
 }
 
@@ -50,18 +50,16 @@ class DashboardStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedColor = _resolveStatColor(context, color);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-              .withValues(alpha: 0.65),
-        ),
-        boxShadow: isDark ? AppShadows.xs : AppShadows.sm,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
+        boxShadow: isDark ? null : AppShadows.xs,
       ),
       child: Row(
         children: [
@@ -69,10 +67,10 @@ class DashboardStatCard extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: resolvedColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              color: resolvedColor.withValues(alpha: isDark ? 0.18 : 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
-                color: resolvedColor.withValues(alpha: 0.14),
+                color: resolvedColor.withValues(alpha: isDark ? 0.28 : 0.16),
               ),
             ),
             child: Icon(
@@ -89,25 +87,21 @@ class DashboardStatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                        height: 1,
-                      ),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22,
+                    color: context.textPrimaryColor,
+                    height: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: context.textSecondaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -138,18 +132,16 @@ class DashboardStatCardCompact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedColor = _resolveStatColor(context, color);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-              .withValues(alpha: 0.65),
-        ),
-        boxShadow: isDark ? AppShadows.xs : AppShadows.sm,
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
+        boxShadow: isDark ? null : AppShadows.xs,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -159,10 +151,10 @@ class DashboardStatCardCompact extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: resolvedColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              color: resolvedColor.withValues(alpha: isDark ? 0.18 : 0.10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
-                color: resolvedColor.withValues(alpha: 0.14),
+                color: resolvedColor.withValues(alpha: isDark ? 0.28 : 0.16),
               ),
             ),
             child: Icon(
@@ -174,25 +166,21 @@ class DashboardStatCardCompact extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 19,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                  height: 1,
-                ),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
+              color: context.textPrimaryColor,
+              height: 1.1,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: context.textSecondaryColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -221,20 +209,16 @@ class DashboardStatCardTeacher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedColor = _resolveStatColor(context, color);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = context.isDark;
+    final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: context.borderColor),
+        boxShadow: isDark ? null : AppShadows.xs,
       ),
       child: Row(
         children: [
@@ -245,37 +229,33 @@ class DashboardStatCardTeacher extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
-                        height: 1,
-                      ),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    color: context.textPrimaryColor,
+                    height: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: context.textSecondaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: resolvedColor.withValues(alpha: 0.08),
+              color: resolvedColor.withValues(alpha: isDark ? 0.20 : 0.10),
               shape: BoxShape.circle,
             ),
             child: Icon(

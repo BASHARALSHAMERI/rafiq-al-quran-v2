@@ -286,18 +286,18 @@ export default function FinanceInvoicesPage() {
                 month={month}
                 year={year}
                 status={status}
-              statusLabels={statusLabels}
-              onCenterChange={setCenterId}
-              onMonthChange={setMonth}
-              onYearChange={setYear}
-              onStatusChange={setStatus}
-              onReset={() => {
-                setCenterId(undefined);
-                setMonth(defaultMonth);
-                setYear(defaultYear);
-                setStatus("");
-              }}
-            />
+                statusLabels={statusLabels}
+                onCenterChange={setCenterId}
+                onMonthChange={setMonth}
+                onYearChange={setYear}
+                onStatusChange={setStatus}
+                onReset={() => {
+                  setCenterId(undefined);
+                  setMonth(defaultMonth);
+                  setYear(defaultYear);
+                  setStatus("");
+                }}
+              />
             </>
           ) : null}
         </>

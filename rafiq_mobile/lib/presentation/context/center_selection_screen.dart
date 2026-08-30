@@ -149,12 +149,10 @@ class _CenterSelectionScreenState extends ConsumerState<CenterSelectionScreen> {
                                                     fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
-                                                if (center.domain
-                                                    .trim()
-                                                    .isNotEmpty) ...[
+                                                if (center.code.trim().isNotEmpty) ...[
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    center.domain,
+                                                    center.code,
                                                     style: theme
                                                         .textTheme.bodySmall,
                                                   ),

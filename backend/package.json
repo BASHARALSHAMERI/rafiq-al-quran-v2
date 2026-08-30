@@ -46,7 +46,6 @@
         "db:reset": "node -e \"throw new Error('db:reset is strictly disabled to protect data. Use db:migrate and db:seed instead.')\"",
         "db:seed:demo": "tsx prisma/seed-demo.ts",
         "db:safety-check": "tsx scripts/safety-check.ts"
-
     },
     "keywords": [],
     "author": "",
@@ -96,7 +95,8 @@
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",
         "tsx": "^4.21.0",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "untun": "^0.2.2"
     },
     "prisma": {
         "seed": "tsx prisma/seed.ts"

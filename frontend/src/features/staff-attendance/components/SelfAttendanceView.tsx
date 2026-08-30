@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   AlertCircle,
   CalendarCheck,
@@ -20,6 +20,7 @@ import { Button } from "../../../components/ui/Button";
 import { Modal } from "../../../components/ui/Modal";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { notifyError, notifySuccess } from "../../../shared/ui/feedback";
+import { haversineMeters, requestBrowserLocation } from "../../../shared/geo/browser-location";
 import {
   useSelfAttendance,
   useSelfCheckIn,
@@ -153,7 +154,7 @@ export function SelfAttendanceView() {
   const leaveMutation    = useSubmitLeave();
 
   // ── Geo location state
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number; accuracy: number | null } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
 
@@ -170,25 +171,6 @@ export function SelfAttendanceView() {
   const [leaveStart,  setLeaveStart]  = useState("");
   const [leaveEnd,    setLeaveEnd]    = useState("");
   const [leaveReason, setLeaveReason] = useState("");
-
-  // ── Geolocation: request once on mount
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        setLocating(false);
-      },
-      (err) => {
-        console.warn("Geo warning:", err.message);
-        setGeoError(ar ? "تعذر تحديد الموقع" : "Location unavailable");
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const data = attendanceQuery.data;
   const { hour12 } = useTimeFormat();
@@ -256,48 +238,37 @@ export function SelfAttendanceView() {
       .slice(0, 15);
   }, [data?.history]);
 
-  const handleVerifyLocation = () => {
-    if (!navigator.geolocation) {
-      notifyError(ar ? "المتصفح لا يدعم تحديد الموقع" : "Geolocation not supported");
-      return;
-    }
-    
+  const handleVerifyLocation = async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        setLocation({ latitude: lat, longitude: lon });
-        setLocating(false);
-        setGeoError(null);
+    try {
+      const coords = await requestBrowserLocation(ar);
+      setLocation(coords);
+      setGeoError(null);
 
-        if (target?.latitude && target?.longitude) {
-          const R = 6371e3;
-          const p1 = lat * Math.PI/180;
-          const p2 = target.latitude * Math.PI/180;
-          const dp = (target.latitude - lat) * Math.PI/180;
-          const dl = (target.longitude - lon) * Math.PI/180;
-          const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          const distance = Math.round(R * c);
-          
-          const radius = target.allowedRadiusMeters || 150;
-          if (distance <= radius) {
-            notifySuccess(ar ? `أنت داخل النطاق المسموح (المسافة: ${distance}م)` : `Within range (${distance}m)`);
-          } else {
-            notifyError(ar ? `أنت خارج النطاق (المسافة: ${distance}م)` : `Outside range (${distance}m)`);
-          }
+      if (target?.latitude != null && target?.longitude != null) {
+        const distance = Math.round(haversineMeters({
+          fromLat: coords.latitude,
+          fromLng: coords.longitude,
+          toLat: target.latitude,
+          toLng: target.longitude,
+        }));
+        const radius = target.allowedRadiusMeters ?? 150;
+
+        if (distance <= radius) {
+          notifySuccess(ar ? `\u0623\u0646\u062a \u062f\u0627\u062e\u0644 \u0627\u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u0645\u0633\u0645\u0648\u062d (\u0627\u0644\u0645\u0633\u0627\u0641\u0629: ${distance}\u0645)` : `Within range (${distance}m)`);
         } else {
-          notifySuccess(ar ? "تم تحديث الموقع بنجاح" : "Location updated");
+          notifyError(ar ? `\u0623\u0646\u062a \u062e\u0627\u0631\u062c \u0627\u0644\u0646\u0637\u0627\u0642 (\u0627\u0644\u0645\u0633\u0627\u0641\u0629: ${distance}\u0645\u060c \u0627\u0644\u0645\u0633\u0645\u0648\u062d: ${radius}\u0645)` : `Outside range (${distance}m, allowed: ${radius}m)`);
         }
-      },
-      () => {
-        setGeoError(ar ? "تعذر تحديد الموقع" : "Location unavailable");
-        setLocating(false);
-        notifyError(ar ? "يرجى تفعيل صلاحية الموقع من المتصفح" : "Please enable location permission");
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-    );
+      } else {
+        notifySuccess(ar ? "\u062a\u0645 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0648\u0642\u0639" : "Location updated");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ar ? "\u0627\u0644\u0645\u0648\u0642\u0639 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d" : "Location unavailable";
+      setGeoError(message);
+      notifyError(message);
+    } finally {
+      setLocating(false);
+    }
   };
 
   // ── Handlers
@@ -312,6 +283,11 @@ export function SelfAttendanceView() {
   });
 
   const handleCheckIn = () => {
+    const isGeoStrict = data?.policy?.geoEnforcement === "STRICT";
+    if (isGeoStrict && !location) {
+      notifyError(ar ? "\u064a\u0631\u062c\u0649 \u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627 \u0639\u0628\u0631 \u0632\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u062c\u063a\u0631\u0627\u0641\u064a" : "Please get your location first using the location button");
+      return;
+    }
     checkInMutation.mutate(buildGeoPayload(), {
       onSuccess: () => notifySuccess(ar ? "تم تسجيل الحضور ✅" : "Checked in ✅"),
       onError:   (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الحضور" : "Check-in failed" })),
@@ -319,6 +295,11 @@ export function SelfAttendanceView() {
   };
 
   const handleCheckOut = () => {
+    const isGeoStrict = data?.policy?.geoEnforcement === "STRICT";
+    if (isGeoStrict && !location) {
+      notifyError(ar ? "\u064a\u0631\u062c\u0649 \u062a\u062d\u062f\u064a\u062f \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627 \u0639\u0628\u0631 \u0632\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u062c\u063a\u0631\u0627\u0641\u064a" : "Please get your location first using the location button");
+      return;
+    }
     checkOutMutation.mutate(buildGeoPayload(), {
       onSuccess: () => notifySuccess(ar ? "تم تسجيل الانصراف ✅" : "Checked out ✅"),
       onError:   (err) => notifyError(getLocalizedApiErrorMessage(err, { ar, fallback: ar ? "خطأ في تسجيل الانصراف" : "Check-out failed" })),
@@ -512,21 +493,29 @@ export function SelfAttendanceView() {
               </div>
             )}
 
-            {/* Geo verify button — only when policy requires it */}
-            {data?.policy?.geoEnforcement === "REQUIRED" && (
-              <button
-                onClick={handleVerifyLocation}
-                disabled={isBusy}
-                className={`sa2-geo ${geoError ? "sa2-geo--warning" : location ? "sa2-geo--ok" : "sa2-geo--muted"}`}
-                style={{ border:"none", background:"none", cursor:"pointer", padding:"0.2rem 0", fontFamily:"inherit", textDecoration:"underline dotted" }}
-              >
-                {locating ? <RefreshCcw size={11} className="animate-spin" /> : <MapPin size={11} />}
-                {geoError
-                  ? geoError
-                  : location
-                    ? (ar ? "الموقع متوفر (انقر للتحقق)" : "Location active (click to verify)")
-                    : (ar ? "انقر لتحديد الموقع" : "Click to locate")}
-              </button>
+            {/* Geo verify button */}
+            {data?.policy?.geoEnforcement !== "DISABLED" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", alignItems: "stretch" }}>
+                <button
+                  onClick={() => void handleVerifyLocation()}
+                  disabled={isBusy}
+                  className={`sa2-geo ${geoError ? "sa2-geo--warning" : location ? "sa2-geo--ok" : "sa2-geo--muted"}`}
+                  style={{ border:"none", background:"none", cursor:"pointer", padding:"0.2rem 0", fontFamily:"inherit", textDecoration:"underline dotted" }}
+                >
+                  {locating ? <RefreshCcw size={11} className="animate-spin" /> : <MapPin size={11} />}
+                  {geoError
+                    ? geoError
+                    : location
+                      ? (ar ? "تحديث موقعي" : "Refresh my location")
+                      : (ar ? "تحديد موقعي" : "Use my location")}
+                </button>
+                {location && (
+                  <div style={{ fontSize: "0.72rem", color: "#475569", textAlign: ar ? "right" : "left" }}>
+                    <span dir="ltr">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</span>
+                    <span>{ar ? "\u0627\u0644\u062f\u0642\u0629" : "Accuracy"}: {location.accuracy == null ? (ar ? "\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641\u0629" : "unknown") : `\u00b1${location.accuracy}m`}</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

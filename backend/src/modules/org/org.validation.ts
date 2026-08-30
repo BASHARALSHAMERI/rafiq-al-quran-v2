@@ -73,7 +73,8 @@ export const centersQuerySchema = z
 export const circlesQuerySchema = z
   .object({
     centerId: z.coerce.number().int().positive().optional(),
-    circleId: z.coerce.number().int().positive().optional()
+    circleId: z.coerce.number().int().positive().optional(),
+    approvalStatus: z.enum(["PENDING", "APPROVED", "REJECTED"]).optional()
   })
   .strict();
 
@@ -286,6 +287,10 @@ export const updateCircleBodySchema = z
   }
   );
 
+export const updateCircleApprovalStatusBodySchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"])
+}).strict();
+
 export const circleStatusBodySchema = centerStatusBodySchema;
 
 export const orgBrandingUpdateBodySchema = z
@@ -333,3 +338,4 @@ export type CreateCircleDto = z.infer<typeof createCircleBodySchema>;
 export type UpdateCircleDto = z.infer<typeof updateCircleBodySchema>;
 export type CircleStatusDto = z.infer<typeof circleStatusBodySchema>;
 export type OrgBrandingUpdateDto = z.infer<typeof orgBrandingUpdateBodySchema>;
+export type UpdateCircleApprovalStatusDto = z.infer<typeof updateCircleApprovalStatusBodySchema>;

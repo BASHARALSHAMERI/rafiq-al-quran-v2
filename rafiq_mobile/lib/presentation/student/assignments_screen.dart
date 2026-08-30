@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/student/student_dashboard_provider.dart';
-
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../shared/widgets/page_state_view.dart';
@@ -11,7 +10,7 @@ import '../shared/widgets/standard_app_bar.dart';
 
 class Assignment {
   final int id;
-  final String type; // "حفظ" or "مراجعة"
+  final String type;
   final String surah;
   final String verses;
   final bool completed;
@@ -43,7 +42,6 @@ class AssignmentsScreen extends ConsumerStatefulWidget {
 }
 
 class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
-  // We keep track of local toggles if we derive assignments from profile
   final Set<int> _completedIds = {};
 
   @override
@@ -66,17 +64,18 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'واجبي اليوم'),
-      body: _buildBody(theme),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildBody(ThemeData theme) {
+  Widget _buildBody() {
     final state = ref.watch(studentDashboardProvider);
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
 
     if (state.isLoading) {
       return const PageStateView.loading();
@@ -92,8 +91,6 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
       );
     }
 
-    // Since the API doesn't provide future assignments directly, we derive a goal from currentJuzz
-    // or show an empty state if no data is available.
     final profile = state.profileData?['studentProfile'];
     final currentJuzz = profile != null ? profile['currentJuzz'] as int? : null;
 
@@ -117,7 +114,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
     if (activeAssignments.isEmpty) {
       return const PageStateView.empty(
         title: 'لا توجد واجبات اليوم',
-        message: 'لم يتم تعيين أي واجب لهذا اليوم الاستناداً للبيانات الحالية.',
+        message: 'لم يتم تعيين أي واجب لهذا اليوم استناداً للبيانات الحالية.',
       );
     }
 
@@ -135,15 +132,15 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [const Color(0xFF0F172A), const Color(0xFF14B8A6).withValues(alpha: 0.9)],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F766E), Color(0xFF115E59)],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
               ),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryLight.withValues(alpha: 0.25),
+                  color: const Color(0xFF0F766E).withValues(alpha: 0.25),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 ),
@@ -189,8 +186,8 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                   child: LinearProgressIndicator(
                     value: progress / 100,
                     minHeight: 8,
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    color: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
+                    color: const Color(0xFF34D399),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -217,20 +214,25 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
             final a = activeAssignments[index];
             final isCompleted = a.completed;
             final isHifz = a.type == "حفظ";
+            final typeColor = isHifz ? primary : custom.info;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: isCompleted ? const Color(0xFFF0FDFA) : Colors.white,
+                  color: isCompleted
+                      ? custom.success.withValues(alpha: isDark ? 0.16 : 0.08)
+                      : context.cardColor,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isCompleted ? const Color(0xFFCCFBF1) : AppColors.borderLight.withValues(alpha: 0.5),
+                    color: isCompleted
+                        ? custom.success.withValues(alpha: 0.35)
+                        : context.borderColor,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -244,15 +246,15 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: isCompleted ? const Color(0xFF14B8A6) : const Color(0xFFF8FAFC),
+                          color: isCompleted ? custom.success : context.surfaceColor,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isCompleted ? Colors.transparent : const Color(0xFFE2E8F0),
+                            color: isCompleted ? Colors.transparent : context.borderColor,
                           ),
                         ),
                         child: Icon(
                           isCompleted ? Icons.check_rounded : Icons.circle_outlined,
-                          color: isCompleted ? Colors.white : const Color(0xFF94A3B8),
+                          color: isCompleted ? Colors.white : context.textSecondaryColor,
                           size: 24,
                         ),
                       ),
@@ -269,7 +271,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w900,
-                                  color: isHifz ? AppColors.primaryLight : AppColors.infoLight,
+                                  color: typeColor,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -278,12 +280,12 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                                 Container(
                                   width: 4,
                                   height: 4,
-                                  decoration: const BoxDecoration(color: Color(0xFF14B8A6), shape: BoxShape.circle),
+                                  decoration: BoxDecoration(color: custom.success, shape: BoxShape.circle),
                                 ),
                                 const SizedBox(width: 4),
-                                const Text(
+                                Text(
                                   'تم الإنجاز',
-                                  style: TextStyle(color: Color(0xFF14B8A6), fontSize: 10, fontWeight: FontWeight.w800),
+                                  style: TextStyle(color: custom.success, fontSize: 10, fontWeight: FontWeight.w800),
                                 ),
                               ],
                             ],
@@ -294,20 +296,20 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: isCompleted ? const Color(0xFF64748B) : const Color(0xFF1E293B),
+                              color: isCompleted ? context.textSecondaryColor : context.textPrimaryColor,
                               decoration: isCompleted ? TextDecoration.lineThrough : null,
                             ),
                           ),
                           Text(
                             a.verses,
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w500),
+                            style: TextStyle(fontSize: 12, color: context.textSecondaryColor, fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
                     ),
                     Icon(
                       isHifz ? Icons.menu_book_rounded : Icons.auto_stories_rounded,
-                      color: isHifz ? AppColors.primaryLight.withValues(alpha: 0.2) : AppColors.infoLight.withValues(alpha: 0.2),
+                      color: typeColor.withValues(alpha: 0.3),
                     ),
                   ],
                 ),
@@ -317,7 +319,7 @@ class _AssignmentsScreenState extends ConsumerState<AssignmentsScreen> {
                   .slideX(begin: 0.05, end: 0),
             );
           }),
-          const SizedBox(height: 100), // BottomNav padding
+          const SizedBox(height: 100),
         ],
       ),
     );

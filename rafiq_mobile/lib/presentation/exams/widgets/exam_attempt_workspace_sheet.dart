@@ -86,8 +86,7 @@ class _ExamAttemptWorkspaceSheetState
   }
 
   UserRole? get _currentRole => ref.read(currentUserRoleProvider);
-  int? get _currentUserId =>
-      int.tryParse(ref.read(authControllerProvider).user?.id ?? '');
+  int? get _currentUserId => ref.read(authControllerProvider).user?.id;
 
   ExamAttemptCommitteeMemberDto? get _myCommitteeMembership {
     final userId = _currentUserId;
@@ -457,7 +456,7 @@ class _ExamAttemptWorkspaceSheetState
             const SizedBox(height: 12),
             TextField(
               controller: reasonController,
-              decoration: examInputDecoration('سبب إعادة الفتح (اختياري)'),
+              decoration: examInputDecoration(context, 'سبب إعادة الفتح (اختياري)'),
             ),
           ],
         ),
@@ -468,7 +467,7 @@ class _ExamAttemptWorkspaceSheetState
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.errorLight),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('إعادة الفتح'),
           ),
         ],
@@ -532,7 +531,7 @@ class _ExamAttemptWorkspaceSheetState
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق'),
+            child: const Text('إلغاء'),
           ),
         ],
       ),
@@ -548,6 +547,8 @@ class _ExamAttemptWorkspaceSheetState
     final passScore = (exam?.passScore ?? 0).round();
     final liveScore = _calculateTotalScore();
     final isPass = liveScore >= passScore;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return ExamSheetScaffold(
       title: _canEvaluate ? 'إجراء التقييم' : 'نتيجة الاختبار',
@@ -563,7 +564,7 @@ class _ExamAttemptWorkspaceSheetState
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  side: const BorderSide(color: AppColors.primaryLight),
+                  side: BorderSide(color: primary),
                 ),
                 icon: const Icon(Icons.workspace_premium_rounded, size: 18),
                 label: const Text('الشهادة'),
@@ -579,7 +580,7 @@ class _ExamAttemptWorkspaceSheetState
                       ? () => Navigator.of(context).pop(_attempt)
                       : _openReviewAndSave,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(54),
                 shape: RoundedRectangleBorder(
@@ -608,7 +609,7 @@ class _ExamAttemptWorkspaceSheetState
               child: FilledButton.icon(
                 onPressed: examState.isSubmitting ? null : _finalizeEvaluation,
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.secondaryLight,
+                  backgroundColor: custom.accent,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(54),
                   shape: RoundedRectangleBorder(
@@ -664,16 +665,18 @@ class _ExamAttemptWorkspaceSheetState
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.successLight.withValues(alpha: 0.08),
+                color: custom.success.withValues(alpha: context.isDark ? 0.20 : 0.08),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: AppColors.successLight.withValues(alpha: 0.18),
+                  color: custom.success.withValues(alpha: context.isDark ? 0.35 : 0.18),
                 ),
               ),
               child: Text(
                 _successMessage!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimaryLight,
+                style: TextStyle(
+                      color: context.textPrimaryColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
               ),
             ),
@@ -699,15 +702,15 @@ class _ExamAttemptWorkspaceSheetState
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.borderLight),
+                border: Border.all(color: context.borderColor),
                 boxShadow: AppShadows.xs,
               ),
               child: Text(
                 'لا توجد أسئلة محفوظة لهذه المحاولة.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                      color: context.textSecondaryColor,
                     ),
                 textAlign: TextAlign.center,
               ),
@@ -715,9 +718,9 @@ class _ExamAttemptWorkspaceSheetState
           else
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.borderLight),
+                border: Border.all(color: context.borderColor),
                 boxShadow: AppShadows.xs,
               ),
               child: ClipRRect(
@@ -727,7 +730,7 @@ class _ExamAttemptWorkspaceSheetState
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _questions.length,
                   separatorBuilder: (_, __) => Divider(
-                      height: 1, color: AppColors.borderLight.withValues(alpha: 0.5)),
+                      height: 1, color: context.borderColor),
                   itemBuilder: (context, index) {
                     final q = _questions[index];
                     final deductions = q.promptingDeductions +
@@ -741,7 +744,7 @@ class _ExamAttemptWorkspaceSheetState
                       },
                       child: Container(
                         color: _selectedQuestionId == q.id
-                            ? AppColors.primaryLight.withValues(alpha: 0.05)
+                            ? primary.withValues(alpha: context.isDark ? 0.15 : 0.05)
                             : Colors.transparent,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
@@ -753,18 +756,19 @@ class _ExamAttemptWorkspaceSheetState
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: q.isEvaluated
-                                    ? AppColors.successLight.withValues(alpha: 0.1)
-                                    : AppColors.primaryLight.withValues(alpha: 0.1),
+                                    ? custom.success.withValues(alpha: context.isDark ? 0.25 : 0.1)
+                                    : primary.withValues(alpha: context.isDark ? 0.25 : 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Text(
                                 '${q.orderIndex}',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                      color: q.isEvaluated
-                                          ? AppColors.successLight
-                                          : AppColors.primaryLight,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: TextStyle(
+                                       color: q.isEvaluated
+                                           ? custom.success
+                                           : primary,
+                                       fontWeight: FontWeight.w900,
+                                       fontSize: 13,
+                                     ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -774,33 +778,32 @@ class _ExamAttemptWorkspaceSheetState
                                 children: [
                                   Text(
                                     '${surahName(q.fromSurah).replaceFirst('سورة ', '')} ${q.fromAyah} - ${surahName(q.toSurah).replaceFirst('سورة ', '')} ${q.toAyah}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                    style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: context.textPrimaryColor,
+                                          fontSize: 14,
+                                        ),
                                   ),
                                   if (q.isEvaluated)
                                     Text(
                                       deductions > 0
                                           ? 'الخصم: -${deductions % 1 == 0 ? deductions.toInt() : deductions}'
                                           : 'بدون أخطاء ✓',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: deductions > 0
-                                                ? AppColors.errorLight
-                                                : AppColors.successLight,
-                                          ),
+                                      style: TextStyle(
+                                             color: deductions > 0
+                                                 ? Theme.of(context).colorScheme.error
+                                                 : custom.success,
+                                             fontWeight: FontWeight.w700,
+                                             fontSize: 11,
+                                           ),
                                     )
                                   else
                                     Text(
                                       'لم يتم التقييم',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                              color: AppColors.textSecondaryLight),
+                                      style: TextStyle(
+                                               color: context.textSecondaryColor,
+                                               fontSize: 11,
+                                             ),
                                     ),
                                 ],
                               ),
@@ -848,7 +851,7 @@ class _ExamAttemptWorkspaceSheetState
               label: 'جوانب التميز',
               options: examStrengthSuggestions,
               selected: splitListText(_strengthNotes),
-              color: AppColors.successLight,
+              color: custom.success,
               onChanged: (list) {
                 setState(() {
                   _strengthNotes = list.join('، ');
@@ -860,7 +863,7 @@ class _ExamAttemptWorkspaceSheetState
               label: 'جوانب القصور',
               options: examWeaknessSuggestions,
               selected: splitListText(_weaknessNotes),
-              color: AppColors.warningLight,
+              color: custom.warning,
               onChanged: (list) {
                 setState(() {
                   _weaknessNotes = list.join('، ');
@@ -899,21 +902,24 @@ class _PremiumHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exam = attempt.exam;
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isPass
-              ? [AppColors.primaryLight, AppColors.primaryLight.withValues(alpha: 0.8)]
-              : [AppColors.secondaryLight, AppColors.secondaryLight.withValues(alpha: 0.8)],
+              ? [primary, primary.withValues(alpha: 0.8)]
+              : [custom.accent, custom.accent.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: (isPass ? AppColors.primaryLight : AppColors.secondaryLight)
+            color: (isPass ? primary : custom.accent)
                 .withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
@@ -932,17 +938,19 @@ class _PremiumHeader extends StatelessWidget {
                   children: [
                     Text(
                       attempt.student?.fullName ?? 'اسم الطالب',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
+                            fontSize: 18,
                             letterSpacing: -0.5,
                           ),
                     ),
                     Text(
                       '${attempt.circle?.name ?? 'الحلقة'} • ${exam?.title ?? 'بدون عنوان'}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontWeight: FontWeight.w500,
+                      style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
                           ),
                     ),
                   ],
@@ -1012,16 +1020,17 @@ class _HeaderInfoItem extends StatelessWidget {
           children: [
             Text(
               label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 10,
                   ),
             ),
             Text(
               value,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
             ),
           ],
@@ -1068,6 +1077,9 @@ class _ExamToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -1077,7 +1089,7 @@ class _ExamToolbar extends StatelessWidget {
             _ToolbarButton(
               icon: Icons.public_rounded,
               label: 'نشر',
-              color: AppColors.successLight,
+              color: custom.success,
               onPressed: isSubmitting ? null : onPublish,
             ),
             const SizedBox(width: 8),
@@ -1086,46 +1098,46 @@ class _ExamToolbar extends StatelessWidget {
             _ToolbarButton(
               icon: Icons.lock_open_rounded,
               label: 'فتح',
-              color: AppColors.warningLight,
+              color: custom.warning,
               onPressed: isSubmitting ? null : onReopen,
             ),
             const SizedBox(width: 8),
           ],
 
           if (canPublish || canReopen)
-            Container(width: 1, height: 24, color: AppColors.borderLight, margin: const EdgeInsets.only(right: 8)),
+            Container(width: 1, height: 24, color: context.borderColor, margin: const EdgeInsets.only(right: 8)),
 
           // 2. Core Actions: Evaluate, Delete, Add
           _ToolbarButton(
             icon: Icons.edit_note_rounded,
             label: 'تقييم',
-            color: AppColors.primaryLight,
+            color: primary,
             onPressed: (canEvaluate && !isSubmitting) ? onEvaluate : null,
           ),
           const SizedBox(width: 8),
           _ToolbarButton(
             icon: Icons.delete_outline_rounded,
             label: 'حذف',
-            color: AppColors.errorLight,
+            color: Theme.of(context).colorScheme.error,
             onPressed: (canDelete && !isSubmitting) ? onDelete : null,
           ),
           const SizedBox(width: 8),
           _ToolbarButton(
             icon: Icons.add_circle_outline_rounded,
             label: 'إضافة',
-            color: AppColors.textSecondaryLight,
+            color: context.textSecondaryColor,
             onPressed: (canAdd && !isSubmitting) ? onAdd : null,
           ),
           const SizedBox(width: 8),
 
           // 3. Question Count Stepper + Generate
-          Container(width: 1, height: 24, color: AppColors.borderLight, margin: const EdgeInsets.only(right: 8)),
+          Container(width: 1, height: 24, color: context.borderColor, margin: const EdgeInsets.only(right: 8)),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.borderColor),
             ),
             child: Row(
               children: [
@@ -1138,7 +1150,7 @@ class _ExamToolbar extends StatelessWidget {
                 Text('$questionCount', style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: canGenerate ? AppColors.textPrimaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.5),
+                  color: canGenerate ? context.textPrimaryColor : context.textSecondaryColor.withValues(alpha: 0.5),
                 )),
                 IconButton(
                   icon: const Icon(Icons.add, size: 14),
@@ -1153,7 +1165,7 @@ class _ExamToolbar extends StatelessWidget {
           _ToolbarButton(
             icon: Icons.auto_awesome_rounded,
             label: 'توليد',
-            color: AppColors.primaryLight,
+            color: primary,
             onPressed: (canGenerate && !isSubmitting) ? onGenerate : null,
           ),
         ],
@@ -1178,8 +1190,10 @@ class _ToolbarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isEnabled = onPressed != null;
+    final isDark = context.isDark;
+
     return Material(
-      color: isEnabled ? color.withValues(alpha: 0.1) : AppColors.background,
+      color: isEnabled ? color.withValues(alpha: isDark ? 0.20 : 0.10) : context.surfaceColor,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onPressed,
@@ -1189,18 +1203,18 @@ class _ToolbarButton extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isEnabled ? color.withValues(alpha: 0.2) : AppColors.borderLight.withValues(alpha: 0.5),
+              color: isEnabled ? color.withValues(alpha: isDark ? 0.35 : 0.20) : context.borderColor.withValues(alpha: 0.5),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: isEnabled ? color : AppColors.textSecondaryLight.withValues(alpha: 0.5)),
+              Icon(icon, size: 18, color: isEnabled ? color : context.textSecondaryColor.withValues(alpha: 0.5)),
               const SizedBox(width: 8),
               Text(
                 label,
                 style: TextStyle(
-                  color: isEnabled ? color : AppColors.textSecondaryLight.withValues(alpha: 0.5),
+                  color: isEnabled ? color : context.textSecondaryColor.withValues(alpha: 0.5),
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -1232,13 +1246,14 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress =
         maxScore <= 0 ? 0.0 : (liveScore / maxScore).clamp(0.0, 1.0);
+    final custom = context.customColors;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Column(
@@ -1249,8 +1264,10 @@ class _ResultCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'الخلاصة النهائية',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                  style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        color: context.textPrimaryColor,
                       ),
                 ),
               ),
@@ -1259,17 +1276,18 @@ class _ResultCard extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isPass
-                      ? AppColors.successLight.withValues(alpha: 0.08)
-                      : AppColors.warningLight.withValues(alpha: 0.08),
+                      ? custom.success.withValues(alpha: context.isDark ? 0.20 : 0.08)
+                      : custom.warning.withValues(alpha: context.isDark ? 0.20 : 0.08),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   isPass ? 'ناجح' : 'يحتاج تحسين',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  style: TextStyle(
                         color: isPass
-                            ? AppColors.successLight
-                            : AppColors.warningLight,
-                        fontWeight: FontWeight.w700,
+                            ? custom.success
+                            : custom.warning,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
                       ),
                 ),
               ),
@@ -1280,24 +1298,26 @@ class _ResultCard extends StatelessWidget {
             value: progress,
             minHeight: 10,
             borderRadius: BorderRadius.circular(999),
-            backgroundColor: AppColors.borderLight,
+            backgroundColor: context.borderColor,
             valueColor: AlwaysStoppedAnimation<Color>(
-              isPass ? AppColors.successLight : AppColors.warningLight,
+              isPass ? custom.success : custom.warning,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'الدرجة الحالية $liveScore من $maxScore • حد النجاح $passScore',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondaryLight,
+            style: TextStyle(
+                  color: context.textSecondaryColor,
+                  fontSize: 12,
                 ),
           ),
           if (gradeLabel != null && gradeLabel!.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               'التقدير: $gradeLabel',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+              style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: context.textPrimaryColor,
                   ),
             ),
           ],
@@ -1334,17 +1354,19 @@ class _ScoreStepper extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimaryLight,
+                style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimaryColor,
+                      fontSize: 13,
                     ),
               ),
             ),
             if (helper != null)
               Text(
                 helper!,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.textSecondaryLight,
+                style: TextStyle(
+                      color: context.textSecondaryColor,
+                      fontSize: 11,
                     ),
               ),
           ],
@@ -1353,10 +1375,10 @@ class _ScoreStepper extends StatelessWidget {
         Container(
           height: 48,
           decoration: BoxDecoration(
-            color: enabled ? Colors.white : AppColors.background,
+            color: enabled ? context.cardColor : context.surfaceColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: enabled ? AppColors.borderLight : Colors.transparent,
+              color: enabled ? context.borderColor : Colors.transparent,
             ),
           ),
           child: Row(
@@ -1372,7 +1394,7 @@ class _ScoreStepper extends StatelessWidget {
                         }
                       }
                     : null,
-                color: AppColors.textSecondaryLight,
+                color: context.textSecondaryColor,
               ),
               Expanded(
                 child: TextField(
@@ -1381,10 +1403,11 @@ class _ScoreStepper extends StatelessWidget {
                   textAlign: TextAlign.center,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: context.textPrimaryColor,
+                      ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     isDense: true,
@@ -1410,7 +1433,7 @@ class _ScoreStepper extends StatelessWidget {
                         }
                       }
                     : null,
-                color: AppColors.textSecondaryLight,
+                color: context.textSecondaryColor,
               ),
             ],
           ),
@@ -1442,9 +1465,10 @@ class _SearchableMultiSelect extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.textSecondaryLight,
+          style: TextStyle(
+                color: context.textSecondaryColor,
                 fontWeight: FontWeight.w700,
+                fontSize: 12,
               ),
         ),
         const SizedBox(height: 8),
@@ -1468,9 +1492,9 @@ class _SearchableMultiSelect extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.borderColor),
             ),
             child: Row(
               children: [
@@ -1478,8 +1502,9 @@ class _SearchableMultiSelect extends StatelessWidget {
                   child: selected.isEmpty
                       ? Text(
                           'اختر من القائمة...',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondaryLight,
+                          style: TextStyle(
+                                color: context.textSecondaryColor,
+                                fontSize: 13,
                               ),
                         )
                       : Wrap(
@@ -1490,25 +1515,25 @@ class _SearchableMultiSelect extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.1),
+                                      color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
-                                          color: color.withValues(alpha: 0.2)),
+                                          color: color.withValues(alpha: context.isDark ? 0.35 : 0.20)),
                                     ),
                                     child: Text(
                                       s,
                                       style: TextStyle(
                                         color: color,
                                         fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ))
                               .toList(),
                         ),
                 ),
-                const Icon(Icons.search_rounded,
-                    size: 18, color: AppColors.textSecondaryLight),
+                Icon(Icons.search_rounded,
+                    size: 18, color: context.textSecondaryColor),
               ],
             ),
           ),
@@ -1553,9 +1578,9 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -1564,7 +1589,7 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.borderLight,
+              color: context.borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1575,9 +1600,10 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
                 Expanded(
                   child: Text(
                     widget.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
+                      color: context.textPrimaryColor,
                     ),
                   ),
                 ),
@@ -1592,14 +1618,15 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TextField(
               autofocus: true,
+              style: TextStyle(color: context.textPrimaryColor),
               decoration: InputDecoration(
                 hintText: 'بحث...',
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
-                fillColor: AppColors.background,
+                fillColor: context.surfaceColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(color: context.borderColor),
                 ),
               ),
               onChanged: (v) => setState(() => _query = v),
@@ -1625,8 +1652,8 @@ class _MultiSelectSearchSheetState extends State<_MultiSelectSearchSheet> {
                   title: Text(
                     opt,
                     style: TextStyle(
-                      fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
-                      color: isSel ? widget.color : AppColors.textPrimaryLight,
+                      fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                      color: isSel ? widget.color : context.textPrimaryColor,
                     ),
                   ),
                   trailing: Checkbox(

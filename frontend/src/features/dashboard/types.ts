@@ -20,6 +20,8 @@ export type DashboardMetrics = {
     totalCircles: number;
     attendanceTotal: number;
     attendanceRate: number;
+    previousAttendanceRate: number;
+    attendanceDelta: number;
     attendanceTrend: "up" | "down" | "stable";
   };
   attendanceByStatus: {
@@ -28,6 +30,32 @@ export type DashboardMetrics = {
     late: number;
     excused: number;
   };
+  staffAttendance: {
+    applicable: boolean;
+    dataKind: "RECORDED_ATTENDANCE";
+    coverage: {
+      scheduledWithoutRecord: null;
+      withoutActiveShift: null;
+      dataSufficiency: "RECORDED_ONLY";
+    };
+    totals: StaffAttendanceTotals;
+    recordedTotal: number;
+    attendanceRate: number;
+    byRole: Array<StaffAttendanceTotals & {
+      staffRole: string;
+      recordedTotal: number;
+    }>;
+    lastUpdatedAt: string | null;
+  };
+  lastUpdatedAt: string | null;
+};
+
+export type StaffAttendanceTotals = {
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  onLeave: number;
 };
 
 export type ActivityFeedItem = {
@@ -58,6 +86,11 @@ export type AttendanceSummaryItem = {
   circleName: string;
   centerId: number | null;
   centerName: string | null;
+  teacher: {
+    id: number;
+    fullName: string;
+  } | null;
+  activeStudents: number;
   totals: {
     present: number;
     absent: number;

@@ -11,11 +11,10 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/app_snack_bar.dart';
 import '../../data/models/org_dtos.dart';
-
 import '../shared/states/app_empty_state.dart';
 import '../shared/widgets/app_card.dart';
-import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class SupervisorNotesScreen extends ConsumerStatefulWidget {
   const SupervisorNotesScreen({super.key});
@@ -43,7 +42,7 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
 
   Future<void> _load() async {
     final ctx = ref.read(contextControllerProvider);
-    final centerId = int.tryParse(ctx.selectedCenterId ?? '');
+    final centerId = ctx.selectedCenterId;
     await ref
         .read(supervisorNotesControllerProvider.notifier)
         .load(centerId: centerId);
@@ -55,9 +54,8 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
       return;
     }
 
-    // Build targetLabel from selected circle if not manually provided
     final ctx = ref.read(contextControllerProvider);
-    final centerId = int.tryParse(ctx.selectedCenterId ?? '');
+    final centerId = ctx.selectedCenterId;
     final circle = _selectedCircleId != null
         ? circles.where((c) => c.id == _selectedCircleId).firstOrNull
         : null;
@@ -104,52 +102,56 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
     }
   }
 
-  Map<String, dynamic> _getCategoryStyle(String cat) {
+  Map<String, dynamic> _getCategoryStyle(BuildContext context, String cat) {
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = context.isDark;
+
     if (cat == 'PRAISE') {
       return {
-        'bg': AppColors.successLight.withValues(alpha: 0.1),
-        'color': AppColors.successLight,
+        'bg': custom.success.withValues(alpha: isDark ? 0.20 : 0.10),
+        'color': custom.success,
         'label': 'إشادة'
       };
     }
     if (cat == 'WARNING') {
       return {
-        'bg': AppColors.errorLight.withValues(alpha: 0.1),
-        'color': AppColors.errorLight,
+        'bg': Theme.of(context).colorScheme.error.withValues(alpha: isDark ? 0.20 : 0.10),
+        'color': Theme.of(context).colorScheme.error,
         'label': 'تنبيه'
       };
     }
     if (cat == 'VISIT') {
       return {
-        'bg': AppColors.infoLight.withValues(alpha: 0.1),
-        'color': AppColors.infoLight,
+        'bg': custom.info.withValues(alpha: isDark ? 0.20 : 0.10),
+        'color': custom.info,
         'label': 'زيارة'
       };
     }
     if (cat == 'EVALUATION') {
       return {
-        'bg': AppColors.primaryLight.withValues(alpha: 0.1),
-        'color': AppColors.primaryLight,
+        'bg': primary.withValues(alpha: isDark ? 0.20 : 0.10),
+        'color': primary,
         'label': 'تقييم'
       };
     }
     return {
-      'bg': AppColors.infoLight.withValues(alpha: 0.1),
-      'color': AppColors.infoLight,
+      'bg': custom.info.withValues(alpha: isDark ? 0.20 : 0.10),
+      'color': custom.info,
       'label': 'ملاحظة عامة'
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final notesState = ref.watch(supervisorNotesControllerProvider);
     final ctx = ref.watch(contextControllerProvider);
-    final centerId = int.tryParse(ctx.selectedCenterId ?? '');
+    final centerId = ctx.selectedCenterId;
     final circlesAsync = ref.watch(orgCirclesProvider(centerId));
+    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: context.surfaceColor,
       appBar: StandardAppBar(
         title: 'ملاحظات إشرافية',
         actions: [
@@ -159,9 +161,9 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
               onPressed: () => setState(() => _showForm = !_showForm),
               icon: const Icon(Icons.add_comment_rounded, size: 16),
               label: const Text('جديد',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primaryLight,
+                foregroundColor: primary,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
@@ -198,10 +200,11 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text('ملاحظة جديدة',
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: context.textPrimaryColor)),
                           const SizedBox(height: AppSpacing.sm),
-                          // Category
                           _DropdownField<String>(
                             value: _category,
                             hint: 'نوع الملاحظة',
@@ -217,7 +220,6 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                 setState(() => _category = v ?? 'GENERAL'),
                           ),
                           const SizedBox(height: AppSpacing.sm),
-                          // Circle
                           _DropdownField<int>(
                             value: _selectedCircleId,
                             hint: 'الحلقة / المعلم',
@@ -234,33 +236,33 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                 setState(() => _selectedCircleId = v),
                           ),
                           const SizedBox(height: AppSpacing.sm),
-                          // Content
                           TextField(
                             onChanged: (val) => _content = val,
                             maxLines: 4,
+                            style: TextStyle(color: context.textPrimaryColor),
                             decoration: InputDecoration(
                               hintText: 'اكتب ملاحظتك هنا...',
                               filled: true,
-                              fillColor: theme.scaffoldBackgroundColor,
+                              fillColor: context.surfaceColor,
                               contentPadding: const EdgeInsets.all(14),
                               border: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.lg),
-                                borderSide: const BorderSide(
-                                    color: AppColors.borderLight),
+                                borderSide: BorderSide(
+                                    color: context.borderColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.lg),
-                                borderSide: const BorderSide(
-                                    color: AppColors.borderLight),
+                                borderSide: BorderSide(
+                                    color: context.borderColor),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius:
                                     BorderRadius.circular(AppRadius.lg),
                                 borderSide: BorderSide(
-                                    color: AppColors.primaryLight
-                                        .withValues(alpha: 0.5)),
+                                    color: primary,
+                                    width: 1.5),
                               ),
                             ),
                           ),
@@ -277,10 +279,10 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(AppRadius.lg),
-                                        side: const BorderSide(
-                                            color: AppColors.borderLight)),
+                                        side: BorderSide(
+                                            color: context.borderColor)),
                                   ),
-                                  child: const Text('إلغاء'),
+                                  child: Text('إلغاء', style: TextStyle(color: context.textPrimaryColor, fontWeight: FontWeight.w700)),
                                 ),
                               ),
                               const SizedBox(width: AppSpacing.md),
@@ -290,8 +292,8 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                       ? null
                                       : () => _handleSubmit(circles),
                                   style: TextButton.styleFrom(
-                                    backgroundColor: AppColors.primaryLight,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: primary,
+                                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 12),
                                     shape: RoundedRectangleBorder(
@@ -299,15 +301,15 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                             AppRadius.lg)),
                                   ),
                                   child: notesState.isActing
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 16,
                                           height: 16,
                                           child: CircularProgressIndicator(
-                                              color: Colors.white,
+                                              color: Theme.of(context).colorScheme.onPrimary,
                                               strokeWidth: 2))
                                       : const Text('حفظ',
                                           style: TextStyle(
-                                              fontWeight: FontWeight.w700)),
+                                              fontWeight: FontWeight.w800)),
                                 ),
                               ),
                             ],
@@ -342,8 +344,10 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     ...List.generate(notesState.items.length, (index) {
                       final note = notesState.items[index];
-                      final catStyle = _getCategoryStyle(note.category);
+                      final catStyle = _getCategoryStyle(context, note.category);
                       final isPending = note.isPending;
+                      final custom = context.customColors;
+                      final isDark = context.isDark;
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -367,34 +371,33 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                         const SizedBox(width: 8),
                                         _Badge(
                                           label: 'قيد المتابعة',
-                                          bg: AppColors.warningLight
-                                              .withValues(alpha: 0.1),
-                                          color: AppColors.warningLight,
+                                          bg: custom.warning
+                                              .withValues(alpha: isDark ? 0.20 : 0.10),
+                                          color: custom.warning,
                                         ),
                                       ] else ...[
                                         const SizedBox(width: 8),
                                         _Badge(
                                           label: 'تمت المعالجة',
-                                          bg: AppColors.successLight
-                                              .withValues(alpha: 0.1),
-                                          color: AppColors.successLight,
+                                          bg: custom.success
+                                              .withValues(alpha: isDark ? 0.20 : 0.10),
+                                          color: custom.success,
                                         ),
                                       ],
                                     ],
                                   ),
                                   Row(
                                     children: [
-                                      const Icon(Icons.access_time_rounded,
+                                      Icon(Icons.access_time_rounded,
                                           size: 12,
-                                          color: AppColors.textSecondaryLight),
+                                          color: context.textSecondaryColor),
                                       const SizedBox(width: 4),
                                       Text(
                                         DateFormat('d MMM y', 'ar')
                                             .format(note.createdAt),
-                                        style: const TextStyle(
-                                            fontSize: 10,
-                                            color:
-                                                AppColors.textSecondaryLight),
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: context.textSecondaryColor),
                                       ),
                                     ],
                                   ),
@@ -404,17 +407,17 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
-                                    const Icon(Icons.person_outline_rounded,
+                                    Icon(Icons.person_outline_rounded,
                                         size: 14,
-                                        color: AppColors.primaryLight),
+                                        color: primary),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         note.targetLabel!,
-                                        style: const TextStyle(
-                                            color: AppColors.primaryLight,
+                                        style: TextStyle(
+                                            color: primary,
                                             fontSize: 12,
-                                            fontWeight: FontWeight.w700),
+                                            fontWeight: FontWeight.w800),
                                       ),
                                     ),
                                   ],
@@ -423,10 +426,10 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 note.content,
-                                style: theme.textTheme.bodyMedium?.copyWith(
+                                style: TextStyle(
                                     height: 1.6,
                                     fontSize: 13,
-                                    color: AppColors.textPrimaryLight),
+                                    color: context.textPrimaryColor),
                               ),
                               if (isPending) ...[
                                 const SizedBox(height: AppSpacing.sm),
@@ -437,10 +440,9 @@ class _SupervisorNotesScreenState extends ConsumerState<SupervisorNotesScreen> {
                                     icon: const Icon(Icons.check_circle_outline,
                                         size: 14),
                                     label: const Text('تمت المعالجة',
-                                        style: TextStyle(fontSize: 11)),
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                                     style: TextButton.styleFrom(
-                                        foregroundColor:
-                                            AppColors.successLight),
+                                        foregroundColor: custom.success),
                                   ),
                                 ),
                               ],
@@ -482,21 +484,21 @@ class _DropdownField<T> extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
-          hint: Text(hint, style: const TextStyle(fontSize: 12)),
+          dropdownColor: context.cardColor,
+          hint: Text(hint, style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-          style: const TextStyle(
+          icon: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: context.textSecondaryColor),
+          style: TextStyle(
               fontSize: 12,
-              color: AppColors.textPrimaryLight,
-              fontFamily: 'Tajawal',
-              fontWeight: FontWeight.w500),
+              color: context.textPrimaryColor,
+              fontWeight: FontWeight.w600),
           onChanged: onChanged,
           items: items,
         ),
@@ -520,7 +522,7 @@ class _Badge extends StatelessWidget {
           color: bg, borderRadius: BorderRadius.circular(AppRadius.sm)),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+              color: color, fontSize: 10, fontWeight: FontWeight.w800)),
     );
   }
 }

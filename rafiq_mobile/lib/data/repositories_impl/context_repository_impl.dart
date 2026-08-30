@@ -13,29 +13,50 @@ class ContextRepositoryImpl implements ContextRepository {
 
   @override
   Future<List<Center>> getMyCenters() async {
-    final dtos = await _remoteDataSource.getMyCenters();
-    return dtos.map((dto) => dto.toEntity()).toList();
+    try {
+      final dtos = await _remoteDataSource.getMyCenters();
+      await _localDataSource.saveCenters(dtos);
+      return dtos.map((dto) => dto.toEntity()).toList();
+    } catch (e) {
+      final cachedDtos = await _localDataSource.getCachedCenters();
+      if (cachedDtos != null && cachedDtos.isNotEmpty) {
+        return cachedDtos.map((dto) => dto.toEntity()).toList();
+      }
+      rethrow;
+    }
   }
 
   @override
-  Future<List<Circle>> getMyCircles({required String centerId}) async {
-    final dtos = await _remoteDataSource.getMyCircles(centerId);
-    return dtos.map((dto) => dto.toEntity()).toList();
+  Future<List<Circle>> getMyCircles({required int centerId}) async {
+    try {
+      final dtos = await _remoteDataSource.getMyCircles(centerId.toString());
+      await _localDataSource.saveCircles(dtos);
+      return dtos.map((dto) => dto.toEntity()).toList();
+    } catch (e) {
+      final cachedDtos = await _localDataSource.getCachedCircles();
+      if (cachedDtos != null && cachedDtos.isNotEmpty) {
+        return cachedDtos
+            .where((dto) => dto.centerId == centerId)
+            .map((dto) => dto.toEntity())
+            .toList();
+      }
+      rethrow;
+    }
   }
 
   @override
-  Future<void> saveCurrentCenter(String centerId) =>
+  Future<void> saveCurrentCenter(int centerId) =>
       _localDataSource.saveCurrentCenter(centerId);
 
   @override
-  Future<void> saveCurrentCircle(String circleId) =>
+  Future<void> saveCurrentCircle(int circleId) =>
       _localDataSource.saveCurrentCircle(circleId);
 
   @override
-  Future<String?> getCurrentCenterId() => _localDataSource.getCurrentCenterId();
+  Future<int?> getCurrentCenterId() => _localDataSource.getCurrentCenterId();
 
   @override
-  Future<String?> getCurrentCircleId() => _localDataSource.getCurrentCircleId();
+  Future<int?> getCurrentCircleId() => _localDataSource.getCurrentCircleId();
 
   @override
   Future<void> clearContext() => _localDataSource.clearContext();

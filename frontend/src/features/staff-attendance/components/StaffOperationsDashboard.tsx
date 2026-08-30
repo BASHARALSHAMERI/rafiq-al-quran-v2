@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Calendar,
   Clock,
-  DollarSign,
   MapPin,
   Settings,
 } from "lucide-react";

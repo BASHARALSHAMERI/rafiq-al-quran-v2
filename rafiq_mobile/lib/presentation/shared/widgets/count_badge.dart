@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_radius.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// CountBadge - Used in AttendancePage summary
-///
-/// Layout: Large count number on top, small label below
-/// Colors: success, warning, destructive, accent
 enum BadgeColor {
   success,
   warning,
   destructive,
   accent,
   primary,
+  info,
 }
 
 class CountBadge extends StatelessWidget {
@@ -25,75 +25,63 @@ class CountBadge extends StatelessWidget {
     this.color = BadgeColor.primary,
   });
 
-  Color _getBackgroundColor(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    switch (color) {
-      case BadgeColor.success:
-        return isDark
-            ? AppColors.successDark.withValues(alpha: 0.15)
-            : AppColors.successLight.withValues(alpha: 0.10);
-      case BadgeColor.warning:
-        return isDark
-            ? AppColors.warningDark.withValues(alpha: 0.15)
-            : AppColors.warningLight.withValues(alpha: 0.10);
-      case BadgeColor.destructive:
-        return isDark
-            ? AppColors.errorDark.withValues(alpha: 0.15)
-            : AppColors.errorLight.withValues(alpha: 0.10);
-      case BadgeColor.accent:
-        return isDark
-            ? AppColors.accentLight.withValues(alpha: 0.15)
-            : AppColors.accentLight.withValues(alpha: 0.10);
-      case BadgeColor.primary:
-        return isDark
-            ? AppColors.primaryDark.withValues(alpha: 0.15)
-            : AppColors.primaryLight.withValues(alpha: 0.10);
-    }
-  }
-
   Color _getForegroundColor(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final custom = context.customColors;
+    final isDark = context.isDark;
     switch (color) {
       case BadgeColor.success:
-        return isDark ? AppColors.successDark : AppColors.successLight;
+        return custom.success;
       case BadgeColor.warning:
-        return isDark ? AppColors.warningDark : AppColors.warningLight;
+        return custom.warning;
       case BadgeColor.destructive:
         return isDark ? AppColors.errorDark : AppColors.errorLight;
       case BadgeColor.accent:
-        return isDark ? AppColors.accentLight : const Color(0xFFD97706);
+        return isDark ? AppColors.accentDark : AppColors.accentLight;
       case BadgeColor.primary:
-        return isDark ? AppColors.primaryDark : AppColors.primaryLight;
+        return Theme.of(context).colorScheme.primary;
+      case BadgeColor.info:
+        return custom.info;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final fg = _getForegroundColor(context);
+    final theme = Theme.of(context);
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
       decoration: BoxDecoration(
-        color: _getBackgroundColor(context),
-        borderRadius: BorderRadius.circular(12),
+        color: fg.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: fg.withValues(alpha: isDark ? 0.25 : 0.15),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             count.toString(),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20,
-                  color: _getForegroundColor(context),
-                ),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+              color: fg,
+              height: 1.1,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: _getForegroundColor(context),
-                ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: fg.withValues(alpha: 0.9),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -114,55 +102,38 @@ class CountBadgeHorizontal extends StatelessWidget {
     this.color = BadgeColor.primary,
   });
 
-  Color _getBackgroundColor(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    switch (color) {
-      case BadgeColor.success:
-        return isDark
-            ? AppColors.successDark.withValues(alpha: 0.15)
-            : AppColors.successLight.withValues(alpha: 0.10);
-      case BadgeColor.warning:
-        return isDark
-            ? AppColors.warningDark.withValues(alpha: 0.15)
-            : AppColors.warningLight.withValues(alpha: 0.10);
-      case BadgeColor.destructive:
-        return isDark
-            ? AppColors.errorDark.withValues(alpha: 0.15)
-            : AppColors.errorLight.withValues(alpha: 0.10);
-      case BadgeColor.accent:
-        return isDark
-            ? AppColors.accentLight.withValues(alpha: 0.15)
-            : AppColors.accentLight.withValues(alpha: 0.10);
-      case BadgeColor.primary:
-        return isDark
-            ? AppColors.primaryDark.withValues(alpha: 0.15)
-            : AppColors.primaryLight.withValues(alpha: 0.10);
-    }
-  }
-
   Color _getForegroundColor(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final custom = context.customColors;
+    final isDark = context.isDark;
     switch (color) {
       case BadgeColor.success:
-        return isDark ? AppColors.successDark : AppColors.successLight;
+        return custom.success;
       case BadgeColor.warning:
-        return isDark ? AppColors.warningDark : AppColors.warningLight;
+        return custom.warning;
       case BadgeColor.destructive:
         return isDark ? AppColors.errorDark : AppColors.errorLight;
       case BadgeColor.accent:
-        return isDark ? AppColors.accentLight : const Color(0xFFD97706);
+        return isDark ? AppColors.accentDark : AppColors.accentLight;
       case BadgeColor.primary:
-        return isDark ? AppColors.primaryDark : AppColors.primaryLight;
+        return Theme.of(context).colorScheme.primary;
+      case BadgeColor.info:
+        return custom.info;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final fg = _getForegroundColor(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getBackgroundColor(context),
-        borderRadius: BorderRadius.circular(20),
+        color: fg.withValues(alpha: isDark ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: fg.withValues(alpha: isDark ? 0.25 : 0.15),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -170,8 +141,8 @@ class CountBadgeHorizontal extends StatelessWidget {
           Text(
             count.toString(),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: _getForegroundColor(context),
+                  fontWeight: FontWeight.w800,
+                  color: fg,
                 ),
           ),
           const SizedBox(width: 4),
@@ -179,7 +150,8 @@ class CountBadgeHorizontal extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: _getForegroundColor(context).withValues(alpha: 0.8),
+                  fontWeight: FontWeight.w600,
+                  color: fg.withValues(alpha: 0.85),
                 ),
           ),
         ],

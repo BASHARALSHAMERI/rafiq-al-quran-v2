@@ -42,7 +42,7 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
     final state = ref.watch(studentDashboardProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const PremiumAppBar(title: 'رحلتي القرآنية'),
       body: _buildBody(state),
     );
@@ -78,10 +78,8 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
     final enrollments = DataParsingHelper.asMapList(data['studentEnrollments']);
     final userProfile = DataParsingHelper.asMap(data['profile']);
 
-    // Extract dynamic student name
     final name = DataParsingHelper.readString(data['fullName'], fallback: 'الطالب');
     
-    // Extract dynamic circle & center name
     String circleSubTitle = 'طالب قرآن';
     if (enrollments.isNotEmpty) {
       final circle = DataParsingHelper.asMap(enrollments.first['circle']);
@@ -96,7 +94,6 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
       }
     }
 
-    // Extract avatar url
     final avatarUrl = DataParsingHelper.readString(userProfile['avatarUrl']);
 
     return Column(
@@ -142,12 +139,12 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+          border: Border.all(color: context.borderColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
+              color: Colors.black.withValues(alpha: context.isDark ? 0.20 : 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -163,11 +160,19 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, fontFamily: 'Cairo'),
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: context.textPrimaryColor,
+                    ),
                   ),
                   Text(
                     subTitle,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight, fontWeight: FontWeight.w600, fontFamily: 'Cairo'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.textSecondaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -180,23 +185,25 @@ class _StudentJourneyScreenState extends ConsumerState<StudentJourneyScreen> wit
   }
 
   Widget _buildTabBar() {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: AppColors.primaryLight,
+          color: primary,
           borderRadius: BorderRadius.circular(12),
         ),
-        labelColor: Colors.white,
-        unselectedLabelColor: AppColors.textSecondaryLight,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, fontFamily: 'Cairo'),
+        labelColor: Theme.of(context).colorScheme.onPrimary,
+        unselectedLabelColor: context.textSecondaryColor,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
         tabs: const [
           Tab(text: 'نظرة عامة'),
           Tab(text: 'سجل التسميع'),
@@ -224,20 +231,22 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.2), width: 2),
+        border: Border.all(color: primary.withValues(alpha: 0.3), width: 2),
       ),
       child: CircleAvatar(
         radius: 26,
-        backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
+        backgroundColor: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
         backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
         child: avatarUrl.isEmpty
             ? Text(
                 name.isNotEmpty ? name[0] : 'ط',
-                style: const TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.w900, fontSize: 20, fontFamily: 'Cairo'),
+                style: TextStyle(color: primary, fontWeight: FontWeight.w900, fontSize: 20),
               )
             : null,
       ),
@@ -251,17 +260,20 @@ class _RatingPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1FAF4),
+        color: custom.success.withValues(alpha: isDark ? 0.20 : 0.10),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.successLight.withValues(alpha: 0.2)),
+        border: Border.all(color: custom.success.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
-          Text(score, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.successLight, fontFamily: 'Cairo')),
-          const Text('التقييم', style: TextStyle(fontSize: 10, color: AppColors.successLight, fontWeight: FontWeight.w700, fontFamily: 'Cairo')),
+          Text(score, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: custom.success)),
+          Text('التقييم', style: TextStyle(fontSize: 10, color: custom.success, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -291,7 +303,6 @@ class _OverviewTabState extends State<_OverviewTab> {
   @override
   void initState() {
     super.initState();
-    // Default expanded Juzz to the student's current position
     final currentJuz = DataParsingHelper.readInt(widget.profile['currentJuzz']) ??
         DataParsingHelper.readInt(widget.profile['currentJuz']) ??
         0;
@@ -405,7 +416,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                     const Spacer(),
@@ -421,7 +431,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
                           fontSize: 12,
-                          fontFamily: 'Cairo',
                         ),
                       ),
                     ),
@@ -434,7 +443,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                     color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    fontFamily: 'Cairo',
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -444,7 +452,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                     color: Colors.white,
                     fontSize: 15,
                     fontWeight: FontWeight.w900,
-                    fontFamily: 'Cairo',
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -457,7 +464,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                         color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                     Text(
@@ -466,7 +472,6 @@ class _OverviewTabState extends State<_OverviewTab> {
                         color: Colors.white,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                   ],
@@ -571,7 +576,9 @@ class _JuzMilestone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isCompleted ? AppColors.successLight : (isCurrent ? AppColors.primaryLight : const Color(0xFFE2E8F0));
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+    final color = isCompleted ? custom.success : (isCurrent ? primary : context.borderColor);
     final rangeText = juzRanges[juzNumber] ?? '';
 
     return GestureDetector(
@@ -585,24 +592,23 @@ class _JuzMilestone extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: isCompleted || isCurrent ? 1.0 : 0.1),
+                  color: color.withValues(alpha: isCompleted || isCurrent ? 1.0 : (context.isDark ? 0.20 : 0.12)),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isCurrent ? AppColors.primaryLight : Colors.transparent,
+                    color: isCurrent ? primary : Colors.transparent,
                     width: 3,
                   ),
                   boxShadow: isCurrent ? [
-                    BoxShadow(color: AppColors.primaryLight.withValues(alpha: 0.3), blurRadius: 10)
+                    BoxShadow(color: primary.withValues(alpha: 0.3), blurRadius: 10)
                   ] : null,
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   '$juzNumber',
                   style: TextStyle(
-                    color: isCompleted || isCurrent ? Colors.white : const Color(0xFF94A3B8),
+                    color: isCompleted || isCurrent ? Colors.white : context.textSecondaryColor,
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
-                    fontFamily: 'Cairo',
                   ),
                 ),
               ),
@@ -610,7 +616,7 @@ class _JuzMilestone extends StatelessWidget {
                 Container(
                   width: 4,
                   height: isExpanded ? 90 : 50,
-                  color: color.withValues(alpha: 0.3),
+                  color: color.withValues(alpha: context.isDark ? 0.35 : 0.25),
                 ),
             ],
           ),
@@ -620,21 +626,21 @@ class _JuzMilestone extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isCurrent 
-                      ? AppColors.primaryLight.withValues(alpha: 0.4) 
-                      : (isExpanded ? AppColors.primaryLight.withValues(alpha: 0.2) : AppColors.borderLight),
+                      ? primary.withValues(alpha: 0.5) 
+                      : (isExpanded ? primary.withValues(alpha: 0.3) : context.borderColor),
                   width: isCurrent || isExpanded ? 1.5 : 1.0,
                 ),
-                boxShadow: isExpanded || isCurrent ? [
+                boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
+                    color: Colors.black.withValues(alpha: context.isDark ? 0.15 : 0.02),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
-                ] : null,
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,8 +652,7 @@ class _JuzMilestone extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 14,
-                          fontFamily: 'Cairo',
-                          color: isCompleted || isCurrent ? const Color(0xFF1E293B) : const Color(0xFF94A3B8),
+                          color: isCompleted || isCurrent ? context.textPrimaryColor : context.textSecondaryColor,
                         ),
                       ),
                       if (isTargeted) ...[
@@ -655,22 +660,21 @@ class _JuzMilestone extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withValues(alpha: 0.08),
+                            color: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.25)),
+                            border: Border.all(color: primary.withValues(alpha: 0.3)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.gps_fixed_rounded, color: AppColors.primaryLight, size: 8),
-                              SizedBox(width: 4),
+                              Icon(Icons.gps_fixed_rounded, color: primary, size: 10),
+                              const SizedBox(width: 4),
                               Text(
                                 'مستهدف هذا الشهر',
                                 style: TextStyle(
-                                  fontSize: 9,
-                                  color: AppColors.primaryLight,
+                                  fontSize: 10,
+                                  color: primary,
                                   fontWeight: FontWeight.w800,
-                                  fontFamily: 'Cairo',
                                 ),
                               ),
                             ],
@@ -684,8 +688,7 @@ class _JuzMilestone extends StatelessWidget {
                     isCompleted ? 'تم الختم بنجاح 🎉' : (isCurrent ? 'أنت هنا الآن 📍' : 'المحطة القادمة 🔜'),
                     style: TextStyle(
                       fontSize: 11,
-                      fontFamily: 'Cairo',
-                      color: isCompleted ? AppColors.successLight : (isCurrent ? AppColors.primaryLight : const Color(0xFF94A3B8)),
+                      color: isCompleted ? custom.success : (isCurrent ? primary : context.textSecondaryColor),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -696,24 +699,22 @@ class _JuzMilestone extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Divider(height: 12, color: Color(0xFFF1F5F9)),
-                          const Text(
+                          Divider(height: 12, color: context.borderColor),
+                          Text(
                             'محتوى السور والآيات:',
                             style: TextStyle(
                               fontSize: 10,
-                              fontFamily: 'Cairo',
-                              color: Color(0xFF64748B),
+                              color: context.textSecondaryColor,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             rangeText,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              fontFamily: 'Cairo',
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1E293B),
+                              fontWeight: FontWeight.w800,
+                              color: context.textPrimaryColor,
                             ),
                           ),
                         ],
@@ -729,7 +730,8 @@ class _JuzMilestone extends StatelessWidget {
         ],
       ),
     );
-  }}
+  }
+}
 
 class _HistoryTab extends StatelessWidget {
   final List<Map<String, dynamic>> followUps;
@@ -742,18 +744,20 @@ class _HistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         _RecitationTargetCard(followUps: followUps, activePlan: activePlan),
         const SizedBox(height: AppSpacing.sm),
         if (followUps.isEmpty)
-          const SizedBox(
-            height: 200,
-            child: Center(
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
               child: Text(
                 'لا توجد سجلات سابقة',
-                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700),
+                style: TextStyle(fontWeight: FontWeight.w700, color: context.textSecondaryColor),
               ),
             ),
           )
@@ -767,9 +771,9 @@ class _HistoryTab extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardColor,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.borderLight),
+                border: Border.all(color: context.borderColor),
               ),
               child: Row(
                 children: [
@@ -777,10 +781,10 @@ class _HistoryTab extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.08),
+                      color: primary.withValues(alpha: context.isDark ? 0.20 : 0.10),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.menu_book_rounded, color: AppColors.primaryLight, size: 20),
+                    child: Icon(Icons.menu_book_rounded, color: primary, size: 20),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -789,11 +793,11 @@ class _HistoryTab extends StatelessWidget {
                       children: [
                         Text(
                           DataParsingHelper.readString(item['surah'], fallback: 'سورة غير محددة'),
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, fontFamily: 'Cairo'),
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: context.textPrimaryColor),
                         ),
                         Text(
                           formattedDate,
-                          style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 12, fontFamily: 'Cairo'),
+                          style: TextStyle(color: context.textSecondaryColor, fontSize: 12),
                         ),
                       ],
                     ),
@@ -819,23 +823,27 @@ class _RecitationTargetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     if (followUps.isEmpty) {
       return Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.md),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.borderLight),
+          border: Border.all(color: context.borderColor),
         ),
-        child: const Column(
+        child: Column(
           children: [
-            Icon(Icons.info_outline_rounded, color: AppColors.primaryLight, size: 24),
-            SizedBox(height: 8),
+            Icon(Icons.info_outline_rounded, color: primary, size: 24),
+            const SizedBox(height: 8),
             Text(
               'ابدأ رحلتك القرآنية اليوم بالتسميع مع معلمك ليظهر لك هنا ورد الغد المقترح والتحفيز اليومي.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, fontSize: 13, height: 1.4),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, height: 1.4, color: context.textPrimaryColor),
             ),
           ],
         ),
@@ -886,33 +894,30 @@ class _RecitationTargetCard extends StatelessWidget {
       nextTargetLabel = 'متابعة الورد التالي من خطتك النشطة مع معلمك';
     }
 
-    final cardColor = hasRecitedToday ? const Color(0xFFF1FAF4) : const Color(0xFFFFF8EC);
-    final borderColor = hasRecitedToday ? AppColors.successLight : AppColors.warningLight;
-    final iconColor = hasRecitedToday ? AppColors.successLight : AppColors.warningLight;
+    final statusColor = hasRecitedToday ? custom.success : custom.warning;
     final title = hasRecitedToday ? 'تم إنجاز ورد اليوم! 🎉' : 'توجيه وتحفيز اليوم 💡';
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: statusColor.withValues(alpha: isDark ? 0.16 : 0.08),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: borderColor.withValues(alpha: 0.25), width: 1.5),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(hasRecitedToday ? Icons.check_circle_outline_rounded : Icons.lightbulb_outline_rounded, color: iconColor, size: 20),
+              Icon(hasRecitedToday ? Icons.check_circle_outline_rounded : Icons.lightbulb_outline_rounded, color: statusColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: TextStyle(
-                  color: iconColor,
+                  color: statusColor,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
-                  fontFamily: 'Cairo',
                 ),
               ),
             ],
@@ -922,27 +927,25 @@ class _RecitationTargetCard extends StatelessWidget {
             hasRecitedToday 
                 ? 'أحسنت! لقد قمت بالتسميع اليوم وخطوت خطوة مباركة نحو إتمام خطتك. استمر على هذه الهمة العالية! 🚀🌟'
                 : quote,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              fontFamily: 'Cairo',
-              color: Color(0xFF475569),
+              color: context.textPrimaryColor,
               height: 1.4,
             ),
           ),
-          const Divider(height: 24, thickness: 1, color: Color(0xFFE2E8F0)),
+          Divider(height: 24, thickness: 1, color: context.borderColor),
           Row(
             children: [
-              const Icon(Icons.gps_fixed_rounded, color: Color(0xFF64748B), size: 16),
+              Icon(Icons.gps_fixed_rounded, color: context.textSecondaryColor, size: 16),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   hasRecitedToday ? 'ورد الغد المقترح:' : 'الورد المتبقي/المقترح للتسميع:',
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
+                  style: TextStyle(
+                    color: context.textSecondaryColor,
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
-                    fontFamily: 'Cairo',
                   ),
                 ),
               ),
@@ -953,11 +956,10 @@ class _RecitationTargetCard extends StatelessWidget {
             padding: const EdgeInsets.only(right: 24),
             child: Text(
               nextTargetLabel,
-              style: const TextStyle(
-                color: Color(0xFF1E293B),
+              style: TextStyle(
+                color: context.textPrimaryColor,
                 fontWeight: FontWeight.w900,
                 fontSize: 14,
-                fontFamily: 'Cairo',
               ),
             ),
           ),
@@ -966,11 +968,10 @@ class _RecitationTargetCard extends StatelessWidget {
             padding: const EdgeInsets.only(right: 24),
             child: Text(
               'آخر تسميع: $lastSurahName (آية $lastToAyah)',
-              style: const TextStyle(
-                color: Color(0xFF64748B),
+              style: TextStyle(
+                color: context.textSecondaryColor,
                 fontWeight: FontWeight.w700,
                 fontSize: 11,
-                fontFamily: 'Cairo',
               ),
             ),
           ),
@@ -986,10 +987,12 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+
     return Row(
       children: List.generate(5, (index) => Icon(
         index < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-        color: index < rating ? Colors.amber : AppColors.borderLight,
+        color: index < rating ? custom.warning : context.borderColor,
         size: 16,
       )),
     );

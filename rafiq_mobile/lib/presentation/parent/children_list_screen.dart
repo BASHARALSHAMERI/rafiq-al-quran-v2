@@ -32,20 +32,23 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final state = ref.watch(parentDashboardProvider);
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8F5),
+        backgroundColor: context.surfaceColor,
         appBar: const StandardAppBar(title: 'الأبناء'),
-        body: _buildBody(theme, state),
+        body: _buildBody(state),
       ),
     );
   }
 
-  Widget _buildBody(ThemeData theme, ParentDashboardState state) {
+  Widget _buildBody(ParentDashboardState state) {
+    final theme = Theme.of(context);
+    final custom = context.customColors;
+    final primary = theme.colorScheme.primary;
+
     if (state.isLoading && state.parentData == null) {
       return const PageStateView.loading(
         title: 'جارٍ تحميل قائمة الأبناء',
@@ -120,7 +123,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                         leadingLetter,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           fontSize: 18,
                         ),
                       ),
@@ -134,8 +137,10 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                             studentName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              color: context.textPrimaryColor,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -143,8 +148,9 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                             '$center • $halqa',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondaryLight,
+                            style: TextStyle(
+                              color: context.textSecondaryColor,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -152,14 +158,14 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     profileData == null
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: primary),
                           )
-                        : const Icon(
+                        : Icon(
                             Icons.chevron_left_rounded,
-                            color: AppColors.textSecondaryLight,
+                            color: context.textSecondaryColor,
                           ),
                   ],
                 ),
@@ -178,7 +184,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                             label: 'الحضور',
                             value: attendance,
                             icon: Icons.check_circle_rounded,
-                            color: AppColors.successLight,
+                            color: custom.success,
                           ),
                         ),
                         SizedBox(
@@ -187,7 +193,7 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
                             label: 'الجزء الحالي',
                             value: currentJuzz > 0 ? '$currentJuzz' : '-',
                             icon: Icons.menu_book_rounded,
-                            color: AppColors.primaryLight,
+                            color: primary,
                           ),
                         ),
                         SizedBox(
@@ -213,7 +219,6 @@ class _ChildrenListScreenState extends ConsumerState<ChildrenListScreen> {
       },
     );
   }
-
 }
 
 class _MetricBadge extends StatelessWidget {
@@ -234,7 +239,7 @@ class _MetricBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
@@ -246,9 +251,10 @@ class _MetricBadge extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),

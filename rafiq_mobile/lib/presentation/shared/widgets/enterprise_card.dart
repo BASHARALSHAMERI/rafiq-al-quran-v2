@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_shadows.dart';
 
 class EnterpriseCard extends StatelessWidget {
@@ -35,10 +36,10 @@ class EnterpriseCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final resolvedBorderColor =
-        borderColor ?? theme.colorScheme.outline.withValues(alpha: 0.14);
+    final isDark = theme.brightness == Brightness.dark;
+    final resolvedBorderColor = borderColor ?? context.borderColor;
     final resolvedColor = color ?? theme.cardColor;
-    final resolvedShadow = boxShadow ?? AppShadows.xs;
+    final resolvedShadow = boxShadow ?? (isDark ? null : AppShadows.xs);
     final borderRadius = BorderRadius.circular(radius);
 
     Widget content = Padding(
@@ -49,6 +50,7 @@ class EnterpriseCard extends StatelessWidget {
     if (onTap != null) {
       content = InkWell(
         onTap: onTap,
+        borderRadius: borderRadius,
         child: content,
       );
     }

@@ -308,6 +308,14 @@ export const followUpsRepository = {
     });
   },
 
+  async removeRecord(id: number, tx?: Prisma.TransactionClient) {
+    const db = tx ?? prisma;
+    return db.followUpRecord.delete({
+      where: { id },
+      select: { id: true }
+    });
+  },
+
   async listRecords(where: Prisma.FollowUpRecordWhereInput, page: number, pageSize: number) {
     const [data, total] = await Promise.all([
       prisma.followUpRecord.findMany({

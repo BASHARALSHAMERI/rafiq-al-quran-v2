@@ -6,12 +6,12 @@ import 'package:intl/intl.dart';
 import '../../application/student/student_dashboard_provider.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/data_parsing_helper.dart';
 import '../shared/widgets/enterprise_card.dart';
 import '../shared/widgets/page_state_view.dart';
-import '../shared/widgets/standard_app_bar.dart';
 import '../shared/widgets/section_header.dart';
 import '../shared/widgets/skeleton_loader.dart';
-import '../../core/utils/data_parsing_helper.dart';
+import '../shared/widgets/standard_app_bar.dart';
 
 class ProgressScreen extends ConsumerStatefulWidget {
   const ProgressScreen({super.key});
@@ -34,7 +34,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     final state = ref.watch(studentDashboardProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       appBar: const StandardAppBar(title: 'تقدمي'),
       body: _buildBody(state),
     );
@@ -138,9 +138,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       ],
     );
   }
-
-  // ... (existing helper methods like _stringValue, _sumMemorizedPages, etc. remain unchanged)
-
 
   int _sumMemorizedPages(List<Map<String, dynamic>> followUps) {
     return followUps
@@ -263,7 +260,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     return (type?.toString().toUpperCase() ?? '') == 'MATN';
   }
 
-
   String _weekdayLabel(int weekday) {
     switch (weekday) {
       case DateTime.sunday:
@@ -284,7 +280,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
         return '-';
     }
   }
-
 
   DateTime? _asDate(dynamic value) {
     if (value is DateTime) return value;
@@ -313,15 +308,19 @@ class _ModernProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.8)),
+        border: Border.all(color: context.borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -333,15 +332,15 @@ class _ModernProfileHeader extends StatelessWidget {
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.2), width: 2),
+              border: Border.all(color: primary.withValues(alpha: 0.3), width: 2),
             ),
             child: CircleAvatar(
               radius: 28,
-              backgroundColor: AppColors.primaryLight.withValues(alpha: 0.08),
+              backgroundColor: primary.withValues(alpha: isDark ? 0.20 : 0.10),
               child: Text(
                 name.isNotEmpty ? name[0] : 'ط',
-                style: const TextStyle(
-                  color: AppColors.primaryLight,
+                style: TextStyle(
+                  color: primary,
                   fontWeight: FontWeight.w900,
                   fontSize: 22,
                 ),
@@ -355,28 +354,28 @@ class _ModernProfileHeader extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.2,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: 0.7, // Mock XP progress for now
+                    value: 0.7,
                     minHeight: 4,
-                    backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
-                    color: AppColors.primaryLight,
+                    backgroundColor: primary.withValues(alpha: 0.12),
+                    color: primary,
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   'المستوى 5 • طالب مثابر',
                   style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textSecondaryLight,
+                    fontSize: 11,
+                    color: context.textSecondaryColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -386,23 +385,23 @@ class _ModernProfileHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1FAF4),
+              color: custom.success.withValues(alpha: isDark ? 0.20 : 0.10),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.successLight.withValues(alpha: 0.2)),
+              border: Border.all(color: custom.success.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
                 Text(
                   grade,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.successLight,
+                    color: custom.success,
                   ),
                 ),
-                const Text(
+                Text(
                   'التقييم',
-                  style: TextStyle(fontSize: 10, color: AppColors.successLight, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 10, color: custom.success, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -428,6 +427,9 @@ class _MetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemWidth = (constraints.maxWidth - (AppSpacing.xs * 2)) / 3;
@@ -442,7 +444,7 @@ class _MetricsGrid extends StatelessWidget {
               value: totalMemorized > 0 ? '$totalMemorized' : currentJuz,
               unit: totalMemorized > 0 ? 'صفحة' : 'جزء',
               icon: Icons.auto_stories_rounded,
-              color: const Color(0xFF5D9F8A),
+              color: primary,
             ),
             _CompactStatCard(
               width: itemWidth,
@@ -450,7 +452,7 @@ class _MetricsGrid extends StatelessWidget {
               value: attendance,
               unit: '%',
               icon: Icons.event_available_rounded,
-              color: const Color(0xFF5A8DB6),
+              color: custom.info,
             ),
             _CompactStatCard(
               width: itemWidth,
@@ -458,7 +460,7 @@ class _MetricsGrid extends StatelessWidget {
               value: '$weekPages',
               unit: 'صفحة',
               icon: Icons.show_chart_rounded,
-              color: const Color(0xFFB88E56),
+              color: custom.warning,
             ),
           ],
         );
@@ -490,16 +492,16 @@ class _CompactStatCard extends StatelessWidget {
       width: width,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
+              color: color.withValues(alpha: context.isDark ? 0.20 : 0.10),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 16),
@@ -525,7 +527,7 @@ class _CompactStatCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: color.withValues(alpha: 0.6),
+                  color: color.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -533,10 +535,10 @@ class _CompactStatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textSecondaryLight,
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -552,6 +554,7 @@ class _WeeklyActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final maxCount = items.fold<int>(
       0,
       (maxValue, item) => item.count > maxValue ? item.count : maxValue,
@@ -560,34 +563,36 @@ class _WeeklyActivityCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'تسميعات هذا الأسبوع',
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 15,
+                  color: context.textPrimaryColor,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: context.surfaceColor,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: context.borderColor),
                 ),
                 child: Text(
                   '${items.fold<int>(0, (sum, item) => sum + item.count)} سجل',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondaryLight,
+                    color: context.textSecondaryColor,
                   ),
                 ),
               ),
@@ -609,7 +614,7 @@ class _WeeklyActivityCard extends StatelessWidget {
                         height: 70,
                         alignment: Alignment.bottomCenter,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: context.surfaceColor,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: AnimatedContainer(
@@ -619,8 +624,8 @@ class _WeeklyActivityCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                AppColors.primaryLight,
-                                AppColors.primaryLight.withValues(alpha: 0.7),
+                                primary,
+                                primary.withValues(alpha: 0.7),
                               ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
@@ -632,10 +637,10 @@ class _WeeklyActivityCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         item.dayLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondaryLight,
+                          color: context.textSecondaryColor,
                         ),
                       ),
                     ],
@@ -657,14 +662,16 @@ class _MilestoneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = item.done ? const Color(0xFF5D9F8A) : const Color(0xFF5A8DB6);
+    final custom = context.customColors;
+    final primary = Theme.of(context).colorScheme.primary;
+    final accent = item.done ? custom.success : primary;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.6)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Row(
         children: [
@@ -672,7 +679,7 @@ class _MilestoneCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
+              color: accent.withValues(alpha: context.isDark ? 0.20 : 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -690,15 +697,16 @@ class _MilestoneCard extends StatelessWidget {
               children: [
                 Text(
                   item.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
+                    color: context.textPrimaryColor,
                   ),
                 ),
                 Text(
                   item.subtitle,
-                  style: const TextStyle(
-                    color: AppColors.textSecondaryLight,
+                  style: TextStyle(
+                    color: context.textSecondaryColor,
                     fontSize: 12,
                   ),
                 ),
@@ -706,9 +714,9 @@ class _MilestoneCard extends StatelessWidget {
             ),
           ),
           if (item.done)
-            const Icon(
+            Icon(
               Icons.check_circle_rounded,
-              color: AppColors.successLight,
+              color: custom.success,
               size: 16,
             ),
         ],

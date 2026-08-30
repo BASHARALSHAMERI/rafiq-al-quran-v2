@@ -20,12 +20,15 @@ class ExamsContextSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Wrap(
@@ -35,17 +38,17 @@ class ExamsContextSummaryCard extends StatelessWidget {
           ExamPill(
             icon: Icons.apartment_rounded,
             text: centerName,
-            color: AppColors.primaryLight,
+            color: primary,
           ),
           ExamPill(
             icon: Icons.groups_rounded,
             text: circleName,
-            color: AppColors.infoLight,
+            color: custom.info,
           ),
           ExamPill(
             icon: Icons.publish_rounded,
             text: '$examTemplateCount قالب منشور',
-            color: AppColors.secondaryLight,
+            color: custom.accent,
           ),
         ],
       ),
@@ -69,6 +72,9 @@ class ExamsStatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -80,25 +86,25 @@ class ExamsStatsGrid extends StatelessWidget {
         _ExamStatCard(
           label: 'إجمالي المحاولات',
           value: totalCount.toString(),
-          color: AppColors.primaryLight,
+          color: primary,
           icon: Icons.auto_stories_rounded,
         ),
         _ExamStatCard(
           label: 'مجدولة',
           value: pendingCount.toString(),
-          color: AppColors.warningLight,
+          color: custom.warning,
           icon: Icons.hourglass_top_rounded,
         ),
         _ExamStatCard(
           label: 'قيد التنفيذ',
           value: inProgressCount.toString(),
-          color: AppColors.infoLight,
+          color: custom.info,
           icon: Icons.play_circle_outline_rounded,
         ),
         _ExamStatCard(
           label: 'مكتملة',
           value: reviewedCount.toString(),
-          color: AppColors.successLight,
+          color: custom.success,
           icon: Icons.verified_rounded,
         ),
       ],
@@ -129,9 +135,9 @@ class NominationReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Column(
@@ -146,16 +152,19 @@ class NominationReviewCard extends StatelessWidget {
                     Text(
                       nomination.student?.fullName ??
                           'طالب #${nomination.studentId}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        color: context.textPrimaryColor,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       nomination.exam?.title ?? 'اختبار #${nomination.examId}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight,
-                          ),
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -166,9 +175,10 @@ class NominationReviewCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '${nomination.circle?.name ?? '-'} • ${formatExamAttemptDate(nomination.proposedExamDate)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
+            style: TextStyle(
+              color: context.textSecondaryColor,
+              fontSize: 11,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -224,13 +234,15 @@ class ExamAttemptCard extends StatelessWidget {
     final dateText = formatExamAttemptDate(
       attempt.reviewedAt ?? attempt.updatedAt,
     );
+    final primary = Theme.of(context).colorScheme.primary;
+    final custom = context.customColors;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Column(
@@ -245,16 +257,19 @@ class ExamAttemptCard extends StatelessWidget {
                   children: [
                     Text(
                       attempt.student?.fullName ?? 'طالب #${attempt.studentId}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: context.textPrimaryColor,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       attempt.exam?.title ?? 'اختبار #${attempt.examId}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textSecondaryLight,
-                          ),
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -270,12 +285,12 @@ class ExamAttemptCard extends StatelessWidget {
               ExamPill(
                 icon: Icons.groups_rounded,
                 text: attempt.circle?.name ?? 'الحلقة الحالية',
-                color: AppColors.primaryLight,
+                color: primary,
               ),
               ExamPill(
                 icon: Icons.event_note_rounded,
                 text: dateText,
-                color: AppColors.infoLight,
+                color: custom.info,
               ),
               ExamPill(
                 icon: Icons.stars_rounded,
@@ -283,7 +298,7 @@ class ExamAttemptCard extends StatelessWidget {
                     ? (attempt.gradeLabel ?? 'بدون تقدير')
                     : 'قيد التنفيذ',
                 color:
-                    finalized ? AppColors.successLight : AppColors.warningLight,
+                    finalized ? custom.success : custom.warning,
               ),
             ],
           ),
@@ -297,26 +312,28 @@ class ExamAttemptCard extends StatelessWidget {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: context.surfaceColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderLight),
+                    border: Border.all(color: context.borderColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'الدرجة',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondaryLight,
-                            ),
+                        style: TextStyle(
+                          color: context.textSecondaryColor,
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         scoreText,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          color: context.textPrimaryColor,
+                        ),
                       ),
                     ],
                   ),
@@ -329,8 +346,8 @@ class ExamAttemptCard extends StatelessWidget {
                     onPressed: onTapAction,
                     style: FilledButton.styleFrom(
                       backgroundColor: finalized
-                          ? AppColors.infoLight
-                          : AppColors.primaryLight,
+                          ? custom.info
+                          : primary,
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(56),
                       shape: RoundedRectangleBorder(
@@ -367,6 +384,8 @@ class ExamsContextMissingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -376,12 +395,12 @@ class ExamsContextMissingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.08),
+                color: primary.withValues(alpha: context.isDark ? 0.20 : 0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.account_tree_outlined,
-                color: AppColors.primaryLight,
+                color: primary,
                 size: 36,
               ),
             ),
@@ -389,17 +408,20 @@ class ExamsContextMissingCard extends StatelessWidget {
             Text(
               'لا يمكن فتح سجل الاختبارات قبل تحديد المركز والحلقة',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: context.textPrimaryColor,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'ارجع لاختيار السياق الحالي ثم أعد المحاولة.',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
+              style: TextStyle(
+                color: context.textSecondaryColor,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
@@ -429,31 +451,34 @@ class ExamsErrorStateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.error_outline_rounded,
-            color: AppColors.errorLight,
+            color: Theme.of(context).colorScheme.error,
             size: 40,
           ),
           const SizedBox(height: 12),
           Text(
             'تعذر تحميل سجل الاختبارات',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 15,
+              color: context.textPrimaryColor,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
+            style: TextStyle(
+              color: context.textSecondaryColor,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 18),
           OutlinedButton.icon(
@@ -481,6 +506,8 @@ class ExamsEmptyAttemptsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
     final description = hasSearchQuery
         ? 'لا توجد نتائج مطابقة لعبارة البحث الحالية.'
         : hasPublishedExams
@@ -490,45 +517,48 @@ class ExamsEmptyAttemptsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.08),
+              color: primary.withValues(alpha: context.isDark ? 0.20 : 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.auto_stories_outlined,
               size: 36,
-              color: AppColors.primaryLight,
+              color: primary,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'لا توجد محاولات بعد',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: context.textPrimaryColor,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             description,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondaryLight,
-                ),
+            style: TextStyle(
+              color: context.textSecondaryColor,
+              fontSize: 13,
+            ),
           ),
           if (onNominate != null) ...[
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: onNominate,
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primaryLight,
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
@@ -621,9 +651,9 @@ class _ExamStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.borderColor),
         boxShadow: AppShadows.xs,
       ),
       child: Row(
@@ -632,7 +662,7 @@ class _ExamStatCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
+              color: color.withValues(alpha: context.isDark ? 0.20 : 0.08),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: color),
@@ -645,16 +675,19 @@ class _ExamStatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    color: context.textPrimaryColor,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondaryLight,
-                      ),
+                  style: TextStyle(
+                    color: context.textSecondaryColor,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),

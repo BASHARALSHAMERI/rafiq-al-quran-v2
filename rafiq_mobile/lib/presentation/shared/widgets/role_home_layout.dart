@@ -91,7 +91,7 @@ class RoleHomeLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8F5),
+      backgroundColor: context.surfaceColor,
       body: SafeArea(
         bottom: false,
         top: false,
@@ -165,7 +165,7 @@ class SectionTitle extends StatelessWidget {
           width: 4,
           height: 18,
           decoration: BoxDecoration(
-            color: AppColors.primaryLight,
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(999),
           ),
         ),
@@ -174,7 +174,6 @@ class SectionTitle extends StatelessWidget {
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                fontFamily: 'Cairo',
               ),
         ),
       ],
@@ -192,7 +191,7 @@ class MetricGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 720 ? 3 : 3; // Force 3 columns as requested
+        final crossAxisCount = width >= 720 ? 3 : 3;
         final childAspectRatio = width >= 720 ? 1.8 : 1.35;
 
         return GridView.builder(
@@ -233,8 +232,8 @@ class ActionGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 720 ? 3 : 3; // Force 3 columns
-        const childAspectRatio = 1.18; // Shorter cards
+        final crossAxisCount = width >= 720 ? 3 : 3;
+        const childAspectRatio = 1.18;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -320,10 +319,13 @@ class FeatureAvailabilityChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final custom = context.customColors;
+    final isDark = context.isDark;
+
     final (label, color) = switch (availability) {
-      FeatureAvailability.available => ('متاح', AppColors.successLight),
-      FeatureAvailability.webOnly => ('من الويب', AppColors.infoLight),
-      FeatureAvailability.later => ('قريبًا', AppColors.warningLight),
+      FeatureAvailability.available => ('متاح', custom.success),
+      FeatureAvailability.webOnly => ('من الويب', custom.info),
+      FeatureAvailability.later => ('قريبًا', custom.warning),
     };
 
     return Align(
@@ -331,11 +333,14 @@ class FeatureAvailabilityChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xs,
-          vertical: 6,
+          vertical: 4,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: color.withValues(alpha: isDark ? 0.16 : 0.10),
           borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: color.withValues(alpha: isDark ? 0.28 : 0.16),
+          ),
         ),
         child: Text(
           label,
@@ -357,6 +362,8 @@ class HomeUpdateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = context.isDark;
+
     return EnterpriseCard(
       accentColor: data.color,
       onTap: data.onTap,
@@ -366,7 +373,7 @@ class HomeUpdateCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.1),
+              color: data.color.withValues(alpha: isDark ? 0.18 : 0.10),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(data.icon, color: data.color),
@@ -390,7 +397,7 @@ class HomeUpdateCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondaryLight,
+                        color: context.textSecondaryColor,
                       ),
                 ),
               ],
